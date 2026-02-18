@@ -5,6 +5,7 @@ import "./globals.css";
 import { SupabaseProvider } from "@/components/providers/supabase-provider";
 import { AudioProvider } from "@/components/player/audio-provider";
 import { GlobalPlayer } from "@/components/player/global-player";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,6 +39,7 @@ export default function RootLayout({
             <GlobalPlayer />
           </AudioProvider>
         </SupabaseProvider>
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   );

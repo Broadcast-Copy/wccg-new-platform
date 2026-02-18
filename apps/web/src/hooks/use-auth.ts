@@ -2,23 +2,25 @@
 
 import { useEffect, useState } from "react";
 import { useSupabase } from "@/components/providers/supabase-provider";
-import type { User } from "@supabase/supabase-js";
+import type { User, Session } from "@supabase/supabase-js";
 
 /**
  * Hook to access the current Supabase auth state.
  *
  * Subscribes to auth state changes and provides the current user,
- * loading state, and a signOut function.
+ * session, loading state, and a signOut function.
  */
 export function useAuth() {
   const { supabase } = useSupabase();
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Get the initial session
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
       setIsLoading(false);
     });
 
@@ -26,6 +28,7 @@ export function useAuth() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
     });
@@ -38,7 +41,8 @@ export function useAuth() {
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setSession(null);
   };
 
-  return { user, isLoading, signOut };
+  return { user, session, isLoading, signOut };
 }

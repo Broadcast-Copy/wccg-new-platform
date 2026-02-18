@@ -1,8 +1,6 @@
-import { EventBuilder } from "@/components/events/event-builder";
+"use client";
 
-export const metadata = {
-  title: "Create Event | WCCG 104.5 FM",
-};
+import { EventBuilder } from "@/components/events/event-builder";
 
 export default function CreateEventPage() {
   return (

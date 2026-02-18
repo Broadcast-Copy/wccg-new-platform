@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { Pause, Play } from "lucide-react";
 
 interface ChannelCardProps {
@@ -54,12 +55,17 @@ export function ChannelCard({
 
   return (
     <Card className="group relative overflow-hidden transition-shadow hover:shadow-md">
+      <div className="absolute right-2 top-2 z-10">
+        <FavoriteButton itemType="stream" itemId={streamId} />
+      </div>
       <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between pr-8">
           <div className="space-y-1">
             <CardTitle className="text-lg">{name}</CardTitle>
             {description && (
-              <CardDescription>{description}</CardDescription>
+              <CardDescription className="line-clamp-2">
+                {description}
+              </CardDescription>
             )}
           </div>
           {isLive && (
@@ -88,7 +94,7 @@ export function ChannelCard({
               <Play className="h-4 w-4" />
             )}
           </Button>
-          {currentTrack && (
+          {currentTrack ? (
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{currentTrack}</p>
               {currentArtist && (
@@ -97,6 +103,10 @@ export function ChannelCard({
                 </p>
               )}
             </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {isThisStreamPlaying ? "Now playing" : "Tap to play"}
+            </p>
           )}
         </div>
       </CardContent>

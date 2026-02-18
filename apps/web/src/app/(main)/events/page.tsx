@@ -1,25 +1,93 @@
+import { EventCard } from "@/components/events/event-card";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { CalendarDays, Plus } from "lucide-react";
+
 export const metadata = {
   title: "Events | WCCG 104.5 FM",
 };
 
-export default function EventsPage() {
+interface Event {
+  id: string;
+  title: string;
+  description?: string;
+  start_time: string;
+  venue_name?: string;
+  image_url?: string;
+  ticket_price_cents?: number;
+  is_sold_out?: boolean;
+}
+
+async function getEvents(): Promise<Event[]> {
+  try {
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+    const res = await fetch(`${apiUrl}/events`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
+export default async function EventsPage() {
+  const events = await getEvents();
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Events</h1>
-          <p className="text-muted-foreground">
-            Discover upcoming events and experiences
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-6 w-6 text-primary" />
+            <h1 className="text-3xl font-bold tracking-tight">Events</h1>
+          </div>
+          <p className="mt-1 text-muted-foreground">
+            Discover upcoming events and community experiences
           </p>
         </div>
-        {/* TODO: Link to event creation for authorized users */}
+        <Button asChild>
+          <Link href="/events/create">
+            <Plus className="mr-2 h-4 w-4" />
+            Create Event
+          </Link>
+        </Button>
       </div>
-      {/* TODO: Fetch events and render event cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <p className="col-span-full text-center text-muted-foreground">
-          Events will appear here.
-        </p>
-      </div>
+
+      {events.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {events.map((event) => (
+            <EventCard
+              key={event.id}
+              eventId={event.id}
+              title={event.title}
+              description={event.description}
+              date={new Date(event.start_time).toLocaleDateString("en-US", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+              venue={event.venue_name}
+              ticketPrice={
+                event.ticket_price_cents
+                  ? `$${(event.ticket_price_cents / 100).toFixed(2)}`
+                  : "Free"
+              }
+              isSoldOut={event.is_sold_out}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="flex h-40 items-center justify-center rounded-lg border bg-muted/50">
+          <p className="text-sm text-muted-foreground">
+            No upcoming events at the moment. Check back soon!
+          </p>
+        </div>
+      )}
     </div>
   );
 }

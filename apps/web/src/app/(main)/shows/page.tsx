@@ -1,22 +1,98 @@
+import { ShowCard } from "@/components/shows/show-card";
+import { Mic2 } from "lucide-react";
+
 export const metadata = {
   title: "Shows | WCCG 104.5 FM",
 };
 
-export default function ShowsPage() {
+interface Show {
+  id: string;
+  title: string;
+  description?: string;
+  host_name?: string;
+  schedule_summary?: string;
+  image_url?: string;
+  genre?: string;
+  is_active: boolean;
+}
+
+async function getShows(): Promise<Show[]> {
+  try {
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+    const res = await fetch(`${apiUrl}/shows`, {
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
+export default async function ShowsPage() {
+  const shows = await getShows();
+
+  const activeShows = shows.filter((s) => s.is_active);
+  const inactiveShows = shows.filter((s) => !s.is_active);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Show Directory</h1>
-        <p className="text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <Mic2 className="h-6 w-6 text-primary" />
+          <h1 className="text-3xl font-bold tracking-tight">Show Directory</h1>
+        </div>
+        <p className="mt-1 text-muted-foreground">
           Explore all shows on WCCG 104.5 FM
         </p>
       </div>
-      {/* TODO: Fetch shows and render show cards grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <p className="col-span-full text-center text-muted-foreground">
-          Shows will appear here.
-        </p>
-      </div>
+
+      {activeShows.length > 0 ? (
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold">Active Shows</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {activeShows.map((show) => (
+              <ShowCard
+                key={show.id}
+                showId={show.id}
+                title={show.title}
+                description={show.description}
+                hostName={show.host_name}
+                schedule={show.schedule_summary}
+                genre={show.genre}
+              />
+            ))}
+          </div>
+        </section>
+      ) : (
+        <div className="flex h-40 items-center justify-center rounded-lg border bg-muted/50">
+          <p className="text-sm text-muted-foreground">
+            Show listings will appear once the API is connected.
+          </p>
+        </div>
+      )}
+
+      {inactiveShows.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold text-muted-foreground">
+            Past Shows
+          </h2>
+          <div className="grid gap-4 opacity-60 sm:grid-cols-2 lg:grid-cols-3">
+            {inactiveShows.map((show) => (
+              <ShowCard
+                key={show.id}
+                showId={show.id}
+                title={show.title}
+                description={show.description}
+                hostName={show.host_name}
+                schedule={show.schedule_summary}
+                genre={show.genre}
+              />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

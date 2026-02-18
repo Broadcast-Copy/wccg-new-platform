@@ -11,10 +11,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { LogOut, Settings, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  Heart,
+  LayoutDashboard,
+  LogOut,
+  Star,
+  Ticket,
+} from "lucide-react";
+import { toast } from "sonner";
 
 export function UserMenu() {
   const { user, signOut, isLoading } = useAuth();
+  const router = useRouter();
 
   if (isLoading) {
     return (
@@ -35,39 +44,65 @@ export function UserMenu() {
     );
   }
 
-  const initials = (user.email ?? "U")
-    .split("@")[0]
-    .slice(0, 2)
-    .toUpperCase();
+  const displayName =
+    user.user_metadata?.display_name ||
+    user.email?.split("@")[0] ||
+    "User";
+
+  const initials = displayName.slice(0, 2).toUpperCase();
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Signed out successfully");
+    router.push("/login");
+    router.refresh();
+  };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarFallback>{initials}</AvatarFallback>
+            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+              {initials}
+            </AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent className="w-56" align="end">
         <div className="flex items-center gap-2 px-2 py-1.5">
-          <p className="text-sm font-medium">{user.email}</p>
+          <div className="flex flex-col space-y-0.5">
+            <p className="text-sm font-medium">{displayName}</p>
+            <p className="text-xs text-muted-foreground">{user.email}</p>
+          </div>
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/my">
-            <User className="mr-2 h-4 w-4" />
+            <LayoutDashboard className="mr-2 h-4 w-4" />
             My Dashboard
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/my/favorites">
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
+            <Heart className="mr-2 h-4 w-4" />
+            My Favorites
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/my/points">
+            <Star className="mr-2 h-4 w-4" />
+            My Points
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/my/tickets">
+            <Ticket className="mr-2 h-4 w-4" />
+            My Tickets
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => signOut()}>
+        <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
           Sign Out
         </DropdownMenuItem>

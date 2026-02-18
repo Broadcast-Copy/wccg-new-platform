@@ -26,9 +26,9 @@ export class EventsController {
   @Get()
   findAll(
     @Query('upcoming') upcoming?: boolean,
-    @Query('type') type?: string,
+    @Query('category') category?: string,
   ) {
-    return this.eventsService.findAll({ upcoming, type });
+    return this.eventsService.findAll({ upcoming, category });
   }
 
   /**
