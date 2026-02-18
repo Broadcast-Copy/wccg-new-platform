@@ -6,22 +6,23 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
-import { randomUUID } from 'node:crypto';
+import { favorite_target_type } from '@prisma/client';
+import type { favorites, streams, shows } from '@prisma/client';
 
-interface FavoriteRow {
-  id: string;
-  user_id: string;
-  target_type: string;
-  stream_id: string | null;
-  show_id: string | null;
-  created_at: Date;
-}
+// ─── Prisma result types ─────────────────────────────────────────
 
-interface FavoriteWithDetails extends FavoriteRow {
-  target_name: string | null;
-  target_slug: string | null;
-  target_image_url: string | null;
-}
+type FavoriteWithRelations = favorites & {
+  stream: streams | null;
+  show: shows | null;
+};
+
+/** Maps incoming camelCase target types to the Prisma enum values */
+const TARGET_TYPE_MAP: Record<string, favorite_target_type> = {
+  stream: favorite_target_type.STREAM,
+  show: favorite_target_type.SHOW,
+  STREAM: favorite_target_type.STREAM,
+  SHOW: favorite_target_type.SHOW,
+};
 
 @Injectable()
 export class FavoritesService {
@@ -35,18 +36,14 @@ export class FavoritesService {
   async findByUser(userId: string) {
     this.logger.debug(`Finding favorites for user ${userId}`);
 
-    const rows = await this.prisma.$queryRaw<FavoriteWithDetails[]>`
-      SELECT
-        f.*,
-        COALESCE(st.name, sh.name) as target_name,
-        COALESCE(st.slug, sh.slug) as target_slug,
-        COALESCE(st.image_url, sh.image_url) as target_image_url
-      FROM favorites f
-      LEFT JOIN streams st ON st.id = f.stream_id AND f.target_type = 'stream'
-      LEFT JOIN shows sh ON sh.id = f.show_id AND f.target_type = 'show'
-      WHERE f.user_id = ${userId}::uuid
-      ORDER BY f.created_at DESC
-    `;
+    const rows = await this.prisma.favorites.findMany({
+      where: { user_id: userId },
+      include: {
+        stream: true,
+        show: true,
+      },
+      orderBy: { created_at: 'desc' },
+    });
 
     return rows.map((r) => this.formatFavorite(r));
   }
@@ -59,65 +56,70 @@ export class FavoritesService {
 
     const { targetType, targetId } = dto;
 
-    // Validate target type
-    if (!['stream', 'show'].includes(targetType)) {
+    // Validate and map target type
+    const prismaTargetType = TARGET_TYPE_MAP[targetType];
+    if (!prismaTargetType) {
       throw new BadRequestException('targetType must be "stream" or "show"');
     }
 
     // Verify target exists
-    if (targetType === 'stream') {
-      const exists = await this.prisma.$queryRaw<{ count: bigint }[]>`
-        SELECT COUNT(*) as count FROM streams WHERE id = ${targetId}
-      `;
-      if (Number(exists[0]?.count ?? 0) === 0) {
+    if (prismaTargetType === favorite_target_type.STREAM) {
+      const stream = await this.prisma.streams.findUnique({
+        where: { id: targetId },
+        select: { id: true },
+      });
+      if (!stream) {
         throw new NotFoundException(`Stream ${targetId} not found`);
       }
     } else {
-      const exists = await this.prisma.$queryRaw<{ count: bigint }[]>`
-        SELECT COUNT(*) as count FROM shows WHERE id = ${targetId}
-      `;
-      if (Number(exists[0]?.count ?? 0) === 0) {
+      const show = await this.prisma.shows.findUnique({
+        where: { id: targetId },
+        select: { id: true },
+      });
+      if (!show) {
         throw new NotFoundException(`Show ${targetId} not found`);
       }
     }
 
-    const streamId = targetType === 'stream' ? targetId : null;
-    const showId = targetType === 'show' ? targetId : null;
+    const streamId = prismaTargetType === favorite_target_type.STREAM ? targetId : null;
+    const showId = prismaTargetType === favorite_target_type.SHOW ? targetId : null;
 
     // Check if already favorited (idempotent)
-    const existing = await this.prisma.$queryRaw<FavoriteRow[]>`
-      SELECT * FROM favorites
-      WHERE user_id = ${userId}::uuid
-        AND target_type = ${targetType}
-        AND COALESCE(stream_id, '') = COALESCE(${streamId}, '')
-        AND COALESCE(show_id, '') = COALESCE(${showId}, '')
-    `;
+    const existing = await this.prisma.favorites.findFirst({
+      where: {
+        user_id: userId,
+        target_type: prismaTargetType,
+        stream_id: streamId,
+        show_id: showId,
+      },
+    });
 
-    if (existing.length > 0) {
+    if (existing) {
       return {
-        id: existing[0].id,
-        userId: existing[0].user_id,
-        targetType: existing[0].target_type,
+        id: existing.id,
+        userId: existing.user_id,
+        targetType: targetType.toLowerCase(),
         targetId,
-        createdAt: existing[0].created_at,
+        createdAt: existing.created_at,
         alreadyExisted: true,
       };
     }
 
-    const id = randomUUID();
-    const now = new Date();
-
-    await this.prisma.$executeRaw`
-      INSERT INTO favorites (id, user_id, target_type, stream_id, show_id, created_at)
-      VALUES (${id}, ${userId}::uuid, ${targetType}, ${streamId}, ${showId}, ${now})
-    `;
+    const created = await this.prisma.favorites.create({
+      data: {
+        user_id: userId,
+        target_type: prismaTargetType,
+        stream_id: streamId,
+        show_id: showId,
+      },
+    });
 
     return {
-      id,
-      userId,
-      targetType,
+      id: created.id,
+      userId: created.user_id,
+      targetType: targetType.toLowerCase(),
       targetId,
-      createdAt: now,
+      createdAt: created.created_at,
       alreadyExisted: false,
     };
   }
@@ -128,22 +130,21 @@ export class FavoritesService {
   async remove(userId: string, favoriteId: string) {
     this.logger.debug(`User ${userId} unfavoriting ${favoriteId}`);
 
-    // Verify the favorite exists and belongs to the user
-    const rows = await this.prisma.$queryRaw<FavoriteRow[]>`
-      SELECT * FROM favorites WHERE id = ${favoriteId}
-    `;
+    const existing = await this.prisma.favorites.findUnique({
+      where: { id: favoriteId },
+    });
 
-    if (rows.length === 0) {
+    if (!existing) {
       throw new NotFoundException(`Favorite ${favoriteId} not found`);
     }
 
-    if (rows[0].user_id !== userId) {
-      throw new ForbiddenException('Cannot remove another user\'s favorite');
+    if (existing.user_id !== userId) {
+      throw new ForbiddenException("Cannot remove another user's favorite");
     }
 
-    await this.prisma.$executeRaw`
-      DELETE FROM favorites WHERE id = ${favoriteId} AND user_id = ${userId}::uuid
-    `;
+    await this.prisma.favorites.delete({
+      where: { id: favoriteId },
+    });
 
     return { deleted: true, id: favoriteId };
   }
@@ -154,37 +155,40 @@ export class FavoritesService {
   async check(userId: string, targetType: string, targetId: string) {
     this.logger.debug(`Checking favorite ${targetType}:${targetId} for user ${userId}`);
 
-    const streamId = targetType === 'stream' ? targetId : null;
-    const showId = targetType === 'show' ? targetId : null;
+    const prismaTargetType = TARGET_TYPE_MAP[targetType];
+    const streamId = prismaTargetType === favorite_target_type.STREAM ? targetId : null;
+    const showId = prismaTargetType === favorite_target_type.SHOW ? targetId : null;
 
-    const rows = await this.prisma.$queryRaw<{ id: string }[]>`
-      SELECT id FROM favorites
-      WHERE user_id = ${userId}::uuid
-        AND target_type = ${targetType}
-        AND COALESCE(stream_id, '') = COALESCE(${streamId}, '')
-        AND COALESCE(show_id, '') = COALESCE(${showId}, '')
-      LIMIT 1
-    `;
+    const found = await this.prisma.favorites.findFirst({
+      where: {
+        user_id: userId,
+        target_type: prismaTargetType,
+        stream_id: streamId,
+        show_id: showId,
+      },
+      select: { id: true },
+    });
 
     return {
-      isFavorited: rows.length > 0,
-      favoriteId: rows[0]?.id ?? null,
+      isFavorited: !!found,
+      favoriteId: found?.id ?? null,
     };
   }
 
   // ─── Private helpers ──────────────────────────────────────────
 
-  private formatFavorite(row: FavoriteWithDetails) {
+  private formatFavorite(row: FavoriteWithRelations) {
+    const target = row.stream ?? row.show;
     return {
       id: row.id,
       userId: row.user_id,
-      targetType: row.target_type,
+      targetType: row.target_type === favorite_target_type.STREAM ? 'stream' : 'show',
       targetId: row.stream_id ?? row.show_id,
-      target: row.target_name
+      target: target
         ? {
-            name: row.target_name,
-            slug: row.target_slug,
-            imageUrl: row.target_image_url,
+            name: target.name,
+            slug: target.slug,
+            imageUrl: target.image_url,
           }
         : null,
       createdAt: row.created_at,

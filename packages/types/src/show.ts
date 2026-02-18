@@ -3,10 +3,10 @@ export interface Show {
   name: string;
   slug: string;
   description: string | null;
-  imageUrl: string | null;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  image_url: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Host {
@@ -14,26 +14,34 @@ export interface Host {
   name: string;
   slug: string;
   bio: string | null;
-  avatarUrl: string | null;
+  avatar_url: string | null;
   email: string | null;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ShowEpisode {
   id: string;
-  showId: string;
+  show_id: string;
   title: string;
   description: string | null;
-  airDate: string;
+  air_date: string | null;
   duration: number | null;
-  audioUrl: string | null;
-  imageUrl: string | null;
-  createdAt: string;
-  updatedAt: string;
+  audio_url: string | null;
+  image_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HostInfo {
+  id: string;
+  name: string;
+  slug: string;
+  avatar_url: string | null;
+  is_primary: boolean;
 }
 
 export interface ShowWithHosts extends Show {
-  hosts: (Host & { isPrimary: boolean })[];
+  hosts: HostInfo[];
 }

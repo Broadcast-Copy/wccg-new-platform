@@ -1,13 +1,13 @@
 export interface Profile {
   id: string;
-  email: string;
-  firstName: string | null;
-  lastName: string | null;
-  displayName: string | null;
-  avatarUrl: string | null;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  email: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Role {

@@ -5,30 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
-import { randomUUID } from 'node:crypto';
-
-interface LedgerRow {
-  id: string;
-  user_id: string;
-  amount: number;
-  reason: string;
-  reference_type: string | null;
-  reference_id: string | null;
-  balance: number;
-  created_at: Date;
-}
-
-interface PointsRuleRow {
-  id: string;
-  name: string;
-  trigger_type: string;
-  points_amount: number;
-  threshold: number;
-  is_active: boolean;
-  cooldown_minutes: number;
-  created_at: Date;
-  updated_at: Date;
-}
+import { points_reason } from '@prisma/client';
 
 @Injectable()
 export class PointsService {
@@ -43,15 +20,13 @@ export class PointsService {
   async getBalance(userId: string) {
     this.logger.debug(`Getting balance for user ${userId}`);
 
-    const rows = await this.prisma.$queryRaw<{ balance: number }[]>`
-      SELECT balance
-      FROM points_ledger
-      WHERE user_id = ${userId}::uuid
-      ORDER BY created_at DESC
-      LIMIT 1
-    `;
+    const latest = await this.prisma.points_ledger.findFirst({
+      where: { user_id: userId },
+      orderBy: { created_at: 'desc' },
+      select: { balance: true },
+    });
 
-    const balance = rows[0]?.balance ?? 0;
+    const balance = latest?.balance ?? 0;
     return { userId, balance };
   }
 
@@ -60,24 +35,19 @@ export class PointsService {
    */
   async getHistory(userId: string, page = 1, limit = 20) {
     this.logger.debug(`Getting points history for user ${userId}`);
-    const offset = (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
-    const [entries, countResult] = await Promise.all([
-      this.prisma.$queryRaw<LedgerRow[]>`
-        SELECT *
-        FROM points_ledger
-        WHERE user_id = ${userId}::uuid
-        ORDER BY created_at DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `,
-      this.prisma.$queryRaw<{ count: bigint }[]>`
-        SELECT COUNT(*) as count
-        FROM points_ledger
-        WHERE user_id = ${userId}::uuid
-      `,
+    const [entries, total] = await Promise.all([
+      this.prisma.points_ledger.findMany({
+        where: { user_id: userId },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.points_ledger.count({
+        where: { user_id: userId },
+      }),
     ]);
-
-    const total = Number(countResult[0]?.count ?? 0);
 
     return {
       data: entries.map((e) => ({
@@ -101,12 +71,10 @@ export class PointsService {
   async getRules() {
     this.logger.debug('Getting points rules');
 
-    const rows = await this.prisma.$queryRaw<PointsRuleRow[]>`
-      SELECT *
-      FROM points_rules
-      WHERE is_active = true
-      ORDER BY trigger_type ASC
-    `;
+    const rows = await this.prisma.points_rules.findMany({
+      where: { is_active: true },
+      orderBy: { trigger_type: 'asc' },
+    });
 
     return rows.map((r) => ({
       id: r.id,
@@ -124,6 +92,7 @@ export class PointsService {
   /**
    * Award points to a user (admin or system).
    * Creates a ledger entry with a running balance.
+   * Uses a transaction to ensure atomicity between reading the balance and inserting the entry.
    */
   async award(
     userId: string,
@@ -135,39 +104,46 @@ export class PointsService {
 
     this.logger.debug(`Awarding ${dto.amount} points to user ${userId}: ${dto.reason}`);
 
-    // Get current balance
-    const { balance: currentBalance } = await this.getBalance(userId);
-    const newBalance = currentBalance + dto.amount;
+    const entry = await this.prisma.$transaction(async (tx) => {
+      // Get current balance inside the transaction for consistency
+      const latest = await tx.points_ledger.findFirst({
+        where: { user_id: userId },
+        orderBy: { created_at: 'desc' },
+        select: { balance: true },
+      });
 
-    const id = randomUUID();
-    const now = new Date();
-    const referenceType = dto.referenceType ?? null;
-    const referenceId = dto.referenceId ?? null;
+      const currentBalance = latest?.balance ?? 0;
+      const newBalance = currentBalance + dto.amount;
 
-    await this.prisma.$executeRaw`
-      INSERT INTO points_ledger (id, user_id, amount, reason, reference_type, reference_id, balance, created_at)
-      VALUES (
-        ${id}, ${userId}::uuid, ${dto.amount}, ${dto.reason},
-        ${referenceType}, ${referenceId}, ${newBalance}, ${now}
-      )
-    `;
+      return tx.points_ledger.create({
+        data: {
+          user_id: userId,
+          amount: dto.amount,
+          reason: dto.reason as points_reason,
+          reference_type: dto.referenceType ?? null,
+          reference_id: dto.referenceId ?? null,
+          balance: newBalance,
+        },
+      });
+    });
 
     return {
-      id,
-      userId,
-      amount: dto.amount,
-      reason: dto.reason,
-      referenceType,
-      referenceId,
-      balance: newBalance,
+      id: entry.id,
+      userId: entry.user_id,
+      amount: entry.amount,
+      reason: entry.reason,
+      referenceType: entry.reference_type,
+      referenceId: entry.reference_id,
+      balance: entry.balance,
       type: 'earn',
-      createdAt: now,
+      createdAt: entry.created_at,
     };
   }
 
   /**
    * Redeem points from a user's balance.
    * Optionally links to a reward catalog item and decrements stock.
+   * Uses a transaction to ensure atomicity across balance check, stock decrement, and ledger insert.
    */
   async redeem(
     userId: string,
@@ -177,68 +153,75 @@ export class PointsService {
       throw new BadRequestException('Redeem amount must be positive');
     }
 
-    // Check sufficient balance
-    const { balance: currentBalance } = await this.getBalance(userId);
-    if (currentBalance < dto.amount) {
-      throw new BadRequestException(
-        `Insufficient points balance. Have ${currentBalance}, need ${dto.amount}`,
-      );
-    }
-
     this.logger.debug(`Redeeming ${dto.amount} points from user ${userId}: ${dto.reason}`);
 
-    // If redeeming for a reward, verify it exists and has stock
-    if (dto.rewardId) {
-      const rewards = await this.prisma.$queryRaw<{ id: string; stock_count: number; is_active: boolean }[]>`
-        SELECT id, stock_count, is_active
-        FROM reward_catalog
-        WHERE id = ${dto.rewardId}
-      `;
+    const entry = await this.prisma.$transaction(async (tx) => {
+      // Check sufficient balance inside the transaction
+      const latest = await tx.points_ledger.findFirst({
+        where: { user_id: userId },
+        orderBy: { created_at: 'desc' },
+        select: { balance: true },
+      });
 
-      if (rewards.length === 0) {
-        throw new NotFoundException(`Reward ${dto.rewardId} not found`);
+      const currentBalance = latest?.balance ?? 0;
+      if (currentBalance < dto.amount) {
+        throw new BadRequestException(
+          `Insufficient points balance. Have ${currentBalance}, need ${dto.amount}`,
+        );
       }
 
-      if (!rewards[0].is_active) {
-        throw new BadRequestException('This reward is no longer available');
+      // If redeeming for a reward, verify it exists and has stock
+      if (dto.rewardId) {
+        const reward = await tx.reward_catalog.findUnique({
+          where: { id: dto.rewardId },
+          select: { id: true, stock_count: true, is_active: true },
+        });
+
+        if (!reward) {
+          throw new NotFoundException(`Reward ${dto.rewardId} not found`);
+        }
+
+        if (!reward.is_active) {
+          throw new BadRequestException('This reward is no longer available');
+        }
+
+        if (reward.stock_count !== null && reward.stock_count <= 0) {
+          throw new BadRequestException('This reward is out of stock');
+        }
+
+        // Decrement stock (only if stock_count is tracked, i.e. not null)
+        if (reward.stock_count !== null) {
+          await tx.reward_catalog.update({
+            where: { id: dto.rewardId },
+            data: { stock_count: { decrement: 1 } },
+          });
+        }
       }
 
-      if (rewards[0].stock_count <= 0) {
-        throw new BadRequestException('This reward is out of stock');
-      }
+      const newBalance = currentBalance - dto.amount;
 
-      // Decrement stock
-      await this.prisma.$executeRaw`
-        UPDATE reward_catalog
-        SET stock_count = stock_count - 1
-        WHERE id = ${dto.rewardId} AND stock_count > 0
-      `;
-    }
-
-    const newBalance = currentBalance - dto.amount;
-    const id = randomUUID();
-    const now = new Date();
-    const referenceType = dto.rewardId ? 'reward' : null;
-    const referenceId = dto.rewardId ?? null;
-
-    await this.prisma.$executeRaw`
-      INSERT INTO points_ledger (id, user_id, amount, reason, reference_type, reference_id, balance, created_at)
-      VALUES (
-        ${id}, ${userId}::uuid, ${-dto.amount}, ${dto.reason},
-        ${referenceType}, ${referenceId}, ${newBalance}, ${now}
-      )
-    `;
+      return tx.points_ledger.create({
+        data: {
+          user_id: userId,
+          amount: -dto.amount,
+          reason: dto.reason as points_reason,
+          reference_type: dto.rewardId ? 'reward' : null,
+          reference_id: dto.rewardId ?? null,
+          balance: newBalance,
+        },
+      });
+    });
 
     return {
-      id,
-      userId,
-      amount: -dto.amount,
-      reason: dto.reason,
-      referenceType,
-      referenceId,
-      balance: newBalance,
+      id: entry.id,
+      userId: entry.user_id,
+      amount: entry.amount,
+      reason: entry.reason,
+      referenceType: entry.reference_type,
+      referenceId: entry.reference_id,
+      balance: entry.balance,
       type: 'redeem',
-      createdAt: now,
+      createdAt: entry.created_at,
     };
   }
 }

@@ -36,5 +36,9 @@
       "msgpackr-extract",
       "@scarf/scarf"
     ]
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.4.0",
+    "@supabase/supabase-js": "^2.96.0"
   }
 }

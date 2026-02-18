@@ -11,11 +11,10 @@ interface Event {
   id: string;
   title: string;
   description?: string;
-  start_time: string;
-  venue_name?: string;
+  start_date: string;
+  venue?: string;
   image_url?: string;
-  ticket_price_cents?: number;
-  is_sold_out?: boolean;
+  is_free?: boolean;
 }
 
 async function getEvents(): Promise<Event[]> {
@@ -63,7 +62,7 @@ export default async function EventsPage() {
               eventId={event.id}
               title={event.title}
               description={event.description}
-              date={new Date(event.start_time).toLocaleDateString("en-US", {
+              date={new Date(event.start_date).toLocaleDateString("en-US", {
                 weekday: "short",
                 month: "short",
                 day: "numeric",
@@ -71,13 +70,8 @@ export default async function EventsPage() {
                 hour: "numeric",
                 minute: "2-digit",
               })}
-              venue={event.venue_name}
-              ticketPrice={
-                event.ticket_price_cents
-                  ? `$${(event.ticket_price_cents / 100).toFixed(2)}`
-                  : "Free"
-              }
-              isSoldOut={event.is_sold_out}
+              venue={event.venue}
+              ticketPrice={event.is_free ? "Free" : "Ticketed"}
             />
           ))}
         </div>

@@ -5,43 +5,36 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
-import { randomUUID } from 'node:crypto';
+import { Prisma } from '@prisma/client';
 
-interface ShowRow {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  image_url: string | null;
-  is_active: boolean;
-  created_at: Date;
-  updated_at: Date;
-}
-
-interface ShowWithHosts extends ShowRow {
-  hosts_json: string | null;
-}
-
+/**
+ * Exported for controller/other consumers that reference the host shape.
+ */
 export interface HostInfo {
   id: string;
   name: string;
   slug: string;
-  avatar_url: string | null;
-  is_primary: boolean;
+  avatarUrl: string | null;
+  isPrimary: boolean;
 }
 
-interface EpisodeRow {
-  id: string;
-  show_id: string;
-  title: string;
-  description: string | null;
-  air_date: Date | null;
-  duration: number | null;
-  audio_url: string | null;
-  image_url: string | null;
-  created_at: Date;
-  updated_at: Date;
-}
+// Prisma include for a show with its hosts (via join table)
+const SHOW_WITH_HOSTS_INCLUDE = {
+  show_hosts: {
+    include: { host: true },
+  },
+} as const;
+
+// Prisma include for a full show detail (hosts + recent episodes)
+const SHOW_FULL_INCLUDE = {
+  show_hosts: {
+    include: { host: true },
+  },
+  show_episodes: {
+    orderBy: { air_date: 'desc' as const },
+    take: 20,
+  },
+} as const;
 
 @Injectable()
 export class ShowsService {
@@ -50,52 +43,32 @@ export class ShowsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * List all shows with their hosts. Optional filters by hostId.
+   * List all shows with their hosts. Optional filter by hostId.
    */
-  async findAll(filters?: { genre?: string; hostId?: string; streamId?: string }) {
+  async findAll(filters?: {
+    genre?: string;
+    hostId?: string;
+    streamId?: string;
+  }) {
     this.logger.debug('Finding all shows', filters);
 
-    // Base query with hosts aggregated as JSON
+    const where: Prisma.showsWhereInput = {
+      is_active: true,
+    };
+
     if (filters?.hostId) {
-      const rows = await this.prisma.$queryRaw<ShowWithHosts[]>`
-        SELECT
-          s.*,
-          (
-            SELECT json_agg(json_build_object(
-              'id', h.id, 'name', h.name, 'slug', h.slug,
-              'avatar_url', h.avatar_url, 'is_primary', sh.is_primary
-            ))
-            FROM show_hosts sh
-            JOIN hosts h ON h.id = sh.host_id
-            WHERE sh.show_id = s.id
-          ) as hosts_json
-        FROM shows s
-        WHERE s.is_active = true
-          AND EXISTS (
-            SELECT 1 FROM show_hosts sh2 WHERE sh2.show_id = s.id AND sh2.host_id = ${filters.hostId}
-          )
-        ORDER BY s.name ASC
-      `;
-      return rows.map((r) => this.formatShowWithHosts(r));
+      where.show_hosts = {
+        some: { host_id: filters.hostId },
+      };
     }
 
-    const rows = await this.prisma.$queryRaw<ShowWithHosts[]>`
-      SELECT
-        s.*,
-        (
-          SELECT json_agg(json_build_object(
-            'id', h.id, 'name', h.name, 'slug', h.slug,
-            'avatar_url', h.avatar_url, 'is_primary', sh.is_primary
-          ))
-          FROM show_hosts sh
-          JOIN hosts h ON h.id = sh.host_id
-          WHERE sh.show_id = s.id
-        ) as hosts_json
-      FROM shows s
-      WHERE s.is_active = true
-      ORDER BY s.name ASC
-    `;
-    return rows.map((r) => this.formatShowWithHosts(r));
+    const shows = await this.prisma.shows.findMany({
+      where,
+      include: SHOW_WITH_HOSTS_INCLUDE,
+      orderBy: { name: 'asc' },
+    });
+
+    return shows.map((s) => this.formatShowWithHosts(s));
   }
 
   /**
@@ -104,40 +77,16 @@ export class ShowsService {
   async findById(id: string) {
     this.logger.debug(`Finding show ${id}`);
 
-    const rows = await this.prisma.$queryRaw<ShowWithHosts[]>`
-      SELECT
-        s.*,
-        (
-          SELECT json_agg(json_build_object(
-            'id', h.id, 'name', h.name, 'slug', h.slug,
-            'avatar_url', h.avatar_url, 'is_primary', sh.is_primary
-          ))
-          FROM show_hosts sh
-          JOIN hosts h ON h.id = sh.host_id
-          WHERE sh.show_id = s.id
-        ) as hosts_json
-      FROM shows s
-      WHERE s.id = ${id}
-    `;
+    const show = await this.prisma.shows.findUnique({
+      where: { id },
+      include: SHOW_FULL_INCLUDE,
+    });
 
-    if (rows.length === 0) {
+    if (!show) {
       throw new NotFoundException(`Show ${id} not found`);
     }
 
-    // Fetch recent episodes
-    const episodes = await this.prisma.$queryRaw<EpisodeRow[]>`
-      SELECT *
-      FROM show_episodes
-      WHERE show_id = ${id}
-      ORDER BY air_date DESC NULLS LAST
-      LIMIT 20
-    `;
-
-    const show = this.formatShowWithHosts(rows[0]);
-    return {
-      ...show,
-      episodes: episodes.map((e) => this.formatEpisode(e)),
-    };
+    return this.formatShowFull(show);
   }
 
   /**
@@ -145,41 +94,51 @@ export class ShowsService {
    */
   async create(dto: Record<string, unknown>) {
     this.logger.debug('Creating show');
-    const id = (dto.id as string) ?? randomUUID();
+
     const name = dto.name as string;
-    const slug = (dto.slug as string) ?? name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const description = (dto.description as string) ?? null;
-    const imageUrl = (dto.imageUrl as string) ?? null;
-    const isActive = (dto.isActive as boolean) ?? true;
-    const now = new Date();
+    const slug =
+      (dto.slug as string) ?? name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const hostIds = dto.hostIds as string[] | undefined;
 
     try {
-      await this.prisma.$executeRaw`
-        INSERT INTO shows (id, name, slug, description, image_url, is_active, created_at, updated_at)
-        VALUES (${id}, ${name}, ${slug}, ${description}, ${imageUrl}, ${isActive}, ${now}, ${now})
-      `;
+      const show = await this.prisma.shows.create({
+        data: {
+          id: (dto.id as string) ?? undefined,
+          name,
+          slug,
+          description: (dto.description as string) ?? null,
+          image_url: (dto.imageUrl as string) ?? null,
+          is_active: (dto.isActive as boolean) ?? true,
+          // Nested create for host associations
+          ...(hostIds && hostIds.length > 0
+            ? {
+                show_hosts: {
+                  createMany: {
+                    data: hostIds.map((hostId, i) => ({
+                      host_id: hostId,
+                      is_primary: i === 0,
+                    })),
+                    skipDuplicates: true,
+                  },
+                },
+              }
+            : {}),
+        },
+        include: SHOW_FULL_INCLUDE,
+      });
+
+      return this.formatShowFull(show);
     } catch (err: any) {
-      if (err.code === 'P2002' || err.message?.includes('unique')) {
-        throw new ConflictException(`Show with slug "${slug}" already exists`);
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          `Show with slug "${slug}" already exists`,
+        );
       }
       throw err;
     }
-
-    // Assign hosts if provided
-    const hostIds = dto.hostIds as string[] | undefined;
-    if (hostIds && hostIds.length > 0) {
-      for (let i = 0; i < hostIds.length; i++) {
-        const hostId = hostIds[i];
-        const isPrimary = i === 0;
-        await this.prisma.$executeRaw`
-          INSERT INTO show_hosts (show_id, host_id, is_primary)
-          VALUES (${id}, ${hostId}, ${isPrimary})
-          ON CONFLICT (show_id, host_id) DO NOTHING
-        `;
-      }
-    }
-
-    return this.findById(id);
   }
 
   /**
@@ -189,38 +148,41 @@ export class ShowsService {
     this.logger.debug(`Updating show ${id}`);
 
     // Verify exists
-    await this.findById(id);
+    const existing = await this.prisma.shows.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException(`Show ${id} not found`);
+    }
 
-    const now = new Date();
-    const name = (dto.name as string) ?? null;
-    const slug = (dto.slug as string) ?? null;
-    const description = (dto.description as string) ?? null;
-    const imageUrl = (dto.imageUrl as string) ?? null;
-    const isActive = dto.isActive as boolean | undefined;
+    // Build partial update
+    const data: Prisma.showsUpdateInput = {
+      updated_at: new Date(),
+    };
+    if (dto.name !== undefined) data.name = dto.name as string;
+    if (dto.slug !== undefined) data.slug = dto.slug as string;
+    if (dto.description !== undefined)
+      data.description = dto.description as string;
+    if (dto.imageUrl !== undefined) data.image_url = dto.imageUrl as string;
+    if (dto.isActive !== undefined) data.is_active = dto.isActive as boolean;
 
-    await this.prisma.$executeRaw`
-      UPDATE shows SET
-        name = COALESCE(${name}, name),
-        slug = COALESCE(${slug}, slug),
-        description = COALESCE(${description}, description),
-        image_url = COALESCE(${imageUrl}, image_url),
-        is_active = COALESCE(${isActive ?? null}::boolean, is_active),
-        updated_at = ${now}
-      WHERE id = ${id}
-    `;
+    await this.prisma.shows.update({
+      where: { id },
+      data,
+    });
 
-    // Replace hosts if provided
+    // Replace hosts if hostIds is provided (even an empty array clears them)
     const hostIds = dto.hostIds as string[] | undefined;
     if (hostIds !== undefined) {
-      await this.prisma.$executeRaw`DELETE FROM show_hosts WHERE show_id = ${id}`;
-      for (let i = 0; i < hostIds.length; i++) {
-        const hostId = hostIds[i];
-        const isPrimary = i === 0;
-        await this.prisma.$executeRaw`
-          INSERT INTO show_hosts (show_id, host_id, is_primary)
-          VALUES (${id}, ${hostId}, ${isPrimary})
-          ON CONFLICT (show_id, host_id) DO NOTHING
-        `;
+      // Delete existing associations then re-create
+      await this.prisma.show_hosts.deleteMany({ where: { show_id: id } });
+      if (hostIds.length > 0) {
+        await this.prisma.show_hosts.createMany({
+          data: hostIds.map((hostId, i) => ({
+            show_id: id,
+            host_id: hostId,
+            is_primary: i === 0,
+          })),
+          skipDuplicates: true,
+        });
       }
     }
 
@@ -229,43 +191,54 @@ export class ShowsService {
 
   /**
    * Delete a show (admin only).
+   * Cascade deletes handle show_hosts, show_episodes,
+   * schedule_blocks, and favorites.
    */
   async remove(id: string) {
     this.logger.debug(`Deleting show ${id}`);
 
     // Verify exists
-    await this.findById(id);
+    const existing = await this.prisma.shows.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException(`Show ${id} not found`);
+    }
 
-    // Delete in dependency order
-    await this.prisma.$executeRaw`DELETE FROM show_episodes WHERE show_id = ${id}`;
-    await this.prisma.$executeRaw`DELETE FROM show_hosts WHERE show_id = ${id}`;
-    await this.prisma.$executeRaw`DELETE FROM schedule_blocks WHERE show_id = ${id}`;
-    await this.prisma.$executeRaw`DELETE FROM favorites WHERE show_id = ${id}`;
-    await this.prisma.$executeRaw`DELETE FROM shows WHERE id = ${id}`;
+    await this.prisma.shows.delete({ where: { id } });
 
     return { deleted: true, id };
   }
 
-  // ─── Private helpers ──────────────────────────────────────────
+  // --- Private helpers ---
 
-  private formatShowWithHosts(row: ShowWithHosts) {
-    let hosts: HostInfo[] = [];
-    if (row.hosts_json) {
-      try {
-        const parsed = typeof row.hosts_json === 'string'
-          ? JSON.parse(row.hosts_json)
-          : row.hosts_json;
-        hosts = (parsed as any[]).map((h: any) => ({
-          id: h.id,
-          name: h.name,
-          slug: h.slug,
-          avatarUrl: h.avatar_url,
-          isPrimary: h.is_primary,
-        })) as any;
-      } catch {
-        hosts = [];
-      }
-    }
+  /**
+   * Format a show row that includes the show_hosts -> host relation.
+   */
+  private formatShowWithHosts(row: {
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    image_url: string | null;
+    is_active: boolean;
+    created_at: Date;
+    updated_at: Date;
+    show_hosts: Array<{
+      is_primary: boolean;
+      host: {
+        id: string;
+        name: string;
+        slug: string;
+        avatar_url: string | null;
+      };
+    }>;
+  }) {
+    const hosts: HostInfo[] = row.show_hosts.map((sh) => ({
+      id: sh.host.id,
+      name: sh.host.name,
+      slug: sh.host.slug,
+      avatarUrl: sh.host.avatar_url,
+      isPrimary: sh.is_primary,
+    }));
 
     return {
       id: row.id,
@@ -280,18 +253,56 @@ export class ShowsService {
     };
   }
 
-  private formatEpisode(row: EpisodeRow) {
+  /**
+   * Format a full show row that includes hosts and episodes.
+   */
+  private formatShowFull(
+    row: {
+      id: string;
+      name: string;
+      slug: string;
+      description: string | null;
+      image_url: string | null;
+      is_active: boolean;
+      created_at: Date;
+      updated_at: Date;
+      show_hosts: Array<{
+        is_primary: boolean;
+        host: {
+          id: string;
+          name: string;
+          slug: string;
+          avatar_url: string | null;
+        };
+      }>;
+      show_episodes: Array<{
+        id: string;
+        show_id: string;
+        title: string;
+        description: string | null;
+        air_date: Date | null;
+        duration: number | null;
+        audio_url: string | null;
+        image_url: string | null;
+        created_at: Date;
+        updated_at: Date;
+      }>;
+    },
+  ) {
     return {
-      id: row.id,
-      showId: row.show_id,
-      title: row.title,
-      description: row.description,
-      airDate: row.air_date,
-      duration: row.duration,
-      audioUrl: row.audio_url,
-      imageUrl: row.image_url,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
+      ...this.formatShowWithHosts(row),
+      episodes: row.show_episodes.map((e) => ({
+        id: e.id,
+        showId: e.show_id,
+        title: e.title,
+        description: e.description,
+        airDate: e.air_date,
+        duration: e.duration,
+        audioUrl: e.audio_url,
+        imageUrl: e.image_url,
+        createdAt: e.created_at,
+        updatedAt: e.updated_at,
+      })),
     };
   }
 }

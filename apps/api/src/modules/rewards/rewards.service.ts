@@ -4,20 +4,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
-import { randomUUID } from 'node:crypto';
-
-interface RewardRow {
-  id: string;
-  name: string;
-  description: string | null;
-  image_url: string | null;
-  points_cost: number;
-  category: string | null;
-  stock_count: number;
-  is_active: boolean;
-  created_at: Date;
-  updated_at: Date;
-}
+import type { reward_catalog } from '@prisma/client';
 
 @Injectable()
 export class RewardsService {
@@ -31,21 +18,14 @@ export class RewardsService {
   async findAll(filters?: { active?: boolean }) {
     this.logger.debug('Finding all rewards');
 
-    if (filters?.active !== undefined) {
-      const rows = await this.prisma.$queryRaw<RewardRow[]>`
-        SELECT *
-        FROM reward_catalog
-        WHERE is_active = ${filters.active}
-        ORDER BY points_cost ASC, name ASC
-      `;
-      return rows.map((r) => this.formatReward(r));
-    }
+    const rows = await this.prisma.reward_catalog.findMany({
+      where:
+        filters?.active !== undefined
+          ? { is_active: filters.active }
+          : undefined,
+      orderBy: [{ points_cost: 'asc' }, { name: 'asc' }],
+    });
 
-    const rows = await this.prisma.$queryRaw<RewardRow[]>`
-      SELECT *
-      FROM reward_catalog
-      ORDER BY points_cost ASC, name ASC
-    `;
     return rows.map((r) => this.formatReward(r));
   }
 
@@ -55,15 +35,15 @@ export class RewardsService {
   async findById(id: string) {
     this.logger.debug(`Finding reward ${id}`);
 
-    const rows = await this.prisma.$queryRaw<RewardRow[]>`
-      SELECT * FROM reward_catalog WHERE id = ${id}
-    `;
+    const row = await this.prisma.reward_catalog.findUnique({
+      where: { id },
+    });
 
-    if (rows.length === 0) {
+    if (!row) {
       throw new NotFoundException(`Reward ${id} not found`);
     }
 
-    return this.formatReward(rows[0]);
+    return this.formatReward(row);
   }
 
   /**
@@ -71,22 +51,21 @@ export class RewardsService {
    */
   async create(dto: Record<string, unknown>) {
     this.logger.debug('Creating reward');
-    const id = (dto.id as string) ?? randomUUID();
-    const name = dto.name as string;
-    const description = (dto.description as string) ?? null;
-    const imageUrl = (dto.imageUrl as string) ?? null;
-    const pointsCost = dto.pointsCost as number;
-    const category = (dto.category as string) ?? null;
-    const stockCount = (dto.stockCount as number) ?? 0;
-    const isActive = (dto.isActive as boolean) ?? true;
-    const now = new Date();
 
-    await this.prisma.$executeRaw`
-      INSERT INTO reward_catalog (id, name, description, image_url, points_cost, category, stock_count, is_active, created_at, updated_at)
-      VALUES (${id}, ${name}, ${description}, ${imageUrl}, ${pointsCost}, ${category}, ${stockCount}, ${isActive}, ${now}, ${now})
-    `;
+    const row = await this.prisma.reward_catalog.create({
+      data: {
+        id: (dto.id as string) ?? undefined,
+        name: dto.name as string,
+        description: (dto.description as string) ?? null,
+        image_url: (dto.imageUrl as string) ?? null,
+        points_cost: dto.pointsCost as number,
+        category: (dto.category as string) ?? null,
+        stock_count: (dto.stockCount as number) ?? 0,
+        is_active: (dto.isActive as boolean) ?? true,
+      },
+    });
 
-    return this.findById(id);
+    return this.formatReward(row);
   }
 
   /**
@@ -98,29 +77,21 @@ export class RewardsService {
     // Verify exists
     await this.findById(id);
 
-    const now = new Date();
-    const name = (dto.name as string) ?? null;
-    const description = (dto.description as string) ?? null;
-    const imageUrl = (dto.imageUrl as string) ?? null;
-    const pointsCost = (dto.pointsCost as number) ?? null;
-    const category = (dto.category as string) ?? null;
-    const stockCount = (dto.stockCount as number) ?? null;
-    const isActive = dto.isActive as boolean | undefined;
+    const row = await this.prisma.reward_catalog.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name as string }),
+        ...(dto.description !== undefined && { description: dto.description as string }),
+        ...(dto.imageUrl !== undefined && { image_url: dto.imageUrl as string }),
+        ...(dto.pointsCost !== undefined && { points_cost: dto.pointsCost as number }),
+        ...(dto.category !== undefined && { category: dto.category as string }),
+        ...(dto.stockCount !== undefined && { stock_count: dto.stockCount as number }),
+        ...(dto.isActive !== undefined && { is_active: dto.isActive as boolean }),
+        updated_at: new Date(),
+      },
+    });
 
-    await this.prisma.$executeRaw`
-      UPDATE reward_catalog SET
-        name = COALESCE(${name}, name),
-        description = COALESCE(${description}, description),
-        image_url = COALESCE(${imageUrl}, image_url),
-        points_cost = COALESCE(${pointsCost}, points_cost),
-        category = COALESCE(${category}, category),
-        stock_count = COALESCE(${stockCount}, stock_count),
-        is_active = COALESCE(${isActive ?? null}::boolean, is_active),
-        updated_at = ${now}
-      WHERE id = ${id}
-    `;
-
-    return this.findById(id);
+    return this.formatReward(row);
   }
 
   /**
@@ -132,14 +103,14 @@ export class RewardsService {
     // Verify exists
     await this.findById(id);
 
-    await this.prisma.$executeRaw`DELETE FROM reward_catalog WHERE id = ${id}`;
+    await this.prisma.reward_catalog.delete({ where: { id } });
 
     return { deleted: true, id };
   }
 
   // ─── Private helpers ──────────────────────────────────────────
 
-  private formatReward(row: RewardRow) {
+  private formatReward(row: reward_catalog) {
     return {
       id: row.id,
       name: row.name,

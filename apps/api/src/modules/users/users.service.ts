@@ -5,22 +5,10 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
+import type { profiles, user_roles } from '@prisma/client';
 
-interface ProfileRow {
-  id: string;
-  email: string | null;
-  first_name: string | null;
-  last_name: string | null;
-  display_name: string | null;
-  avatar_url: string | null;
-  is_active: boolean;
-  created_at: Date;
-  updated_at: Date;
-}
-
-interface ProfileWithRoles extends ProfileRow {
-  roles: string | null;
-}
+/** Profile row returned from Prisma with its user_roles included. */
+type ProfileWithRoles = profiles & { user_roles: Pick<user_roles, 'role_id'>[] };
 
 @Injectable()
 export class UsersService {
@@ -33,26 +21,17 @@ export class UsersService {
    */
   async findAll(page = 1, limit = 20) {
     this.logger.debug(`Finding all users, page=${page}, limit=${limit}`);
-    const offset = (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
-    const [users, countResult] = await Promise.all([
-      this.prisma.$queryRaw<ProfileWithRoles[]>`
-        SELECT
-          p.id, p.email, p.first_name, p.last_name, p.display_name,
-          p.avatar_url, p.is_active, p.created_at, p.updated_at,
-          STRING_AGG(ur.role_id, ',') as roles
-        FROM profiles p
-        LEFT JOIN user_roles ur ON ur.profile_id = p.id
-        GROUP BY p.id
-        ORDER BY p.created_at DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `,
-      this.prisma.$queryRaw<{ count: bigint }[]>`
-        SELECT COUNT(*) as count FROM profiles
-      `,
+    const [users, total] = await Promise.all([
+      this.prisma.profiles.findMany({
+        include: { user_roles: { select: { role_id: true } } },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.profiles.count(),
     ]);
-
-    const total = Number(countResult[0]?.count ?? 0);
 
     return {
       data: users.map((u) => this.formatProfile(u)),
@@ -66,19 +45,13 @@ export class UsersService {
   async findById(userId: string) {
     this.logger.debug(`Finding user ${userId}`);
 
-    const rows = await this.prisma.$queryRaw<ProfileWithRoles[]>`
-      SELECT
-        p.id, p.email, p.first_name, p.last_name, p.display_name,
-        p.avatar_url, p.is_active, p.created_at, p.updated_at,
-        STRING_AGG(ur.role_id, ',') as roles
-      FROM profiles p
-      LEFT JOIN user_roles ur ON ur.profile_id = p.id
-      WHERE p.id = ${userId}::uuid
-      GROUP BY p.id
-    `;
+    const row = await this.prisma.profiles.findUnique({
+      where: { id: userId },
+      include: { user_roles: { select: { role_id: true } } },
+    });
 
-    if (rows.length === 0) return null;
-    return this.formatProfile(rows[0]);
+    if (!row) return null;
+    return this.formatProfile(row);
   }
 
   /**
@@ -105,23 +78,17 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    const now = new Date();
-    const firstName = (dto.firstName as string) ?? null;
-    const lastName = (dto.lastName as string) ?? null;
-    const displayName = (dto.displayName as string) ?? null;
-    const avatarUrl = (dto.avatarUrl as string) ?? null;
-    const isActive = dto.isActive as boolean | undefined;
-
-    await this.prisma.$executeRaw`
-      UPDATE profiles SET
-        first_name = COALESCE(${firstName}, first_name),
-        last_name = COALESCE(${lastName}, last_name),
-        display_name = COALESCE(${displayName}, display_name),
-        avatar_url = COALESCE(${avatarUrl}, avatar_url),
-        is_active = COALESCE(${isActive ?? null}::boolean, is_active),
-        updated_at = ${now}
-      WHERE id = ${userId}::uuid
-    `;
+    await this.prisma.profiles.update({
+      where: { id: userId },
+      data: {
+        ...(dto.firstName !== undefined && { first_name: dto.firstName as string }),
+        ...(dto.lastName !== undefined && { last_name: dto.lastName as string }),
+        ...(dto.displayName !== undefined && { display_name: dto.displayName as string }),
+        ...(dto.avatarUrl !== undefined && { avatar_url: dto.avatarUrl as string }),
+        ...(dto.isActive !== undefined && { is_active: dto.isActive as boolean }),
+        updated_at: new Date(),
+      },
+    });
 
     return this.findById(userId);
   }
@@ -160,7 +127,7 @@ export class UsersService {
       displayName: row.display_name,
       avatarUrl: row.avatar_url,
       isActive: row.is_active,
-      roles: row.roles ? row.roles.split(',') : [],
+      roles: row.user_roles.map((ur) => ur.role_id),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

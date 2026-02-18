@@ -5,39 +5,13 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
-import { randomUUID } from 'node:crypto';
+import { Prisma, stream_category, stream_status } from '@prisma/client';
 
-interface StreamRow {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  category: string | null;
-  status: string | null;
-  sort_order: number;
-  image_url: string | null;
-  created_at: Date;
-  updated_at: Date;
-}
-
-interface StreamWithSource extends StreamRow {
-  source_id: string | null;
-  primary_url: string | null;
-  fallback_url: string | null;
-  mount_point: string | null;
-  format: string | null;
-  bitrate: number | null;
-}
-
-interface StreamFull extends StreamWithSource {
-  current_title: string | null;
-  current_artist: string | null;
-  current_track: string | null;
-  album_art: string | null;
-  listener_count: number | null;
-  is_live: boolean | null;
-  last_updated: Date | null;
-}
+// Prisma include shape for a fully-loaded stream
+const STREAM_FULL_INCLUDE = {
+  stream_source: true,
+  stream_metadata: true,
+} as const;
 
 @Injectable()
 export class StreamsService {
@@ -51,21 +25,16 @@ export class StreamsService {
   async findAll(category?: string) {
     this.logger.debug(`Finding all streams, category=${category ?? 'all'}`);
 
+    const where: Prisma.streamsWhereInput = {};
     if (category) {
-      const streams = await this.prisma.$queryRaw<StreamRow[]>`
-        SELECT s.*
-        FROM streams s
-        WHERE s.category = ${category}
-        ORDER BY s.sort_order ASC, s.name ASC
-      `;
-      return streams.map((s) => this.formatStream(s));
+      where.category = category as stream_category;
     }
 
-    const streams = await this.prisma.$queryRaw<StreamRow[]>`
-      SELECT s.*
-      FROM streams s
-      ORDER BY s.sort_order ASC, s.name ASC
-    `;
+    const streams = await this.prisma.streams.findMany({
+      where,
+      orderBy: [{ sort_order: 'asc' }, { name: 'asc' }],
+    });
+
     return streams.map((s) => this.formatStream(s));
   }
 
@@ -75,24 +44,16 @@ export class StreamsService {
   async findById(id: string) {
     this.logger.debug(`Finding stream ${id}`);
 
-    const rows = await this.prisma.$queryRaw<StreamFull[]>`
-      SELECT
-        s.*,
-        ss.id as source_id, ss.primary_url, ss.fallback_url,
-        ss.mount_point, ss.format, ss.bitrate,
-        sm.current_title, sm.current_artist, sm.current_track,
-        sm.album_art, sm.listener_count, sm.is_live, sm.last_updated
-      FROM streams s
-      LEFT JOIN stream_sources ss ON ss.stream_id = s.id
-      LEFT JOIN stream_metadata sm ON sm.stream_id = s.id
-      WHERE s.id = ${id}
-    `;
+    const stream = await this.prisma.streams.findUnique({
+      where: { id },
+      include: STREAM_FULL_INCLUDE,
+    });
 
-    if (rows.length === 0) {
+    if (!stream) {
       throw new NotFoundException(`Stream ${id} not found`);
     }
 
-    return this.formatStreamFull(rows[0]);
+    return this.formatStreamFull(stream);
   }
 
   /**
@@ -100,54 +61,60 @@ export class StreamsService {
    */
   async create(dto: Record<string, unknown>) {
     this.logger.debug('Creating stream');
-    const id = (dto.id as string) ?? randomUUID();
+
     const name = dto.name as string;
-    const slug = (dto.slug as string) ?? name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const description = (dto.description as string) ?? null;
-    const category = (dto.category as string) ?? null;
-    const status = (dto.status as string) ?? 'offline';
-    const sortOrder = (dto.sortOrder as number) ?? 0;
-    const imageUrl = (dto.imageUrl as string) ?? null;
-    const now = new Date();
+    const slug =
+      (dto.slug as string) ?? name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
     try {
-      await this.prisma.$executeRaw`
-        INSERT INTO streams (id, name, slug, description, category, status, sort_order, image_url, created_at, updated_at)
-        VALUES (${id}, ${name}, ${slug}, ${description}, ${category}, ${status}, ${sortOrder}, ${imageUrl}, ${now}, ${now})
-      `;
+      const stream = await this.prisma.streams.create({
+        data: {
+          id: (dto.id as string) ?? undefined,
+          name,
+          slug,
+          description: (dto.description as string) ?? null,
+          category: ((dto.category as string) ?? 'MAIN') as stream_category,
+          status: ((dto.status as string) ?? 'ACTIVE') as stream_status,
+          sort_order: (dto.sortOrder as number) ?? 0,
+          image_url: (dto.imageUrl as string) ?? null,
+          // Nested create for stream source if primary URL is provided
+          ...(dto.primaryUrl
+            ? {
+                stream_source: {
+                  create: {
+                    primary_url: (dto.primaryUrl as string) ?? null,
+                    fallback_url: (dto.fallbackUrl as string) ?? null,
+                    mount_point: (dto.mountPoint as string) ?? null,
+                    format: (dto.format as string) ?? null,
+                    bitrate: (dto.bitrate as number) ?? null,
+                  },
+                },
+              }
+            : {}),
+          // Always initialize metadata row
+          stream_metadata: {
+            create: {
+              listener_count: 0,
+              is_live: false,
+              last_updated: new Date(),
+            },
+          },
+        },
+        include: STREAM_FULL_INCLUDE,
+      });
+
+      return this.formatStreamFull(stream);
     } catch (err: any) {
-      if (err.code === 'P2002' || err.message?.includes('unique')) {
-        throw new ConflictException(`Stream with slug "${slug}" already exists`);
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          `Stream with slug "${slug}" already exists`,
+        );
       }
       throw err;
     }
-
-    // If source configuration is provided, create it
-    if (dto.primaryUrl) {
-      const sourceId = randomUUID();
-      await this.prisma.$executeRaw`
-        INSERT INTO stream_sources (id, stream_id, primary_url, fallback_url, mount_point, format, bitrate, created_at, updated_at)
-        VALUES (
-          ${sourceId}, ${id},
-          ${(dto.primaryUrl as string) ?? null},
-          ${(dto.fallbackUrl as string) ?? null},
-          ${(dto.mountPoint as string) ?? null},
-          ${(dto.format as string) ?? null},
-          ${(dto.bitrate as number) ?? null},
-          ${now}, ${now}
-        )
-      `;
-    }
-
-    // Initialize metadata row
-    const metaId = randomUUID();
-    await this.prisma.$executeRaw`
-      INSERT INTO stream_metadata (id, stream_id, listener_count, is_live, last_updated)
-      VALUES (${metaId}, ${id}, 0, false, ${now})
-      ON CONFLICT (stream_id) DO NOTHING
-    `;
-
-    return this.findById(id);
   }
 
   /**
@@ -157,50 +124,60 @@ export class StreamsService {
     this.logger.debug(`Updating stream ${id}`);
 
     // Verify exists
-    await this.findById(id);
+    const existing = await this.prisma.streams.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException(`Stream ${id} not found`);
+    }
 
-    const now = new Date();
-    const name = (dto.name as string) ?? null;
-    const slug = (dto.slug as string) ?? null;
-    const description = (dto.description as string) ?? null;
-    const category = (dto.category as string) ?? null;
-    const status = (dto.status as string) ?? null;
-    const sortOrder = (dto.sortOrder as number) ?? null;
-    const imageUrl = (dto.imageUrl as string) ?? null;
+    // Build a partial update object, only setting fields that were provided
+    const data: Prisma.streamsUpdateInput = {
+      updated_at: new Date(),
+    };
+    if (dto.name !== undefined) data.name = dto.name as string;
+    if (dto.slug !== undefined) data.slug = dto.slug as string;
+    if (dto.description !== undefined)
+      data.description = dto.description as string;
+    if (dto.category !== undefined)
+      data.category = dto.category as stream_category;
+    if (dto.status !== undefined) data.status = dto.status as stream_status;
+    if (dto.sortOrder !== undefined) data.sort_order = dto.sortOrder as number;
+    if (dto.imageUrl !== undefined) data.image_url = dto.imageUrl as string;
 
-    await this.prisma.$executeRaw`
-      UPDATE streams SET
-        name = COALESCE(${name}, name),
-        slug = COALESCE(${slug}, slug),
-        description = COALESCE(${description}, description),
-        category = COALESCE(${category}, category),
-        status = COALESCE(${status}, status),
-        sort_order = COALESCE(${sortOrder}, sort_order),
-        image_url = COALESCE(${imageUrl}, image_url),
-        updated_at = ${now}
-      WHERE id = ${id}
-    `;
+    await this.prisma.streams.update({
+      where: { id },
+      data,
+    });
 
-    // Update source if provided
-    if (dto.primaryUrl !== undefined || dto.fallbackUrl !== undefined || dto.mountPoint !== undefined) {
-      await this.prisma.$executeRaw`
-        INSERT INTO stream_sources (id, stream_id, primary_url, fallback_url, mount_point, format, bitrate, created_at, updated_at)
-        VALUES (${randomUUID()}, ${id},
-          ${(dto.primaryUrl as string) ?? null},
-          ${(dto.fallbackUrl as string) ?? null},
-          ${(dto.mountPoint as string) ?? null},
-          ${(dto.format as string) ?? null},
-          ${(dto.bitrate as number) ?? null},
-          ${now}, ${now}
-        )
-        ON CONFLICT (stream_id) DO UPDATE SET
-          primary_url = COALESCE(EXCLUDED.primary_url, stream_sources.primary_url),
-          fallback_url = COALESCE(EXCLUDED.fallback_url, stream_sources.fallback_url),
-          mount_point = COALESCE(EXCLUDED.mount_point, stream_sources.mount_point),
-          format = COALESCE(EXCLUDED.format, stream_sources.format),
-          bitrate = COALESCE(EXCLUDED.bitrate, stream_sources.bitrate),
-          updated_at = ${now}
-      `;
+    // Update source if any source-related fields are provided
+    if (
+      dto.primaryUrl !== undefined ||
+      dto.fallbackUrl !== undefined ||
+      dto.mountPoint !== undefined
+    ) {
+      const sourceData: Prisma.stream_sourcesUpdateInput = {
+        updated_at: new Date(),
+      };
+      if (dto.primaryUrl !== undefined)
+        sourceData.primary_url = dto.primaryUrl as string;
+      if (dto.fallbackUrl !== undefined)
+        sourceData.fallback_url = dto.fallbackUrl as string;
+      if (dto.mountPoint !== undefined)
+        sourceData.mount_point = dto.mountPoint as string;
+      if (dto.format !== undefined) sourceData.format = dto.format as string;
+      if (dto.bitrate !== undefined) sourceData.bitrate = dto.bitrate as number;
+
+      await this.prisma.stream_sources.upsert({
+        where: { stream_id: id },
+        update: sourceData,
+        create: {
+          stream_id: id,
+          primary_url: (dto.primaryUrl as string) ?? null,
+          fallback_url: (dto.fallbackUrl as string) ?? null,
+          mount_point: (dto.mountPoint as string) ?? null,
+          format: (dto.format as string) ?? null,
+          bitrate: (dto.bitrate as number) ?? null,
+        },
+      });
     }
 
     return this.findById(id);
@@ -208,27 +185,37 @@ export class StreamsService {
 
   /**
    * Delete a stream and its related source/metadata (admin only).
+   * Cascade deletes handle stream_sources, stream_metadata,
+   * schedule_blocks, favorites, and listening_history.
    */
   async remove(id: string) {
     this.logger.debug(`Deleting stream ${id}`);
 
     // Verify exists
-    await this.findById(id);
+    const existing = await this.prisma.streams.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException(`Stream ${id} not found`);
+    }
 
-    // Delete in dependency order
-    await this.prisma.$executeRaw`DELETE FROM stream_metadata WHERE stream_id = ${id}`;
-    await this.prisma.$executeRaw`DELETE FROM stream_sources WHERE stream_id = ${id}`;
-    await this.prisma.$executeRaw`DELETE FROM schedule_blocks WHERE stream_id = ${id}`;
-    await this.prisma.$executeRaw`DELETE FROM favorites WHERE stream_id = ${id}`;
-    await this.prisma.$executeRaw`DELETE FROM listening_history WHERE stream_id = ${id}`;
-    await this.prisma.$executeRaw`DELETE FROM streams WHERE id = ${id}`;
+    await this.prisma.streams.delete({ where: { id } });
 
     return { deleted: true, id };
   }
 
-  // ─── Private helpers ──────────────────────────────────────────
+  // --- Private helpers ---
 
-  private formatStream(row: StreamRow) {
+  private formatStream(row: {
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    category: stream_category;
+    status: stream_status;
+    sort_order: number;
+    image_url: string | null;
+    created_at: Date;
+    updated_at: Date;
+  }) {
     return {
       id: row.id,
       name: row.name,
@@ -243,27 +230,58 @@ export class StreamsService {
     };
   }
 
-  private formatStreamFull(row: StreamFull) {
+  private formatStreamFull(
+    row: {
+      id: string;
+      name: string;
+      slug: string;
+      description: string | null;
+      category: stream_category;
+      status: stream_status;
+      sort_order: number;
+      image_url: string | null;
+      created_at: Date;
+      updated_at: Date;
+    } & {
+      stream_source: {
+        id: string;
+        primary_url: string | null;
+        fallback_url: string | null;
+        mount_point: string | null;
+        format: string | null;
+        bitrate: number | null;
+      } | null;
+      stream_metadata: {
+        current_title: string | null;
+        current_artist: string | null;
+        current_track: string | null;
+        album_art: string | null;
+        listener_count: number | null;
+        is_live: boolean;
+        last_updated: Date | null;
+      } | null;
+    },
+  ) {
     return {
       ...this.formatStream(row),
-      source: row.source_id
+      source: row.stream_source
         ? {
-            id: row.source_id,
-            primaryUrl: row.primary_url,
-            fallbackUrl: row.fallback_url,
-            mountPoint: row.mount_point,
-            format: row.format,
-            bitrate: row.bitrate,
+            id: row.stream_source.id,
+            primaryUrl: row.stream_source.primary_url,
+            fallbackUrl: row.stream_source.fallback_url,
+            mountPoint: row.stream_source.mount_point,
+            format: row.stream_source.format,
+            bitrate: row.stream_source.bitrate,
           }
         : null,
       metadata: {
-        currentTitle: row.current_title,
-        currentArtist: row.current_artist,
-        currentTrack: row.current_track,
-        albumArt: row.album_art,
-        listenerCount: row.listener_count ?? 0,
-        isLive: row.is_live ?? false,
-        lastUpdated: row.last_updated,
+        currentTitle: row.stream_metadata?.current_title ?? null,
+        currentArtist: row.stream_metadata?.current_artist ?? null,
+        currentTrack: row.stream_metadata?.current_track ?? null,
+        albumArt: row.stream_metadata?.album_art ?? null,
+        listenerCount: row.stream_metadata?.listener_count ?? 0,
+        isLive: row.stream_metadata?.is_live ?? false,
+        lastUpdated: row.stream_metadata?.last_updated ?? null,
       },
     };
   }

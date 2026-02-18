@@ -3,6 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import type { SupabaseUser } from '../../common/guards/supabase-auth.guard.js';
 
+/** Role priority — lower number = higher privilege. */
+const ROLE_PRIORITY: Record<string, number> = {
+  super_admin: 1,
+  admin: 2,
+  host: 3,
+  listener: 4,
+};
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -32,27 +40,41 @@ export class AuthService {
 
     try {
       // Upsert profile: insert if new, update email/avatar on subsequent logins
-      await this.prisma.$executeRaw`
-        INSERT INTO profiles (id, email, display_name, avatar_url, is_active, created_at, updated_at)
-        VALUES (${userId}::uuid, ${email}, ${displayName}, ${avatarUrl}, true, ${now}, ${now})
-        ON CONFLICT (id) DO UPDATE SET
-          email = COALESCE(EXCLUDED.email, profiles.email),
-          avatar_url = COALESCE(EXCLUDED.avatar_url, profiles.avatar_url),
-          updated_at = ${now}
-      `;
+      await this.prisma.profiles.upsert({
+        where: { id: userId },
+        create: {
+          id: userId,
+          email,
+          display_name: displayName,
+          avatar_url: avatarUrl,
+          is_active: true,
+          created_at: now,
+          updated_at: now,
+        },
+        update: {
+          email: email ?? undefined,
+          avatar_url: avatarUrl ?? undefined,
+          updated_at: now,
+        },
+      });
 
       // Ensure user has the default 'listener' role if no roles assigned
-      const existingRoles = await this.prisma.$queryRaw<{ count: bigint }[]>`
-        SELECT COUNT(*) as count FROM user_roles WHERE profile_id = ${userId}::uuid
-      `;
+      const roleCount = await this.prisma.user_roles.count({
+        where: { profile_id: userId },
+      });
 
-      const roleCount = Number(existingRoles[0]?.count ?? 0);
       if (roleCount === 0) {
-        await this.prisma.$executeRaw`
-          INSERT INTO user_roles (profile_id, role_id, created_at)
-          VALUES (${userId}::uuid, 'listener', ${now})
-          ON CONFLICT (profile_id, role_id) DO NOTHING
-        `;
+        await this.prisma.user_roles.upsert({
+          where: {
+            profile_id_role_id: { profile_id: userId, role_id: 'listener' },
+          },
+          create: {
+            profile_id: userId,
+            role_id: 'listener',
+            created_at: now,
+          },
+          update: {},
+        });
       }
     } catch (err) {
       this.logger.error(`Failed to sync user ${userId}: ${(err as Error).message}`);
@@ -68,22 +90,20 @@ export class AuthService {
     this.logger.debug(`Getting role for user ${userId}`);
 
     try {
-      const roles = await this.prisma.$queryRaw<{ role_id: string }[]>`
-        SELECT ur.role_id
-        FROM user_roles ur
-        WHERE ur.profile_id = ${userId}::uuid
-        ORDER BY
-          CASE ur.role_id
-            WHEN 'super_admin' THEN 1
-            WHEN 'admin' THEN 2
-            WHEN 'host' THEN 3
-            WHEN 'listener' THEN 4
-            ELSE 5
-          END
-        LIMIT 1
-      `;
+      const userRoles = await this.prisma.user_roles.findMany({
+        where: { profile_id: userId },
+        select: { role_id: true },
+      });
 
-      return roles[0]?.role_id ?? 'listener';
+      if (userRoles.length === 0) return 'listener';
+
+      // Sort by priority (lower number = higher privilege) and return the top one
+      userRoles.sort(
+        (a, b) =>
+          (ROLE_PRIORITY[a.role_id] ?? 5) - (ROLE_PRIORITY[b.role_id] ?? 5),
+      );
+
+      return userRoles[0].role_id;
     } catch (err) {
       this.logger.error(`Failed to get role for user ${userId}: ${(err as Error).message}`);
       return 'listener';

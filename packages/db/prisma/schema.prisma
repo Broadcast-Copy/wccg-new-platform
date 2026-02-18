@@ -5,8 +5,466 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// Schema will be populated via `prisma db pull` after
-// migrations are applied in Supabase SQL Editor.
-// See: Phase 1 of the implementation plan.
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum stream_category {
+  MAIN
+  GOSPEL
+  HIP_HOP
+  RNB
+  JAZZ
+  TALK
+  SPORTS
+  COMMUNITY
+}
+
+enum stream_status {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+enum favorite_target_type {
+  STREAM
+  SHOW
+}
+
+enum points_reason {
+  LISTENING
+  EVENT_CHECKIN
+  PURCHASE
+  REDEMPTION
+  ADMIN_GRANT
+  SIGNUP
+}
+
+enum points_trigger_type {
+  LISTEN_MINUTES
+  EVENT_ATTENDANCE
+  PURCHASE
+  SIGNUP
+}
+
+enum event_status {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum event_visibility {
+  PUBLIC
+  PRIVATE
+  INVITE_ONLY
+}
+
+enum registration_status {
+  CONFIRMED
+  CANCELLED
+  CHECKED_IN
+}
+
+enum organizer_role {
+  OWNER
+  COHOST
+  STAFF
+}
+
+// ============================================================================
+// PROFILES (extends Supabase auth.users)
+// ============================================================================
+
+model profiles {
+  id           String   @id @db.Uuid
+  email        String?
+  first_name   String?
+  last_name    String?
+  display_name String?
+  avatar_url   String?
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  user_roles          user_roles[]
+  favorites           favorites[]
+  listening_history   listening_history[]
+  points_ledger       points_ledger[]
+  events_created      events[]              @relation("EventCreator")
+  event_registrations event_registrations[]
+  event_organizers    event_organizers[]
+}
+
+// ============================================================================
+// ROLES & PERMISSIONS (RBAC)
+// ============================================================================
+
+model roles {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text"))
+  name        String   @unique
+  description String?
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  user_roles       user_roles[]
+  role_permissions role_permissions[]
+}
+
+model permissions {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text"))
+  name        String   @unique
+  description String?
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  role_permissions role_permissions[]
+}
+
+model user_roles {
+  profile_id String   @db.Uuid
+  role_id    String
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  profile profiles @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+  role    roles    @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@id([profile_id, role_id])
+}
+
+model role_permissions {
+  role_id       String
+  permission_id String
+
+  // Relations
+  role       roles       @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  permission permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@id([role_id, permission_id])
+}
+
+// ============================================================================
+// STREAMS
+// ============================================================================
+
+model streams {
+  id          String          @id @default(dbgenerated("gen_random_uuid()::text"))
+  name        String
+  slug        String          @unique
+  description String?
+  category    stream_category @default(MAIN)
+  status      stream_status   @default(ACTIVE)
+  sort_order  Int             @default(0)
+  image_url   String?
+  created_at  DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime        @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  stream_source   stream_sources?
+  stream_metadata stream_metadata?
+  schedule_blocks schedule_blocks[]
+  favorites       favorites[]
+  listening_history listening_history[]
+}
+
+model stream_sources {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()::text"))
+  stream_id          String   @unique
+  primary_url        String?
+  fallback_url       String?
+  mount_point        String?
+  format             String?  @default("audio/mpeg")
+  bitrate            Int?     @default(128)
+  centova_account_id String?
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  stream streams @relation(fields: [stream_id], references: [id], onDelete: Cascade)
+}
+
+model stream_metadata {
+  id             String    @id @default(dbgenerated("gen_random_uuid()::text"))
+  stream_id      String    @unique
+  current_title  String?
+  current_artist String?
+  current_track  String?
+  album_art      String?
+  listener_count Int?      @default(0)
+  is_live        Boolean   @default(false)
+  last_updated   DateTime? @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  stream streams @relation(fields: [stream_id], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// SHOWS & HOSTS
+// ============================================================================
+
+model shows {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text"))
+  name        String
+  slug        String   @unique
+  description String?
+  image_url   String?
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  show_hosts      show_hosts[]
+  show_episodes   show_episodes[]
+  schedule_blocks schedule_blocks[]
+  favorites       favorites[]
+}
+
+model hosts {
+  id         String   @id @default(dbgenerated("gen_random_uuid()::text"))
+  name       String
+  slug       String   @unique
+  bio        String?
+  avatar_url String?
+  email      String?
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  show_hosts show_hosts[]
+}
+
+model show_hosts {
+  show_id    String
+  host_id    String
+  is_primary Boolean @default(false)
+
+  // Relations
+  show shows @relation(fields: [show_id], references: [id], onDelete: Cascade)
+  host hosts @relation(fields: [host_id], references: [id], onDelete: Cascade)
+
+  @@id([show_id, host_id])
+}
+
+model show_episodes {
+  id          String    @id @default(dbgenerated("gen_random_uuid()::text"))
+  show_id     String
+  title       String
+  description String?
+  air_date    DateTime? @db.Timestamptz(6)
+  duration    Int?
+  audio_url   String?
+  image_url   String?
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime  @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  show shows @relation(fields: [show_id], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// SCHEDULE
+// ============================================================================
+
+model schedule_blocks {
+  id            String    @id @default(dbgenerated("gen_random_uuid()::text"))
+  stream_id     String
+  show_id       String?
+  title         String
+  day_of_week   Int
+  start_time    String
+  end_time      String
+  is_override   Boolean   @default(false)
+  override_date DateTime? @db.Date
+  is_active     Boolean   @default(true)
+  color         String?   @default("#3B82F6")
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime  @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  stream streams @relation(fields: [stream_id], references: [id], onDelete: Cascade)
+  show   shows?  @relation(fields: [show_id], references: [id], onDelete: SetNull)
+
+  @@index([stream_id], map: "idx_schedule_blocks_stream")
+  @@index([day_of_week], map: "idx_schedule_blocks_day")
+  @@index([is_override, override_date], map: "idx_schedule_blocks_override")
+}
+
+// ============================================================================
+// FAVORITES & LISTENING HISTORY
+// ============================================================================
+
+model favorites {
+  id          String               @id @default(dbgenerated("gen_random_uuid()::text"))
+  user_id     String               @db.Uuid
+  target_type favorite_target_type
+  stream_id   String?
+  show_id     String?
+  created_at  DateTime             @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  user   profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  stream streams? @relation(fields: [stream_id], references: [id], onDelete: Cascade)
+  show   shows?   @relation(fields: [show_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, target_type, stream_id, show_id])
+}
+
+model listening_history {
+  id         String    @id @default(dbgenerated("gen_random_uuid()::text"))
+  user_id    String    @db.Uuid
+  stream_id  String
+  started_at DateTime  @default(now()) @db.Timestamptz(6)
+  ended_at   DateTime? @db.Timestamptz(6)
+  duration   Int?      @default(0)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  user   profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  stream streams  @relation(fields: [stream_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id], map: "idx_listening_history_user")
+  @@index([stream_id], map: "idx_listening_history_stream")
+}
+
+// ============================================================================
+// POINTS & REWARDS
+// ============================================================================
+
+model points_ledger {
+  id             String        @id @default(dbgenerated("gen_random_uuid()::text"))
+  user_id        String        @db.Uuid
+  amount         Int
+  reason         points_reason
+  reference_type String?
+  reference_id   String?
+  balance        Int           @default(0)
+  created_at     DateTime      @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  user profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id], map: "idx_points_ledger_user")
+}
+
+model points_rules {
+  id               String              @id @default(dbgenerated("gen_random_uuid()::text"))
+  name             String
+  trigger_type     points_trigger_type
+  points_amount    Int
+  threshold        Int?                @default(0)
+  is_active        Boolean             @default(true)
+  cooldown_minutes Int?                @default(0)
+  created_at       DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime            @default(now()) @db.Timestamptz(6)
+}
+
+model reward_catalog {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text"))
+  name        String
+  description String?
+  image_url   String?
+  points_cost Int
+  category    String?
+  stock_count Int?     @default(-1)
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+}
+
+// ============================================================================
+// EVENTS
+// ============================================================================
+
+model events {
+  id            String           @id @default(dbgenerated("gen_random_uuid()::text"))
+  creator_id    String           @db.Uuid
+  title         String
+  slug          String           @unique
+  description   String?
+  image_url     String?
+  banner_url    String?
+  venue         String?
+  address       String?
+  city          String?
+  state         String?
+  zip_code      String?
+  latitude      Float?
+  longitude     Float?
+  start_date    DateTime         @db.Timestamptz(6)
+  end_date      DateTime         @db.Timestamptz(6)
+  timezone      String           @default("America/New_York")
+  category      String?
+  status        event_status     @default(DRAFT)
+  visibility    event_visibility @default(PUBLIC)
+  max_attendees Int?
+  is_free       Boolean          @default(true)
+  created_at    DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime         @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  creator             profiles              @relation("EventCreator", fields: [creator_id], references: [id], onDelete: Cascade)
+  ticket_types        ticket_types[]
+  event_registrations event_registrations[]
+  event_organizers    event_organizers[]
+
+  @@index([creator_id], map: "idx_events_creator")
+  @@index([status], map: "idx_events_status")
+  @@index([start_date], map: "idx_events_start_date")
+}
+
+model ticket_types {
+  id            String    @id @default(dbgenerated("gen_random_uuid()::text"))
+  event_id      String
+  name          String
+  price         Decimal   @default(0) @db.Decimal(10, 2)
+  quantity      Int       @default(0)
+  quantity_sold Int       @default(0)
+  description   String?
+  sales_start   DateTime? @db.Timestamptz(6)
+  sales_end     DateTime? @db.Timestamptz(6)
+  is_active     Boolean   @default(true)
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime  @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  event               events                @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  event_registrations event_registrations[]
+}
+
+model event_registrations {
+  id             String              @id @default(dbgenerated("gen_random_uuid()::text"))
+  event_id       String
+  user_id        String              @db.Uuid
+  ticket_type_id String
+  status         registration_status @default(CONFIRMED)
+  qr_code        String?
+  purchased_at   DateTime            @default(now()) @db.Timestamptz(6)
+  checked_in_at  DateTime?           @db.Timestamptz(6)
+  created_at     DateTime            @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  event       events       @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  user        profiles     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  ticket_type ticket_types @relation(fields: [ticket_type_id], references: [id], onDelete: Cascade)
+
+  @@index([event_id], map: "idx_registrations_event")
+  @@index([user_id], map: "idx_registrations_user")
+}
+
+model event_organizers {
+  event_id String
+  user_id  String         @db.Uuid
+  role     organizer_role @default(STAFF)
+
+  // Relations
+  event events   @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  user  profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([event_id, user_id])
+}

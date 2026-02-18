@@ -14,32 +14,32 @@ export type PointsTriggerType =
 
 export interface PointsLedgerEntry {
   id: string;
-  userId: string;
+  user_id: string;
   amount: number;
   reason: PointsReason;
-  referenceType: string | null;
-  referenceId: string | null;
+  reference_type: string | null;
+  reference_id: string | null;
   balance: number;
-  createdAt: string;
+  created_at: string;
 }
 
 export interface PointsRule {
   id: string;
   name: string;
-  triggerType: PointsTriggerType;
-  pointsAmount: number;
+  trigger_type: PointsTriggerType;
+  points_amount: number;
   threshold: number | null;
-  isActive: boolean;
-  cooldownMinutes: number | null;
+  is_active: boolean;
+  cooldown_minutes: number | null;
 }
 
 export interface RewardCatalogItem {
   id: string;
   name: string;
   description: string | null;
-  imageUrl: string | null;
-  pointsCost: number;
+  image_url: string | null;
+  points_cost: number;
   category: string | null;
-  stockCount: number | null;
-  isActive: boolean;
+  stock_count: number | null;
+  is_active: boolean;
 }

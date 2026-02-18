@@ -17,36 +17,36 @@ export interface Stream {
   description: string | null;
   category: StreamCategory;
   status: StreamStatus;
-  sortOrder: number;
-  imageUrl: string | null;
-  createdAt: string;
-  updatedAt: string;
+  sort_order: number;
+  image_url: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface StreamSource {
   id: string;
-  streamId: string;
-  primaryUrl: string;
-  fallbackUrl: string | null;
-  mountPoint: string | null;
-  format: string;
-  bitrate: number;
-  centovaAccountId: string | null;
+  stream_id: string;
+  primary_url: string | null;
+  fallback_url: string | null;
+  mount_point: string | null;
+  format: string | null;
+  bitrate: number | null;
+  centova_account_id: string | null;
 }
 
 export interface StreamMetadata {
   id: string;
-  streamId: string;
-  currentTitle: string | null;
-  currentArtist: string | null;
-  currentTrack: string | null;
-  albumArt: string | null;
-  listenerCount: number;
-  isLive: boolean;
-  lastUpdated: string;
+  stream_id: string;
+  current_title: string | null;
+  current_artist: string | null;
+  current_track: string | null;
+  album_art: string | null;
+  listener_count: number | null;
+  is_live: boolean;
+  last_updated: string | null;
 }
 
 export interface StreamWithDetails extends Stream {
-  source: StreamSource | null;
-  metadata: StreamMetadata | null;
+  stream_source: StreamSource | null;
+  stream_metadata: StreamMetadata | null;
 }

@@ -6,40 +6,56 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
-import { randomUUID } from 'node:crypto';
+import type {
+  schedule_blocks,
+  shows,
+  hosts,
+  show_hosts,
+  streams,
+  stream_metadata,
+  Prisma,
+} from '@prisma/client';
 
-interface ScheduleBlockRow {
-  id: string;
-  stream_id: string;
-  show_id: string | null;
-  title: string;
-  day_of_week: number;
-  start_time: string;
-  end_time: string;
-  is_override: boolean;
-  override_date: Date | null;
-  is_active: boolean;
-  color: string | null;
-  created_at: Date;
-  updated_at: Date;
-}
+// ─── Prisma include types ────────────────────────────────────────
 
-interface ScheduleBlockWithShow extends ScheduleBlockRow {
-  show_name: string | null;
-  show_slug: string | null;
-  show_image_url: string | null;
-  hosts_json: string | null;
-}
+/** The shape returned by findMany with our standard "include show + hosts" */
+type BlockWithShow = schedule_blocks & {
+  show:
+    | (shows & {
+        show_hosts: (show_hosts & { host: hosts })[];
+      })
+    | null;
+};
 
-interface ScheduleBlockFull extends ScheduleBlockWithShow {
-  stream_name: string | null;
-  stream_slug: string | null;
-  current_title: string | null;
-  current_artist: string | null;
-  album_art: string | null;
-  listener_count: number | null;
-  is_live: boolean | null;
-}
+/** Full block with stream + metadata, used by resolveNow */
+type BlockFull = BlockWithShow & {
+  stream: streams & {
+    stream_metadata: stream_metadata | null;
+  };
+};
+
+// ─── Shared Prisma include fragments ─────────────────────────────
+
+const INCLUDE_SHOW = {
+  show: {
+    include: {
+      show_hosts: {
+        include: {
+          host: true,
+        },
+      },
+    },
+  },
+} as const satisfies Prisma.schedule_blocksInclude;
+
+const INCLUDE_FULL = {
+  ...INCLUDE_SHOW,
+  stream: {
+    include: {
+      stream_metadata: true,
+    },
+  },
+} as const satisfies Prisma.schedule_blocksInclude;
 
 @Injectable()
 export class ScheduleService {
@@ -56,57 +72,42 @@ export class ScheduleService {
     this.logger.debug(`Finding schedule for stream ${streamId}, date=${date}`);
 
     if (date) {
-      // Parse the date to get day_of_week (0=Sunday)
       const d = new Date(date);
       const dayOfWeek = d.getDay();
+      const overrideDateValue = new Date(date);
 
-      const rows = await this.prisma.$queryRaw<ScheduleBlockWithShow[]>`
-        SELECT
-          sb.*,
-          s.name as show_name, s.slug as show_slug, s.image_url as show_image_url,
-          (
-            SELECT json_agg(json_build_object(
-              'id', h.id, 'name', h.name, 'avatar_url', h.avatar_url, 'is_primary', sh.is_primary
-            ))
-            FROM show_hosts sh
-            JOIN hosts h ON h.id = sh.host_id
-            WHERE sh.show_id = sb.show_id
-          ) as hosts_json
-        FROM schedule_blocks sb
-        LEFT JOIN shows s ON s.id = sb.show_id
-        WHERE sb.stream_id = ${streamId}
-          AND sb.is_active = true
-          AND (
-            (sb.is_override = true AND sb.override_date = ${date}::date)
-            OR
-            (sb.is_override = false AND sb.day_of_week = ${dayOfWeek})
-          )
-        ORDER BY sb.start_time ASC
-      `;
+      const rows = await this.prisma.schedule_blocks.findMany({
+        where: {
+          stream_id: streamId,
+          is_active: true,
+          OR: [
+            {
+              is_override: true,
+              override_date: overrideDateValue,
+            },
+            {
+              is_override: false,
+              day_of_week: dayOfWeek,
+            },
+          ],
+        },
+        include: INCLUDE_SHOW,
+        orderBy: { start_time: 'asc' },
+      });
 
       return rows.map((r) => this.formatBlockWithShow(r));
     }
 
     // No date: return all recurring blocks
-    const rows = await this.prisma.$queryRaw<ScheduleBlockWithShow[]>`
-      SELECT
-        sb.*,
-        s.name as show_name, s.slug as show_slug, s.image_url as show_image_url,
-        (
-          SELECT json_agg(json_build_object(
-            'id', h.id, 'name', h.name, 'avatar_url', h.avatar_url, 'is_primary', sh.is_primary
-          ))
-          FROM show_hosts sh
-          JOIN hosts h ON h.id = sh.host_id
-          WHERE sh.show_id = sb.show_id
-        ) as hosts_json
-      FROM schedule_blocks sb
-      LEFT JOIN shows s ON s.id = sb.show_id
-      WHERE sb.stream_id = ${streamId}
-        AND sb.is_active = true
-        AND sb.is_override = false
-      ORDER BY sb.day_of_week ASC, sb.start_time ASC
-    `;
+    const rows = await this.prisma.schedule_blocks.findMany({
+      where: {
+        stream_id: streamId,
+        is_active: true,
+        is_override: false,
+      },
+      include: INCLUDE_SHOW,
+      orderBy: [{ day_of_week: 'asc' }, { start_time: 'asc' }],
+    });
 
     return rows.map((r) => this.formatBlockWithShow(r));
   }
@@ -126,68 +127,29 @@ export class ScheduleService {
     const now = new Date();
     const dayOfWeek = now.getDay(); // 0=Sunday
     const currentTime = now.toTimeString().slice(0, 5); // "HH:mm"
-    const todayDate = now.toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const todayDate = new Date(now.toISOString().slice(0, 10)); // midnight UTC for date comparison
 
-    // Step 1: Check for override blocks matching today's date
-    let overrideRows: ScheduleBlockFull[];
+    // ── Shared where fragments ──
+    const streamFilter: Prisma.schedule_blocksWhereInput = streamId
+      ? { stream_id: streamId }
+      : {};
 
-    if (streamId) {
-      overrideRows = await this.prisma.$queryRaw<ScheduleBlockFull[]>`
-        SELECT
-          sb.*,
-          s.name as show_name, s.slug as show_slug, s.image_url as show_image_url,
-          (
-            SELECT json_agg(json_build_object(
-              'id', h.id, 'name', h.name, 'avatar_url', h.avatar_url, 'is_primary', sh.is_primary
-            ))
-            FROM show_hosts sh
-            JOIN hosts h ON h.id = sh.host_id
-            WHERE sh.show_id = sb.show_id
-          ) as hosts_json,
-          st.name as stream_name, st.slug as stream_slug,
-          sm.current_title, sm.current_artist, sm.album_art,
-          sm.listener_count, sm.is_live
-        FROM schedule_blocks sb
-        LEFT JOIN shows s ON s.id = sb.show_id
-        LEFT JOIN streams st ON st.id = sb.stream_id
-        LEFT JOIN stream_metadata sm ON sm.stream_id = sb.stream_id
-        WHERE sb.stream_id = ${streamId}
-          AND sb.is_active = true
-          AND sb.is_override = true
-          AND sb.override_date = ${todayDate}::date
-          AND sb.start_time <= ${currentTime}
-          AND sb.end_time > ${currentTime}
-        ORDER BY sb.start_time DESC
-        LIMIT 1
-      `;
-    } else {
-      overrideRows = await this.prisma.$queryRaw<ScheduleBlockFull[]>`
-        SELECT
-          sb.*,
-          s.name as show_name, s.slug as show_slug, s.image_url as show_image_url,
-          (
-            SELECT json_agg(json_build_object(
-              'id', h.id, 'name', h.name, 'avatar_url', h.avatar_url, 'is_primary', sh.is_primary
-            ))
-            FROM show_hosts sh
-            JOIN hosts h ON h.id = sh.host_id
-            WHERE sh.show_id = sb.show_id
-          ) as hosts_json,
-          st.name as stream_name, st.slug as stream_slug,
-          sm.current_title, sm.current_artist, sm.album_art,
-          sm.listener_count, sm.is_live
-        FROM schedule_blocks sb
-        LEFT JOIN shows s ON s.id = sb.show_id
-        LEFT JOIN streams st ON st.id = sb.stream_id
-        LEFT JOIN stream_metadata sm ON sm.stream_id = sb.stream_id
-        WHERE sb.is_active = true
-          AND sb.is_override = true
-          AND sb.override_date = ${todayDate}::date
-          AND sb.start_time <= ${currentTime}
-          AND sb.end_time > ${currentTime}
-        ORDER BY sb.start_time DESC
-      `;
-    }
+    // Step 1: Check for override blocks matching today's date + time window
+    const overrideWhere: Prisma.schedule_blocksWhereInput = {
+      ...streamFilter,
+      is_active: true,
+      is_override: true,
+      override_date: todayDate,
+      start_time: { lte: currentTime },
+      end_time: { gt: currentTime },
+    };
+
+    const overrideRows = await this.prisma.schedule_blocks.findMany({
+      where: overrideWhere,
+      include: INCLUDE_FULL,
+      orderBy: { start_time: 'desc' },
+      ...(streamId ? { take: 1 } : {}),
+    });
 
     if (overrideRows.length > 0) {
       if (streamId) {
@@ -197,65 +159,21 @@ export class ScheduleService {
     }
 
     // Step 2: No override found, check recurring blocks
-    let recurringRows: ScheduleBlockFull[];
+    const recurringWhere: Prisma.schedule_blocksWhereInput = {
+      ...streamFilter,
+      is_active: true,
+      is_override: false,
+      day_of_week: dayOfWeek,
+      start_time: { lte: currentTime },
+      end_time: { gt: currentTime },
+    };
 
-    if (streamId) {
-      recurringRows = await this.prisma.$queryRaw<ScheduleBlockFull[]>`
-        SELECT
-          sb.*,
-          s.name as show_name, s.slug as show_slug, s.image_url as show_image_url,
-          (
-            SELECT json_agg(json_build_object(
-              'id', h.id, 'name', h.name, 'avatar_url', h.avatar_url, 'is_primary', sh.is_primary
-            ))
-            FROM show_hosts sh
-            JOIN hosts h ON h.id = sh.host_id
-            WHERE sh.show_id = sb.show_id
-          ) as hosts_json,
-          st.name as stream_name, st.slug as stream_slug,
-          sm.current_title, sm.current_artist, sm.album_art,
-          sm.listener_count, sm.is_live
-        FROM schedule_blocks sb
-        LEFT JOIN shows s ON s.id = sb.show_id
-        LEFT JOIN streams st ON st.id = sb.stream_id
-        LEFT JOIN stream_metadata sm ON sm.stream_id = sb.stream_id
-        WHERE sb.stream_id = ${streamId}
-          AND sb.is_active = true
-          AND sb.is_override = false
-          AND sb.day_of_week = ${dayOfWeek}
-          AND sb.start_time <= ${currentTime}
-          AND sb.end_time > ${currentTime}
-        ORDER BY sb.start_time DESC
-        LIMIT 1
-      `;
-    } else {
-      recurringRows = await this.prisma.$queryRaw<ScheduleBlockFull[]>`
-        SELECT
-          sb.*,
-          s.name as show_name, s.slug as show_slug, s.image_url as show_image_url,
-          (
-            SELECT json_agg(json_build_object(
-              'id', h.id, 'name', h.name, 'avatar_url', h.avatar_url, 'is_primary', sh.is_primary
-            ))
-            FROM show_hosts sh
-            JOIN hosts h ON h.id = sh.host_id
-            WHERE sh.show_id = sb.show_id
-          ) as hosts_json,
-          st.name as stream_name, st.slug as stream_slug,
-          sm.current_title, sm.current_artist, sm.album_art,
-          sm.listener_count, sm.is_live
-        FROM schedule_blocks sb
-        LEFT JOIN shows s ON s.id = sb.show_id
-        LEFT JOIN streams st ON st.id = sb.stream_id
-        LEFT JOIN stream_metadata sm ON sm.stream_id = sb.stream_id
-        WHERE sb.is_active = true
-          AND sb.is_override = false
-          AND sb.day_of_week = ${dayOfWeek}
-          AND sb.start_time <= ${currentTime}
-          AND sb.end_time > ${currentTime}
-        ORDER BY sb.start_time DESC
-      `;
-    }
+    const recurringRows = await this.prisma.schedule_blocks.findMany({
+      where: recurringWhere,
+      include: INCLUDE_FULL,
+      orderBy: { start_time: 'desc' },
+      ...(streamId ? { take: 1 } : {}),
+    });
 
     if (recurringRows.length > 0) {
       if (streamId) {
@@ -270,7 +188,7 @@ export class ScheduleService {
 
   /**
    * Get what's coming up next on a stream.
-   * Looks at today's remaining blocks, then wraps to tomorrow if needed.
+   * Looks at today's remaining override blocks + recurring blocks that haven't started yet.
    */
   async upNext(streamId: string, limit = 5) {
     this.logger.debug(`Finding up-next for stream ${streamId}, limit=${limit}`);
@@ -278,59 +196,42 @@ export class ScheduleService {
     const now = new Date();
     const dayOfWeek = now.getDay();
     const currentTime = now.toTimeString().slice(0, 5);
-    const todayDate = now.toISOString().slice(0, 10);
+    const todayDate = new Date(now.toISOString().slice(0, 10));
 
-    // Get remaining blocks today (overrides first, then recurring)
-    // plus tomorrow's blocks if we need more
-    const rows = await this.prisma.$queryRaw<ScheduleBlockWithShow[]>`
-      (
-        -- Override blocks for today that haven't started yet
-        SELECT
-          sb.*,
-          s.name as show_name, s.slug as show_slug, s.image_url as show_image_url,
-          (
-            SELECT json_agg(json_build_object(
-              'id', h.id, 'name', h.name, 'avatar_url', h.avatar_url, 'is_primary', sh.is_primary
-            ))
-            FROM show_hosts sh
-            JOIN hosts h ON h.id = sh.host_id
-            WHERE sh.show_id = sb.show_id
-          ) as hosts_json
-        FROM schedule_blocks sb
-        LEFT JOIN shows s ON s.id = sb.show_id
-        WHERE sb.stream_id = ${streamId}
-          AND sb.is_active = true
-          AND sb.is_override = true
-          AND sb.override_date = ${todayDate}::date
-          AND sb.start_time > ${currentTime}
-      )
-      UNION ALL
-      (
-        -- Recurring blocks for today that haven't started yet
-        SELECT
-          sb.*,
-          s.name as show_name, s.slug as show_slug, s.image_url as show_image_url,
-          (
-            SELECT json_agg(json_build_object(
-              'id', h.id, 'name', h.name, 'avatar_url', h.avatar_url, 'is_primary', sh.is_primary
-            ))
-            FROM show_hosts sh
-            JOIN hosts h ON h.id = sh.host_id
-            WHERE sh.show_id = sb.show_id
-          ) as hosts_json
-        FROM schedule_blocks sb
-        LEFT JOIN shows s ON s.id = sb.show_id
-        WHERE sb.stream_id = ${streamId}
-          AND sb.is_active = true
-          AND sb.is_override = false
-          AND sb.day_of_week = ${dayOfWeek}
-          AND sb.start_time > ${currentTime}
-      )
-      ORDER BY start_time ASC
-      LIMIT ${limit}
-    `;
+    // Fetch override blocks for today that haven't started yet
+    const overrideBlocks = await this.prisma.schedule_blocks.findMany({
+      where: {
+        stream_id: streamId,
+        is_active: true,
+        is_override: true,
+        override_date: todayDate,
+        start_time: { gt: currentTime },
+      },
+      include: INCLUDE_SHOW,
+      orderBy: { start_time: 'asc' },
+      take: limit,
+    });
 
-    return rows.map((r) => this.formatBlockWithShow(r));
+    // Fetch recurring blocks for today that haven't started yet
+    const recurringBlocks = await this.prisma.schedule_blocks.findMany({
+      where: {
+        stream_id: streamId,
+        is_active: true,
+        is_override: false,
+        day_of_week: dayOfWeek,
+        start_time: { gt: currentTime },
+      },
+      include: INCLUDE_SHOW,
+      orderBy: { start_time: 'asc' },
+      take: limit,
+    });
+
+    // Merge, sort by start_time, and take the requested limit
+    const combined = [...overrideBlocks, ...recurringBlocks]
+      .sort((a, b) => a.start_time.localeCompare(b.start_time))
+      .slice(0, limit);
+
+    return combined.map((r) => this.formatBlockWithShow(r));
   }
 
   /**
@@ -339,7 +240,7 @@ export class ScheduleService {
    */
   async createBlock(dto: Record<string, unknown>) {
     this.logger.debug('Creating schedule block');
-    const id = (dto.id as string) ?? randomUUID();
+
     const streamId = dto.streamId as string;
     const showId = (dto.showId as string) ?? null;
     const title = dto.title as string;
@@ -350,7 +251,6 @@ export class ScheduleService {
     const overrideDate = (dto.overrideDate as string) ?? null;
     const isActive = (dto.isActive as boolean) ?? true;
     const color = (dto.color as string) ?? null;
-    const now = new Date();
 
     // Validate time format
     if (!/^\d{2}:\d{2}$/.test(startTime) || !/^\d{2}:\d{2}$/.test(endTime)) {
@@ -361,42 +261,47 @@ export class ScheduleService {
       throw new BadRequestException('start_time must be before end_time');
     }
 
-    // Check for overlapping blocks
-    const overlaps = await this.prisma.$queryRaw<{ count: bigint }[]>`
-      SELECT COUNT(*) as count
-      FROM schedule_blocks
-      WHERE stream_id = ${streamId}
-        AND is_active = true
-        AND id != ${id}
-        AND (
-          CASE
-            WHEN ${isOverride}::boolean = true AND is_override = true
-              THEN override_date = ${overrideDate}::date
-            WHEN ${isOverride}::boolean = false AND is_override = false
-              THEN day_of_week = ${dayOfWeek}
-            ELSE false
-          END
-        )
-        AND start_time < ${endTime}
-        AND end_time > ${startTime}
-    `;
+    // Check for overlapping blocks on the same stream, same day/override_date, with overlapping time ranges
+    const overlapWhere: Prisma.schedule_blocksWhereInput = {
+      stream_id: streamId,
+      is_active: true,
+      start_time: { lt: endTime },
+      end_time: { gt: startTime },
+    };
 
-    if (Number(overlaps[0]?.count ?? 0) > 0) {
+    if (isOverride) {
+      overlapWhere.is_override = true;
+      overlapWhere.override_date = overrideDate ? new Date(overrideDate) : undefined;
+    } else {
+      overlapWhere.is_override = false;
+      overlapWhere.day_of_week = dayOfWeek;
+    }
+
+    const overlapCount = await this.prisma.schedule_blocks.count({
+      where: overlapWhere,
+    });
+
+    if (overlapCount > 0) {
       throw new ConflictException('Schedule block overlaps with an existing block');
     }
 
-    await this.prisma.$executeRaw`
-      INSERT INTO schedule_blocks (
-        id, stream_id, show_id, title, day_of_week, start_time, end_time,
-        is_override, override_date, is_active, color, created_at, updated_at
-      )
-      VALUES (
-        ${id}, ${streamId}, ${showId}, ${title}, ${dayOfWeek}, ${startTime}, ${endTime},
-        ${isOverride}, ${overrideDate}::date, ${isActive}, ${color}, ${now}, ${now}
-      )
-    `;
+    const created = await this.prisma.schedule_blocks.create({
+      data: {
+        stream_id: streamId,
+        show_id: showId,
+        title,
+        day_of_week: dayOfWeek,
+        start_time: startTime,
+        end_time: endTime,
+        is_override: isOverride,
+        override_date: overrideDate ? new Date(overrideDate) : null,
+        is_active: isActive,
+        color,
+      },
+      include: INCLUDE_SHOW,
+    });
 
-    return this.getBlockById(id);
+    return this.formatBlockWithShow(created);
   }
 
   /**
@@ -405,34 +310,35 @@ export class ScheduleService {
   async updateBlock(id: string, dto: Record<string, unknown>) {
     this.logger.debug(`Updating schedule block ${id}`);
 
-    const existing = await this.getBlockById(id);
+    const existing = await this.prisma.schedule_blocks.findUnique({
+      where: { id },
+    });
+
     if (!existing) {
       throw new NotFoundException(`Schedule block ${id} not found`);
     }
 
-    const now = new Date();
-    const showId = (dto.showId as string) ?? null;
-    const title = (dto.title as string) ?? null;
-    const dayOfWeek = dto.dayOfWeek as number | undefined;
-    const startTime = (dto.startTime as string) ?? null;
-    const endTime = (dto.endTime as string) ?? null;
-    const isActive = dto.isActive as boolean | undefined;
-    const color = (dto.color as string) ?? null;
+    // Build the update data, only including fields that were provided.
+    // Use UncheckedUpdateInput so we can set scalar FK fields directly.
+    const data: Prisma.schedule_blocksUncheckedUpdateInput = {
+      updated_at: new Date(),
+    };
 
-    await this.prisma.$executeRaw`
-      UPDATE schedule_blocks SET
-        show_id = COALESCE(${showId}, show_id),
-        title = COALESCE(${title}, title),
-        day_of_week = COALESCE(${dayOfWeek ?? null}::int, day_of_week),
-        start_time = COALESCE(${startTime}, start_time),
-        end_time = COALESCE(${endTime}, end_time),
-        is_active = COALESCE(${isActive ?? null}::boolean, is_active),
-        color = COALESCE(${color}, color),
-        updated_at = ${now}
-      WHERE id = ${id}
-    `;
+    if (dto.showId !== undefined) data.show_id = (dto.showId as string) || null;
+    if (dto.title !== undefined) data.title = dto.title as string;
+    if (dto.dayOfWeek !== undefined) data.day_of_week = dto.dayOfWeek as number;
+    if (dto.startTime !== undefined) data.start_time = dto.startTime as string;
+    if (dto.endTime !== undefined) data.end_time = dto.endTime as string;
+    if (dto.isActive !== undefined) data.is_active = dto.isActive as boolean;
+    if (dto.color !== undefined) data.color = dto.color as string;
 
-    return this.getBlockById(id);
+    const updated = await this.prisma.schedule_blocks.update({
+      where: { id },
+      data,
+      include: INCLUDE_SHOW,
+    });
+
+    return this.formatBlockWithShow(updated);
   }
 
   /**
@@ -441,57 +347,29 @@ export class ScheduleService {
   async removeBlock(id: string) {
     this.logger.debug(`Deleting schedule block ${id}`);
 
-    const existing = await this.getBlockById(id);
+    const existing = await this.prisma.schedule_blocks.findUnique({
+      where: { id },
+    });
+
     if (!existing) {
       throw new NotFoundException(`Schedule block ${id} not found`);
     }
 
-    await this.prisma.$executeRaw`DELETE FROM schedule_blocks WHERE id = ${id}`;
+    await this.prisma.schedule_blocks.delete({ where: { id } });
 
     return { deleted: true, id };
   }
 
   // ─── Private helpers ──────────────────────────────────────────
 
-  private async getBlockById(id: string) {
-    const rows = await this.prisma.$queryRaw<ScheduleBlockWithShow[]>`
-      SELECT
-        sb.*,
-        s.name as show_name, s.slug as show_slug, s.image_url as show_image_url,
-        (
-          SELECT json_agg(json_build_object(
-            'id', h.id, 'name', h.name, 'avatar_url', h.avatar_url, 'is_primary', sh.is_primary
-          ))
-          FROM show_hosts sh
-          JOIN hosts h ON h.id = sh.host_id
-          WHERE sh.show_id = sb.show_id
-        ) as hosts_json
-      FROM schedule_blocks sb
-      LEFT JOIN shows s ON s.id = sb.show_id
-      WHERE sb.id = ${id}
-    `;
-
-    if (rows.length === 0) return null;
-    return this.formatBlockWithShow(rows[0]);
-  }
-
-  private formatBlockWithShow(row: ScheduleBlockWithShow) {
-    let hosts: any[] = [];
-    if (row.hosts_json) {
-      try {
-        const parsed = typeof row.hosts_json === 'string'
-          ? JSON.parse(row.hosts_json)
-          : row.hosts_json;
-        hosts = (parsed as any[]).map((h: any) => ({
-          id: h.id,
-          name: h.name,
-          avatarUrl: h.avatar_url,
-          isPrimary: h.is_primary,
-        }));
-      } catch {
-        hosts = [];
-      }
-    }
+  private formatBlockWithShow(row: BlockWithShow) {
+    const hosts =
+      row.show?.show_hosts.map((sh) => ({
+        id: sh.host.id,
+        name: sh.host.name,
+        avatarUrl: sh.host.avatar_url,
+        isPrimary: sh.is_primary,
+      })) ?? [];
 
     return {
       id: row.id,
@@ -505,12 +383,12 @@ export class ScheduleService {
       overrideDate: row.override_date,
       isActive: row.is_active,
       color: row.color,
-      show: row.show_id
+      show: row.show
         ? {
-            id: row.show_id,
-            name: row.show_name,
-            slug: row.show_slug,
-            imageUrl: row.show_image_url,
+            id: row.show.id,
+            name: row.show.name,
+            slug: row.show.slug,
+            imageUrl: row.show.image_url,
             hosts,
           }
         : null,
@@ -519,21 +397,22 @@ export class ScheduleService {
     };
   }
 
-  private formatBlockFull(row: ScheduleBlockFull) {
+  private formatBlockFull(row: BlockFull) {
     const base = this.formatBlockWithShow(row);
+    const meta = row.stream.stream_metadata;
     return {
       ...base,
       stream: {
-        id: row.stream_id,
-        name: row.stream_name,
-        slug: row.stream_slug,
+        id: row.stream.id,
+        name: row.stream.name,
+        slug: row.stream.slug,
       },
       nowPlaying: {
-        currentTitle: row.current_title,
-        currentArtist: row.current_artist,
-        albumArt: row.album_art,
-        listenerCount: row.listener_count ?? 0,
-        isLive: row.is_live ?? false,
+        currentTitle: meta?.current_title ?? null,
+        currentArtist: meta?.current_artist ?? null,
+        albumArt: meta?.album_art ?? null,
+        listenerCount: meta?.listener_count ?? 0,
+        isLive: meta?.is_live ?? false,
       },
     };
   }
