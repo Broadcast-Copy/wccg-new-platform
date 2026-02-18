@@ -1,0 +1,12 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Schema will be populated via `prisma db pull` after
+// migrations are applied through Supabase MCP.
+// See: Phase 1 of the implementation plan.
