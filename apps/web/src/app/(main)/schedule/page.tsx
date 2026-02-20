@@ -10,7 +10,7 @@ async function getSchedule() {
     const apiUrl =
       process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
     const res = await fetch(
-      `${apiUrl}/schedule?streamId=stream_main`,
+      `${apiUrl}/schedule?streamId=stream_wccg`,
       { next: { revalidate: 300 } },
     );
     if (!res.ok) return [];
