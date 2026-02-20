@@ -14,14 +14,25 @@ import { Badge } from "@/components/ui/badge";
 
 interface ScheduleSlot {
   id: string;
-  stream_id: string;
-  show_id: string;
-  show_title: string;
-  host_name?: string;
-  day_of_week: number;
-  start_time: string;
-  end_time: string;
+  streamId: string;
+  showId: string | null;
+  title: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
   color?: string;
+  show?: {
+    id: string;
+    name: string;
+    slug: string;
+    imageUrl: string | null;
+    hosts?: Array<{
+      id: string;
+      name: string;
+      avatarUrl: string | null;
+      isPrimary: boolean;
+    }>;
+  } | null;
 }
 
 interface ScheduleGridProps {
@@ -71,16 +82,27 @@ const SHOW_COLORS = [
   "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/20",
 ];
 
+function getShowTitle(slot: ScheduleSlot): string {
+  return slot.show?.name ?? slot.title;
+}
+
+function getHostName(slot: ScheduleSlot): string | undefined {
+  const primary = slot.show?.hosts?.find((h) => h.isPrimary);
+  return primary?.name ?? slot.show?.hosts?.[0]?.name;
+}
+
 export function ScheduleGrid({ schedule }: ScheduleGridProps) {
   const today = new Date().getDay();
   const [selectedDay, setSelectedDay] = useState<string>(String(today));
 
-  // Build a map of show_id -> color
+  // Build a map of showId -> color
   const colorMap = useMemo(() => {
     const map = new Map<string, string>();
-    const uniqueShows = [...new Set(schedule.map((s) => s.show_id))];
+    const uniqueShows = [
+      ...new Set(schedule.map((s) => s.showId).filter(Boolean)),
+    ];
     uniqueShows.forEach((showId, index) => {
-      map.set(showId, SHOW_COLORS[index % SHOW_COLORS.length]);
+      if (showId) map.set(showId, SHOW_COLORS[index % SHOW_COLORS.length]);
     });
     return map;
   }, [schedule]);
@@ -91,10 +113,10 @@ export function ScheduleGrid({ schedule }: ScheduleGridProps) {
   function getSlotForDayAndTime(dayOfWeek: number, timeSlot: string) {
     const hour = parseInt(timeSlot.split(":")[0], 10);
     return schedule.find((slot) => {
-      const slotStartHour = parseInt(slot.start_time.split(":")[0], 10);
-      const slotEndHour = parseInt(slot.end_time.split(":")[0], 10);
+      const slotStartHour = parseInt(slot.startTime.split(":")[0], 10);
+      const slotEndHour = parseInt(slot.endTime.split(":")[0], 10);
       return (
-        slot.day_of_week === dayOfWeek &&
+        slot.dayOfWeek === dayOfWeek &&
         slotStartHour <= hour &&
         slotEndHour > hour
       );
@@ -165,6 +187,8 @@ export function ScheduleGrid({ schedule }: ScheduleGridProps) {
               slotHour <= currentHour &&
               slotHour + 2 > currentHour;
 
+            const hostName = slot ? getHostName(slot) : undefined;
+
             return (
               <div
                 key={timeSlot}
@@ -178,14 +202,12 @@ export function ScheduleGrid({ schedule }: ScheduleGridProps) {
                 {slot ? (
                   <div
                     className={`flex-1 rounded-md border px-3 py-1.5 ${
-                      colorMap.get(slot.show_id) || ""
+                      colorMap.get(slot.showId ?? "") || ""
                     }`}
                   >
-                    <p className="text-sm font-medium">{slot.show_title}</p>
-                    {slot.host_name && (
-                      <p className="text-xs opacity-80">
-                        {slot.host_name}
-                      </p>
+                    <p className="text-sm font-medium">{getShowTitle(slot)}</p>
+                    {hostName && (
+                      <p className="text-xs opacity-80">{hostName}</p>
                     )}
                   </div>
                 ) : (
@@ -246,6 +268,7 @@ export function ScheduleGrid({ schedule }: ScheduleGridProps) {
                     );
                     const isNow =
                       day.value === today && isCurrentTimeSlot;
+                    const hostName = slot ? getHostName(slot) : undefined;
 
                     return (
                       <TableCell
@@ -255,16 +278,14 @@ export function ScheduleGrid({ schedule }: ScheduleGridProps) {
                         {slot ? (
                           <div
                             className={`rounded-md border px-2 py-1 ${
-                              colorMap.get(slot.show_id) || ""
+                              colorMap.get(slot.showId ?? "") || ""
                             } ${isNow ? "ring-2 ring-primary" : ""}`}
                           >
                             <p className="text-xs font-medium">
-                              {slot.show_title}
+                              {getShowTitle(slot)}
                             </p>
-                            {slot.host_name && (
-                              <p className="text-xs opacity-70">
-                                {slot.host_name}
-                              </p>
+                            {hostName && (
+                              <p className="text-xs opacity-70">{hostName}</p>
                             )}
                           </div>
                         ) : (

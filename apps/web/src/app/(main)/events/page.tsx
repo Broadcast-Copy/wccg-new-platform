@@ -7,17 +7,17 @@ export const metadata = {
   title: "Events | WCCG 104.5 FM",
 };
 
-interface Event {
+interface EventItem {
   id: string;
   title: string;
   description?: string;
-  start_date: string;
+  startDate: string;
   venue?: string;
-  image_url?: string;
-  is_free?: boolean;
+  imageUrl?: string;
+  isFree?: boolean;
 }
 
-async function getEvents(): Promise<Event[]> {
+async function getEvents(): Promise<EventItem[]> {
   try {
     const apiUrl =
       process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
@@ -62,7 +62,7 @@ export default async function EventsPage() {
               eventId={event.id}
               title={event.title}
               description={event.description}
-              date={new Date(event.start_date).toLocaleDateString("en-US", {
+              date={new Date(event.startDate).toLocaleDateString("en-US", {
                 weekday: "short",
                 month: "short",
                 day: "numeric",
@@ -71,7 +71,7 @@ export default async function EventsPage() {
                 minute: "2-digit",
               })}
               venue={event.venue}
-              ticketPrice={event.is_free ? "Free" : "Ticketed"}
+              ticketPrice={event.isFree ? "Free" : "Ticketed"}
             />
           ))}
         </div>

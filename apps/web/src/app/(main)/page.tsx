@@ -6,17 +6,17 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Radio, Calendar, Mic2 } from "lucide-react";
 
-interface Event {
+interface EventItem {
   id: string;
   title: string;
   description?: string;
-  start_date: string;
+  startDate: string;
   venue?: string;
-  image_url?: string;
-  is_free?: boolean;
+  imageUrl?: string;
+  isFree?: boolean;
 }
 
-async function getUpcomingEvents(): Promise<Event[]> {
+async function getUpcomingEvents(): Promise<EventItem[]> {
   try {
     const apiUrl =
       process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
@@ -62,7 +62,7 @@ export default async function HomePage() {
                 eventId={event.id}
                 title={event.title}
                 description={event.description}
-                date={new Date(event.start_date).toLocaleDateString("en-US", {
+                date={new Date(event.startDate).toLocaleDateString("en-US", {
                   weekday: "short",
                   month: "short",
                   day: "numeric",
@@ -70,7 +70,7 @@ export default async function HomePage() {
                   minute: "2-digit",
                 })}
                 venue={event.venue}
-                ticketPrice={event.is_free ? "Free" : "Ticketed"}
+                ticketPrice={event.isFree ? "Free" : "Ticketed"}
               />
             ))}
           </div>

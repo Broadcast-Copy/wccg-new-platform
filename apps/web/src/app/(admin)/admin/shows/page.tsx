@@ -39,8 +39,8 @@ const showSchema = z.object({
   name: z.string().min(1, "Name is required"),
   slug: z.string().min(1, "Slug is required"),
   description: z.string().optional(),
-  image_url: z.string().url().optional().or(z.literal("")),
-  is_active: z.boolean(),
+  imageUrl: z.string().url().optional().or(z.literal("")),
+  isActive: z.boolean(),
 });
 
 type ShowFormValues = z.infer<typeof showSchema>;
@@ -48,8 +48,8 @@ type ShowFormValues = z.infer<typeof showSchema>;
 interface Show extends ShowFormValues {
   id: string;
   hosts?: Array<{ id: string; name: string }>;
-  created_at?: string;
-  updated_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export default function AdminShowsPage() {
@@ -67,8 +67,8 @@ export default function AdminShowsPage() {
       name: "",
       slug: "",
       description: "",
-      image_url: "",
-      is_active: true,
+      imageUrl: "",
+      isActive: true,
     },
   });
 
@@ -94,8 +94,8 @@ export default function AdminShowsPage() {
       name: "",
       slug: "",
       description: "",
-      image_url: "",
-      is_active: true,
+      imageUrl: "",
+      isActive: true,
     });
     setDialogOpen(true);
   }
@@ -106,8 +106,8 @@ export default function AdminShowsPage() {
       name: show.name,
       slug: show.slug,
       description: show.description ?? "",
-      image_url: show.image_url ?? "",
-      is_active: show.is_active,
+      imageUrl: show.imageUrl ?? "",
+      isActive: show.isActive,
     });
     setDialogOpen(true);
   }
@@ -117,7 +117,7 @@ export default function AdminShowsPage() {
     try {
       const payload = {
         ...values,
-        image_url: values.image_url || undefined,
+        imageUrl: values.imageUrl || undefined,
       };
 
       if (editingShow) {
@@ -209,12 +209,12 @@ export default function AdminShowsPage() {
                   <TableCell>
                     <Badge
                       className={
-                        show.is_active
+                        show.isActive
                           ? "bg-green-600 hover:bg-green-600"
                           : "bg-gray-500 hover:bg-gray-500"
                       }
                     >
-                      {show.is_active ? "Active" : "Inactive"}
+                      {show.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -297,22 +297,22 @@ export default function AdminShowsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="image_url">Image URL</Label>
+              <Label htmlFor="imageUrl">Image URL</Label>
               <Input
-                id="image_url"
+                id="imageUrl"
                 placeholder="https://..."
-                {...form.register("image_url")}
+                {...form.register("imageUrl")}
               />
             </div>
 
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
-                id="is_active"
+                id="isActive"
                 className="size-4 rounded border"
-                {...form.register("is_active")}
+                {...form.register("isActive")}
               />
-              <Label htmlFor="is_active">Active</Label>
+              <Label htmlFor="isActive">Active</Label>
             </div>
           </form>
           <DialogFooter>

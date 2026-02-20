@@ -28,21 +28,21 @@ import {
 
 interface StreamSource {
   id: string;
-  primary_url: string | null;
-  fallback_url: string | null;
-  mount_point: string | null;
+  primaryUrl: string | null;
+  fallbackUrl: string | null;
+  mountPoint: string | null;
   format: string | null;
   bitrate: number | null;
 }
 
 interface StreamMetadataInfo {
-  current_title: string | null;
-  current_artist: string | null;
-  current_track: string | null;
-  album_art: string | null;
-  listener_count: number;
-  is_live: boolean;
-  last_updated: string | null;
+  currentTitle: string | null;
+  currentArtist: string | null;
+  currentTrack: string | null;
+  albumArt: string | null;
+  listenerCount: number;
+  isLive: boolean;
+  lastUpdated: string | null;
 }
 
 interface Stream {
@@ -52,12 +52,12 @@ interface Stream {
   description: string | null;
   category: string;
   status: string;
-  sort_order: number;
-  image_url: string | null;
-  stream_source: StreamSource | null;
-  stream_metadata: StreamMetadataInfo | null;
-  created_at: string;
-  updated_at: string;
+  sortOrder: number;
+  imageUrl: string | null;
+  source: StreamSource | null;
+  metadata: StreamMetadataInfo | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function StreamDetailPage() {
@@ -99,9 +99,9 @@ export default function StreamDetailPage() {
     };
   }, [streamId]);
 
-  const streamUrl = stream?.stream_source?.primary_url ?? null;
+  const streamUrl = stream?.source?.primaryUrl ?? null;
   const isThisPlaying = isPlaying && streamUrl !== null && currentStream === streamUrl;
-  const metadata = stream?.stream_metadata;
+  const metadata = stream?.metadata;
 
   function handlePlayPause() {
     if (!stream || !streamUrl) return;
@@ -169,10 +169,10 @@ export default function StreamDetailPage() {
       </Link>
 
       <div className="relative overflow-hidden rounded-xl border">
-        {stream.image_url ? (
+        {stream.imageUrl ? (
           <div
             className="h-48 w-full bg-cover bg-center sm:h-64"
-            style={{ backgroundImage: `url(${stream.image_url})` }}
+            style={{ backgroundImage: `url(${stream.imageUrl})` }}
           />
         ) : (
           <div className="h-48 w-full bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 sm:h-64" />
@@ -183,7 +183,7 @@ export default function StreamDetailPage() {
           <div className="flex items-end justify-between gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                {metadata?.is_live && (
+                {metadata?.isLive && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
                     <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
                     LIVE
@@ -247,16 +247,16 @@ export default function StreamDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {metadata?.current_title || metadata?.current_artist ? (
+              {metadata?.currentTitle || metadata?.currentArtist ? (
                 <div className="space-y-1">
-                  {metadata.current_title && (
+                  {metadata.currentTitle && (
                     <p className="text-lg font-medium">
-                      {metadata.current_title}
+                      {metadata.currentTitle}
                     </p>
                   )}
-                  {metadata.current_artist && (
+                  {metadata.currentArtist && (
                     <p className="text-muted-foreground">
-                      {metadata.current_artist}
+                      {metadata.currentArtist}
                     </p>
                   )}
                 </div>
@@ -278,10 +278,10 @@ export default function StreamDetailPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
-                    {metadata?.listener_count ?? 0}
+                    {metadata?.listenerCount ?? 0}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {(metadata?.listener_count ?? 0) === 1
+                    {(metadata?.listenerCount ?? 0) === 1
                       ? "Listener"
                       : "Listeners"}
                   </p>
@@ -290,7 +290,7 @@ export default function StreamDetailPage() {
             </CardContent>
           </Card>
 
-          {stream.stream_source && (
+          {stream.source && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -299,32 +299,32 @@ export default function StreamDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {stream.stream_source.format && (
+                {stream.source.format && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Format</span>
                     <span className="font-medium uppercase">
-                      {stream.stream_source.format}
+                      {stream.source.format}
                     </span>
                   </div>
                 )}
-                {stream.stream_source.bitrate && (
+                {stream.source.bitrate && (
                   <>
                     <Separator />
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Bitrate</span>
                       <span className="font-medium">
-                        {stream.stream_source.bitrate} kbps
+                        {stream.source.bitrate} kbps
                       </span>
                     </div>
                   </>
                 )}
-                {stream.stream_source.mount_point && (
+                {stream.source.mountPoint && (
                   <>
                     <Separator />
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Mount Point</span>
                       <span className="font-mono text-xs">
-                        {stream.stream_source.mount_point}
+                        {stream.source.mountPoint}
                       </span>
                     </div>
                   </>
@@ -335,13 +335,13 @@ export default function StreamDetailPage() {
                   <div className="flex items-center gap-1.5">
                     <Wifi
                       className={`h-3.5 w-3.5 ${
-                        metadata?.is_live
+                        metadata?.isLive
                           ? "text-green-500"
                           : "text-muted-foreground"
                       }`}
                     />
                     <span className="font-medium">
-                      {metadata?.is_live ? "Online" : "Offline"}
+                      {metadata?.isLive ? "Online" : "Offline"}
                     </span>
                   </div>
                 </div>

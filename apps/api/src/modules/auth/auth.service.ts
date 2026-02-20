@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../../common/prisma/prisma.service.js';
+import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
 import type { SupabaseUser } from '../../common/guards/supabase-auth.guard.js';
 
-/** Role priority — lower number = higher privilege. */
+/** Role priority -- lower number = higher privilege. */
 const ROLE_PRIORITY: Record<string, number> = {
   super_admin: 1,
   admin: 2,
@@ -16,7 +16,7 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly db: SupabaseDbService,
     private readonly config: ConfigService,
   ) {}
 
@@ -34,47 +34,50 @@ export class AuthService {
       email ??
       'User';
     const avatarUrl = (metadata.avatar_url as string) ?? null;
-    const now = new Date();
+    const now = new Date().toISOString();
 
     this.logger.debug(`Syncing user ${userId} (${email})`);
 
     try {
       // Upsert profile: insert if new, update email/avatar on subsequent logins
-      await this.prisma.profiles.upsert({
-        where: { id: userId },
-        create: {
-          id: userId,
-          email,
-          display_name: displayName,
-          avatar_url: avatarUrl,
-          is_active: true,
-          created_at: now,
-          updated_at: now,
-        },
-        update: {
-          email: email ?? undefined,
-          avatar_url: avatarUrl ?? undefined,
-          updated_at: now,
-        },
-      });
+      const { error: profileError } = await this.db.from('profiles')
+        .upsert(
+          {
+            id: userId,
+            email,
+            display_name: displayName,
+            avatar_url: avatarUrl,
+            is_active: true,
+            updated_at: now,
+          },
+          { onConflict: 'id' },
+        );
+
+      if (profileError) {
+        this.logger.error(`Failed to upsert profile: ${profileError.message}`);
+        return;
+      }
 
       // Ensure user has the default 'listener' role if no roles assigned
-      const roleCount = await this.prisma.user_roles.count({
-        where: { profile_id: userId },
-      });
+      const { count, error: countError } = await this.db.from('user_roles')
+        .select('*', { count: 'exact', head: true })
+        .eq('profile_id', userId);
 
-      if (roleCount === 0) {
-        await this.prisma.user_roles.upsert({
-          where: {
-            profile_id_role_id: { profile_id: userId, role_id: 'listener' },
-          },
-          create: {
-            profile_id: userId,
-            role_id: 'listener',
-            created_at: now,
-          },
-          update: {},
-        });
+      if (countError) {
+        this.logger.error(`Failed to count roles: ${countError.message}`);
+        return;
+      }
+
+      if ((count ?? 0) === 0) {
+        await this.db.from('user_roles')
+          .upsert(
+            {
+              profile_id: userId,
+              role_id: 'listener',
+              created_at: now,
+            },
+            { onConflict: 'profile_id,role_id' },
+          );
       }
     } catch (err) {
       this.logger.error(`Failed to sync user ${userId}: ${(err as Error).message}`);
@@ -90,16 +93,15 @@ export class AuthService {
     this.logger.debug(`Getting role for user ${userId}`);
 
     try {
-      const userRoles = await this.prisma.user_roles.findMany({
-        where: { profile_id: userId },
-        select: { role_id: true },
-      });
+      const { data: userRoles, error } = await this.db.from('user_roles')
+        .select('role_id')
+        .eq('profile_id', userId);
 
-      if (userRoles.length === 0) return 'listener';
+      if (error || !userRoles || userRoles.length === 0) return 'listener';
 
       // Sort by priority (lower number = higher privilege) and return the top one
       userRoles.sort(
-        (a, b) =>
+        (a: any, b: any) =>
           (ROLE_PRIORITY[a.role_id] ?? 5) - (ROLE_PRIORITY[b.role_id] ?? 5),
       );
 

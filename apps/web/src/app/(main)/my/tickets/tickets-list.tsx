@@ -17,34 +17,26 @@ import {
 
 type RegistrationStatus = "CONFIRMED" | "CANCELLED" | "CHECKED_IN";
 
-interface TicketType {
-  id: string;
-  name: string;
-  price: number;
-}
-
 interface EventInfo {
-  id: string;
   title: string;
   slug: string;
-  start_date: string;
-  end_date: string;
+  startDate: string;
+  endDate: string;
   venue: string | null;
-  city: string | null;
-  state: string | null;
-  image_url: string | null;
+  imageUrl: string | null;
 }
 
 interface Registration {
   id: string;
-  event_id: string;
-  ticket_type_id: string;
+  eventId: string;
+  userId: string;
+  ticketTypeId: string | null;
   status: RegistrationStatus;
-  qr_code: string | null;
-  purchased_at: string;
-  checked_in_at: string | null;
-  event?: EventInfo;
-  ticket_type?: TicketType;
+  qrCode: string | null;
+  purchasedAt: string;
+  checkedInAt: string | null;
+  event: EventInfo;
+  ticketName: string;
 }
 
 const STATUS_CONFIG: Record<
@@ -67,10 +59,6 @@ const STATUS_CONFIG: Record<
       "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-400",
   },
 };
-
-function formatPrice(price: number): string {
-  return price == 0 ? "Free" : "$" + Number(price).toFixed(2);
-}
 
 function EventImage({
   src,
@@ -101,30 +89,30 @@ function EventImage({
 }
 
 function VenueText({ event }: { event: EventInfo }) {
-  const parts = [event.venue, event.city, event.state].filter(Boolean);
-  if (parts.length === 0) return null;
+  if (!event.venue) return null;
   return (
     <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
       <MapPin className="size-3.5 shrink-0" />
-      <span className="truncate">{parts.join(", ")}</span>
+      <span className="truncate">{event.venue}</span>
     </div>
   );
 }
 
 function TicketCard({ registration }: { registration: Registration }) {
   const event = registration.event;
-  const ticketType = registration.ticket_type;
   const statusConfig = STATUS_CONFIG[registration.status];
 
   const eventTitle = event?.title ?? "Unknown Event";
-  const eventLink = event ? `/events/${event.id}` : "#";
+  const eventLink = registration.eventId
+    ? `/events/${registration.eventId}`
+    : "#";
 
   return (
     <Card className="overflow-hidden py-0">
       <CardContent className="p-0">
         {/* Event Image */}
         <Link href={eventLink} className="block">
-          <EventImage src={event?.image_url} alt={eventTitle} />
+          <EventImage src={event?.imageUrl} alt={eventTitle} />
         </Link>
 
         <div className="space-y-3 p-4">
@@ -141,11 +129,11 @@ function TicketCard({ registration }: { registration: Registration }) {
           </div>
 
           {/* Date */}
-          {event?.start_date && (
+          {event?.startDate && (
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <CalendarDays className="size-3.5 shrink-0" />
               <span>
-                {new Date(event.start_date).toLocaleDateString("en-US", {
+                {new Date(event.startDate).toLocaleDateString("en-US", {
                   weekday: "short",
                   month: "short",
                   day: "numeric",
@@ -160,18 +148,15 @@ function TicketCard({ registration }: { registration: Registration }) {
           {/* Venue */}
           {event && <VenueText event={event} />}
 
-          {/* Ticket Type + Price */}
-          {ticketType && (
+          {/* Ticket Name */}
+          {registration.ticketName && (
             <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm">
-              <span className="font-medium">{ticketType.name}</span>
-              <span className="text-muted-foreground">
-                {formatPrice(ticketType.price)}
-              </span>
+              <span className="font-medium">{registration.ticketName}</span>
             </div>
           )}
 
           {/* QR Code */}
-          {registration.qr_code && registration.status !== "CANCELLED" && (
+          {registration.qrCode && registration.status !== "CANCELLED" && (
             <div className="space-y-1.5">
               <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                 <QrCode className="size-3.5" />
@@ -179,7 +164,7 @@ function TicketCard({ registration }: { registration: Registration }) {
               </div>
               <div className="flex items-center justify-center rounded-md border-2 border-dashed p-4">
                 <code className="text-sm font-mono break-all text-center">
-                  {registration.qr_code}
+                  {registration.qrCode}
                 </code>
               </div>
             </div>

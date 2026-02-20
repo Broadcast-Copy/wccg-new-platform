@@ -30,28 +30,27 @@ import {
   Clock,
 } from "lucide-react";
 
-// ─── Types matching API response (snake_case from Prisma/NestJS) ─────────
+// ─── Types matching API response (camelCase from NestJS format methods) ───
 
 interface ShowHost {
-  host: {
-    id: string;
-    name: string;
-    slug: string;
-    avatar_url: string | null;
-  };
-  is_primary: boolean;
+  id: string;
+  name: string;
+  slug: string;
+  avatarUrl: string | null;
+  isPrimary: boolean;
 }
 
 interface Episode {
   id: string;
+  showId: string;
   title: string;
   description: string | null;
-  air_date: string | null;
+  airDate: string | null;
   duration: number | null;
-  audio_url: string | null;
-  image_url: string | null;
-  created_at: string;
-  updated_at: string;
+  audioUrl: string | null;
+  imageUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface Show {
@@ -59,12 +58,12 @@ interface Show {
   name: string;
   slug: string;
   description: string | null;
-  image_url: string | null;
-  is_active: boolean;
-  show_hosts: ShowHost[];
-  show_episodes: Episode[];
-  created_at: string;
-  updated_at: string;
+  imageUrl: string | null;
+  isActive: boolean;
+  hosts: ShowHost[];
+  episodes: Episode[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -138,11 +137,11 @@ export default function ShowDetailPage() {
   // ─── Episode play/pause handler ─────────────────────────────────────
 
   function handleEpisodePlay(episode: Episode) {
-    if (!episode.audio_url) return;
-    if (isPlaying && currentStream === episode.audio_url) {
+    if (!episode.audioUrl) return;
+    if (isPlaying && currentStream === episode.audioUrl) {
       pause();
     } else {
-      play(episode.audio_url, {
+      play(episode.audioUrl, {
         streamName: show?.name ?? "Episode",
         title: episode.title,
       });
@@ -207,10 +206,10 @@ export default function ShowDetailPage() {
 
       {/* Hero Section */}
       <div className="relative overflow-hidden rounded-xl border">
-        {show.image_url ? (
+        {show.imageUrl ? (
           <div
             className="h-48 w-full bg-cover bg-center sm:h-64"
-            style={{ backgroundImage: `url(${show.image_url})` }}
+            style={{ backgroundImage: `url(${show.imageUrl})` }}
           />
         ) : (
           <div className="h-48 w-full bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 sm:h-64" />
@@ -221,8 +220,8 @@ export default function ShowDetailPage() {
           <div className="flex items-end justify-between gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Badge variant={show.is_active ? "default" : "secondary"}>
-                  {show.is_active ? "Active" : "Inactive"}
+                <Badge variant={show.isActive ? "default" : "secondary"}>
+                  {show.isActive ? "Active" : "Inactive"}
                 </Badge>
               </div>
               <h1 className="text-2xl font-bold text-white sm:text-3xl">
@@ -255,23 +254,23 @@ export default function ShowDetailPage() {
           <Tabs defaultValue="episodes">
             <TabsList>
               <TabsTrigger value="episodes">
-                Episodes ({show.show_episodes.length})
+                Episodes ({show.episodes.length})
               </TabsTrigger>
             </TabsList>
             <TabsContent value="episodes" className="mt-4">
-              {show.show_episodes.length > 0 ? (
+              {show.episodes.length > 0 ? (
                 <div className="space-y-3">
-                  {show.show_episodes.map((episode) => {
+                  {show.episodes.map((episode) => {
                     const isEpisodePlaying =
                       isPlaying &&
-                      episode.audio_url !== null &&
-                      currentStream === episode.audio_url;
+                      episode.audioUrl !== null &&
+                      currentStream === episode.audioUrl;
 
                     return (
                       <Card key={episode.id}>
                         <CardContent className="flex items-center gap-4 pt-6">
                           {/* Play button */}
-                          {episode.audio_url ? (
+                          {episode.audioUrl ? (
                             <Button
                               variant="outline"
                               size="icon"
@@ -301,10 +300,10 @@ export default function ShowDetailPage() {
                               </p>
                             )}
                             <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                              {episode.air_date && (
+                              {episode.airDate && (
                                 <span className="flex items-center gap-1">
                                   <Calendar className="h-3 w-3" />
-                                  {formatDate(episode.air_date)}
+                                  {formatDate(episode.airDate)}
                                 </span>
                               )}
                               {episode.duration && (
@@ -342,30 +341,30 @@ export default function ShowDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {show.show_hosts.length > 0 ? (
+              {show.hosts.length > 0 ? (
                 <div className="space-y-3">
-                  {show.show_hosts.map((sh) => (
+                  {show.hosts.map((host) => (
                     <Link
-                      key={sh.host.id}
-                      href={`/hosts/${sh.host.id}`}
+                      key={host.id}
+                      href={`/hosts/${host.id}`}
                       className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-muted"
                     >
                       <Avatar>
-                        {sh.host.avatar_url ? (
+                        {host.avatarUrl ? (
                           <AvatarImage
-                            src={sh.host.avatar_url}
-                            alt={sh.host.name}
+                            src={host.avatarUrl}
+                            alt={host.name}
                           />
                         ) : null}
                         <AvatarFallback>
-                          {getInitials(sh.host.name)}
+                          {getInitials(host.name)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">
-                          {sh.host.name}
+                          {host.name}
                         </p>
-                        {sh.is_primary && (
+                        {host.isPrimary && (
                           <p className="text-xs text-muted-foreground">
                             Primary Host
                           </p>
@@ -387,22 +386,22 @@ export default function ShowDetailPage() {
             <CardContent className="pt-6 space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Episodes</span>
-                <span className="font-medium">{show.show_episodes.length}</span>
+                <span className="font-medium">{show.episodes.length}</span>
               </div>
               <Separator />
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Status</span>
                 <Badge
-                  variant={show.is_active ? "default" : "secondary"}
+                  variant={show.isActive ? "default" : "secondary"}
                   className="text-xs"
                 >
-                  {show.is_active ? "Active" : "Inactive"}
+                  {show.isActive ? "Active" : "Inactive"}
                 </Badge>
               </div>
               <Separator />
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Hosts</span>
-                <span className="font-medium">{show.show_hosts.length}</span>
+                <span className="font-medium">{show.hosts.length}</span>
               </div>
             </CardContent>
           </Card>

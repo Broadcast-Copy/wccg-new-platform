@@ -3,14 +3,13 @@ import {
   NotFoundException,
   Logger,
 } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma/prisma.service.js';
-import type { reward_catalog } from '@prisma/client';
+import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
 
 @Injectable()
 export class RewardsService {
   private readonly logger = new Logger(RewardsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly db: SupabaseDbService) {}
 
   /**
    * List all rewards (catalog), optionally filtered by active status.
@@ -18,15 +17,19 @@ export class RewardsService {
   async findAll(filters?: { active?: boolean }) {
     this.logger.debug('Finding all rewards');
 
-    const rows = await this.prisma.reward_catalog.findMany({
-      where:
-        filters?.active !== undefined
-          ? { is_active: filters.active }
-          : undefined,
-      orderBy: [{ points_cost: 'asc' }, { name: 'asc' }],
-    });
+    let query = this.db.from('reward_catalog')
+      .select('*')
+      .order('points_cost', { ascending: true })
+      .order('name', { ascending: true });
 
-    return rows.map((r) => this.formatReward(r));
+    if (filters?.active !== undefined) {
+      query = query.eq('is_active', filters.active);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    return (data ?? []).map((r: any) => this.formatReward(r));
   }
 
   /**
@@ -35,11 +38,12 @@ export class RewardsService {
   async findById(id: string) {
     this.logger.debug(`Finding reward ${id}`);
 
-    const row = await this.prisma.reward_catalog.findUnique({
-      where: { id },
-    });
+    const { data: row, error } = await this.db.from('reward_catalog')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-    if (!row) {
+    if (error || !row) {
       throw new NotFoundException(`Reward ${id} not found`);
     }
 
@@ -52,9 +56,9 @@ export class RewardsService {
   async create(dto: Record<string, unknown>) {
     this.logger.debug('Creating reward');
 
-    const row = await this.prisma.reward_catalog.create({
-      data: {
-        id: (dto.id as string) ?? undefined,
+    const { data: row, error } = await this.db.from('reward_catalog')
+      .insert({
+        ...(dto.id ? { id: dto.id as string } : {}),
         name: dto.name as string,
         description: (dto.description as string) ?? null,
         image_url: (dto.imageUrl as string) ?? null,
@@ -62,8 +66,11 @@ export class RewardsService {
         category: (dto.category as string) ?? null,
         stock_count: (dto.stockCount as number) ?? 0,
         is_active: (dto.isActive as boolean) ?? true,
-      },
-    });
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
 
     return this.formatReward(row);
   }
@@ -77,19 +84,24 @@ export class RewardsService {
     // Verify exists
     await this.findById(id);
 
-    const row = await this.prisma.reward_catalog.update({
-      where: { id },
-      data: {
-        ...(dto.name !== undefined && { name: dto.name as string }),
-        ...(dto.description !== undefined && { description: dto.description as string }),
-        ...(dto.imageUrl !== undefined && { image_url: dto.imageUrl as string }),
-        ...(dto.pointsCost !== undefined && { points_cost: dto.pointsCost as number }),
-        ...(dto.category !== undefined && { category: dto.category as string }),
-        ...(dto.stockCount !== undefined && { stock_count: dto.stockCount as number }),
-        ...(dto.isActive !== undefined && { is_active: dto.isActive as boolean }),
-        updated_at: new Date(),
-      },
-    });
+    const data: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (dto.name !== undefined) data.name = dto.name as string;
+    if (dto.description !== undefined) data.description = dto.description as string;
+    if (dto.imageUrl !== undefined) data.image_url = dto.imageUrl as string;
+    if (dto.pointsCost !== undefined) data.points_cost = dto.pointsCost as number;
+    if (dto.category !== undefined) data.category = dto.category as string;
+    if (dto.stockCount !== undefined) data.stock_count = dto.stockCount as number;
+    if (dto.isActive !== undefined) data.is_active = dto.isActive as boolean;
+
+    const { data: row, error } = await this.db.from('reward_catalog')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
 
     return this.formatReward(row);
   }
@@ -103,14 +115,18 @@ export class RewardsService {
     // Verify exists
     await this.findById(id);
 
-    await this.prisma.reward_catalog.delete({ where: { id } });
+    const { error } = await this.db.from('reward_catalog')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
 
     return { deleted: true, id };
   }
 
   // ─── Private helpers ──────────────────────────────────────────
 
-  private formatReward(row: reward_catalog) {
+  private formatReward(row: any) {
     return {
       id: row.id,
       name: row.name,

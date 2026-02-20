@@ -5,16 +5,7 @@ export const metadata = {
   title: "Rewards | WCCG 104.5 FM",
 };
 
-interface Reward {
-  id: string;
-  title: string;
-  description?: string;
-  points_cost: number;
-  image_url?: string;
-  is_available: boolean;
-}
-
-async function getRewards(): Promise<Reward[]> {
+async function getRewards() {
   try {
     const apiUrl =
       process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";

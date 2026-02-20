@@ -31,24 +31,24 @@ import { apiClient } from "@/lib/api-client";
 
 interface EventRegistration {
   id: string;
-  user_id: string;
-  user?: { email: string; display_name?: string };
-  created_at: string;
+  userId: string;
+  user?: { email: string; displayName?: string };
+  createdAt: string;
 }
 
 interface Event {
   id: string;
   title: string;
   description?: string;
-  start_date: string;
-  end_date?: string;
+  startDate: string;
+  endDate?: string;
   location?: string;
   status: string;
-  creator_id?: string;
-  creator?: { email: string; display_name?: string };
+  creatorId?: string;
+  creator?: { email: string; displayName?: string };
   registrations?: EventRegistration[];
   _count?: { registrations: number };
-  created_at?: string;
+  createdAt?: string;
 }
 
 function statusBadgeClass(status: string) {
@@ -184,12 +184,12 @@ export default function AdminEventsPage() {
                 <TableRow key={event.id}>
                   <TableCell className="font-medium">{event.title}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    {event.creator?.display_name ||
+                    {event.creator?.displayName ||
                       event.creator?.email ||
                       "\u2014"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {formatDate(event.start_date)}
+                    {formatDate(event.startDate)}
                   </TableCell>
                   <TableCell>
                     <Badge className={statusBadgeClass(event.status)}>
@@ -291,10 +291,10 @@ export default function AdminEventsPage() {
                   {registrations.map((reg) => (
                     <TableRow key={reg.id}>
                       <TableCell>
-                        {reg.user?.display_name || reg.user?.email || reg.user_id}
+                        {reg.user?.displayName || reg.user?.email || reg.userId}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {formatDate(reg.created_at)}
+                        {formatDate(reg.createdAt)}
                       </TableCell>
                     </TableRow>
                   ))}

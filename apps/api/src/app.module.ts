@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 
 // Common
-import { PrismaModule } from './common/prisma/prisma.module.js';
+import { SupabaseDbModule } from './common/supabase/supabase-db.module.js';
 import { SupabaseAuthGuard } from './common/guards/supabase-auth.guard.js';
 
 // Feature modules
@@ -29,7 +29,7 @@ import { AppService } from './app.service.js';
     ConfigModule.forRoot({ isGlobal: true }),
 
     // ── Database ───────────────────────────────────────────────────
-    PrismaModule,
+    SupabaseDbModule,
 
     // ── Feature modules ────────────────────────────────────────────
     AuthModule,

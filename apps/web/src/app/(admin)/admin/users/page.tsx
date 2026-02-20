@@ -24,11 +24,11 @@ import { apiClient } from "@/lib/api-client";
 interface User {
   id: string;
   email: string;
-  display_name?: string;
+  displayName?: string;
   roles?: string[];
   role?: string;
-  is_active: boolean;
-  created_at: string;
+  isActive: boolean;
+  createdAt: string;
 }
 
 function formatDate(dateStr: string) {
@@ -69,10 +69,10 @@ export default function AdminUsersPage() {
     try {
       await apiClient(`/users/${user.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ is_active: !user.is_active }),
+        body: JSON.stringify({ isActive: !user.isActive }),
       });
       toast.success(
-        `User ${!user.is_active ? "activated" : "deactivated"} successfully`
+        `User ${!user.isActive ? "activated" : "deactivated"} successfully`
       );
       fetchUsers();
     } catch (err) {
@@ -138,7 +138,7 @@ export default function AdminUsersPage() {
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.email}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {user.display_name || "\u2014"}
+                      {user.displayName || "\u2014"}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
@@ -159,16 +159,16 @@ export default function AdminUsersPage() {
                     <TableCell>
                       <Badge
                         className={
-                          user.is_active
+                          user.isActive
                             ? "bg-green-600 hover:bg-green-600"
                             : "bg-gray-500 hover:bg-gray-500"
                         }
                       >
-                        {user.is_active ? "Active" : "Inactive"}
+                        {user.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDate(user.created_at)}
+                      {formatDate(user.createdAt)}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -183,7 +183,7 @@ export default function AdminUsersPage() {
                             onClick={() => toggleActive(user)}
                             disabled={submitting}
                           >
-                            {user.is_active ? (
+                            {user.isActive ? (
                               <>
                                 <ShieldOff className="size-4" />
                                 Deactivate

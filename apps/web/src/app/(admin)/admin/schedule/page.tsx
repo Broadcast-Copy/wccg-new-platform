@@ -44,14 +44,14 @@ const HOURS = Array.from({ length: 24 }, (_, i) => {
 });
 
 const blockSchema = z.object({
-  stream_id: z.string().min(1, "Stream is required"),
-  show_id: z.string().optional(),
+  streamId: z.string().min(1, "Stream is required"),
+  showId: z.string().optional(),
   title: z.string().min(1, "Title is required"),
-  day_of_week: z.number().int().min(0).max(6),
-  start_time: z.string().min(1, "Start time is required"),
-  end_time: z.string().min(1, "End time is required"),
-  is_override: z.boolean(),
-  override_date: z.string().optional(),
+  dayOfWeek: z.number().int().min(0).max(6),
+  startTime: z.string().min(1, "Start time is required"),
+  endTime: z.string().min(1, "End time is required"),
+  isOverride: z.boolean(),
+  overrideDate: z.string().optional(),
   color: z.string().optional(),
 });
 
@@ -91,8 +91,8 @@ function timeToRow(time: string): number {
 }
 
 function getBlockStyle(block: ScheduleBlock) {
-  const startRow = timeToRow(block.start_time);
-  const endRow = timeToRow(block.end_time);
+  const startRow = timeToRow(block.startTime);
+  const endRow = timeToRow(block.endTime);
   const height = Math.max(endRow - startRow, 1);
 
   return {
@@ -119,19 +119,19 @@ export default function AdminSchedulePage() {
   const form = useForm<BlockFormValues>({
     resolver: zodResolver(blockSchema),
     defaultValues: {
-      stream_id: "",
-      show_id: "",
+      streamId: "",
+      showId: "",
       title: "",
-      day_of_week: 0,
-      start_time: "09:00",
-      end_time: "10:00",
-      is_override: false,
-      override_date: "",
+      dayOfWeek: 0,
+      startTime: "09:00",
+      endTime: "10:00",
+      isOverride: false,
+      overrideDate: "",
       color: DEFAULT_COLORS[0],
     },
   });
 
-  const isOverride = form.watch("is_override");
+  const isOverride = form.watch("isOverride");
 
   const fetchData = useCallback(async () => {
     try {
@@ -183,8 +183,8 @@ export default function AdminSchedulePage() {
     const map: Record<number, ScheduleBlock[]> = {};
     for (let i = 0; i < 7; i++) map[i] = [];
     blocks.forEach((b) => {
-      if (map[b.day_of_week]) {
-        map[b.day_of_week].push(b);
+      if (map[b.dayOfWeek]) {
+        map[b.dayOfWeek].push(b);
       }
     });
     return map;
@@ -193,14 +193,14 @@ export default function AdminSchedulePage() {
   function openCreateDialog(dayOfWeek?: number) {
     setEditingBlock(null);
     form.reset({
-      stream_id: selectedStream,
-      show_id: "",
+      streamId: selectedStream,
+      showId: "",
       title: "",
-      day_of_week: dayOfWeek ?? 0,
-      start_time: "09:00",
-      end_time: "10:00",
-      is_override: false,
-      override_date: "",
+      dayOfWeek: dayOfWeek ?? 0,
+      startTime: "09:00",
+      endTime: "10:00",
+      isOverride: false,
+      overrideDate: "",
       color: DEFAULT_COLORS[Math.floor(Math.random() * DEFAULT_COLORS.length)],
     });
     setDialogOpen(true);
@@ -209,14 +209,14 @@ export default function AdminSchedulePage() {
   function openEditDialog(block: ScheduleBlock) {
     setEditingBlock(block);
     form.reset({
-      stream_id: block.stream_id,
-      show_id: block.show_id ?? "",
+      streamId: block.streamId,
+      showId: block.showId ?? "",
       title: block.title,
-      day_of_week: block.day_of_week,
-      start_time: block.start_time,
-      end_time: block.end_time,
-      is_override: block.is_override,
-      override_date: block.override_date ?? "",
+      dayOfWeek: block.dayOfWeek,
+      startTime: block.startTime,
+      endTime: block.endTime,
+      isOverride: block.isOverride,
+      overrideDate: block.overrideDate ?? "",
       color: block.color ?? DEFAULT_COLORS[0],
     });
     setDialogOpen(true);
@@ -227,8 +227,8 @@ export default function AdminSchedulePage() {
     try {
       const payload = {
         ...values,
-        show_id: values.show_id || undefined,
-        override_date: values.override_date || undefined,
+        showId: values.showId || undefined,
+        overrideDate: values.overrideDate || undefined,
         color: values.color || undefined,
       };
 
@@ -370,7 +370,7 @@ export default function AdminSchedulePage() {
                     >
                       <div className="font-medium truncate">{block.title}</div>
                       <div className="truncate opacity-80">
-                        {block.start_time} - {block.end_time}
+                        {block.startTime} - {block.endTime}
                       </div>
                       <div className="absolute top-1 right-1 flex gap-0.5">
                         <button
@@ -423,8 +423,8 @@ export default function AdminSchedulePage() {
             <div className="space-y-2">
               <Label>Stream</Label>
               <Select
-                value={form.watch("stream_id")}
-                onValueChange={(val) => form.setValue("stream_id", val)}
+                value={form.watch("streamId")}
+                onValueChange={(val) => form.setValue("streamId", val)}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select stream" />
@@ -437,9 +437,9 @@ export default function AdminSchedulePage() {
                   ))}
                 </SelectContent>
               </Select>
-              {form.formState.errors.stream_id && (
+              {form.formState.errors.streamId && (
                 <p className="text-sm text-destructive">
-                  {form.formState.errors.stream_id.message}
+                  {form.formState.errors.streamId.message}
                 </p>
               )}
             </div>
@@ -447,9 +447,9 @@ export default function AdminSchedulePage() {
             <div className="space-y-2">
               <Label>Show (optional)</Label>
               <Select
-                value={form.watch("show_id") || "none"}
+                value={form.watch("showId") || "none"}
                 onValueChange={(val) =>
-                  form.setValue("show_id", val === "none" ? "" : val)
+                  form.setValue("showId", val === "none" ? "" : val)
                 }
               >
                 <SelectTrigger className="w-full">
@@ -480,9 +480,9 @@ export default function AdminSchedulePage() {
               <div className="space-y-2">
                 <Label>Day of Week</Label>
                 <Select
-                  value={String(form.watch("day_of_week"))}
+                  value={String(form.watch("dayOfWeek"))}
                   onValueChange={(val) =>
-                    form.setValue("day_of_week", parseInt(val))
+                    form.setValue("dayOfWeek", parseInt(val))
                   }
                 >
                   <SelectTrigger className="w-full">
@@ -498,19 +498,19 @@ export default function AdminSchedulePage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="start_time">Start Time</Label>
+                <Label htmlFor="startTime">Start Time</Label>
                 <Input
-                  id="start_time"
+                  id="startTime"
                   type="time"
-                  {...form.register("start_time")}
+                  {...form.register("startTime")}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="end_time">End Time</Label>
+                <Label htmlFor="endTime">End Time</Label>
                 <Input
-                  id="end_time"
+                  id="endTime"
                   type="time"
-                  {...form.register("end_time")}
+                  {...form.register("endTime")}
                 />
               </div>
             </div>
@@ -548,20 +548,20 @@ export default function AdminSchedulePage() {
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
-                id="is_override"
+                id="isOverride"
                 className="size-4 rounded border"
-                {...form.register("is_override")}
+                {...form.register("isOverride")}
               />
-              <Label htmlFor="is_override">Override (one-time slot)</Label>
+              <Label htmlFor="isOverride">Override (one-time slot)</Label>
             </div>
 
             {isOverride && (
               <div className="space-y-2">
-                <Label htmlFor="override_date">Override Date</Label>
+                <Label htmlFor="overrideDate">Override Date</Label>
                 <Input
-                  id="override_date"
+                  id="overrideDate"
                   type="date"
-                  {...form.register("override_date")}
+                  {...form.register("overrideDate")}
                 />
               </div>
             )}

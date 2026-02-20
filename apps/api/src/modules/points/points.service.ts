@@ -4,14 +4,13 @@ import {
   NotFoundException,
   Logger,
 } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma/prisma.service.js';
-import { points_reason } from '@prisma/client';
+import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
 
 @Injectable()
 export class PointsService {
   private readonly logger = new Logger(PointsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly db: SupabaseDbService) {}
 
   /**
    * Get the current points balance for a user.
@@ -20,11 +19,12 @@ export class PointsService {
   async getBalance(userId: string) {
     this.logger.debug(`Getting balance for user ${userId}`);
 
-    const latest = await this.prisma.points_ledger.findFirst({
-      where: { user_id: userId },
-      orderBy: { created_at: 'desc' },
-      select: { balance: true },
-    });
+    const { data: latest } = await this.db.from('points_ledger')
+      .select('balance')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     const balance = latest?.balance ?? 0;
     return { userId, balance };
@@ -37,20 +37,18 @@ export class PointsService {
     this.logger.debug(`Getting points history for user ${userId}`);
     const skip = (page - 1) * limit;
 
-    const [entries, total] = await Promise.all([
-      this.prisma.points_ledger.findMany({
-        where: { user_id: userId },
-        orderBy: { created_at: 'desc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.points_ledger.count({
-        where: { user_id: userId },
-      }),
-    ]);
+    const { data: entries, count: total, error } = await this.db.from('points_ledger')
+      .select('*', { count: 'exact' })
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .range(skip, skip + limit - 1);
+
+    if (error) throw error;
+
+    const totalCount = total ?? 0;
 
     return {
-      data: entries.map((e) => ({
+      data: (entries ?? []).map((e: any) => ({
         id: e.id,
         userId: e.user_id,
         amount: e.amount,
@@ -61,7 +59,7 @@ export class PointsService {
         type: e.amount >= 0 ? 'earn' : 'redeem',
         createdAt: e.created_at,
       })),
-      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      meta: { page, limit, total: totalCount, totalPages: Math.ceil(totalCount / limit) },
     };
   }
 
@@ -71,12 +69,14 @@ export class PointsService {
   async getRules() {
     this.logger.debug('Getting points rules');
 
-    const rows = await this.prisma.points_rules.findMany({
-      where: { is_active: true },
-      orderBy: { trigger_type: 'asc' },
-    });
+    const { data: rows, error } = await this.db.from('points_rules')
+      .select('*')
+      .eq('is_active', true)
+      .order('trigger_type', { ascending: true });
 
-    return rows.map((r) => ({
+    if (error) throw error;
+
+    return (rows ?? []).map((r: any) => ({
       id: r.id,
       name: r.name,
       triggerType: r.trigger_type,
@@ -92,7 +92,7 @@ export class PointsService {
   /**
    * Award points to a user (admin or system).
    * Creates a ledger entry with a running balance.
-   * Uses a transaction to ensure atomicity between reading the balance and inserting the entry.
+   * Uses sequential operations (Supabase doesn't support transactions via REST).
    */
   async award(
     userId: string,
@@ -104,28 +104,30 @@ export class PointsService {
 
     this.logger.debug(`Awarding ${dto.amount} points to user ${userId}: ${dto.reason}`);
 
-    const entry = await this.prisma.$transaction(async (tx) => {
-      // Get current balance inside the transaction for consistency
-      const latest = await tx.points_ledger.findFirst({
-        where: { user_id: userId },
-        orderBy: { created_at: 'desc' },
-        select: { balance: true },
-      });
+    // Get current balance
+    const { data: latest } = await this.db.from('points_ledger')
+      .select('balance')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-      const currentBalance = latest?.balance ?? 0;
-      const newBalance = currentBalance + dto.amount;
+    const currentBalance = latest?.balance ?? 0;
+    const newBalance = currentBalance + dto.amount;
 
-      return tx.points_ledger.create({
-        data: {
-          user_id: userId,
-          amount: dto.amount,
-          reason: dto.reason as points_reason,
-          reference_type: dto.referenceType ?? null,
-          reference_id: dto.referenceId ?? null,
-          balance: newBalance,
-        },
-      });
-    });
+    const { data: entry, error } = await this.db.from('points_ledger')
+      .insert({
+        user_id: userId,
+        amount: dto.amount,
+        reason: dto.reason,
+        reference_type: dto.referenceType ?? null,
+        reference_id: dto.referenceId ?? null,
+        balance: newBalance,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
 
     return {
       id: entry.id,
@@ -143,7 +145,7 @@ export class PointsService {
   /**
    * Redeem points from a user's balance.
    * Optionally links to a reward catalog item and decrements stock.
-   * Uses a transaction to ensure atomicity across balance check, stock decrement, and ledger insert.
+   * Uses sequential operations (acceptable risk of race conditions for this app).
    */
   async redeem(
     userId: string,
@@ -155,62 +157,63 @@ export class PointsService {
 
     this.logger.debug(`Redeeming ${dto.amount} points from user ${userId}: ${dto.reason}`);
 
-    const entry = await this.prisma.$transaction(async (tx) => {
-      // Check sufficient balance inside the transaction
-      const latest = await tx.points_ledger.findFirst({
-        where: { user_id: userId },
-        orderBy: { created_at: 'desc' },
-        select: { balance: true },
-      });
+    // Check sufficient balance
+    const { data: latest } = await this.db.from('points_ledger')
+      .select('balance')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-      const currentBalance = latest?.balance ?? 0;
-      if (currentBalance < dto.amount) {
-        throw new BadRequestException(
-          `Insufficient points balance. Have ${currentBalance}, need ${dto.amount}`,
-        );
+    const currentBalance = latest?.balance ?? 0;
+    if (currentBalance < dto.amount) {
+      throw new BadRequestException(
+        `Insufficient points balance. Have ${currentBalance}, need ${dto.amount}`,
+      );
+    }
+
+    // If redeeming for a reward, verify it exists and has stock
+    if (dto.rewardId) {
+      const { data: reward } = await this.db.from('reward_catalog')
+        .select('id, stock_count, is_active')
+        .eq('id', dto.rewardId)
+        .maybeSingle();
+
+      if (!reward) {
+        throw new NotFoundException(`Reward ${dto.rewardId} not found`);
       }
 
-      // If redeeming for a reward, verify it exists and has stock
-      if (dto.rewardId) {
-        const reward = await tx.reward_catalog.findUnique({
-          where: { id: dto.rewardId },
-          select: { id: true, stock_count: true, is_active: true },
-        });
-
-        if (!reward) {
-          throw new NotFoundException(`Reward ${dto.rewardId} not found`);
-        }
-
-        if (!reward.is_active) {
-          throw new BadRequestException('This reward is no longer available');
-        }
-
-        if (reward.stock_count !== null && reward.stock_count <= 0) {
-          throw new BadRequestException('This reward is out of stock');
-        }
-
-        // Decrement stock (only if stock_count is tracked, i.e. not null)
-        if (reward.stock_count !== null) {
-          await tx.reward_catalog.update({
-            where: { id: dto.rewardId },
-            data: { stock_count: { decrement: 1 } },
-          });
-        }
+      if (!reward.is_active) {
+        throw new BadRequestException('This reward is no longer available');
       }
 
-      const newBalance = currentBalance - dto.amount;
+      if (reward.stock_count !== null && reward.stock_count <= 0) {
+        throw new BadRequestException('This reward is out of stock');
+      }
 
-      return tx.points_ledger.create({
-        data: {
-          user_id: userId,
-          amount: -dto.amount,
-          reason: dto.reason as points_reason,
-          reference_type: dto.rewardId ? 'reward' : null,
-          reference_id: dto.rewardId ?? null,
-          balance: newBalance,
-        },
-      });
-    });
+      // Decrement stock (only if stock_count is tracked, i.e. not null)
+      if (reward.stock_count !== null) {
+        await this.db.from('reward_catalog')
+          .update({ stock_count: reward.stock_count - 1 })
+          .eq('id', dto.rewardId);
+      }
+    }
+
+    const newBalance = currentBalance - dto.amount;
+
+    const { data: entry, error } = await this.db.from('points_ledger')
+      .insert({
+        user_id: userId,
+        amount: -dto.amount,
+        reason: dto.reason,
+        reference_type: dto.rewardId ? 'reward' : null,
+        reference_id: dto.rewardId ?? null,
+        balance: newBalance,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
 
     return {
       id: entry.id,

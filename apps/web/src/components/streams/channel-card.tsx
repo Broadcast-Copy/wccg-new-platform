@@ -17,7 +17,7 @@ interface ChannelCardProps {
   streamId: string;
   name: string;
   description?: string;
-  streamUrl: string;
+  streamUrl?: string;
   category?: string;
   isLive?: boolean;
   albumArt?: string;
@@ -43,7 +43,7 @@ export function ChannelCard({
   const handleTogglePlay = () => {
     if (isThisStreamPlaying) {
       pause();
-    } else {
+    } else if (streamUrl) {
       play(streamUrl, {
         title: currentTrack,
         artist: currentArtist,

@@ -22,16 +22,14 @@ import {
   Radio,
 } from "lucide-react";
 
-// ─── Types matching API response (snake_case from Prisma/NestJS) ─────────
+// ─── Types matching API response (camelCase from NestJS format methods) ───
 
-interface HostShowEntry {
-  show: {
-    id: string;
-    name: string;
-    slug: string;
-    image_url: string | null;
-  };
-  is_primary: boolean;
+interface HostShow {
+  id: string;
+  name: string;
+  slug: string;
+  imageUrl: string | null;
+  isPrimary: boolean;
 }
 
 interface Host {
@@ -39,12 +37,12 @@ interface Host {
   name: string;
   slug: string;
   bio: string | null;
-  avatar_url: string | null;
+  avatarUrl: string | null;
   email: string | null;
-  is_active: boolean;
-  show_hosts: HostShowEntry[];
-  created_at: string;
-  updated_at: string;
+  isActive: boolean;
+  shows: HostShow[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -157,8 +155,8 @@ export default function HostBioPage() {
       <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
         {/* Large Avatar */}
         <Avatar className="h-28 w-28 text-2xl sm:h-36 sm:w-36">
-          {host.avatar_url ? (
-            <AvatarImage src={host.avatar_url} alt={host.name} />
+          {host.avatarUrl ? (
+            <AvatarImage src={host.avatarUrl} alt={host.name} />
           ) : null}
           <AvatarFallback className="text-2xl">
             {getInitials(host.name)}
@@ -172,8 +170,8 @@ export default function HostBioPage() {
               <h1 className="text-3xl font-bold tracking-tight">
                 {host.name}
               </h1>
-              <Badge variant={host.is_active ? "default" : "secondary"}>
-                {host.is_active ? "Active" : "Inactive"}
+              <Badge variant={host.isActive ? "default" : "secondary"}>
+                {host.isActive ? "Active" : "Inactive"}
               </Badge>
             </div>
           </div>
@@ -207,24 +205,24 @@ export default function HostBioPage() {
           Shows
         </h2>
 
-        {host.show_hosts.length > 0 ? (
+        {host.shows.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {host.show_hosts.map((sh) => (
-              <Link key={sh.show.id} href={`/shows/${sh.show.id}`}>
+            {host.shows.map((show) => (
+              <Link key={show.id} href={`/shows/${show.id}`}>
                 <Card className="overflow-hidden transition-colors hover:bg-muted/50">
                   {/* Show image or gradient */}
-                  {sh.show.image_url ? (
+                  {show.imageUrl ? (
                     <div
                       className="h-32 w-full bg-cover bg-center"
-                      style={{ backgroundImage: `url(${sh.show.image_url})` }}
+                      style={{ backgroundImage: `url(${show.imageUrl})` }}
                     />
                   ) : (
                     <div className="h-32 w-full bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600" />
                   )}
                   <CardContent className="pt-4">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium truncate">{sh.show.name}</p>
-                      {sh.is_primary && (
+                      <p className="font-medium truncate">{show.name}</p>
+                      {show.isPrimary && (
                         <Badge variant="outline" className="shrink-0 text-xs">
                           Primary
                         </Badge>

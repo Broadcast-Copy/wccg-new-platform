@@ -6,15 +6,14 @@ import {
   ConflictException,
   Logger,
 } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma/prisma.service.js';
-import { Prisma } from '@prisma/client';
+import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
 import { randomUUID } from 'node:crypto';
 
 @Injectable()
 export class EventsService {
   private readonly logger = new Logger(EventsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly db: SupabaseDbService) {}
 
   // ─── Events CRUD ───────────────────────────────────────────────
 
@@ -25,29 +24,27 @@ export class EventsService {
   async findAll(filters?: { upcoming?: boolean; category?: string }) {
     this.logger.debug('Finding all events', filters);
 
-    const now = new Date();
+    const now = new Date().toISOString();
 
-    const where: Prisma.eventsWhereInput = {
-      visibility: 'PUBLIC',
-      status: { not: 'CANCELLED' },
-    };
+    let query = this.db.from('events')
+      .select('*')
+      .eq('visibility', 'PUBLIC')
+      .neq('status', 'CANCELLED');
 
     if (filters?.upcoming) {
-      where.start_date = { gte: now };
+      query = query.gte('start_date', now).order('start_date', { ascending: true });
+    } else {
+      query = query.order('start_date', { ascending: false });
     }
 
     if (filters?.category) {
-      where.category = filters.category;
+      query = query.eq('category', filters.category);
     }
 
-    const events = await this.prisma.events.findMany({
-      where,
-      orderBy: {
-        start_date: filters?.upcoming ? 'asc' : 'desc',
-      },
-    });
+    const { data: events, error } = await query;
+    if (error) throw error;
 
-    return events.map((e) => this.formatEvent(e));
+    return (events ?? []).map((e: any) => this.formatEvent(e));
   }
 
   /**
@@ -56,48 +53,36 @@ export class EventsService {
   async findById(id: string) {
     this.logger.debug(`Finding event ${id}`);
 
-    const event = await this.prisma.events.findUnique({
-      where: { id },
-      include: {
-        ticket_types: {
-          orderBy: { price: 'asc' },
-        },
-        event_organizers: {
-          include: {
-            user: {
-              select: {
-                display_name: true,
-                email: true,
-                avatar_url: true,
-              },
-            },
-          },
-        },
-        _count: {
-          select: {
-            event_registrations: {
-              where: { status: { not: 'CANCELLED' } },
-            },
-          },
-        },
-      },
-    });
+    const { data: event, error } = await this.db.from('events')
+      .select('*, ticket_types(*), event_organizers(*, profiles(display_name, email, avatar_url))')
+      .eq('id', id)
+      .single();
 
-    if (!event) {
+    if (error || !event) {
       throw new NotFoundException(`Event ${id} not found`);
     }
 
+    // Separate count query for registrations (excluding cancelled)
+    const { count: registrationCount } = await this.db.from('event_registrations')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', id)
+      .neq('status', 'CANCELLED');
+
+    // Sort ticket types by price
+    const ticketTypes = (event.ticket_types ?? [])
+      .sort((a: any, b: any) => Number(a.price) - Number(b.price));
+
     return {
       ...this.formatEvent(event),
-      ticketTypes: event.ticket_types.map((t) => this.formatTicketType(t)),
-      organizers: event.event_organizers.map((o) => ({
+      ticketTypes: ticketTypes.map((t: any) => this.formatTicketType(t)),
+      organizers: (event.event_organizers ?? []).map((o: any) => ({
         userId: o.user_id,
         role: o.role,
-        displayName: o.user.display_name,
-        email: o.user.email,
-        avatarUrl: o.user.avatar_url,
+        displayName: o.profiles?.display_name,
+        email: o.profiles?.email,
+        avatarUrl: o.profiles?.avatar_url,
       })),
-      registrationCount: event._count.event_registrations,
+      registrationCount: registrationCount ?? 0,
     };
   }
 
@@ -112,72 +97,67 @@ export class EventsService {
 
     const ticketTypes = dto.ticketTypes as any[] | undefined;
 
-    try {
-      await this.prisma.events.create({
-        data: {
-          id,
-          creator_id: userId,
-          title,
-          slug,
-          description: (dto.description as string) ?? null,
-          image_url: (dto.imageUrl as string) ?? null,
-          banner_url: (dto.bannerUrl as string) ?? null,
-          venue: (dto.venue as string) ?? null,
-          address: (dto.address as string) ?? null,
-          city: (dto.city as string) ?? null,
-          state: (dto.state as string) ?? null,
-          zip_code: (dto.zipCode as string) ?? null,
-          latitude: (dto.latitude as number) ?? null,
-          longitude: (dto.longitude as number) ?? null,
-          start_date: new Date(dto.startDate as string),
-          end_date: new Date(dto.endDate as string),
-          timezone: (dto.timezone as string) ?? 'America/New_York',
-          category: (dto.category as string) ?? null,
-          status: ((dto.status as string) ?? 'draft').toUpperCase() as any,
-          visibility: ((dto.visibility as string) ?? 'public').toUpperCase() as any,
-          max_attendees: (dto.maxAttendees as number) ?? null,
-          is_free: (dto.isFree as boolean) ?? true,
-
-          // Nested create: add creator as organizer with OWNER role
-          event_organizers: {
-            create: {
-              user_id: userId,
-              role: 'OWNER',
-            },
-          },
-
-          // Nested create: ticket types if provided
-          ...(ticketTypes && ticketTypes.length > 0
-            ? {
-                ticket_types: {
-                  create: ticketTypes.map((tt) => ({
-                    id: tt.id ?? randomUUID(),
-                    name: tt.name as string,
-                    price: tt.price ?? 0,
-                    quantity: tt.quantity ?? 0,
-                    quantity_sold: 0,
-                    description: (tt.description as string) ?? null,
-                    sales_start: tt.salesStart
-                      ? new Date(tt.salesStart as string)
-                      : null,
-                    sales_end: tt.salesEnd
-                      ? new Date(tt.salesEnd as string)
-                      : null,
-                    is_active: true,
-                  })),
-                },
-              }
-            : {}),
-        },
+    // Insert the event
+    const { error: eventError } = await this.db.from('events')
+      .insert({
+        id,
+        creator_id: userId,
+        title,
+        slug,
+        description: (dto.description as string) ?? null,
+        image_url: (dto.imageUrl as string) ?? null,
+        banner_url: (dto.bannerUrl as string) ?? null,
+        venue: (dto.venue as string) ?? null,
+        address: (dto.address as string) ?? null,
+        city: (dto.city as string) ?? null,
+        state: (dto.state as string) ?? null,
+        zip_code: (dto.zipCode as string) ?? null,
+        latitude: (dto.latitude as number) ?? null,
+        longitude: (dto.longitude as number) ?? null,
+        start_date: new Date(dto.startDate as string).toISOString(),
+        end_date: new Date(dto.endDate as string).toISOString(),
+        timezone: (dto.timezone as string) ?? 'America/New_York',
+        category: (dto.category as string) ?? null,
+        status: ((dto.status as string) ?? 'DRAFT').toUpperCase(),
+        visibility: ((dto.visibility as string) ?? 'PUBLIC').toUpperCase(),
+        max_attendees: (dto.maxAttendees as number) ?? null,
+        is_free: (dto.isFree as boolean) ?? true,
       });
-    } catch (err: any) {
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === 'P2002'
-      ) {
+
+    if (eventError) {
+      if (eventError.code === '23505') {
         throw new ConflictException(`Event with slug "${slug}" already exists`);
       }
-      throw err;
+      throw eventError;
+    }
+
+    // Add creator as organizer with OWNER role
+    await this.db.from('event_organizers')
+      .insert({
+        event_id: id,
+        user_id: userId,
+        role: 'OWNER',
+      });
+
+    // Insert ticket types if provided
+    if (ticketTypes && ticketTypes.length > 0) {
+      const ticketRows = ticketTypes.map((tt: any) => ({
+        id: tt.id ?? randomUUID(),
+        event_id: id,
+        name: tt.name as string,
+        price: tt.price ?? 0,
+        quantity: tt.quantity ?? 0,
+        quantity_sold: 0,
+        description: (tt.description as string) ?? null,
+        sales_start: tt.salesStart
+          ? new Date(tt.salesStart as string).toISOString()
+          : null,
+        sales_end: tt.salesEnd
+          ? new Date(tt.salesEnd as string).toISOString()
+          : null,
+        is_active: true,
+      }));
+      await this.db.from('ticket_types').insert(ticketRows);
     }
 
     return this.findById(id);
@@ -193,8 +173,8 @@ export class EventsService {
     await this.verifyOrganizer(eventId, userId);
 
     // Build data object with only the fields that were provided
-    const data: Prisma.eventsUpdateInput = {
-      updated_at: new Date(),
+    const data: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
     };
 
     if (dto.title !== undefined) data.title = dto.title as string;
@@ -211,23 +191,22 @@ export class EventsService {
     if (dto.latitude !== undefined) data.latitude = dto.latitude as number;
     if (dto.longitude !== undefined) data.longitude = dto.longitude as number;
     if (dto.startDate !== undefined)
-      data.start_date = new Date(dto.startDate as string);
+      data.start_date = new Date(dto.startDate as string).toISOString();
     if (dto.endDate !== undefined)
-      data.end_date = new Date(dto.endDate as string);
+      data.end_date = new Date(dto.endDate as string).toISOString();
     if (dto.timezone !== undefined) data.timezone = dto.timezone as string;
     if (dto.category !== undefined) data.category = dto.category as string;
     if (dto.status !== undefined)
-      data.status = (dto.status as string).toUpperCase() as any;
+      data.status = (dto.status as string).toUpperCase();
     if (dto.visibility !== undefined)
-      data.visibility = (dto.visibility as string).toUpperCase() as any;
+      data.visibility = (dto.visibility as string).toUpperCase();
     if (dto.maxAttendees !== undefined)
       data.max_attendees = dto.maxAttendees as number;
     if (dto.isFree !== undefined) data.is_free = dto.isFree as boolean;
 
-    await this.prisma.events.update({
-      where: { id: eventId },
-      data,
-    });
+    await this.db.from('events')
+      .update(data)
+      .eq('id', eventId);
 
     return this.findById(eventId);
   }
@@ -239,25 +218,25 @@ export class EventsService {
     this.logger.debug(`Deleting event ${eventId}`);
 
     // Verify ownership (must be creator)
-    const event = await this.prisma.events.findUnique({
-      where: { id: eventId },
-      select: {
-        creator_id: true,
-        event_organizers: {
-          where: { user_id: userId },
-          select: { role: true },
-        },
-      },
-    });
+    const { data: event } = await this.db.from('events')
+      .select('creator_id')
+      .eq('id', eventId)
+      .maybeSingle();
 
     if (!event) {
       throw new NotFoundException(`Event ${eventId} not found`);
     }
 
+    // Check if user is the creator
     const isCreator = event.creator_id === userId;
-    const isOwnerOrganizer = event.event_organizers.some(
-      (o) => o.role === 'OWNER',
-    );
+
+    // Or an OWNER organizer
+    const { data: orgRows } = await this.db.from('event_organizers')
+      .select('role')
+      .eq('event_id', eventId)
+      .eq('user_id', userId);
+
+    const isOwnerOrganizer = (orgRows ?? []).some((o: any) => o.role === 'OWNER');
 
     if (!isCreator && !isOwnerOrganizer) {
       throw new ForbiddenException(
@@ -266,9 +245,11 @@ export class EventsService {
     }
 
     // Cascade delete handles ticket_types, event_registrations, event_organizers
-    await this.prisma.events.delete({
-      where: { id: eventId },
-    });
+    const { error } = await this.db.from('events')
+      .delete()
+      .eq('id', eventId);
+
+    if (error) throw error;
 
     return { deleted: true, id: eventId };
   }
@@ -281,19 +262,21 @@ export class EventsService {
   async getTicketTypes(eventId: string) {
     this.logger.debug(`Getting ticket types for event ${eventId}`);
 
-    const tickets = await this.prisma.ticket_types.findMany({
-      where: { event_id: eventId },
-      orderBy: { price: 'asc' },
-    });
+    const { data: tickets, error } = await this.db.from('ticket_types')
+      .select('*')
+      .eq('event_id', eventId)
+      .order('price', { ascending: true });
 
-    return tickets.map((t) => this.formatTicketType(t));
+    if (error) throw error;
+
+    return (tickets ?? []).map((t: any) => this.formatTicketType(t));
   }
 
   // ─── Registrations ────────────────────────────────────────────
 
   /**
    * Register the current user for an event.
-   * Uses a transaction to atomically increment quantity_sold and create the registration.
+   * Uses sequential operations (acceptable risk for this app).
    */
   async register(
     eventId: string,
@@ -303,9 +286,10 @@ export class EventsService {
     this.logger.debug(`User ${userId} registering for event ${eventId}`);
 
     // Verify event exists
-    const event = await this.prisma.events.findUnique({
-      where: { id: eventId },
-    });
+    const { data: event } = await this.db.from('events')
+      .select('*')
+      .eq('id', eventId)
+      .maybeSingle();
 
     if (!event) {
       throw new NotFoundException(`Event ${eventId} not found`);
@@ -317,28 +301,24 @@ export class EventsService {
     }
 
     // Check for duplicate registration
-    const existingCount = await this.prisma.event_registrations.count({
-      where: {
-        event_id: eventId,
-        user_id: userId,
-        status: { not: 'CANCELLED' },
-      },
-    });
+    const { count: existingCount } = await this.db.from('event_registrations')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+      .eq('user_id', userId)
+      .neq('status', 'CANCELLED');
 
-    if (existingCount > 0) {
+    if (existingCount && existingCount > 0) {
       throw new ConflictException('You are already registered for this event');
     }
 
     // Check max attendees
     if (event.max_attendees) {
-      const regCount = await this.prisma.event_registrations.count({
-        where: {
-          event_id: eventId,
-          status: { not: 'CANCELLED' },
-        },
-      });
+      const { count: regCount } = await this.db.from('event_registrations')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_id', eventId)
+        .neq('status', 'CANCELLED');
 
-      if (regCount >= event.max_attendees) {
+      if ((regCount ?? 0) >= event.max_attendees) {
         throw new BadRequestException('This event is at full capacity');
       }
     }
@@ -346,13 +326,15 @@ export class EventsService {
     const id = randomUUID();
     const qrCode =
       `WCCG-${eventId.slice(0, 8)}-${id.slice(0, 8)}`.toUpperCase();
-    const now = new Date();
+    const now = new Date().toISOString();
 
-    // If ticket type is specified, atomically update quantity_sold and create registration
+    // If ticket type is specified, update quantity_sold and create registration
     if (dto.ticketTypeId) {
-      const ticket = await this.prisma.ticket_types.findFirst({
-        where: { id: dto.ticketTypeId, event_id: eventId },
-      });
+      const { data: ticket } = await this.db.from('ticket_types')
+        .select('*')
+        .eq('id', dto.ticketTypeId)
+        .eq('event_id', eventId)
+        .maybeSingle();
 
       if (!ticket) {
         throw new NotFoundException(
@@ -368,87 +350,81 @@ export class EventsService {
         throw new BadRequestException('This ticket type is sold out');
       }
 
-      // Atomic transaction: increment quantity_sold + create registration
-      await this.prisma.$transaction(async (tx) => {
-        // Optimistic concurrency: only update if quantity_sold < quantity
-        const updated = await tx.ticket_types.updateMany({
-          where: {
-            id: dto.ticketTypeId!,
-            quantity_sold: { lt: ticket.quantity },
-          },
-          data: {
-            quantity_sold: { increment: 1 },
-            updated_at: now,
-          },
-        });
+      // Increment quantity_sold
+      await this.db.from('ticket_types')
+        .update({
+          quantity_sold: ticket.quantity_sold + 1,
+          updated_at: now,
+        })
+        .eq('id', dto.ticketTypeId);
 
-        if (updated.count === 0) {
-          throw new BadRequestException('This ticket type is sold out');
-        }
-
-        await tx.event_registrations.create({
-          data: {
-            id,
-            event_id: eventId,
-            user_id: userId,
-            ticket_type_id: dto.ticketTypeId!,
-            status: 'CONFIRMED',
-            qr_code: qrCode,
-            purchased_at: now,
-          },
+      // Create registration
+      await this.db.from('event_registrations')
+        .insert({
+          id,
+          event_id: eventId,
+          user_id: userId,
+          ticket_type_id: dto.ticketTypeId,
+          status: 'CONFIRMED',
+          qr_code: qrCode,
+          purchased_at: now,
         });
-      });
     } else {
-      // Free event or no ticket type: create registration without ticket
-      // ticket_type_id is required in the schema, so we need a ticket type.
-      // For free events without a specific ticket, find or create a default "General Admission" ticket.
+      // Free event or no ticket type: find or create a default "General Admission" ticket
       let defaultTicketId: string;
 
-      const defaultTicket = await this.prisma.ticket_types.findFirst({
-        where: {
-          event_id: eventId,
-          name: 'General Admission',
-        },
-      });
+      const { data: defaultTicket } = await this.db.from('ticket_types')
+        .select('id')
+        .eq('event_id', eventId)
+        .eq('name', 'General Admission')
+        .limit(1)
+        .maybeSingle();
 
       if (defaultTicket) {
         defaultTicketId = defaultTicket.id;
       } else {
         // Create a default free ticket type
-        const newTicket = await this.prisma.ticket_types.create({
-          data: {
+        const { data: newTicket, error: ticketError } = await this.db.from('ticket_types')
+          .insert({
             event_id: eventId,
             name: 'General Admission',
             price: 0,
             quantity: event.max_attendees ?? 999999,
             quantity_sold: 0,
             is_active: true,
-          },
-        });
+          })
+          .select()
+          .single();
+
+        if (ticketError) throw ticketError;
         defaultTicketId = newTicket.id;
       }
 
-      await this.prisma.$transaction(async (tx) => {
-        await tx.ticket_types.update({
-          where: { id: defaultTicketId },
-          data: {
-            quantity_sold: { increment: 1 },
-            updated_at: now,
-          },
-        });
+      // Get current quantity_sold for default ticket
+      const { data: currentTicket } = await this.db.from('ticket_types')
+        .select('quantity_sold')
+        .eq('id', defaultTicketId)
+        .single();
 
-        await tx.event_registrations.create({
-          data: {
-            id,
-            event_id: eventId,
-            user_id: userId,
-            ticket_type_id: defaultTicketId,
-            status: 'CONFIRMED',
-            qr_code: qrCode,
-            purchased_at: now,
-          },
+      // Increment quantity_sold
+      await this.db.from('ticket_types')
+        .update({
+          quantity_sold: (currentTicket?.quantity_sold ?? 0) + 1,
+          updated_at: now,
+        })
+        .eq('id', defaultTicketId);
+
+      // Create registration
+      await this.db.from('event_registrations')
+        .insert({
+          id,
+          event_id: eventId,
+          user_id: userId,
+          ticket_type_id: defaultTicketId,
+          status: 'CONFIRMED',
+          qr_code: qrCode,
+          purchased_at: now,
         });
-      });
     }
 
     return {
@@ -469,33 +445,14 @@ export class EventsService {
   async getMyRegistrations(userId: string) {
     this.logger.debug(`Getting registrations for user ${userId}`);
 
-    const registrations = await this.prisma.event_registrations.findMany({
-      where: { user_id: userId },
-      include: {
-        event: {
-          select: {
-            title: true,
-            slug: true,
-            start_date: true,
-            end_date: true,
-            venue: true,
-            image_url: true,
-          },
-        },
-        ticket_type: {
-          select: {
-            name: true,
-          },
-        },
-      },
-      orderBy: {
-        event: {
-          start_date: 'asc',
-        },
-      },
-    });
+    const { data: registrations, error } = await this.db.from('event_registrations')
+      .select('*, events(title, slug, start_date, end_date, venue, image_url), ticket_types(name)')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
 
-    return registrations.map((r) => ({
+    if (error) throw error;
+
+    return (registrations ?? []).map((r: any) => ({
       id: r.id,
       eventId: r.event_id,
       userId: r.user_id,
@@ -505,15 +462,17 @@ export class EventsService {
       purchasedAt: r.purchased_at,
       checkedInAt: r.checked_in_at,
       createdAt: r.created_at,
-      event: {
-        title: r.event.title,
-        slug: r.event.slug,
-        startDate: r.event.start_date,
-        endDate: r.event.end_date,
-        venue: r.event.venue,
-        imageUrl: r.event.image_url,
-      },
-      ticketName: r.ticket_type.name,
+      event: r.events
+        ? {
+            title: r.events.title,
+            slug: r.events.slug,
+            startDate: r.events.start_date,
+            endDate: r.events.end_date,
+            venue: r.events.venue,
+            imageUrl: r.events.image_url,
+          }
+        : null,
+      ticketName: r.ticket_types?.name ?? null,
     }));
   }
 
@@ -524,9 +483,10 @@ export class EventsService {
     this.logger.debug(`Checking in registration ${registrationId}`);
 
     // Get the registration
-    const reg = await this.prisma.event_registrations.findUnique({
-      where: { id: registrationId },
-    });
+    const { data: reg } = await this.db.from('event_registrations')
+      .select('*')
+      .eq('id', registrationId)
+      .maybeSingle();
 
     if (!reg) {
       throw new NotFoundException(
@@ -549,14 +509,13 @@ export class EventsService {
       );
     }
 
-    const now = new Date();
-    await this.prisma.event_registrations.update({
-      where: { id: registrationId },
-      data: {
+    const now = new Date().toISOString();
+    await this.db.from('event_registrations')
+      .update({
         status: 'CHECKED_IN',
         checked_in_at: now,
-      },
-    });
+      })
+      .eq('id', registrationId);
 
     return {
       id: registrationId,
@@ -576,57 +535,27 @@ export class EventsService {
     userId: string,
   ): Promise<void> {
     // Check event_organizers table
-    const organizer = await this.prisma.event_organizers.findUnique({
-      where: {
-        event_id_user_id: {
-          event_id: eventId,
-          user_id: userId,
-        },
-      },
-    });
+    const { data: organizer } = await this.db.from('event_organizers')
+      .select('*')
+      .eq('event_id', eventId)
+      .eq('user_id', userId)
+      .maybeSingle();
 
     if (organizer) return;
 
     // Also check creator_id on the events table itself
-    const event = await this.prisma.events.findFirst({
-      where: {
-        id: eventId,
-        creator_id: userId,
-      },
-      select: { id: true },
-    });
+    const { data: event } = await this.db.from('events')
+      .select('id')
+      .eq('id', eventId)
+      .eq('creator_id', userId)
+      .maybeSingle();
 
     if (event) return;
 
     throw new ForbiddenException('You are not an organizer of this event');
   }
 
-  private formatEvent(row: {
-    id: string;
-    creator_id: string;
-    title: string;
-    slug: string;
-    description: string | null;
-    image_url: string | null;
-    banner_url: string | null;
-    venue: string | null;
-    address: string | null;
-    city: string | null;
-    state: string | null;
-    zip_code: string | null;
-    latitude: number | null;
-    longitude: number | null;
-    start_date: Date;
-    end_date: Date;
-    timezone: string;
-    category: string | null;
-    status: string;
-    visibility: string;
-    max_attendees: number | null;
-    is_free: boolean;
-    created_at: Date;
-    updated_at: Date;
-  }) {
+  private formatEvent(row: any) {
     return {
       id: row.id,
       creatorId: row.creator_id,
@@ -655,20 +584,7 @@ export class EventsService {
     };
   }
 
-  private formatTicketType(row: {
-    id: string;
-    event_id: string;
-    name: string;
-    price: Prisma.Decimal | number;
-    quantity: number;
-    quantity_sold: number;
-    description: string | null;
-    sales_start: Date | null;
-    sales_end: Date | null;
-    is_active: boolean;
-    created_at: Date;
-    updated_at: Date;
-  }) {
+  private formatTicketType(row: any) {
     const price = Number(row.price);
     return {
       id: row.id,

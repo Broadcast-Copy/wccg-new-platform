@@ -5,21 +5,7 @@ export const metadata = {
   title: "Channel Guide | WCCG 104.5 FM",
 };
 
-interface Stream {
-  id: string;
-  name: string;
-  description?: string;
-  stream_url: string;
-  category?: string;
-  metadata?: {
-    is_live?: boolean;
-    current_track?: string;
-    current_artist?: string;
-    album_art?: string;
-  };
-}
-
-async function getStreams(): Promise<Stream[]> {
+async function getStreams() {
   try {
     const apiUrl =
       process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";

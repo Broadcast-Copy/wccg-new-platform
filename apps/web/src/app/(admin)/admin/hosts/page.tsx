@@ -39,17 +39,17 @@ const hostSchema = z.object({
   name: z.string().min(1, "Name is required"),
   slug: z.string().min(1, "Slug is required"),
   bio: z.string().optional(),
-  avatar_url: z.string().url().optional().or(z.literal("")),
+  avatarUrl: z.string().url().optional().or(z.literal("")),
   email: z.string().email("Invalid email").optional().or(z.literal("")),
-  is_active: z.boolean(),
+  isActive: z.boolean(),
 });
 
 type HostFormValues = z.infer<typeof hostSchema>;
 
 interface Host extends HostFormValues {
   id: string;
-  created_at?: string;
-  updated_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export default function AdminHostsPage() {
@@ -67,9 +67,9 @@ export default function AdminHostsPage() {
       name: "",
       slug: "",
       bio: "",
-      avatar_url: "",
+      avatarUrl: "",
       email: "",
-      is_active: true,
+      isActive: true,
     },
   });
 
@@ -95,9 +95,9 @@ export default function AdminHostsPage() {
       name: "",
       slug: "",
       bio: "",
-      avatar_url: "",
+      avatarUrl: "",
       email: "",
-      is_active: true,
+      isActive: true,
     });
     setDialogOpen(true);
   }
@@ -108,9 +108,9 @@ export default function AdminHostsPage() {
       name: host.name,
       slug: host.slug,
       bio: host.bio ?? "",
-      avatar_url: host.avatar_url ?? "",
+      avatarUrl: host.avatarUrl ?? "",
       email: host.email ?? "",
-      is_active: host.is_active,
+      isActive: host.isActive,
     });
     setDialogOpen(true);
   }
@@ -120,7 +120,7 @@ export default function AdminHostsPage() {
     try {
       const payload = {
         ...values,
-        avatar_url: values.avatar_url || undefined,
+        avatarUrl: values.avatarUrl || undefined,
         email: values.email || undefined,
         bio: values.bio || undefined,
       };
@@ -212,12 +212,12 @@ export default function AdminHostsPage() {
                   <TableCell>
                     <Badge
                       className={
-                        host.is_active
+                        host.isActive
                           ? "bg-green-600 hover:bg-green-600"
                           : "bg-gray-500 hover:bg-gray-500"
                       }
                     >
-                      {host.is_active ? "Active" : "Inactive"}
+                      {host.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -320,22 +320,22 @@ export default function AdminHostsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="avatar_url">Avatar URL</Label>
+              <Label htmlFor="avatarUrl">Avatar URL</Label>
               <Input
-                id="avatar_url"
+                id="avatarUrl"
                 placeholder="https://..."
-                {...form.register("avatar_url")}
+                {...form.register("avatarUrl")}
               />
             </div>
 
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
-                id="is_active"
+                id="isActive"
                 className="size-4 rounded border"
-                {...form.register("is_active")}
+                {...form.register("isActive")}
               />
-              <Label htmlFor="is_active">Active</Label>
+              <Label htmlFor="isActive">Active</Label>
             </div>
           </form>
           <DialogFooter>

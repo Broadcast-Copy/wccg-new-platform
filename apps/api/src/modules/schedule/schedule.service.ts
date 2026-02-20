@@ -5,63 +5,13 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma/prisma.service.js';
-import type {
-  schedule_blocks,
-  shows,
-  hosts,
-  show_hosts,
-  streams,
-  stream_metadata,
-  Prisma,
-} from '@prisma/client';
-
-// ─── Prisma include types ────────────────────────────────────────
-
-/** The shape returned by findMany with our standard "include show + hosts" */
-type BlockWithShow = schedule_blocks & {
-  show:
-    | (shows & {
-        show_hosts: (show_hosts & { host: hosts })[];
-      })
-    | null;
-};
-
-/** Full block with stream + metadata, used by resolveNow */
-type BlockFull = BlockWithShow & {
-  stream: streams & {
-    stream_metadata: stream_metadata | null;
-  };
-};
-
-// ─── Shared Prisma include fragments ─────────────────────────────
-
-const INCLUDE_SHOW = {
-  show: {
-    include: {
-      show_hosts: {
-        include: {
-          host: true,
-        },
-      },
-    },
-  },
-} as const satisfies Prisma.schedule_blocksInclude;
-
-const INCLUDE_FULL = {
-  ...INCLUDE_SHOW,
-  stream: {
-    include: {
-      stream_metadata: true,
-    },
-  },
-} as const satisfies Prisma.schedule_blocksInclude;
+import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
 
 @Injectable()
 export class ScheduleService {
   private readonly logger = new Logger(ScheduleService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly db: SupabaseDbService) {}
 
   /**
    * Get schedule blocks for a stream, optionally filtered by date.
@@ -74,52 +24,35 @@ export class ScheduleService {
     if (date) {
       const d = new Date(date);
       const dayOfWeek = d.getDay();
-      const overrideDateValue = new Date(date);
 
-      const rows = await this.prisma.schedule_blocks.findMany({
-        where: {
-          stream_id: streamId,
-          is_active: true,
-          OR: [
-            {
-              is_override: true,
-              override_date: overrideDateValue,
-            },
-            {
-              is_override: false,
-              day_of_week: dayOfWeek,
-            },
-          ],
-        },
-        include: INCLUDE_SHOW,
-        orderBy: { start_time: 'asc' },
-      });
+      const { data, error } = await this.db.from('schedule_blocks')
+        .select('*, shows(*, show_hosts(*, hosts(*)))')
+        .eq('stream_id', streamId)
+        .eq('is_active', true)
+        .or(`and(is_override.eq.true,override_date.eq.${date}),and(is_override.eq.false,day_of_week.eq.${dayOfWeek})`)
+        .order('start_time', { ascending: true });
 
-      return rows.map((r) => this.formatBlockWithShow(r));
+      if (error) throw error;
+
+      return (data ?? []).map((r: any) => this.formatBlockWithShow(r));
     }
 
     // No date: return all recurring blocks
-    const rows = await this.prisma.schedule_blocks.findMany({
-      where: {
-        stream_id: streamId,
-        is_active: true,
-        is_override: false,
-      },
-      include: INCLUDE_SHOW,
-      orderBy: [{ day_of_week: 'asc' }, { start_time: 'asc' }],
-    });
+    const { data, error } = await this.db.from('schedule_blocks')
+      .select('*, shows(*, show_hosts(*, hosts(*)))')
+      .eq('stream_id', streamId)
+      .eq('is_active', true)
+      .eq('is_override', false)
+      .order('day_of_week', { ascending: true })
+      .order('start_time', { ascending: true });
 
-    return rows.map((r) => this.formatBlockWithShow(r));
+    if (error) throw error;
+
+    return (data ?? []).map((r: any) => this.formatBlockWithShow(r));
   }
 
   /**
    * Resolve "Live Now" -- which show is currently on air for a given stream.
-   *
-   * Algorithm:
-   * 1. Get current day_of_week and time in HH:mm format
-   * 2. First check for override blocks matching today's date
-   * 3. If no override, find the recurring block for this day/time range
-   * 4. Return the matching block enriched with show details + stream metadata
    */
   async resolveNow(streamId?: string) {
     this.logger.debug(`Resolving live-now for stream ${streamId ?? 'all'}`);
@@ -127,59 +60,54 @@ export class ScheduleService {
     const now = new Date();
     const dayOfWeek = now.getDay(); // 0=Sunday
     const currentTime = now.toTimeString().slice(0, 5); // "HH:mm"
-    const todayDate = new Date(now.toISOString().slice(0, 10)); // midnight UTC for date comparison
-
-    // ── Shared where fragments ──
-    const streamFilter: Prisma.schedule_blocksWhereInput = streamId
-      ? { stream_id: streamId }
-      : {};
+    const todayDate = now.toISOString().slice(0, 10); // "YYYY-MM-DD"
 
     // Step 1: Check for override blocks matching today's date + time window
-    const overrideWhere: Prisma.schedule_blocksWhereInput = {
-      ...streamFilter,
-      is_active: true,
-      is_override: true,
-      override_date: todayDate,
-      start_time: { lte: currentTime },
-      end_time: { gt: currentTime },
-    };
+    let overrideQuery = this.db.from('schedule_blocks')
+      .select('*, shows(*, show_hosts(*, hosts(*))), streams(*, stream_metadata(*))')
+      .eq('is_active', true)
+      .eq('is_override', true)
+      .eq('override_date', todayDate)
+      .lte('start_time', currentTime)
+      .gt('end_time', currentTime)
+      .order('start_time', { ascending: false });
 
-    const overrideRows = await this.prisma.schedule_blocks.findMany({
-      where: overrideWhere,
-      include: INCLUDE_FULL,
-      orderBy: { start_time: 'desc' },
-      ...(streamId ? { take: 1 } : {}),
-    });
+    if (streamId) {
+      overrideQuery = overrideQuery.eq('stream_id', streamId).limit(1);
+    }
 
-    if (overrideRows.length > 0) {
+    const { data: overrideRows, error: overrideError } = await overrideQuery;
+    if (overrideError) throw overrideError;
+
+    if (overrideRows && overrideRows.length > 0) {
       if (streamId) {
         return this.formatBlockFull(overrideRows[0]);
       }
-      return overrideRows.map((r) => this.formatBlockFull(r));
+      return overrideRows.map((r: any) => this.formatBlockFull(r));
     }
 
     // Step 2: No override found, check recurring blocks
-    const recurringWhere: Prisma.schedule_blocksWhereInput = {
-      ...streamFilter,
-      is_active: true,
-      is_override: false,
-      day_of_week: dayOfWeek,
-      start_time: { lte: currentTime },
-      end_time: { gt: currentTime },
-    };
+    let recurringQuery = this.db.from('schedule_blocks')
+      .select('*, shows(*, show_hosts(*, hosts(*))), streams(*, stream_metadata(*))')
+      .eq('is_active', true)
+      .eq('is_override', false)
+      .eq('day_of_week', dayOfWeek)
+      .lte('start_time', currentTime)
+      .gt('end_time', currentTime)
+      .order('start_time', { ascending: false });
 
-    const recurringRows = await this.prisma.schedule_blocks.findMany({
-      where: recurringWhere,
-      include: INCLUDE_FULL,
-      orderBy: { start_time: 'desc' },
-      ...(streamId ? { take: 1 } : {}),
-    });
+    if (streamId) {
+      recurringQuery = recurringQuery.eq('stream_id', streamId).limit(1);
+    }
 
-    if (recurringRows.length > 0) {
+    const { data: recurringRows, error: recurringError } = await recurringQuery;
+    if (recurringError) throw recurringError;
+
+    if (recurringRows && recurringRows.length > 0) {
       if (streamId) {
         return this.formatBlockFull(recurringRows[0]);
       }
-      return recurringRows.map((r) => this.formatBlockFull(r));
+      return recurringRows.map((r: any) => this.formatBlockFull(r));
     }
 
     // Nothing on air right now
@@ -188,7 +116,6 @@ export class ScheduleService {
 
   /**
    * Get what's coming up next on a stream.
-   * Looks at today's remaining override blocks + recurring blocks that haven't started yet.
    */
   async upNext(streamId: string, limit = 5) {
     this.logger.debug(`Finding up-next for stream ${streamId}, limit=${limit}`);
@@ -196,47 +123,40 @@ export class ScheduleService {
     const now = new Date();
     const dayOfWeek = now.getDay();
     const currentTime = now.toTimeString().slice(0, 5);
-    const todayDate = new Date(now.toISOString().slice(0, 10));
+    const todayDate = now.toISOString().slice(0, 10);
 
     // Fetch override blocks for today that haven't started yet
-    const overrideBlocks = await this.prisma.schedule_blocks.findMany({
-      where: {
-        stream_id: streamId,
-        is_active: true,
-        is_override: true,
-        override_date: todayDate,
-        start_time: { gt: currentTime },
-      },
-      include: INCLUDE_SHOW,
-      orderBy: { start_time: 'asc' },
-      take: limit,
-    });
+    const { data: overrideBlocks } = await this.db.from('schedule_blocks')
+      .select('*, shows(*, show_hosts(*, hosts(*)))')
+      .eq('stream_id', streamId)
+      .eq('is_active', true)
+      .eq('is_override', true)
+      .eq('override_date', todayDate)
+      .gt('start_time', currentTime)
+      .order('start_time', { ascending: true })
+      .limit(limit);
 
     // Fetch recurring blocks for today that haven't started yet
-    const recurringBlocks = await this.prisma.schedule_blocks.findMany({
-      where: {
-        stream_id: streamId,
-        is_active: true,
-        is_override: false,
-        day_of_week: dayOfWeek,
-        start_time: { gt: currentTime },
-      },
-      include: INCLUDE_SHOW,
-      orderBy: { start_time: 'asc' },
-      take: limit,
-    });
+    const { data: recurringBlocks } = await this.db.from('schedule_blocks')
+      .select('*, shows(*, show_hosts(*, hosts(*)))')
+      .eq('stream_id', streamId)
+      .eq('is_active', true)
+      .eq('is_override', false)
+      .eq('day_of_week', dayOfWeek)
+      .gt('start_time', currentTime)
+      .order('start_time', { ascending: true })
+      .limit(limit);
 
     // Merge, sort by start_time, and take the requested limit
-    const combined = [...overrideBlocks, ...recurringBlocks]
-      .sort((a, b) => a.start_time.localeCompare(b.start_time))
+    const combined = [...(overrideBlocks ?? []), ...(recurringBlocks ?? [])]
+      .sort((a: any, b: any) => a.start_time.localeCompare(b.start_time))
       .slice(0, limit);
 
-    return combined.map((r) => this.formatBlockWithShow(r));
+    return combined.map((r: any) => this.formatBlockWithShow(r));
   }
 
   /**
    * Create a schedule block (admin only).
-   * Validates no overlapping blocks on the same stream/day/time.
    */
   async createBlock(dto: Record<string, unknown>) {
     this.logger.debug('Creating schedule block');
@@ -261,32 +181,31 @@ export class ScheduleService {
       throw new BadRequestException('start_time must be before end_time');
     }
 
-    // Check for overlapping blocks on the same stream, same day/override_date, with overlapping time ranges
-    const overlapWhere: Prisma.schedule_blocksWhereInput = {
-      stream_id: streamId,
-      is_active: true,
-      start_time: { lt: endTime },
-      end_time: { gt: startTime },
-    };
+    // Check for overlapping blocks
+    let overlapQuery = this.db.from('schedule_blocks')
+      .select('*', { count: 'exact', head: true })
+      .eq('stream_id', streamId)
+      .eq('is_active', true)
+      .lt('start_time', endTime)
+      .gt('end_time', startTime);
 
     if (isOverride) {
-      overlapWhere.is_override = true;
-      overlapWhere.override_date = overrideDate ? new Date(overrideDate) : undefined;
+      overlapQuery = overlapQuery.eq('is_override', true);
+      if (overrideDate) {
+        overlapQuery = overlapQuery.eq('override_date', overrideDate);
+      }
     } else {
-      overlapWhere.is_override = false;
-      overlapWhere.day_of_week = dayOfWeek;
+      overlapQuery = overlapQuery.eq('is_override', false).eq('day_of_week', dayOfWeek);
     }
 
-    const overlapCount = await this.prisma.schedule_blocks.count({
-      where: overlapWhere,
-    });
+    const { count: overlapCount } = await overlapQuery;
 
-    if (overlapCount > 0) {
+    if (overlapCount && overlapCount > 0) {
       throw new ConflictException('Schedule block overlaps with an existing block');
     }
 
-    const created = await this.prisma.schedule_blocks.create({
-      data: {
+    const { data: created, error } = await this.db.from('schedule_blocks')
+      .insert({
         stream_id: streamId,
         show_id: showId,
         title,
@@ -294,12 +213,14 @@ export class ScheduleService {
         start_time: startTime,
         end_time: endTime,
         is_override: isOverride,
-        override_date: overrideDate ? new Date(overrideDate) : null,
+        override_date: overrideDate,
         is_active: isActive,
         color,
-      },
-      include: INCLUDE_SHOW,
-    });
+      })
+      .select('*, shows(*, show_hosts(*, hosts(*)))')
+      .single();
+
+    if (error) throw error;
 
     return this.formatBlockWithShow(created);
   }
@@ -310,18 +231,17 @@ export class ScheduleService {
   async updateBlock(id: string, dto: Record<string, unknown>) {
     this.logger.debug(`Updating schedule block ${id}`);
 
-    const existing = await this.prisma.schedule_blocks.findUnique({
-      where: { id },
-    });
+    const { data: existing } = await this.db.from('schedule_blocks')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
 
     if (!existing) {
       throw new NotFoundException(`Schedule block ${id} not found`);
     }
 
-    // Build the update data, only including fields that were provided.
-    // Use UncheckedUpdateInput so we can set scalar FK fields directly.
-    const data: Prisma.schedule_blocksUncheckedUpdateInput = {
-      updated_at: new Date(),
+    const data: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
     };
 
     if (dto.showId !== undefined) data.show_id = (dto.showId as string) || null;
@@ -332,11 +252,13 @@ export class ScheduleService {
     if (dto.isActive !== undefined) data.is_active = dto.isActive as boolean;
     if (dto.color !== undefined) data.color = dto.color as string;
 
-    const updated = await this.prisma.schedule_blocks.update({
-      where: { id },
-      data,
-      include: INCLUDE_SHOW,
-    });
+    const { data: updated, error } = await this.db.from('schedule_blocks')
+      .update(data)
+      .eq('id', id)
+      .select('*, shows(*, show_hosts(*, hosts(*)))')
+      .single();
+
+    if (error) throw error;
 
     return this.formatBlockWithShow(updated);
   }
@@ -347,27 +269,33 @@ export class ScheduleService {
   async removeBlock(id: string) {
     this.logger.debug(`Deleting schedule block ${id}`);
 
-    const existing = await this.prisma.schedule_blocks.findUnique({
-      where: { id },
-    });
+    const { data: existing } = await this.db.from('schedule_blocks')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
 
     if (!existing) {
       throw new NotFoundException(`Schedule block ${id} not found`);
     }
 
-    await this.prisma.schedule_blocks.delete({ where: { id } });
+    const { error } = await this.db.from('schedule_blocks')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
 
     return { deleted: true, id };
   }
 
   // ─── Private helpers ──────────────────────────────────────────
 
-  private formatBlockWithShow(row: BlockWithShow) {
+  private formatBlockWithShow(row: any) {
+    const show = row.shows;
     const hosts =
-      row.show?.show_hosts.map((sh) => ({
-        id: sh.host.id,
-        name: sh.host.name,
-        avatarUrl: sh.host.avatar_url,
+      show?.show_hosts?.map((sh: any) => ({
+        id: sh.hosts.id,
+        name: sh.hosts.name,
+        avatarUrl: sh.hosts.avatar_url,
         isPrimary: sh.is_primary,
       })) ?? [];
 
@@ -383,12 +311,12 @@ export class ScheduleService {
       overrideDate: row.override_date,
       isActive: row.is_active,
       color: row.color,
-      show: row.show
+      show: show
         ? {
-            id: row.show.id,
-            name: row.show.name,
-            slug: row.show.slug,
-            imageUrl: row.show.image_url,
+            id: show.id,
+            name: show.name,
+            slug: show.slug,
+            imageUrl: show.image_url,
             hosts,
           }
         : null,
@@ -397,15 +325,16 @@ export class ScheduleService {
     };
   }
 
-  private formatBlockFull(row: BlockFull) {
+  private formatBlockFull(row: any) {
     const base = this.formatBlockWithShow(row);
-    const meta = row.stream.stream_metadata;
+    const stream = row.streams;
+    const meta = stream?.stream_metadata;
     return {
       ...base,
       stream: {
-        id: row.stream.id,
-        name: row.stream.name,
-        slug: row.stream.slug,
+        id: stream?.id,
+        name: stream?.name,
+        slug: stream?.slug,
       },
       nowPlaying: {
         currentTitle: meta?.current_title ?? null,

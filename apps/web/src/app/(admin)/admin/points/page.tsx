@@ -40,17 +40,17 @@ import { apiClient } from "@/lib/api-client";
 
 const ruleSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  trigger_type: z.string().min(1, "Trigger type is required"),
-  points_amount: z.number().int().min(1, "Must be at least 1"),
+  triggerType: z.string().min(1, "Trigger type is required"),
+  pointsAmount: z.number().int().min(1, "Must be at least 1"),
   threshold: z.number().int().min(0),
-  is_active: z.boolean(),
+  isActive: z.boolean(),
 });
 
 type RuleFormValues = z.infer<typeof ruleSchema>;
 
 interface PointsRule extends RuleFormValues {
   id: string;
-  created_at?: string;
+  createdAt?: string;
 }
 
 // ---- Rewards ----
@@ -58,18 +58,18 @@ interface PointsRule extends RuleFormValues {
 const rewardSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  points_cost: z.number().int().min(1, "Must be at least 1"),
-  stock_count: z.number().int().min(0),
+  pointsCost: z.number().int().min(1, "Must be at least 1"),
+  stockCount: z.number().int().min(0),
   category: z.string().optional(),
-  image_url: z.string().url().optional().or(z.literal("")),
-  is_active: z.boolean(),
+  imageUrl: z.string().url().optional().or(z.literal("")),
+  isActive: z.boolean(),
 });
 
 type RewardFormValues = z.infer<typeof rewardSchema>;
 
 interface Reward extends RewardFormValues {
   id: string;
-  created_at?: string;
+  createdAt?: string;
 }
 
 export default function AdminPointsPage() {
@@ -96,10 +96,10 @@ export default function AdminPointsPage() {
     resolver: zodResolver(ruleSchema),
     defaultValues: {
       name: "",
-      trigger_type: "",
-      points_amount: 10,
+      triggerType: "",
+      pointsAmount: 10,
       threshold: 0,
-      is_active: true,
+      isActive: true,
     },
   });
 
@@ -108,11 +108,11 @@ export default function AdminPointsPage() {
     defaultValues: {
       name: "",
       description: "",
-      points_cost: 100,
-      stock_count: 0,
+      pointsCost: 100,
+      stockCount: 0,
       category: "",
-      image_url: "",
-      is_active: true,
+      imageUrl: "",
+      isActive: true,
     },
   });
 
@@ -151,10 +151,10 @@ export default function AdminPointsPage() {
     setEditingRule(null);
     ruleForm.reset({
       name: "",
-      trigger_type: "",
-      points_amount: 10,
+      triggerType: "",
+      pointsAmount: 10,
       threshold: 0,
-      is_active: true,
+      isActive: true,
     });
     setRuleDialogOpen(true);
   }
@@ -163,10 +163,10 @@ export default function AdminPointsPage() {
     setEditingRule(rule);
     ruleForm.reset({
       name: rule.name,
-      trigger_type: rule.trigger_type,
-      points_amount: rule.points_amount,
+      triggerType: rule.triggerType,
+      pointsAmount: rule.pointsAmount,
       threshold: rule.threshold,
-      is_active: rule.is_active,
+      isActive: rule.isActive,
     });
     setRuleDialogOpen(true);
   }
@@ -224,11 +224,11 @@ export default function AdminPointsPage() {
     rewardForm.reset({
       name: "",
       description: "",
-      points_cost: 100,
-      stock_count: 0,
+      pointsCost: 100,
+      stockCount: 0,
       category: "",
-      image_url: "",
-      is_active: true,
+      imageUrl: "",
+      isActive: true,
     });
     setRewardDialogOpen(true);
   }
@@ -238,11 +238,11 @@ export default function AdminPointsPage() {
     rewardForm.reset({
       name: reward.name,
       description: reward.description ?? "",
-      points_cost: reward.points_cost,
-      stock_count: reward.stock_count,
+      pointsCost: reward.pointsCost,
+      stockCount: reward.stockCount,
       category: reward.category ?? "",
-      image_url: reward.image_url ?? "",
-      is_active: reward.is_active,
+      imageUrl: reward.imageUrl ?? "",
+      isActive: reward.isActive,
     });
     setRewardDialogOpen(true);
   }
@@ -252,7 +252,7 @@ export default function AdminPointsPage() {
     try {
       const payload = {
         ...values,
-        image_url: values.image_url || undefined,
+        imageUrl: values.imageUrl || undefined,
         category: values.category || undefined,
         description: values.description || undefined,
       };
@@ -349,19 +349,19 @@ export default function AdminPointsPage() {
                     <TableRow key={rule.id}>
                       <TableCell className="font-medium">{rule.name}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{rule.trigger_type}</Badge>
+                        <Badge variant="outline">{rule.triggerType}</Badge>
                       </TableCell>
-                      <TableCell>{rule.points_amount}</TableCell>
+                      <TableCell>{rule.pointsAmount}</TableCell>
                       <TableCell>{rule.threshold}</TableCell>
                       <TableCell>
                         <Badge
                           className={
-                            rule.is_active
+                            rule.isActive
                               ? "bg-green-600 hover:bg-green-600"
                               : "bg-gray-500 hover:bg-gray-500"
                           }
                         >
-                          {rule.is_active ? "Active" : "Inactive"}
+                          {rule.isActive ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -438,8 +438,8 @@ export default function AdminPointsPage() {
                       <TableCell className="font-medium">
                         {reward.name}
                       </TableCell>
-                      <TableCell>{reward.points_cost}</TableCell>
-                      <TableCell>{reward.stock_count}</TableCell>
+                      <TableCell>{reward.pointsCost}</TableCell>
+                      <TableCell>{reward.stockCount}</TableCell>
                       <TableCell>
                         {reward.category ? (
                           <Badge variant="outline">{reward.category}</Badge>
@@ -450,12 +450,12 @@ export default function AdminPointsPage() {
                       <TableCell>
                         <Badge
                           className={
-                            reward.is_active
+                            reward.isActive
                               ? "bg-green-600 hover:bg-green-600"
                               : "bg-gray-500 hover:bg-gray-500"
                           }
                         >
-                          {reward.is_active ? "Active" : "Inactive"}
+                          {reward.isActive ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -522,29 +522,29 @@ export default function AdminPointsPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="trigger_type">Trigger Type</Label>
+              <Label htmlFor="triggerType">Trigger Type</Label>
               <Input
-                id="trigger_type"
+                id="triggerType"
                 placeholder="e.g. LISTEN, EVENT_ATTEND, SHARE"
-                {...ruleForm.register("trigger_type")}
+                {...ruleForm.register("triggerType")}
               />
-              {ruleForm.formState.errors.trigger_type && (
+              {ruleForm.formState.errors.triggerType && (
                 <p className="text-sm text-destructive">
-                  {ruleForm.formState.errors.trigger_type.message}
+                  {ruleForm.formState.errors.triggerType.message}
                 </p>
               )}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="points_amount">Points Amount</Label>
+                <Label htmlFor="pointsAmount">Points Amount</Label>
                 <Input
-                  id="points_amount"
+                  id="pointsAmount"
                   type="number"
-                  {...ruleForm.register("points_amount")}
+                  {...ruleForm.register("pointsAmount")}
                 />
-                {ruleForm.formState.errors.points_amount && (
+                {ruleForm.formState.errors.pointsAmount && (
                   <p className="text-sm text-destructive">
-                    {ruleForm.formState.errors.points_amount.message}
+                    {ruleForm.formState.errors.pointsAmount.message}
                   </p>
                 )}
               </div>
@@ -560,11 +560,11 @@ export default function AdminPointsPage() {
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
-                id="rule-is_active"
+                id="rule-isActive"
                 className="size-4 rounded border"
-                {...ruleForm.register("is_active")}
+                {...ruleForm.register("isActive")}
               />
-              <Label htmlFor="rule-is_active">Active</Label>
+              <Label htmlFor="rule-isActive">Active</Label>
             </div>
           </form>
           <DialogFooter>
@@ -650,24 +650,24 @@ export default function AdminPointsPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="points_cost">Points Cost</Label>
+                <Label htmlFor="pointsCost">Points Cost</Label>
                 <Input
-                  id="points_cost"
+                  id="pointsCost"
                   type="number"
-                  {...rewardForm.register("points_cost")}
+                  {...rewardForm.register("pointsCost")}
                 />
-                {rewardForm.formState.errors.points_cost && (
+                {rewardForm.formState.errors.pointsCost && (
                   <p className="text-sm text-destructive">
-                    {rewardForm.formState.errors.points_cost.message}
+                    {rewardForm.formState.errors.pointsCost.message}
                   </p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="stock_count">Stock</Label>
+                <Label htmlFor="stockCount">Stock</Label>
                 <Input
-                  id="stock_count"
+                  id="stockCount"
                   type="number"
-                  {...rewardForm.register("stock_count")}
+                  {...rewardForm.register("stockCount")}
                 />
               </div>
               <div className="space-y-2">
@@ -680,21 +680,21 @@ export default function AdminPointsPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="reward-image_url">Image URL</Label>
+              <Label htmlFor="reward-imageUrl">Image URL</Label>
               <Input
-                id="reward-image_url"
+                id="reward-imageUrl"
                 placeholder="https://..."
-                {...rewardForm.register("image_url")}
+                {...rewardForm.register("imageUrl")}
               />
             </div>
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
-                id="reward-is_active"
+                id="reward-isActive"
                 className="size-4 rounded border"
-                {...rewardForm.register("is_active")}
+                {...rewardForm.register("isActive")}
               />
-              <Label htmlFor="reward-is_active">Active</Label>
+              <Label htmlFor="reward-isActive">Active</Label>
             </div>
           </form>
           <DialogFooter>

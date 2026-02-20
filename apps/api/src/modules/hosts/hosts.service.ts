@@ -4,15 +4,13 @@ import {
   ConflictException,
   Logger,
 } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma/prisma.service.js';
-import { Prisma } from '@prisma/client';
-import type { hosts } from '@prisma/client';
+import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
 
 @Injectable()
 export class HostsService {
   private readonly logger = new Logger(HostsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly db: SupabaseDbService) {}
 
   /**
    * List all active hosts.
@@ -20,12 +18,14 @@ export class HostsService {
   async findAll() {
     this.logger.debug('Finding all hosts');
 
-    const rows = await this.prisma.hosts.findMany({
-      where: { is_active: true },
-      orderBy: { name: 'asc' },
-    });
+    const { data, error } = await this.db.from('hosts')
+      .select('*')
+      .eq('is_active', true)
+      .order('name', { ascending: true });
 
-    return rows.map((h) => this.formatHost(h));
+    if (error) throw error;
+
+    return (data ?? []).map((h: any) => this.formatHost(h));
   }
 
   /**
@@ -34,21 +34,12 @@ export class HostsService {
   async findById(id: string) {
     this.logger.debug(`Finding host ${id}`);
 
-    const row = await this.prisma.hosts.findUnique({
-      where: { id },
-      include: {
-        show_hosts: {
-          where: { show: { is_active: true } },
-          include: {
-            show: {
-              select: { id: true, name: true, slug: true, image_url: true },
-            },
-          },
-        },
-      },
-    });
+    const { data: row, error } = await this.db.from('hosts')
+      .select('*, show_hosts(is_primary, shows(id, name, slug, image_url))')
+      .eq('id', id)
+      .single();
 
-    if (!row) {
+    if (error || !row) {
       throw new NotFoundException(`Host ${id} not found`);
     }
 
@@ -65,29 +56,27 @@ export class HostsService {
       (dto.slug as string) ??
       name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
-    try {
-      const row = await this.prisma.hosts.create({
-        data: {
-          id: (dto.id as string) ?? undefined,
-          name,
-          slug,
-          bio: (dto.bio as string) ?? null,
-          avatar_url: (dto.avatarUrl as string) ?? null,
-          email: (dto.email as string) ?? null,
-          is_active: (dto.isActive as boolean) ?? true,
-        },
-      });
+    const { data: row, error } = await this.db.from('hosts')
+      .insert({
+        ...(dto.id ? { id: dto.id as string } : {}),
+        name,
+        slug,
+        bio: (dto.bio as string) ?? null,
+        avatar_url: (dto.avatarUrl as string) ?? null,
+        email: (dto.email as string) ?? null,
+        is_active: (dto.isActive as boolean) ?? true,
+      })
+      .select()
+      .single();
 
-      return this.findById(row.id);
-    } catch (err: unknown) {
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === 'P2002'
-      ) {
+    if (error) {
+      if (error.code === '23505') {
         throw new ConflictException(`Host with slug "${slug}" already exists`);
       }
-      throw err;
+      throw error;
     }
+
+    return this.findById(row.id);
   }
 
   /**
@@ -99,18 +88,19 @@ export class HostsService {
     // Verify exists
     await this.findById(id);
 
-    await this.prisma.hosts.update({
-      where: { id },
-      data: {
-        ...(dto.name !== undefined && { name: dto.name as string }),
-        ...(dto.slug !== undefined && { slug: dto.slug as string }),
-        ...(dto.bio !== undefined && { bio: dto.bio as string }),
-        ...(dto.avatarUrl !== undefined && { avatar_url: dto.avatarUrl as string }),
-        ...(dto.email !== undefined && { email: dto.email as string }),
-        ...(dto.isActive !== undefined && { is_active: dto.isActive as boolean }),
-        updated_at: new Date(),
-      },
-    });
+    const data: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (dto.name !== undefined) data.name = dto.name as string;
+    if (dto.slug !== undefined) data.slug = dto.slug as string;
+    if (dto.bio !== undefined) data.bio = dto.bio as string;
+    if (dto.avatarUrl !== undefined) data.avatar_url = dto.avatarUrl as string;
+    if (dto.email !== undefined) data.email = dto.email as string;
+    if (dto.isActive !== undefined) data.is_active = dto.isActive as boolean;
+
+    await this.db.from('hosts')
+      .update(data)
+      .eq('id', id);
 
     return this.findById(id);
   }
@@ -126,15 +116,22 @@ export class HostsService {
 
     // show_hosts rows are cascade-deleted by the DB, but delete explicitly
     // for clarity and backward compatibility
-    await this.prisma.show_hosts.deleteMany({ where: { host_id: id } });
-    await this.prisma.hosts.delete({ where: { id } });
+    await this.db.from('show_hosts')
+      .delete()
+      .eq('host_id', id);
+
+    const { error } = await this.db.from('hosts')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
 
     return { deleted: true, id };
   }
 
   // ─── Private helpers ──────────────────────────────────────────
 
-  private formatHost(row: hosts) {
+  private formatHost(row: any) {
     return {
       id: row.id,
       name: row.name,
@@ -148,21 +145,17 @@ export class HostsService {
     };
   }
 
-  private formatHostWithShows(
-    row: hosts & {
-      show_hosts: Array<{
-        is_primary: boolean;
-        show: { id: string; name: string; slug: string; image_url: string | null };
-      }>;
-    },
-  ) {
-    const shows = row.show_hosts.map((sh) => ({
-      id: sh.show.id,
-      name: sh.show.name,
-      slug: sh.show.slug,
-      imageUrl: sh.show.image_url,
-      isPrimary: sh.is_primary,
-    }));
+  private formatHostWithShows(row: any) {
+    // Filter show_hosts where the show is active (can't filter nested in select)
+    const shows = (row.show_hosts ?? [])
+      .filter((sh: any) => sh.shows != null)
+      .map((sh: any) => ({
+        id: sh.shows.id,
+        name: sh.shows.name,
+        slug: sh.shows.slug,
+        imageUrl: sh.shows.image_url,
+        isPrimary: sh.is_primary,
+      }));
 
     return {
       ...this.formatHost(row),

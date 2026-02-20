@@ -10,11 +10,15 @@ import { toast } from "sonner";
 
 interface Reward {
   id: string;
-  title: string;
+  name: string;
   description?: string;
-  points_cost: number;
-  image_url?: string;
-  is_available: boolean;
+  imageUrl?: string;
+  pointsCost: number;
+  category?: string;
+  stockCount?: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface RewardsContentProps {
@@ -84,12 +88,12 @@ export function RewardsContent({ rewards }: RewardsContentProps) {
             <RewardCard
               key={reward.id}
               rewardId={reward.id}
-              title={reward.title}
+              title={reward.name}
               description={reward.description}
-              pointsCost={reward.points_cost}
+              pointsCost={reward.pointsCost}
               available={
-                reward.is_available &&
-                (balance !== null ? balance >= reward.points_cost : true)
+                reward.isActive &&
+                (balance !== null ? balance >= reward.pointsCost : true)
               }
               onRedeem={handleRedeem}
             />

@@ -28,69 +28,63 @@ import {
   CheckCircle,
 } from "lucide-react";
 
-// ─── Types matching API response (snake_case from Prisma/NestJS) ─────────
+// ─── Types matching API response (camelCase from NestJS format methods) ───
 
 interface TicketType {
   id: string;
   name: string;
   price: number;
   quantity: number;
-  quantity_sold: number;
+  quantitySold: number;
   description: string | null;
-  sales_start: string | null;
-  sales_end: string | null;
-  is_active: boolean;
+  isActive: boolean;
 }
 
 interface Organizer {
-  user_id: string;
+  userId: string;
   role: string;
-  profile: {
-    display_name: string | null;
-    avatar_url: string | null;
-  };
+  displayName: string | null;
+  email: string | null;
+  avatarUrl: string | null;
 }
 
 interface EventDetail {
   id: string;
-  creator_id: string;
   title: string;
   slug: string;
   description: string | null;
-  image_url: string | null;
-  banner_url: string | null;
-  venue: string | null;
+  category: string | null;
+  startDate: string;
+  endDate: string;
+  venueName: string | null;
   address: string | null;
   city: string | null;
   state: string | null;
-  zip_code: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  start_date: string;
-  end_date: string;
-  timezone: string;
-  category: string | null;
+  zipCode: string | null;
+  maxAttendees: number | null;
+  isFree: boolean;
+  isVirtual: boolean;
+  virtualUrl: string | null;
+  bannerUrl: string | null;
   status: string;
   visibility: string;
-  max_attendees: number | null;
-  is_free: boolean;
-  ticket_types: TicketType[];
-  event_organizers: Organizer[];
-  registration_count: number;
-  created_at: string;
-  updated_at: string;
+  ticketTypes: TicketType[];
+  organizers: Organizer[];
+  registrationCount: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface RegistrationResult {
   id: string;
-  event_id: string;
+  eventId: string;
   status: string;
-  qr_code: string;
+  qrCode: string;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
-function formatDateTime(dateStr: string, tz?: string): string {
+function formatDateTime(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -98,7 +92,6 @@ function formatDateTime(dateStr: string, tz?: string): string {
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: tz || undefined,
   });
 }
 
@@ -162,8 +155,8 @@ export default function EventDetailPage() {
           setEvent(data);
           setError(null);
           // Auto-select first active ticket type with availability
-          const firstActive = data.ticket_types.find(
-            (t) => t.is_active && t.quantity - t.quantity_sold > 0,
+          const firstActive = data.ticketTypes.find(
+            (t) => t.isActive && t.quantity - t.quantitySold > 0,
           );
           if (firstActive) {
             setSelectedTicketId(firstActive.id);
@@ -264,7 +257,7 @@ export default function EventDetailPage() {
     !isCancelled && !isCompleted && event.status === "PUBLISHED";
 
   // Build full address string
-  const addressParts = [event.address, event.city, event.state, event.zip_code].filter(Boolean);
+  const addressParts = [event.address, event.city, event.state, event.zipCode].filter(Boolean);
   const fullAddress = addressParts.join(", ");
 
   // ─── Main render ───────────────────────────────────────────────────────
@@ -282,11 +275,11 @@ export default function EventDetailPage() {
 
       {/* Banner Image */}
       <div className="relative overflow-hidden rounded-xl border">
-        {event.banner_url || event.image_url ? (
+        {event.bannerUrl ? (
           <div
             className="h-48 w-full bg-cover bg-center sm:h-72"
             style={{
-              backgroundImage: `url(${event.banner_url ?? event.image_url})`,
+              backgroundImage: `url(${event.bannerUrl})`,
             }}
           />
         ) : (
@@ -300,7 +293,7 @@ export default function EventDetailPage() {
               <Badge variant={getStatusVariant(event.status)}>
                 {event.status}
               </Badge>
-              {event.is_free && (
+              {event.isFree && (
                 <Badge variant="outline" className="border-white/30 text-white">
                   Free Event
                 </Badge>
@@ -334,13 +327,10 @@ export default function EventDetailPage() {
                 <Clock className="mt-0.5 h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
                   <p className="font-medium">
-                    {formatDateTime(event.start_date, event.timezone)}
+                    {formatDateTime(event.startDate)}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    to {formatDateTime(event.end_date, event.timezone)}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Timezone: {event.timezone}
+                    to {formatDateTime(event.endDate)}
                   </p>
                 </div>
               </div>
@@ -348,7 +338,7 @@ export default function EventDetailPage() {
           </Card>
 
           {/* Venue / Location */}
-          {(event.venue || fullAddress) && (
+          {(event.venueName || fullAddress) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -357,8 +347,8 @@ export default function EventDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-1">
-                {event.venue && (
-                  <p className="font-medium">{event.venue}</p>
+                {event.venueName && (
+                  <p className="font-medium">{event.venueName}</p>
                 )}
                 {fullAddress && (
                   <p className="text-sm text-muted-foreground">
@@ -384,7 +374,7 @@ export default function EventDetailPage() {
           )}
 
           {/* Organizers */}
-          {event.event_organizers.length > 0 && (
+          {event.organizers.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -394,25 +384,25 @@ export default function EventDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {event.event_organizers.map((org) => (
+                  {event.organizers.map((org) => (
                     <div
-                      key={org.user_id}
+                      key={org.userId}
                       className="flex items-center gap-3"
                     >
                       <Avatar>
-                        {org.profile.avatar_url ? (
+                        {org.avatarUrl ? (
                           <AvatarImage
-                            src={org.profile.avatar_url}
-                            alt={org.profile.display_name ?? "Organizer"}
+                            src={org.avatarUrl}
+                            alt={org.displayName ?? "Organizer"}
                           />
                         ) : null}
                         <AvatarFallback>
-                          {getInitials(org.profile.display_name)}
+                          {getInitials(org.displayName)}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="text-sm font-medium">
-                          {org.profile.display_name ?? "Unknown"}
+                          {org.displayName ?? "Unknown"}
                         </p>
                         <p className="text-xs text-muted-foreground capitalize">
                           {org.role.toLowerCase()}
@@ -437,22 +427,22 @@ export default function EventDetailPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
-                    {event.registration_count}
+                    {event.registrationCount}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {event.registration_count === 1
+                    {event.registrationCount === 1
                       ? "Attendee registered"
                       : "Attendees registered"}
                   </p>
                 </div>
               </div>
-              {event.max_attendees && (
+              {event.maxAttendees && (
                 <>
                   <Separator className="my-4" />
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Capacity</span>
                     <span className="font-medium">
-                      {event.registration_count} / {event.max_attendees}
+                      {event.registrationCount} / {event.maxAttendees}
                     </span>
                   </div>
                   {/* Progress bar */}
@@ -461,7 +451,7 @@ export default function EventDetailPage() {
                       className="h-full rounded-full bg-primary transition-all"
                       style={{
                         width: `${Math.min(
-                          (event.registration_count / event.max_attendees) * 100,
+                          (event.registrationCount / event.maxAttendees) * 100,
                           100,
                         )}%`,
                       }}
@@ -481,12 +471,12 @@ export default function EventDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {event.ticket_types.length > 0 ? (
-                event.ticket_types.map((ticket) => {
-                  const available = ticket.quantity - ticket.quantity_sold;
+              {event.ticketTypes.length > 0 ? (
+                event.ticketTypes.map((ticket) => {
+                  const available = ticket.quantity - ticket.quantitySold;
                   const isSoldOut = available <= 0;
                   const isSelected = selectedTicketId === ticket.id;
-                  const isInactive = !ticket.is_active;
+                  const isInactive = !ticket.isActive;
 
                   return (
                     <button
@@ -507,7 +497,7 @@ export default function EventDetailPage() {
                       <div className="flex items-center justify-between">
                         <p className="font-medium text-sm">{ticket.name}</p>
                         <p className="font-semibold text-sm">
-                          {formatPrice(ticket.price, event.is_free)}
+                          {formatPrice(ticket.price, event.isFree)}
                         </p>
                       </div>
                       {ticket.description && (
@@ -530,7 +520,7 @@ export default function EventDetailPage() {
                 })
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  {event.is_free
+                  {event.isFree
                     ? "This is a free event. No tickets required."
                     : "No ticket types available."}
                 </p>
@@ -549,7 +539,7 @@ export default function EventDetailPage() {
                     Confirmation code:
                   </p>
                   <p className="font-mono text-sm font-bold">
-                    {registered.qr_code}
+                    {registered.qrCode}
                   </p>
                 </div>
               </CardContent>

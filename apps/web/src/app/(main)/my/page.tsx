@@ -22,7 +22,7 @@ interface DashboardStats {
     id: string;
     amount: number;
     reason: string;
-    created_at: string;
+    createdAt: string;
   }>;
 }
 
@@ -77,14 +77,14 @@ export default function UserDashboardPage() {
             apiClient<{ balance: number }>("/points/balance"),
             apiClient<Array<{ id: string }>>("/favorites"),
             apiClient<Array<{ id: string }>>("/registrations/me"),
-            apiClient<
-              Array<{
+            apiClient<{
+              data: Array<{
                 id: string;
                 amount: number;
                 reason: string;
-                created_at: string;
-              }>
-            >("/points/history"),
+                createdAt: string;
+              }>;
+            }>("/points/history"),
           ]);
 
         setStats({
@@ -104,8 +104,8 @@ export default function UserDashboardPage() {
               : 0,
           recentPoints:
             historyRes.status === "fulfilled"
-              ? Array.isArray(historyRes.value)
-                ? historyRes.value.slice(0, 5)
+              ? Array.isArray(historyRes.value?.data)
+                ? historyRes.value.data.slice(0, 5)
                 : []
               : [],
         });
@@ -255,7 +255,7 @@ export default function UserDashboardPage() {
                         {reasonLabel(tx.reason)}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {formatDate(tx.created_at)}
+                        {formatDate(tx.createdAt)}
                       </p>
                     </div>
                   </div>

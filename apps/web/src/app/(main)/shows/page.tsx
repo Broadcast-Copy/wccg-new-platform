@@ -5,15 +5,24 @@ export const metadata = {
   title: "Shows | WCCG 104.5 FM",
 };
 
+interface ShowHost {
+  id: string;
+  name: string;
+  slug: string;
+  avatarUrl?: string;
+  isPrimary?: boolean;
+}
+
 interface Show {
   id: string;
-  title: string;
+  name: string;
+  slug: string;
   description?: string;
-  host_name?: string;
-  schedule_summary?: string;
-  image_url?: string;
-  genre?: string;
-  is_active: boolean;
+  imageUrl?: string;
+  isActive: boolean;
+  hosts: ShowHost[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 async function getShows(): Promise<Show[]> {
@@ -33,8 +42,8 @@ async function getShows(): Promise<Show[]> {
 export default async function ShowsPage() {
   const shows = await getShows();
 
-  const activeShows = shows.filter((s) => s.is_active);
-  const inactiveShows = shows.filter((s) => !s.is_active);
+  const activeShows = shows.filter((s) => s.isActive);
+  const inactiveShows = shows.filter((s) => !s.isActive);
 
   return (
     <div className="space-y-8">
@@ -56,11 +65,10 @@ export default async function ShowsPage() {
               <ShowCard
                 key={show.id}
                 showId={show.id}
-                title={show.title}
+                title={show.name}
                 description={show.description}
-                hostName={show.host_name}
-                schedule={show.schedule_summary}
-                genre={show.genre}
+                hostName={show.hosts?.find((h) => h.isPrimary)?.name ?? show.hosts?.[0]?.name}
+                imageUrl={show.imageUrl}
               />
             ))}
           </div>
@@ -83,11 +91,10 @@ export default async function ShowsPage() {
               <ShowCard
                 key={show.id}
                 showId={show.id}
-                title={show.title}
+                title={show.name}
                 description={show.description}
-                hostName={show.host_name}
-                schedule={show.schedule_summary}
-                genre={show.genre}
+                hostName={show.hosts?.find((h) => h.isPrimary)?.name ?? show.hosts?.[0]?.name}
+                imageUrl={show.imageUrl}
               />
             ))}
           </div>

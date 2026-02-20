@@ -21,30 +21,21 @@ import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
 import { Heart, Loader2, Radio, Tv, Trash2 } from "lucide-react";
 
-type TargetType = "STREAM" | "SHOW";
+type TargetType = "stream" | "show";
 
-interface FavoriteStream {
-  id: string;
+interface FavoriteTarget {
   name: string;
   slug: string;
-  image_url: string | null;
-  category: string | null;
-}
-
-interface FavoriteShow {
-  id: string;
-  name: string;
-  slug: string;
-  image_url: string | null;
+  imageUrl: string | null;
 }
 
 interface Favorite {
   id: string;
-  target_type: TargetType;
-  stream_id: string | null;
-  show_id: string | null;
-  stream?: FavoriteStream;
-  show?: FavoriteShow;
+  userId: string;
+  targetType: TargetType;
+  targetId: string | null;
+  target: FavoriteTarget | null;
+  createdAt: string;
 }
 
 function FavoriteImage({
@@ -72,17 +63,15 @@ function FavoriteImage({
 
   // Gradient placeholder
   const gradients: Record<TargetType, string> = {
-    STREAM:
-      "from-blue-600 to-purple-600",
-    SHOW:
-      "from-orange-500 to-pink-600",
+    stream: "from-blue-600 to-purple-600",
+    show: "from-orange-500 to-pink-600",
   };
 
   return (
     <div
       className={`flex aspect-video w-full items-center justify-center rounded-md bg-gradient-to-br ${gradients[type]}`}
     >
-      {type === "STREAM" ? (
+      {type === "stream" ? (
         <Radio className="size-10 text-white/70" />
       ) : (
         <Tv className="size-10 text-white/70" />
@@ -101,13 +90,11 @@ function FavoriteCard({
   const [removing, setRemoving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const isStream = favorite.target_type === "STREAM";
-  const item = isStream ? favorite.stream : favorite.show;
-  const name = item?.name ?? "Unknown";
-  const slug = item?.slug ?? "";
-  const imageUrl = item?.image_url ?? null;
+  const isStream = favorite.targetType === "stream";
+  const name = favorite.target?.name ?? "Unknown";
+  const slug = favorite.target?.slug ?? "";
+  const imageUrl = favorite.target?.imageUrl ?? null;
   const href = isStream ? `/channels/${slug}` : `/shows/${slug}`;
-  const category = isStream ? (favorite.stream?.category ?? null) : null;
 
   const handleRemove = async () => {
     setRemoving(true);
@@ -129,7 +116,7 @@ function FavoriteCard({
     <Card className="overflow-hidden py-0">
       <CardContent className="p-0">
         <Link href={href} className="block">
-          <FavoriteImage src={imageUrl} alt={name} type={favorite.target_type} />
+          <FavoriteImage src={imageUrl} alt={name} type={favorite.targetType} />
         </Link>
         <div className="space-y-2 p-4">
           <div className="flex items-start justify-between gap-2">
@@ -185,11 +172,6 @@ function FavoriteCard({
             <Badge variant="secondary" className="text-xs">
               {isStream ? "Stream" : "Show"}
             </Badge>
-            {category && (
-              <Badge variant="outline" className="text-xs">
-                {category}
-              </Badge>
-            )}
           </div>
         </div>
       </CardContent>
@@ -270,8 +252,8 @@ export function FavoritesList() {
     );
   }
 
-  const streams = favorites.filter((f) => f.target_type === "STREAM");
-  const shows = favorites.filter((f) => f.target_type === "SHOW");
+  const streams = favorites.filter((f) => f.targetType === "stream");
+  const shows = favorites.filter((f) => f.targetType === "show");
 
   return (
     <Tabs defaultValue="all" className="space-y-4">

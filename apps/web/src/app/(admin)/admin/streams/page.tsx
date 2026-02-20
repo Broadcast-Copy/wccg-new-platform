@@ -62,11 +62,11 @@ const streamSchema = z.object({
   description: z.string().optional(),
   category: z.enum(CATEGORIES),
   status: z.enum(STATUSES),
-  sort_order: z.number().int().min(0),
-  image_url: z.string().url().optional().or(z.literal("")),
-  primary_url: z.string().url().optional().or(z.literal("")),
-  fallback_url: z.string().url().optional().or(z.literal("")),
-  mount_point: z.string().optional(),
+  sortOrder: z.number().int().min(0),
+  imageUrl: z.string().url().optional().or(z.literal("")),
+  primaryUrl: z.string().url().optional().or(z.literal("")),
+  fallbackUrl: z.string().url().optional().or(z.literal("")),
+  mountPoint: z.string().optional(),
   format: z.string().optional(),
   bitrate: z.number().int().min(0).optional(),
 });
@@ -75,8 +75,8 @@ type StreamFormValues = z.infer<typeof streamSchema>;
 
 interface Stream extends StreamFormValues {
   id: string;
-  created_at?: string;
-  updated_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 function statusBadgeClass(status: string) {
@@ -109,11 +109,11 @@ export default function AdminStreamsPage() {
       description: "",
       category: "MAIN",
       status: "ACTIVE",
-      sort_order: 0,
-      image_url: "",
-      primary_url: "",
-      fallback_url: "",
-      mount_point: "",
+      sortOrder: 0,
+      imageUrl: "",
+      primaryUrl: "",
+      fallbackUrl: "",
+      mountPoint: "",
       format: "",
       bitrate: 128,
     },
@@ -143,11 +143,11 @@ export default function AdminStreamsPage() {
       description: "",
       category: "MAIN",
       status: "ACTIVE",
-      sort_order: 0,
-      image_url: "",
-      primary_url: "",
-      fallback_url: "",
-      mount_point: "",
+      sortOrder: 0,
+      imageUrl: "",
+      primaryUrl: "",
+      fallbackUrl: "",
+      mountPoint: "",
       format: "",
       bitrate: 128,
     });
@@ -162,11 +162,11 @@ export default function AdminStreamsPage() {
       description: stream.description ?? "",
       category: stream.category,
       status: stream.status,
-      sort_order: stream.sort_order ?? 0,
-      image_url: stream.image_url ?? "",
-      primary_url: stream.primary_url ?? "",
-      fallback_url: stream.fallback_url ?? "",
-      mount_point: stream.mount_point ?? "",
+      sortOrder: stream.sortOrder ?? 0,
+      imageUrl: stream.imageUrl ?? "",
+      primaryUrl: stream.primaryUrl ?? "",
+      fallbackUrl: stream.fallbackUrl ?? "",
+      mountPoint: stream.mountPoint ?? "",
       format: stream.format ?? "",
       bitrate: stream.bitrate ?? 128,
     });
@@ -179,10 +179,10 @@ export default function AdminStreamsPage() {
       // Clean empty strings to undefined
       const payload = {
         ...values,
-        image_url: values.image_url || undefined,
-        primary_url: values.primary_url || undefined,
-        fallback_url: values.fallback_url || undefined,
-        mount_point: values.mount_point || undefined,
+        imageUrl: values.imageUrl || undefined,
+        primaryUrl: values.primaryUrl || undefined,
+        fallbackUrl: values.fallbackUrl || undefined,
+        mountPoint: values.mountPoint || undefined,
         format: values.format || undefined,
       };
 
@@ -277,7 +277,7 @@ export default function AdminStreamsPage() {
                       {stream.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{stream.sort_order}</TableCell>
+                  <TableCell>{stream.sortOrder}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -400,21 +400,21 @@ export default function AdminStreamsPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="sort_order">Sort Order</Label>
+                  <Label htmlFor="sortOrder">Sort Order</Label>
                   <Input
-                    id="sort_order"
+                    id="sortOrder"
                     type="number"
-                    {...form.register("sort_order")}
+                    {...form.register("sortOrder")}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="image_url">Image URL</Label>
+                <Label htmlFor="imageUrl">Image URL</Label>
                 <Input
-                  id="image_url"
+                  id="imageUrl"
                   placeholder="https://..."
-                  {...form.register("image_url")}
+                  {...form.register("imageUrl")}
                 />
               </div>
 
@@ -422,27 +422,27 @@ export default function AdminStreamsPage() {
                 <h3 className="mb-3 text-sm font-semibold">Stream Source</h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="primary_url">Primary URL</Label>
+                    <Label htmlFor="primaryUrl">Primary URL</Label>
                     <Input
-                      id="primary_url"
+                      id="primaryUrl"
                       placeholder="https://..."
-                      {...form.register("primary_url")}
+                      {...form.register("primaryUrl")}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="fallback_url">Fallback URL</Label>
+                    <Label htmlFor="fallbackUrl">Fallback URL</Label>
                     <Input
-                      id="fallback_url"
+                      id="fallbackUrl"
                       placeholder="https://..."
-                      {...form.register("fallback_url")}
+                      {...form.register("fallbackUrl")}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="mount_point">Mount Point</Label>
+                    <Label htmlFor="mountPoint">Mount Point</Label>
                     <Input
-                      id="mount_point"
+                      id="mountPoint"
                       placeholder="/live"
-                      {...form.register("mount_point")}
+                      {...form.register("mountPoint")}
                     />
                   </div>
                   <div className="space-y-2">

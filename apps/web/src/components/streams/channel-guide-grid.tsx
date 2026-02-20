@@ -4,18 +4,29 @@ import { useState } from "react";
 import { ChannelCard } from "./channel-card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+interface StreamMetadata {
+  currentTitle?: string;
+  currentArtist?: string;
+  currentTrack?: string;
+  albumArt?: string;
+  listenerCount?: number;
+  isLive?: boolean;
+  lastUpdated?: string;
+}
+
 interface Stream {
   id: string;
   name: string;
+  slug: string;
   description?: string;
-  stream_url: string;
+  streamUrl?: string;
   category?: string;
-  metadata?: {
-    is_live?: boolean;
-    current_track?: string;
-    current_artist?: string;
-    album_art?: string;
-  };
+  status?: string;
+  sortOrder?: number;
+  imageUrl?: string;
+  metadata?: StreamMetadata;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface ChannelGuideGridProps {
@@ -66,12 +77,12 @@ export function ChannelGuideGrid({ streams }: ChannelGuideGridProps) {
               streamId={stream.id}
               name={stream.name}
               description={stream.description}
-              streamUrl={stream.stream_url}
+              streamUrl={stream.streamUrl}
               category={stream.category}
-              isLive={stream.metadata?.is_live}
-              currentTrack={stream.metadata?.current_track}
-              currentArtist={stream.metadata?.current_artist}
-              albumArt={stream.metadata?.album_art}
+              isLive={stream.metadata?.isLive}
+              currentTrack={stream.metadata?.currentTrack}
+              currentArtist={stream.metadata?.currentArtist}
+              albumArt={stream.metadata?.albumArt}
             />
           ))}
         </div>

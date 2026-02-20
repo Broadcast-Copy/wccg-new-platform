@@ -4,17 +4,13 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma/prisma.service.js';
-import type { profiles, user_roles } from '@prisma/client';
-
-/** Profile row returned from Prisma with its user_roles included. */
-type ProfileWithRoles = profiles & { user_roles: Pick<user_roles, 'role_id'>[] };
+import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
 
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly db: SupabaseDbService) {}
 
   /**
    * Get all users (admin only) with pagination.
@@ -23,19 +19,18 @@ export class UsersService {
     this.logger.debug(`Finding all users, page=${page}, limit=${limit}`);
     const skip = (page - 1) * limit;
 
-    const [users, total] = await Promise.all([
-      this.prisma.profiles.findMany({
-        include: { user_roles: { select: { role_id: true } } },
-        orderBy: { created_at: 'desc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.profiles.count(),
-    ]);
+    const { data: users, count: total, error } = await this.db.from('profiles')
+      .select('*, user_roles(role_id)', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(skip, skip + limit - 1);
+
+    if (error) throw error;
+
+    const totalCount = total ?? 0;
 
     return {
-      data: users.map((u) => this.formatProfile(u)),
-      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      data: (users ?? []).map((u: any) => this.formatProfile(u)),
+      meta: { page, limit, total: totalCount, totalPages: Math.ceil(totalCount / limit) },
     };
   }
 
@@ -45,11 +40,12 @@ export class UsersService {
   async findById(userId: string) {
     this.logger.debug(`Finding user ${userId}`);
 
-    const row = await this.prisma.profiles.findUnique({
-      where: { id: userId },
-      include: { user_roles: { select: { role_id: true } } },
-    });
+    const { data: row, error } = await this.db.from('profiles')
+      .select('*, user_roles(role_id)')
+      .eq('id', userId)
+      .maybeSingle();
 
+    if (error) throw error;
     if (!row) return null;
     return this.formatProfile(row);
   }
@@ -78,17 +74,18 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    await this.prisma.profiles.update({
-      where: { id: userId },
-      data: {
-        ...(dto.firstName !== undefined && { first_name: dto.firstName as string }),
-        ...(dto.lastName !== undefined && { last_name: dto.lastName as string }),
-        ...(dto.displayName !== undefined && { display_name: dto.displayName as string }),
-        ...(dto.avatarUrl !== undefined && { avatar_url: dto.avatarUrl as string }),
-        ...(dto.isActive !== undefined && { is_active: dto.isActive as boolean }),
-        updated_at: new Date(),
-      },
-    });
+    const data: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (dto.firstName !== undefined) data.first_name = dto.firstName as string;
+    if (dto.lastName !== undefined) data.last_name = dto.lastName as string;
+    if (dto.displayName !== undefined) data.display_name = dto.displayName as string;
+    if (dto.avatarUrl !== undefined) data.avatar_url = dto.avatarUrl as string;
+    if (dto.isActive !== undefined) data.is_active = dto.isActive as boolean;
+
+    await this.db.from('profiles')
+      .update(data)
+      .eq('id', userId);
 
     return this.findById(userId);
   }
@@ -118,7 +115,7 @@ export class UsersService {
 
   // ─── Private helpers ──────────────────────────────────────────
 
-  private formatProfile(row: ProfileWithRoles) {
+  private formatProfile(row: any) {
     return {
       id: row.id,
       email: row.email,
@@ -127,7 +124,7 @@ export class UsersService {
       displayName: row.display_name,
       avatarUrl: row.avatar_url,
       isActive: row.is_active,
-      roles: row.user_roles.map((ur) => ur.role_id),
+      roles: (row.user_roles ?? []).map((ur: any) => ur.role_id),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

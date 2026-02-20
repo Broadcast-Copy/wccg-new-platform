@@ -6,18 +6,25 @@ import { LiveNowIndicator } from "@/components/schedule/live-now-indicator";
 import { ChannelCard } from "@/components/streams/channel-card";
 import { apiClient } from "@/lib/api-client";
 
+interface NowPlaying {
+  currentTitle?: string;
+  currentArtist?: string;
+  currentTrack?: string;
+  albumArt?: string;
+  listenerCount?: number;
+  isLive?: boolean;
+}
+
 interface LiveStream {
   id: string;
   name: string;
+  slug: string;
   description?: string;
-  stream_url: string;
   category?: string;
-  metadata?: {
-    is_live?: boolean;
-    current_track?: string;
-    current_artist?: string;
-    album_art?: string;
-  };
+  status?: string;
+  streamUrl?: string;
+  imageUrl?: string;
+  nowPlaying?: NowPlaying;
 }
 
 export function LiveNowRail() {
@@ -63,12 +70,12 @@ export function LiveNowRail() {
                   streamId={stream.id}
                   name={stream.name}
                   description={stream.description}
-                  streamUrl={stream.stream_url}
+                  streamUrl={stream.streamUrl}
                   category={stream.category}
-                  isLive={stream.metadata?.is_live}
-                  currentTrack={stream.metadata?.current_track}
-                  currentArtist={stream.metadata?.current_artist}
-                  albumArt={stream.metadata?.album_art}
+                  isLive={stream.nowPlaying?.isLive}
+                  currentTrack={stream.nowPlaying?.currentTrack}
+                  currentArtist={stream.nowPlaying?.currentArtist}
+                  albumArt={stream.nowPlaying?.albumArt}
                 />
               </div>
             ))

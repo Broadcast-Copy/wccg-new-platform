@@ -26,10 +26,10 @@ interface PointsTransaction {
   id: string;
   amount: number;
   reason: PointsReason;
-  reference_type: string | null;
-  reference_id: string | null;
+  referenceType: string | null;
+  referenceId: string | null;
   balance: number;
-  created_at: string;
+  createdAt: string;
 }
 
 interface PointsBalance {
@@ -74,10 +74,10 @@ export function PointsHistory() {
     try {
       const [balanceRes, historyRes] = await Promise.all([
         apiClient<PointsBalance>("/points/balance"),
-        apiClient<PointsTransaction[]>("/points/history"),
+        apiClient<{ data: PointsTransaction[] }>("/points/history"),
       ]);
       setBalance(balanceRes.balance);
-      setTransactions(historyRes);
+      setTransactions(historyRes.data);
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Failed to load points data"
@@ -150,7 +150,7 @@ export function PointsHistory() {
                 return (
                   <TableRow key={tx.id}>
                     <TableCell className="text-muted-foreground">
-                      {new Date(tx.created_at).toLocaleDateString("en-US", {
+                      {new Date(tx.createdAt).toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
                         year: "numeric",

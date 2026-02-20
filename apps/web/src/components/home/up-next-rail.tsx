@@ -6,15 +6,38 @@ import { ShowCard } from "@/components/shows/show-card";
 import { apiClient } from "@/lib/api-client";
 import { Clock } from "lucide-react";
 
+interface ScheduleHost {
+  id: string;
+  name: string;
+  slug: string;
+  avatarUrl?: string;
+  isPrimary?: boolean;
+}
+
+interface ScheduleShow {
+  id: string;
+  name: string;
+  slug: string;
+  imageUrl?: string;
+  hosts: ScheduleHost[];
+}
+
+interface ScheduleStream {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 interface UpcomingShow {
   id: string;
-  show_id: string;
-  show_title: string;
-  show_description?: string;
-  host_name?: string;
-  start_time: string;
-  end_time: string;
-  genre?: string;
+  streamId: string;
+  showId: string;
+  title: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  stream?: ScheduleStream;
+  show?: ScheduleShow;
 }
 
 export function UpNextRail() {
@@ -57,18 +80,17 @@ export function UpNextRail() {
             shows.map((show) => (
               <div key={show.id} className="w-64 shrink-0">
                 <ShowCard
-                  showId={show.show_id}
-                  title={show.show_title}
-                  description={show.show_description}
-                  hostName={show.host_name}
-                  schedule={new Date(show.start_time).toLocaleTimeString(
+                  showId={show.showId ?? show.show?.id ?? show.id}
+                  title={show.title ?? show.show?.name ?? "Untitled"}
+                  hostName={show.show?.hosts?.find((h) => h.isPrimary)?.name ?? show.show?.hosts?.[0]?.name}
+                  schedule={new Date(show.startTime).toLocaleTimeString(
                     "en-US",
                     {
                       hour: "numeric",
                       minute: "2-digit",
                     },
                   )}
-                  genre={show.genre}
+                  imageUrl={show.show?.imageUrl}
                 />
               </div>
             ))
