@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -43,7 +43,7 @@ interface CommunityMapProps {
 }
 
 // ---------------------------------------------------------------------------
-// Custom colored circle marker icons using SVG data URI
+// Custom colored circle marker icons
 // ---------------------------------------------------------------------------
 
 function createMarkerIcon(color: string, isSelected: boolean): L.DivIcon {
@@ -67,7 +67,7 @@ function createMarkerIcon(color: string, isSelected: boolean): L.DivIcon {
           border-radius:50%;
           background:${color};
           border:${borderWidth}px solid white;
-          box-shadow:0 2px 8px rgba(0,0,0,0.4);
+          box-shadow:0 2px 6px rgba(0,0,0,0.25);
           transition:transform 0.2s;
           ${isSelected ? "transform:scale(1.1);" : ""}
         "></div>
@@ -80,7 +80,7 @@ function createMarkerIcon(color: string, isSelected: boolean): L.DivIcon {
 // WCCG branded marker for the station location
 // ---------------------------------------------------------------------------
 
-const WCCG_LOCATION: [number, number] = [35.0527, -78.8785]; // 115 Gillespie St
+const WCCG_LOCATION: [number, number] = [35.0527, -78.8785];
 const WCCG_ICON = L.divIcon({
   className: "wccg-marker",
   iconSize: [40, 40],
@@ -89,11 +89,9 @@ const WCCG_ICON = L.divIcon({
   html: `
     <div style="
       width:40px;height:40px;border-radius:50%;
-      background:linear-gradient(135deg,rgba(116,221,199,1),rgba(116,1,223,1));
-      border:3px solid white;box-shadow:0 2px 12px rgba(116,221,199,0.5);
+      background:linear-gradient(135deg,#0d9488,#7c3aed);
+      border:3px solid white;box-shadow:0 2px 10px rgba(13,148,136,0.4);
       display:flex;align-items:center;justify-content:center;
-      font-weight:900;font-size:10px;color:white;letter-spacing:-0.5px;
-      font-family:system-ui;
     ">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"></path>
@@ -137,7 +135,7 @@ function MapController({
 }
 
 // ---------------------------------------------------------------------------
-// Main map component
+// Main map component — LIGHT theme
 // ---------------------------------------------------------------------------
 
 export default function CommunityMap({
@@ -149,7 +147,6 @@ export default function CommunityMap({
 }: CommunityMapProps) {
   return (
     <>
-      {/* Inject the pulse animation keyframes */}
       <style>{`
         @keyframes marker-pulse {
           0% { transform: scale(1); opacity: 0.4; }
@@ -158,47 +155,47 @@ export default function CommunityMap({
         .custom-marker { background: none !important; border: none !important; }
         .wccg-marker { background: none !important; border: none !important; }
         .leaflet-container {
-          background: #0f172a !important;
+          background: #f8fafc !important;
           font-family: system-ui, -apple-system, sans-serif;
         }
         .leaflet-popup-content-wrapper {
-          background: #1e293b !important;
-          border: 1px solid #334155 !important;
+          background: #ffffff !important;
+          border: 1px solid #e2e8f0 !important;
           border-radius: 12px !important;
-          box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.12) !important;
         }
         .leaflet-popup-content {
-          color: #e2e8f0 !important;
+          color: #1e293b !important;
           margin: 12px 16px !important;
           font-size: 13px !important;
           line-height: 1.5 !important;
         }
         .leaflet-popup-tip {
-          background: #1e293b !important;
-          border: 1px solid #334155 !important;
+          background: #ffffff !important;
+          border: 1px solid #e2e8f0 !important;
         }
         .leaflet-popup-close-button {
           color: #94a3b8 !important;
           font-size: 18px !important;
         }
         .leaflet-popup-close-button:hover {
-          color: #e2e8f0 !important;
+          color: #1e293b !important;
         }
         .leaflet-control-zoom a {
-          background: #1e293b !important;
-          color: #e2e8f0 !important;
-          border-color: #334155 !important;
+          background: #ffffff !important;
+          color: #374151 !important;
+          border-color: #e5e7eb !important;
         }
         .leaflet-control-zoom a:hover {
-          background: #334155 !important;
+          background: #f3f4f6 !important;
         }
         .leaflet-control-attribution {
-          background: rgba(15,23,42,0.8) !important;
-          color: #64748b !important;
+          background: rgba(255,255,255,0.85) !important;
+          color: #9ca3af !important;
           font-size: 10px !important;
         }
         .leaflet-control-attribution a {
-          color: #94a3b8 !important;
+          color: #6b7280 !important;
         }
       `}</style>
       <MapContainer
@@ -208,27 +205,27 @@ export default function CommunityMap({
         style={{ height: "100%", width: "100%" }}
         zoomControl={true}
       >
-        {/* Dark tile layer */}
+        {/* Light tile layer — CartoDB Voyager */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &middot; <a href="https://carto.com/">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         />
 
         {/* WCCG Station marker */}
         <Marker position={WCCG_LOCATION} icon={WCCG_ICON}>
           <Popup>
             <div style={{ minWidth: 180 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: "#74ddc7", marginBottom: 4 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: "#0d9488", marginBottom: 4 }}>
                 WCCG 104.5 FM
               </div>
-              <div style={{ fontSize: 12, color: "#94a3b8" }}>
+              <div style={{ fontSize: 12, color: "#64748b" }}>
                 Carson Communications
               </div>
-              <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
                 115 Gillespie St<br />
                 Fayetteville, NC 28301
               </div>
-              <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
                 (910) 483-6111
               </div>
             </div>
@@ -262,43 +259,27 @@ export default function CommunityMap({
                         flexShrink: 0,
                       }}
                     />
-                    <span
-                      style={{
-                        fontSize: 11,
-                        color: "#94a3b8",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                      }}
-                    >
+                    <span style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                       {business.category}
                     </span>
                     {business.featured && (
-                      <span
-                        style={{
-                          fontSize: 10,
-                          background: "rgba(245,158,11,0.2)",
-                          color: "#fbbf24",
-                          padding: "1px 6px",
-                          borderRadius: 8,
-                          marginLeft: "auto",
-                        }}
-                      >
+                      <span style={{ fontSize: 10, background: "#fef3c7", color: "#92400e", padding: "1px 6px", borderRadius: 8, marginLeft: "auto" }}>
                         Featured
                       </span>
                     )}
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "#f1f5f9", marginBottom: 4 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a", marginBottom: 4 }}>
                     {business.name}
                   </div>
-                  <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 6, lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 6, lineHeight: 1.4 }}>
                     {business.description.length > 100
                       ? business.description.slice(0, 100) + "…"
                       : business.description}
                   </div>
-                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 2 }}>
+                  <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 2 }}>
                     {business.address}
                   </div>
-                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 8 }}>
                     {business.phone}
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
@@ -307,13 +288,9 @@ export default function CommunityMap({
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
-                        fontSize: 11,
-                        color: "#14b8a6",
-                        textDecoration: "none",
-                        padding: "4px 10px",
-                        borderRadius: 6,
-                        border: "1px solid rgba(20,184,166,0.3)",
-                        background: "rgba(20,184,166,0.1)",
+                        fontSize: 11, color: "#0d9488", textDecoration: "none",
+                        padding: "4px 10px", borderRadius: 6,
+                        border: "1px solid rgba(13,148,136,0.3)", background: "rgba(13,148,136,0.05)",
                       }}
                     >
                       Get Directions
@@ -324,12 +301,9 @@ export default function CommunityMap({
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
-                          fontSize: 11,
-                          color: "#94a3b8",
-                          textDecoration: "none",
-                          padding: "4px 10px",
-                          borderRadius: 6,
-                          border: "1px solid rgba(148,163,184,0.2)",
+                          fontSize: 11, color: "#64748b", textDecoration: "none",
+                          padding: "4px 10px", borderRadius: 6,
+                          border: "1px solid #e2e8f0",
                         }}
                       >
                         Website
