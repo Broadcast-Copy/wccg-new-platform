@@ -28,15 +28,25 @@ import {
   Pause,
   Calendar,
   Clock,
+  Radio,
+  Mail,
+  Youtube,
+  ExternalLink,
+  Users,
+  SkipForward,
+  SkipBack,
+  Volume2,
 } from "lucide-react";
 
-// ─── Types matching API response (camelCase from NestJS format methods) ───
+// ─── Types ──────────────────────────────────────────────────────────────
 
 interface ShowHost {
   id: string;
   name: string;
   slug: string;
+  bio: string | null;
   avatarUrl: string | null;
+  email: string | null;
   isPrimary: boolean;
 }
 
@@ -66,7 +76,46 @@ interface Show {
   updatedAt: string;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────
+// ─── YouTube Channel IDs for shows ──────────────────────────────────────
+
+const SHOW_YOUTUBE: Record<string, { name: string; url: string }> = {
+  show_streetz_morning: {
+    name: "Streetz Morning Takeover",
+    url: "https://www.youtube.com/embed?listType=search&list=Streetz+Morning+Takeover+WCCG",
+  },
+  show_angela_yee: {
+    name: "Way Up with Angela Yee",
+    url: "https://www.youtube.com/embed?listType=search&list=Way+Up+Angela+Yee",
+  },
+  show_bootleg_kev: {
+    name: "Bootleg Kev",
+    url: "https://www.youtube.com/embed?listType=search&list=Bootleg+Kev+Show",
+  },
+  show_posted_corner: {
+    name: "Posted on The Corner",
+    url: "https://www.youtube.com/embed?listType=search&list=Incognito+Posted+Corner",
+  },
+  show_shorty_corleone: {
+    name: "Crank with Shorty Corleone",
+    url: "https://www.youtube.com/embed?listType=search&list=Shorty+Corleone+WCCG",
+  },
+};
+
+const SHOW_SCHEDULES: Record<string, string> = {
+  show_streetz_morning: "Weekdays 6:00 AM - 10:00 AM",
+  show_angela_yee: "Weekdays 10:00 AM - 2:00 PM",
+  show_posted_corner: "Weekdays 2:00 PM - 6:00 PM",
+  show_bootleg_kev: "Weekdays 6:00 PM - 10:00 PM",
+  show_shorty_corleone: "Weekdays 10:00 PM - 2:00 AM",
+  show_sunday_snacks: "Sundays 6:00 AM - 8:00 AM",
+  show_praise_mix: "Sundays 6:00 AM - 7:00 AM",
+  show_marvin_sapp: "Sundays 7:00 AM - 8:00 AM",
+  show_mix_squad: "Mix Squad Radio - 24/7",
+  show_duke_football: "Duke Football Season",
+  show_duke_basketball: "Duke Basketball Season",
+};
+
+// ─── Helpers ────────────────────────────────────────────────────────────
 
 function getInitials(name: string): string {
   return name
@@ -93,72 +142,200 @@ function formatDate(dateStr: string): string {
   });
 }
 
-// ─── Component ───────────────────────────────────────────────────────────
+// ─── Podcast Player ─────────────────────────────────────────────────────
+
+function PodcastPlayer({
+  episodes,
+  showName,
+  onPlay,
+  isPlaying,
+  currentStream,
+}: {
+  episodes: Episode[];
+  showName: string;
+  onPlay: (ep: Episode) => void;
+  isPlaying: boolean;
+  currentStream: string | null;
+}) {
+  const [idx, setIdx] = useState(0);
+  const ep = episodes[idx];
+
+  if (!episodes.length) {
+    return (
+      <div className="flex h-48 items-center justify-center rounded-lg border bg-muted/50">
+        <div className="text-center space-y-2">
+          <Mic className="h-8 w-8 mx-auto text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            No podcast episodes available yet. Check back soon!
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const playing = isPlaying && ep?.audioUrl && currentStream === ep.audioUrl;
+
+  return (
+    <div className="space-y-4">
+      {/* Now Playing */}
+      <Card className="bg-gradient-to-r from-gray-900 to-gray-800 text-white border-0">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-4">
+            <div className="h-20 w-20 shrink-0 rounded-lg bg-gradient-to-br from-purple-600 to-teal-500 flex items-center justify-center">
+              <Mic className="h-8 w-8" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-gray-400 uppercase tracking-wider">Now Playing</p>
+              <p className="font-semibold truncate text-lg">{ep?.title ?? showName}</p>
+              <p className="text-sm text-gray-400 truncate">{showName}</p>
+            </div>
+          </div>
+          <div className="mt-4 flex items-center justify-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/10"
+              onClick={() => setIdx(Math.max(0, idx - 1))}
+              disabled={idx === 0}
+            >
+              <SkipBack className="h-5 w-5" />
+            </Button>
+            <Button
+              size="icon"
+              className="h-12 w-12 rounded-full bg-white text-gray-900 hover:bg-gray-200"
+              onClick={() => ep && onPlay(ep)}
+              disabled={!ep?.audioUrl}
+            >
+              {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/10"
+              onClick={() => setIdx(Math.min(episodes.length - 1, idx + 1))}
+              disabled={idx === episodes.length - 1}
+            >
+              <SkipForward className="h-5 w-5" />
+            </Button>
+          </div>
+          <div className="mt-3 h-1 rounded-full bg-white/20">
+            <div className="h-1 w-1/3 rounded-full bg-teal-400" />
+          </div>
+          <div className="mt-1 flex justify-between text-xs text-gray-500">
+            <span>0:00</span>
+            <span>{ep?.duration ? formatDuration(ep.duration) : "--:--"}</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Track List */}
+      <div className="space-y-1 max-h-96 overflow-y-auto">
+        {episodes.map((e, i) => {
+          const isThis = isPlaying && e.audioUrl && currentStream === e.audioUrl;
+          return (
+            <button
+              key={e.id}
+              onClick={() => { setIdx(i); if (e.audioUrl) onPlay(e); }}
+              className={`w-full flex items-center gap-3 rounded-lg p-3 text-left transition-colors ${
+                i === idx ? "bg-primary/10 border border-primary/20" : "hover:bg-muted"
+              }`}
+            >
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                {isThis ? (
+                  <Volume2 className="h-4 w-4 text-primary animate-pulse" />
+                ) : (
+                  <span>{i + 1}</span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className={`text-sm truncate ${i === idx ? "font-semibold" : "font-medium"}`}>
+                  {e.title}
+                </p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {e.airDate && <span>{formatDate(e.airDate)}</span>}
+                  {e.duration && <span>{formatDuration(e.duration)}</span>}
+                </div>
+              </div>
+              {e.audioUrl && <Play className="h-4 w-4 shrink-0 text-muted-foreground" />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── YouTube Feed ───────────────────────────────────────────────────────
+
+function YouTubeFeed({ showId }: { showId: string }) {
+  const yt = SHOW_YOUTUBE[showId];
+  if (!yt) {
+    return (
+      <div className="flex h-48 items-center justify-center rounded-lg border bg-muted/50">
+        <div className="text-center space-y-2">
+          <Youtube className="h-8 w-8 mx-auto text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">YouTube content coming soon</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="aspect-video w-full overflow-hidden rounded-lg border bg-black">
+        <iframe
+          src={yt.url}
+          className="h-full w-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          title={`${yt.name} videos`}
+        />
+      </div>
+      <p className="text-sm text-muted-foreground text-center">
+        Latest videos from {yt.name}
+      </p>
+    </div>
+  );
+}
+
+// ─── Main Component ─────────────────────────────────────────────────────
 
 export default function ShowDetailPage() {
   const params = useParams<{ showId: string }>();
   const showId = params.showId;
-
   const [show, setShow] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const { play, pause, isPlaying, currentStream } = useAudioPlayer();
 
   useEffect(() => {
     if (!showId) return;
-
     let cancelled = false;
-    async function fetchShow() {
+    (async () => {
       try {
         setLoading(true);
         const data = await apiClient<Show>(`/shows/${showId}`);
-        if (!cancelled) {
-          setShow(data);
-          setError(null);
-        }
+        if (!cancelled) { setShow(data); setError(null); }
       } catch (err: unknown) {
-        if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : "Failed to load show",
-          );
-        }
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load show");
       } finally {
         if (!cancelled) setLoading(false);
       }
-    }
-
-    fetchShow();
-    return () => {
-      cancelled = true;
-    };
+    })();
+    return () => { cancelled = true; };
   }, [showId]);
 
-  // ─── Episode play/pause handler ─────────────────────────────────────
-
-  function handleEpisodePlay(episode: Episode) {
+  function handlePlay(episode: Episode) {
     if (!episode.audioUrl) return;
-    if (isPlaying && currentStream === episode.audioUrl) {
-      pause();
-    } else {
-      play(episode.audioUrl, {
-        streamName: show?.name ?? "Episode",
-        title: episode.title,
-      });
-    }
+    if (isPlaying && currentStream === episode.audioUrl) pause();
+    else play(episode.audioUrl, { streamName: show?.name ?? "Episode", title: episode.title });
   }
-
-  // ─── Loading state ─────────────────────────────────────────────────────
 
   if (loading) {
     return (
       <div className="space-y-6">
-        <Link
-          href="/shows"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Shows
+        <Link href="/shows" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft className="h-4 w-4" /> Back to Shows
         </Link>
         <div className="flex h-64 items-center justify-center">
           <div className="flex items-center gap-2 text-muted-foreground">
@@ -170,243 +347,225 @@ export default function ShowDetailPage() {
     );
   }
 
-  // ─── Error state ───────────────────────────────────────────────────────
-
   if (error || !show) {
     return (
       <div className="space-y-6">
-        <Link
-          href="/shows"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Shows
+        <Link href="/shows" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft className="h-4 w-4" /> Back to Shows
         </Link>
         <div className="flex h-64 items-center justify-center rounded-lg border bg-muted/50">
-          <p className="text-sm text-muted-foreground">
-            {error ?? "Show not found."}
-          </p>
+          <p className="text-sm text-muted-foreground">{error ?? "Show not found."}</p>
         </div>
       </div>
     );
   }
 
-  // ─── Main render ───────────────────────────────────────────────────────
+  const schedule = SHOW_SCHEDULES[show.id];
+  const hasYT = !!SHOW_YOUTUBE[show.id];
 
   return (
     <div className="space-y-8">
-      {/* Back link */}
-      <Link
-        href="/shows"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Shows
+      <Link href="/shows" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <ArrowLeft className="h-4 w-4" /> Back to Shows
       </Link>
 
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-xl border">
+      {/* Hero Banner */}
+      <div className="relative overflow-hidden rounded-xl">
         {show.imageUrl ? (
-          <div
-            className="h-48 w-full bg-cover bg-center sm:h-64"
-            style={{ backgroundImage: `url(${show.imageUrl})` }}
-          />
+          <div className="h-56 w-full bg-cover bg-center sm:h-72 lg:h-80" style={{ backgroundImage: `url(${show.imageUrl})` }} />
         ) : (
-          <div className="h-48 w-full bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 sm:h-64" />
+          <div className="h-56 w-full bg-gradient-to-br from-purple-900 via-indigo-900 to-teal-800 sm:h-72 lg:h-80" />
         )}
-
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 p-6">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
           <div className="flex items-end justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Badge variant={show.isActive ? "default" : "secondary"}>
-                  {show.isActive ? "Active" : "Inactive"}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant={show.isActive ? "default" : "secondary"} className="text-xs">
+                  {show.isActive ? "On Air" : "Off Air"}
                 </Badge>
+                {schedule && (
+                  <Badge variant="outline" className="border-white/30 text-white text-xs">
+                    <Clock className="mr-1 h-3 w-3" />{schedule}
+                  </Badge>
+                )}
               </div>
-              <h1 className="text-2xl font-bold text-white sm:text-3xl">
-                {show.name}
-              </h1>
+              <h1 className="text-3xl font-bold text-white sm:text-4xl lg:text-5xl">{show.name}</h1>
+              {show.hosts.length > 0 && (
+                <p className="text-white/70 text-sm sm:text-base">
+                  Hosted by {show.hosts.map((h) => h.name).join(", ")}
+                </p>
+              )}
             </div>
             <FavoriteButton itemType="show" itemId={show.id} />
           </div>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Main content */}
-        <div className="space-y-6 lg:col-span-2">
-          {/* Description */}
-          {show.description && (
-            <Card>
-              <CardHeader>
-                <CardTitle>About This Show</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
-                  {show.description}
-                </p>
-              </CardContent>
-            </Card>
+      {/* Tabbed Content (matching original site: Podcasts, The Show, All Hosts, Videos) */}
+      <Tabs defaultValue="podcasts" className="space-y-6">
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="podcasts" className="flex-1 sm:flex-initial">
+            <Mic className="mr-2 h-4 w-4" />Podcasts
+          </TabsTrigger>
+          <TabsTrigger value="show" className="flex-1 sm:flex-initial">
+            <Radio className="mr-2 h-4 w-4" />The Show
+          </TabsTrigger>
+          <TabsTrigger value="hosts" className="flex-1 sm:flex-initial">
+            <Users className="mr-2 h-4 w-4" />All Hosts
+          </TabsTrigger>
+          {hasYT && (
+            <TabsTrigger value="videos" className="flex-1 sm:flex-initial">
+              <Youtube className="mr-2 h-4 w-4" />Videos
+            </TabsTrigger>
           )}
+        </TabsList>
 
-          {/* Tabs: Episodes */}
-          <Tabs defaultValue="episodes">
-            <TabsList>
-              <TabsTrigger value="episodes">
-                Episodes ({show.episodes.length})
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="episodes" className="mt-4">
-              {show.episodes.length > 0 ? (
-                <div className="space-y-3">
-                  {show.episodes.map((episode) => {
-                    const isEpisodePlaying =
-                      isPlaying &&
-                      episode.audioUrl !== null &&
-                      currentStream === episode.audioUrl;
-
-                    return (
-                      <Card key={episode.id}>
-                        <CardContent className="flex items-center gap-4 pt-6">
-                          {/* Play button */}
-                          {episode.audioUrl ? (
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-10 w-10 shrink-0 rounded-full"
-                              onClick={() => handleEpisodePlay(episode)}
-                            >
-                              {isEpisodePlaying ? (
-                                <Pause className="h-4 w-4" />
-                              ) : (
-                                <Play className="h-4 w-4" />
-                              )}
-                            </Button>
-                          ) : (
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-muted">
-                              <Mic className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                          )}
-
-                          {/* Episode info */}
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium truncate">
-                              {episode.title}
-                            </p>
-                            {episode.description && (
-                              <p className="mt-0.5 text-sm text-muted-foreground line-clamp-2">
-                                {episode.description}
-                              </p>
-                            )}
-                            <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                              {episode.airDate && (
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  {formatDate(episode.airDate)}
-                                </span>
-                              )}
-                              {episode.duration && (
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  {formatDuration(episode.duration)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="flex h-32 items-center justify-center rounded-lg border bg-muted/50">
-                  <p className="text-sm text-muted-foreground">
-                    No episodes available yet.
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Hosts */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Mic className="h-5 w-5 text-primary" />
-                Hosts
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {show.hosts.length > 0 ? (
-                <div className="space-y-3">
-                  {show.hosts.map((host) => (
-                    <Link
-                      key={host.id}
-                      href={`/hosts/${host.id}`}
-                      className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-muted"
-                    >
-                      <Avatar>
-                        {host.avatarUrl ? (
-                          <AvatarImage
-                            src={host.avatarUrl}
-                            alt={host.name}
-                          />
-                        ) : null}
-                        <AvatarFallback>
-                          {getInitials(host.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {host.name}
-                        </p>
-                        {host.isPrimary && (
-                          <p className="text-xs text-muted-foreground">
-                            Primary Host
-                          </p>
-                        )}
+        {/* Podcasts Tab */}
+        <TabsContent value="podcasts">
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <PodcastPlayer episodes={show.episodes} showName={show.name} onPlay={handlePlay} isPlaying={isPlaying} currentStream={currentStream} />
+            </div>
+            <div className="space-y-4">
+              <Card>
+                <CardHeader><CardTitle className="text-base">Show Info</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Episodes</span>
+                    <span className="font-medium">{show.episodes.length}</span>
+                  </div>
+                  <Separator />
+                  {schedule && (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Schedule</span>
+                        <span className="font-medium text-right text-xs">{schedule}</span>
                       </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No hosts assigned yet.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+                      <Separator />
+                    </>
+                  )}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Status</span>
+                    <Badge variant={show.isActive ? "default" : "secondary"} className="text-xs">
+                      {show.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader><CardTitle className="text-base">Connect</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  <a href="mailto:programming@wccg1045fm.com" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    <Mail className="h-4 w-4" />programming@wccg1045fm.com
+                  </a>
+                  <Link href="/contact" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    <ExternalLink className="h-4 w-4" />Contact Us
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
 
-          {/* Show Stats */}
-          <Card>
-            <CardContent className="pt-6 space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Episodes</span>
-                <span className="font-medium">{show.episodes.length}</span>
+        {/* The Show Tab */}
+        <TabsContent value="show">
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-6">
+              <Card>
+                <CardHeader><CardTitle>About {show.name}</CardTitle></CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+                    {show.description ?? "Show description coming soon."}
+                  </p>
+                </CardContent>
+              </Card>
+              {schedule && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-primary" />Broadcast Schedule
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-3 rounded-lg bg-primary/5 p-4">
+                      <Clock className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-medium">{schedule}</p>
+                        <p className="text-sm text-muted-foreground">Eastern Time (ET) on WCCG 104.5 FM</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+            <div>
+              {show.hosts.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Mic className="h-4 w-4 text-primary" />Hosts
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {show.hosts.map((host) => (
+                      <Link key={host.id} href={`/hosts/${host.id}`} className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-muted">
+                        <Avatar className="h-10 w-10">
+                          {host.avatarUrl && <AvatarImage src={host.avatarUrl} alt={host.name} />}
+                          <AvatarFallback className="text-xs">{getInitials(host.name)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-medium">{host.name}</p>
+                          {host.isPrimary && <p className="text-xs text-muted-foreground">Primary Host</p>}
+                        </div>
+                      </Link>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* All Hosts Tab */}
+        <TabsContent value="hosts">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {show.hosts.length > 0 ? show.hosts.map((host) => (
+              <Link key={host.id} href={`/hosts/${host.id}`}>
+                <Card className="h-full transition-all hover:shadow-lg hover:bg-muted/50">
+                  <CardContent className="p-6 text-center space-y-4">
+                    <Avatar className="h-24 w-24 mx-auto">
+                      {host.avatarUrl && <AvatarImage src={host.avatarUrl} alt={host.name} />}
+                      <AvatarFallback className="text-xl">{getInitials(host.name)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="font-semibold text-lg">{host.name}</h3>
+                      {host.isPrimary && <Badge variant="outline" className="mt-1 text-xs">Primary Host</Badge>}
+                    </div>
+                    {host.bio && <p className="text-sm text-muted-foreground line-clamp-3">{host.bio}</p>}
+                    {host.email && (
+                      <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                        <Mail className="h-3 w-3" />{host.email}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </Link>
+            )) : (
+              <div className="col-span-full flex h-32 items-center justify-center rounded-lg border bg-muted/50">
+                <p className="text-sm text-muted-foreground">No hosts assigned to this show yet.</p>
               </div>
-              <Separator />
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Status</span>
-                <Badge
-                  variant={show.isActive ? "default" : "secondary"}
-                  className="text-xs"
-                >
-                  {show.isActive ? "Active" : "Inactive"}
-                </Badge>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Hosts</span>
-                <span className="font-medium">{show.hosts.length}</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Videos Tab */}
+        {hasYT && (
+          <TabsContent value="videos">
+            <YouTubeFeed showId={show.id} />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }

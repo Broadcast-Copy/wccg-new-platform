@@ -124,3 +124,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Hero slideshow progress indicator */
+@keyframes hero-progress {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
