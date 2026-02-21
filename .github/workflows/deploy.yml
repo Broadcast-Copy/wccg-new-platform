@@ -36,6 +36,9 @@ jobs:
       - name: Build web app (static export)
         env:
           GITHUB_PAGES: 'true'
+          NEXT_PUBLIC_SUPABASE_URL: 'https://lmoqvvkhibfiwudgdopb.supabase.co'
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxtb3F2dmtoaWJmaXd1ZGdkb3BiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzNDcxOTQsImV4cCI6MjA4NjkyMzE5NH0.gohJNliy0HBAwajzYwNZS44UTwZ-WBIF7zQUXWRjuLU'
+          NEXT_PUBLIC_API_URL: 'https://api.wccg1045fm.com/api/v1'
         run: pnpm --filter web build
 
       - name: Upload artifact
