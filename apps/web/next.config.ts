@@ -1,8 +1,10 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@wccg/types', '@wccg/ui'],
+  output: 'export',
+  basePath: process.env.GITHUB_PAGES === 'true' ? '/wccg-new-platform' : '',
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
@@ -10,6 +12,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  transpilePackages: ['@wccg/types', '@wccg/ui'],
 };
 
 export default nextConfig;
