@@ -19,16 +19,20 @@ type Category =
   | "Education"
   | "Churches"
   | "Entertainment"
-  | "Home Services";
+  | "Home Services"
+  | "Government & Services";
 
 interface Business {
   id: string;
   name: string;
   category: Category;
   address: string;
+  city: string;
+  county: string;
   phone: string;
   description: string;
   website?: string;
+  imageUrl?: string;
   featured?: boolean;
   lat: number;
   lng: number;

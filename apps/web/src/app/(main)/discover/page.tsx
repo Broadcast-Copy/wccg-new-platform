@@ -435,7 +435,7 @@ export default async function DiscoverPage() {
               className="shrink-0 bg-white text-teal-700 hover:bg-white/90"
               asChild
             >
-              <Link href="/advertise">
+              <Link href="/contact">
                 Get Started
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

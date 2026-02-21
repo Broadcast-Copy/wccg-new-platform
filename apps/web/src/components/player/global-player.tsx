@@ -1,15 +1,13 @@
 "use client";
 
 import { useAudioPlayer } from "@/hooks/use-audio-player";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { Pause, Play, Volume2, VolumeX, Radio } from "lucide-react";
 
 export function GlobalPlayer() {
   const { isPlaying, pause, resume, volume, setVolume, metadata, currentStream } =
     useAudioPlayer();
 
-  // Don't render if no stream has been loaded yet
   if (!currentStream) {
     return null;
   }
@@ -31,53 +29,57 @@ export function GlobalPlayer() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center border-t bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex items-center gap-4">
-        {/* Album Art */}
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
+    <div className="fixed bottom-14 left-0 right-0 z-50 border-t border-white/[0.06] bg-[#0e0e18]/95 backdrop-blur-xl">
+      <div className="container flex h-16 items-center gap-3">
+        {/* Album Art / Station Icon */}
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#74ddc7]/20 to-[#7401df]/20 border border-white/[0.06]">
           {metadata.albumArt ? (
             <img
               src={metadata.albumArt}
               alt="Album art"
-              className="h-10 w-10 rounded-md object-cover"
+              className="h-10 w-10 rounded-lg object-cover"
             />
           ) : (
-            <Volume2 className="h-5 w-5 text-muted-foreground" />
+            <Radio className="h-5 w-5 text-[#74ddc7]" />
           )}
         </div>
 
         {/* Track Info */}
-        <div className="flex min-w-0 flex-col">
-          <span className="truncate text-sm font-medium">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-sm font-semibold text-white">
             {metadata.title || metadata.streamName || "Unknown Track"}
           </span>
-          <span className="truncate text-xs text-muted-foreground">
+          <span className="truncate text-xs text-white/40">
             {metadata.artist || "WCCG 104.5 FM"}
           </span>
         </div>
 
         {/* Live Badge */}
         {isPlaying && (
-          <Badge variant="destructive" className="shrink-0 animate-pulse">
-            LIVE
-          </Badge>
+          <div className="hidden sm:flex items-center gap-1.5 rounded-full bg-[#74ddc7]/10 border border-[#74ddc7]/20 px-2.5 py-0.5">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#74ddc7] opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#74ddc7]" />
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#74ddc7]">
+              Live
+            </span>
+          </div>
         )}
 
-        {/* Spacer */}
-        <div className="flex-1" />
-
         {/* Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
             onClick={togglePlay}
             aria-label={isPlaying ? "Pause" : "Play"}
+            className="h-10 w-10 rounded-full bg-[#74ddc7] text-[#0a0a0f] hover:bg-[#74ddc7]/80 hover:text-[#0a0a0f]"
           >
             {isPlaying ? (
               <Pause className="h-5 w-5" />
             ) : (
-              <Play className="h-5 w-5" />
+              <Play className="h-5 w-5 ml-0.5" />
             )}
           </Button>
 
@@ -86,6 +88,7 @@ export function GlobalPlayer() {
             size="icon"
             onClick={toggleMute}
             aria-label={volume === 0 ? "Unmute" : "Mute"}
+            className="h-8 w-8 rounded-full text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
           >
             {volume === 0 ? (
               <VolumeX className="h-4 w-4" />
@@ -102,7 +105,7 @@ export function GlobalPlayer() {
             step={0.01}
             value={volume}
             onChange={(e) => setVolume(parseFloat(e.target.value))}
-            className="hidden w-24 accent-primary sm:block"
+            className="hidden w-20 accent-[#74ddc7] sm:block"
             aria-label="Volume"
           />
         </div>

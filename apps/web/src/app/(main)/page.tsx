@@ -12,10 +12,11 @@ import {
   Users2,
   ShoppingBag,
   Gift,
-  Cloud,
   Megaphone,
   Headphones,
   Music,
+  Mic,
+  Zap,
 } from "lucide-react";
 
 interface EventItem {
@@ -42,69 +43,57 @@ async function getUpcomingEvents(): Promise<EventItem[]> {
   }
 }
 
+const channels = [
+  { id: "stream_wccg", name: "WCCG 104.5", tagline: "Hip Hop & R&B", color: "from-[#74ddc7] to-[#0d9488]", icon: Radio },
+  { id: "stream_soul", name: "Soul 104.5", tagline: "Classic Soul & R&B", color: "from-[#7401df] to-[#4c1d95]", icon: Headphones },
+  { id: "stream_hot", name: "Hot 104.5", tagline: "Trending Hits", color: "from-[#ef4444] to-[#b91c1c]", icon: Zap },
+  { id: "stream_vibe", name: "Vibe 104.5", tagline: "Lo-Fi & Chill", color: "from-[#3b82f6] to-[#1d4ed8]", icon: Music },
+  { id: "stream_yard", name: "The Yard", tagline: "HBCU & Culture", color: "from-[#f59e0b] to-[#d97706]", icon: Mic },
+  { id: "stream_mixsquad", name: "MixSquad", tagline: "DJ Mixes 24/7", color: "from-[#ec4899] to-[#be185d]", icon: Headphones },
+];
+
 const platformFeatures = [
   {
     href: "/channels",
     icon: Radio,
-    title: "Now Streaming",
-    description: "6 channels of curated music, talk, and sports",
-    color: "from-purple-500 to-purple-700",
-  },
-  {
-    href: "/discover",
-    icon: Compass,
-    title: "Discover More",
-    description: "Shows, DJs, podcasts, and exclusive content",
-    color: "from-teal-500 to-teal-700",
-  },
-  {
-    href: "/community",
-    icon: Users2,
-    title: "Community Directory",
-    description: "Local services and businesses near you",
-    color: "from-blue-500 to-blue-700",
+    title: "6 Live Channels",
+    description: "Curated music, talk, and sports — streaming 24/7",
+    color: "from-[#74ddc7] to-[#0d9488]",
   },
   {
     href: "/events",
     icon: CalendarDays,
     title: "Events & Tickets",
     description: "Local events, concerts, and community experiences",
-    color: "from-orange-500 to-orange-700",
+    color: "from-[#f59e0b] to-[#d97706]",
+  },
+  {
+    href: "/community",
+    icon: Users2,
+    title: "Community Directory",
+    description: "73+ local businesses across 7 NC counties",
+    color: "from-[#3b82f6] to-[#1d4ed8]",
   },
   {
     href: "/marketplace",
     icon: ShoppingBag,
     title: "Marketplace",
     description: "WCCG merch and local vendor products",
-    color: "from-pink-500 to-pink-700",
+    color: "from-[#ec4899] to-[#be185d]",
   },
   {
     href: "/rewards",
     icon: Gift,
     title: "mY1045 Perks",
-    description: "Earn points and redeem exclusive rewards",
-    color: "from-yellow-500 to-yellow-700",
+    description: "Earn points, unlock exclusive rewards",
+    color: "from-[#7401df] to-[#4c1d95]",
   },
   {
     href: "/contact",
     icon: Megaphone,
     title: "Advertise & Promote",
     description: "Reach our audience with your brand",
-    color: "from-red-500 to-red-700",
-  },
-  {
-    href: "/contact",
-    icon: Headphones,
-    title: "Creator Studio",
-    description: "Studio production, podcasts, and content services",
-    color: "from-indigo-500 to-indigo-700",
-  },
-  {
-    href: "/contact",
-    icon: Music,
-    title: "Submit Music",
-    description: "Get your tracks on WCCG 104.5 FM",
-    color: "from-emerald-500 to-emerald-700",
+    color: "from-[#ef4444] to-[#b91c1c]",
   },
 ];
 
@@ -112,38 +101,49 @@ export default async function HomePage() {
   const events = await getUpcomingEvents();
 
   return (
-    <div className="space-y-12">
-      {/* Hero Slideshow */}
+    <div className="space-y-10">
+      {/* Hero Ribbon */}
       <Hero />
 
-      {/* Now Streaming + Discover CTAs */}
-      <section className="flex flex-col sm:flex-row gap-4">
-        <Link
-          href="/channels"
-          className="flex-1 group relative overflow-hidden rounded-xl bg-gradient-to-r from-purple-900 to-purple-700 p-6 text-white transition-transform hover:scale-[1.02]"
-        >
+      {/* Channel Carousel — iHeartRadio "Live Radio Dial" style */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Radio className="h-8 w-8" />
-            <div>
-              <h3 className="text-xl font-bold">Now Streaming</h3>
-              <p className="text-white/70 text-sm">6 channels live now</p>
+            <h2 className="text-xl font-bold text-white">Now Streaming</h2>
+            <div className="flex items-center gap-1.5 rounded-full bg-[#74ddc7]/10 border border-[#74ddc7]/20 px-2.5 py-0.5">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#74ddc7] opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#74ddc7]" />
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#74ddc7]">6 Live</span>
             </div>
           </div>
-          <ArrowRight className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/50 group-hover:text-white transition-colors" />
-        </Link>
-        <Link
-          href="/discover"
-          className="flex-1 group relative overflow-hidden rounded-xl bg-gradient-to-r from-teal-800 to-teal-600 p-6 text-white transition-transform hover:scale-[1.02]"
-        >
-          <div className="flex items-center gap-3">
-            <Compass className="h-8 w-8" />
-            <div>
-              <h3 className="text-xl font-bold">Discover More</h3>
-              <p className="text-white/70 text-sm">Shows, DJs, and podcasts</p>
-            </div>
-          </div>
-          <ArrowRight className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/50 group-hover:text-white transition-colors" />
-        </Link>
+          <Button variant="ghost" size="sm" asChild className="text-white/40 hover:text-[#74ddc7]">
+            <Link href="/channels">
+              View All
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+          {channels.map((ch) => (
+            <Link
+              key={ch.id}
+              href={`/channels/${ch.id}`}
+              className="group flex-shrink-0 w-[160px] overflow-hidden rounded-xl border border-white/[0.06] bg-[#141420] transition-all hover:border-white/[0.12] hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5"
+            >
+              <div className={`h-24 bg-gradient-to-br ${ch.color} flex items-center justify-center relative overflow-hidden`}>
+                <ch.icon className="h-8 w-8 text-white/80" />
+                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTTAgMGgyMHYyMEgweiIgZmlsbD0ibm9uZSIvPjxjaXJjbGUgY3g9IjEwIiBjeT0iMTAiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNnKSIvPjwvc3ZnPg==')] opacity-30" />
+              </div>
+              <div className="p-3">
+                <h3 className="text-sm font-bold text-white truncate">{ch.name}</h3>
+                <p className="text-xs text-white/40 mt-0.5">{ch.tagline}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
       </section>
 
       {/* Live Now Rail */}
@@ -152,33 +152,35 @@ export default async function HomePage() {
       {/* Up Next Rail */}
       <UpNextRail />
 
-      {/* Platform Features Grid (matching original site) */}
-      <section className="space-y-6">
-        <h2 className="text-2xl font-bold tracking-tight">
+      {/* Platform Features — iHeartRadio genre-grid inspired */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-bold text-white">
           Explore the Platform
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {platformFeatures.map((feature) => (
             <Link
               key={feature.href + feature.title}
               href={feature.href}
-              className="group relative overflow-hidden rounded-xl border bg-card p-5 transition-all hover:shadow-lg hover:border-primary/20"
+              className="group relative overflow-hidden rounded-xl border border-white/[0.06] bg-[#141420] p-5 transition-all hover:border-white/[0.12] hover:shadow-lg hover:shadow-black/20"
             >
               <div className="flex items-start gap-4">
                 <div
-                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${feature.color} text-white`}
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${feature.color}`}
                 >
-                  <feature.icon className="h-6 w-6" />
+                  <feature.icon className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-semibold group-hover:text-primary transition-colors">
+                  <h3 className="font-semibold text-white group-hover:text-[#74ddc7] transition-colors">
                     {feature.title}
                   </h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="mt-1 text-sm text-white/40">
                     {feature.description}
                   </p>
                 </div>
               </div>
+              {/* Hover glow */}
+              <div className={`absolute -inset-1 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-[0.03] rounded-xl transition-opacity`} />
             </Link>
           ))}
         </div>
@@ -187,10 +189,10 @@ export default async function HomePage() {
       {/* Upcoming Events */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold tracking-tight">
+          <h2 className="text-xl font-bold text-white">
             Upcoming Events
           </h2>
-          <Button variant="ghost" size="sm" asChild>
+          <Button variant="ghost" size="sm" asChild className="text-white/40 hover:text-[#74ddc7]">
             <Link href="/events">
               View All
               <ArrowRight className="ml-1 h-4 w-4" />
@@ -198,7 +200,7 @@ export default async function HomePage() {
           </Button>
         </div>
         {events.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {events.map((event) => (
               <EventCard
                 key={event.id}
@@ -218,12 +220,51 @@ export default async function HomePage() {
             ))}
           </div>
         ) : (
-          <div className="flex h-32 items-center justify-center rounded-lg border bg-muted/50">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex h-32 items-center justify-center rounded-xl border border-white/[0.06] bg-[#141420]">
+            <p className="text-sm text-white/30">
               No upcoming events at the moment. Check back soon!
             </p>
           </div>
         )}
+      </section>
+
+      {/* CTA Banner — Riverside/SiriusXM-inspired bold accent section */}
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#7401df] to-[#3b82f6] p-8 md:p-12">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0" style={{
+            backgroundImage: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.2) 0%, transparent 40%)"
+          }} />
+        </div>
+        <div className="relative z-10 flex flex-col items-center text-center gap-4">
+          <h2 className="text-2xl md:text-3xl font-black text-white">
+            Your Station. Your Community.
+          </h2>
+          <p className="max-w-md text-white/70 text-sm md:text-base">
+            Join thousands of listeners earning rewards, attending exclusive events, and supporting local businesses through WCCG 104.5 FM.
+          </p>
+          <div className="flex gap-3 mt-2">
+            <Button
+              size="lg"
+              asChild
+              className="rounded-full bg-white text-[#7401df] font-bold hover:bg-white/90 shadow-lg px-6"
+            >
+              <Link href="/register">
+                Get Started Free
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              asChild
+              className="rounded-full border-white/30 text-white hover:bg-white/10 px-6"
+            >
+              <Link href="/channels">
+                Start Listening
+              </Link>
+            </Button>
+          </div>
+        </div>
       </section>
     </div>
   );
