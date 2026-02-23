@@ -38,7 +38,7 @@ interface HostProfile {
 }
 
 export default function DashboardProfilePage() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { isLoading: authLoading } = useAuth();
   const [hostId, setHostId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -236,6 +236,7 @@ export default function DashboardProfilePage() {
             />
             {avatarUrl && (
               <div className="mt-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={avatarUrl}
                   alt="Avatar preview"

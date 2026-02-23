@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Upload,
-  Music,
-  Image,
+  Image as ImageIcon,
   FileAudio,
   X,
   Loader2,
@@ -30,8 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { apiClient } from "@/lib/api-client";
-import { useAuth } from "@/hooks/use-auth";
 
 const GENRES = [
   "Hip Hop",
@@ -45,7 +42,6 @@ const GENRES = [
 
 export default function UploadMixPage() {
   const router = useRouter();
-  const { isLoading: authLoading } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState("");
@@ -265,7 +261,7 @@ export default function UploadMixPage() {
                 htmlFor="coverImageUrl"
                 className="flex items-center gap-2 text-white"
               >
-                <Image className="size-4" />
+                <ImageIcon className="size-4" />
                 Cover Image URL
               </Label>
               <Input
@@ -277,6 +273,7 @@ export default function UploadMixPage() {
               />
               {coverImageUrl && (
                 <div className="mt-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={coverImageUrl}
                     alt="Cover preview"

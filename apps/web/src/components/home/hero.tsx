@@ -15,7 +15,7 @@ import {
   Radio,
   ExternalLink,
 } from "lucide-react";
-import { HERO_SHOWS, type ShowData } from "@/data/shows";
+import { HERO_SHOWS } from "@/data/shows";
 
 const MAIN_STREAM_URL =
   process.env.NEXT_PUBLIC_MAIN_STREAM_URL || "https://stream.wccg.com/main";

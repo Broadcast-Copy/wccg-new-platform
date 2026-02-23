@@ -5,6 +5,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { LiveNowIndicator } from "@/components/schedule/live-now-indicator";
 import { ChannelCard } from "@/components/streams/channel-card";
 import { apiClient } from "@/lib/api-client";
+import Link from "next/link";
 
 interface NowPlaying {
   currentTitle?: string;
@@ -83,9 +84,9 @@ export function LiveNowRail() {
             <div className="flex h-32 w-full items-center justify-center rounded-lg border bg-muted/50">
               <p className="text-sm text-muted-foreground">
                 No live streams at the moment. Check the{" "}
-                <a href="/channels" className="underline hover:text-foreground">
+                <Link href="/channels" className="underline hover:text-foreground">
                   Channel Guide
-                </a>{" "}
+                </Link>{" "}
                 for all available streams.
               </p>
             </div>

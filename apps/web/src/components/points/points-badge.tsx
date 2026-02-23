@@ -13,20 +13,24 @@ export function PointsBadge() {
 
   useEffect(() => {
     if (!user) {
-      setBalance(null);
+      // Defer state reset to avoid synchronous setState in effect
+      queueMicrotask(() => setBalance(null));
       return;
     }
+
+    let cancelled = false;
 
     async function fetchBalance() {
       try {
         const data = await apiClient<{ balance: number }>("/points/balance");
-        setBalance(data.balance);
+        if (!cancelled) setBalance(data.balance);
       } catch {
-        setBalance(0);
+        if (!cancelled) setBalance(0);
       }
     }
 
     fetchBalance();
+    return () => { cancelled = true; };
   }, [user]);
 
   // Don't show points badge for unauthenticated users

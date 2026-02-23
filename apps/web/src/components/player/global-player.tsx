@@ -34,6 +34,7 @@ export function GlobalPlayer() {
         {/* Album Art / Station Icon */}
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#74ddc7]/20 to-[#7401df]/20 border border-white/[0.06]">
           {metadata.albumArt ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={metadata.albumArt}
               alt="Album art"

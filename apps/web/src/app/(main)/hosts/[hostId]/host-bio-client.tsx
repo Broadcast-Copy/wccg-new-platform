@@ -228,7 +228,7 @@ export default function HostBioPage() {
     return () => {
       cancelled = true;
     };
-  }, [hostId]);
+  }, [hostId, hostData]);
 
   // Fetch mixes for this host
   useEffect(() => {

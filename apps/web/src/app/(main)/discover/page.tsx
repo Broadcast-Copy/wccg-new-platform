@@ -125,6 +125,7 @@ function DiscoverShowCard({ show }: { show: Show }) {
       {/* Circular image */}
       <div className="relative h-32 w-32 overflow-hidden rounded-full border-2 border-transparent bg-muted transition-all group-hover:border-teal-500 group-hover:shadow-lg group-hover:shadow-teal-500/20 sm:h-36 sm:w-36">
         {show.imageUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
           <img
             src={show.imageUrl}
             alt={show.name}

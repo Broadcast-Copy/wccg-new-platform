@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowRight,
   Radio,
-  Compass,
   CalendarDays,
   Users2,
   ShoppingBag,

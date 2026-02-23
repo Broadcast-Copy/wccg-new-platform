@@ -5,9 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import {
   Music,
-  Plus,
   Play,
-  Pencil,
   Trash2,
   Eye,
   EyeOff,
@@ -19,9 +17,6 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

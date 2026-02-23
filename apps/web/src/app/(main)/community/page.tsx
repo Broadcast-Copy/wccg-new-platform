@@ -370,10 +370,25 @@ export default function CommunityDirectoryPage() {
     let cancelled = false;
     async function fetchListings() {
       try {
-        const data = await apiClient<any[]>("/directory");
+        interface DirectoryItem {
+          id: string;
+          name: string;
+          category: string;
+          address?: string;
+          city?: string;
+          county?: string;
+          phone?: string;
+          description?: string;
+          website?: string;
+          imageUrl?: string;
+          featured?: boolean;
+          lat?: number;
+          lng?: number;
+        }
+        const data = await apiClient<DirectoryItem[]>("/directory");
         if (!cancelled && data && data.length > 0) {
           // Map API camelCase response → Business interface
-          const mapped: Business[] = data.map((item: any) => ({
+          const mapped: Business[] = data.map((item) => ({
             id: item.id,
             name: item.name,
             category: item.category as Category,
@@ -412,7 +427,7 @@ export default function CommunityDirectoryPage() {
         b.county.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesCounty && matchesSearch;
     });
-  }, [searchQuery, activeCategory, activeCounty]);
+  }, [searchQuery, activeCategory, activeCounty, businesses]);
 
   const categoryCount = useMemo(() => {
     const base = businesses.filter((b) => activeCounty === "All" || b.county === activeCounty);

@@ -6,13 +6,11 @@ import {
   Radio,
   Clock,
   ExternalLink,
-  Loader2,
   Waves,
 } from "lucide-react";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";

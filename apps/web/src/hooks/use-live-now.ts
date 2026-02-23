@@ -54,7 +54,8 @@ export function useLiveNow(streamId?: string) {
         setError("Connection lost. Reconnecting...");
       };
     } catch (err) {
-      setError("Failed to connect to live stream");
+      // Defer setState to avoid synchronous call in effect body
+      queueMicrotask(() => setError("Failed to connect to live stream"));
       console.error("SSE connection error:", err);
     }
 

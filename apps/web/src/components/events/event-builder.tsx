@@ -37,7 +37,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 
-import { TicketSelector, type TicketType } from "./ticket-selector";
+import { TicketSelector } from "./ticket-selector";
 import { apiClient } from "@/lib/api-client";
 
 // ---------------------------------------------------------------------------

@@ -56,6 +56,7 @@ export function MixCard({
       {/* Cover image area */}
       <div className="relative aspect-square overflow-hidden">
         {coverImageUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
           <img
             src={coverImageUrl}
             alt={title}

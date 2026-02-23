@@ -15,9 +15,27 @@ import {
 } from "@/components/ui/select";
 import { apiClient } from "@/lib/api-client";
 
+interface ListingData {
+  id?: string;
+  name?: string;
+  category?: string;
+  description?: string;
+  address?: string;
+  city?: string;
+  county?: string;
+  state?: string;
+  zipCode?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  imageUrl?: string;
+  status?: string;
+  isFeatured?: boolean;
+}
+
 interface ListingFormProps {
-  listing?: any;
-  onSave?: (listing: any) => void;
+  listing?: ListingData | null;
+  onSave?: (listing: ListingData) => void;
   onCancel?: () => void;
 }
 
@@ -94,14 +112,14 @@ export function ListingForm({ listing, onSave, onCancel }: ListingFormProps) {
     };
 
     try {
-      let result;
+      let result: ListingData;
       if (isEditing) {
-        result = await apiClient(`/directory/${listing.id}`, {
+        result = await apiClient<ListingData>(`/directory/${listing.id}`, {
           method: "PATCH",
           body: JSON.stringify(payload),
         });
       } else {
-        result = await apiClient("/directory", {
+        result = await apiClient<ListingData>("/directory", {
           method: "POST",
           body: JSON.stringify(payload),
         });
