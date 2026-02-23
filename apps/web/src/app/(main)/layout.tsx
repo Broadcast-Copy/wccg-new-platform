@@ -4,14 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserMenu } from "@/components/auth/user-menu";
 import { MobileNav } from "@/components/navigation/mobile-nav";
+import Image from "next/image";
 import {
-  Radio,
   Compass,
   CalendarDays,
   Users2,
   Mail,
   Home,
   Headphones,
+  Radio,
   Search,
   Mic,
   Gift,
@@ -54,17 +55,14 @@ export default function MainLayout({
               href="/"
               className="flex items-center gap-2.5 group"
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#74ddc7] to-[#7401df]">
-                <Radio className="h-4 w-4 text-white" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-bold tracking-tight text-white leading-none">
-                  WCCG
-                </span>
-                <span className="text-[10px] font-medium text-[#74ddc7] leading-none">
-                  104.5 FM
-                </span>
-              </div>
+              <Image
+                src="/images/logos/wccg-logo-black.png"
+                alt="WCCG 104.5 FM"
+                width={120}
+                height={40}
+                className="h-8 w-auto brightness-0 invert dark:brightness-0 dark:invert"
+                priority
+              />
             </Link>
 
             {/* Desktop nav links */}
@@ -110,10 +108,13 @@ export default function MainLayout({
             {/* Brand */}
             <div className="space-y-3 md:col-span-2">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#74ddc7] to-[#7401df]">
-                  <Radio className="h-3.5 w-3.5 text-white" />
-                </div>
-                <h3 className="font-bold text-white text-lg">WCCG 104.5 FM</h3>
+                <Image
+                  src="/images/logos/wccg-logo-black.png"
+                  alt="WCCG 104.5 FM"
+                  width={140}
+                  height={46}
+                  className="h-8 w-auto brightness-0 invert"
+                />
               </div>
               <p className="text-sm text-white/40 leading-relaxed max-w-xs">
                 Hip Hop, Sports, Reactions and Podcasts. Serving Fayetteville

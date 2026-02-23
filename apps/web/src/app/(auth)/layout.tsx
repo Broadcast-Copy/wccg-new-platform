@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function AuthLayout({
   children,
@@ -8,8 +9,15 @@ export default function AuthLayout({
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30">
       <div className="mb-8">
-        <Link href="/" className="text-2xl font-bold tracking-tight">
-          WCCG 104.5 FM
+        <Link href="/">
+          <Image
+            src="/images/logos/wccg-logo-black.png"
+            alt="WCCG 104.5 FM"
+            width={180}
+            height={60}
+            className="h-12 w-auto brightness-0 invert"
+            priority
+          />
         </Link>
       </div>
       <div className="w-full max-w-md px-4">{children}</div>
