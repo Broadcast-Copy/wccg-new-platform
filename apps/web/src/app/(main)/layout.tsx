@@ -58,9 +58,9 @@ export default function MainLayout({
               <Image
                 src="/images/logos/wccg-logo-black.png"
                 alt="WCCG 104.5 FM"
-                width={120}
-                height={40}
-                className="h-8 w-auto brightness-0 invert dark:brightness-0 dark:invert"
+                width={300}
+                height={194}
+                className="h-9 w-auto brightness-0 invert"
                 priority
               />
             </Link>
@@ -111,9 +111,9 @@ export default function MainLayout({
                 <Image
                   src="/images/logos/wccg-logo-black.png"
                   alt="WCCG 104.5 FM"
-                  width={140}
-                  height={46}
-                  className="h-8 w-auto brightness-0 invert"
+                  width={300}
+                  height={194}
+                  className="h-10 w-auto brightness-0 invert"
                 />
               </div>
               <p className="text-sm text-white/40 leading-relaxed max-w-xs">
