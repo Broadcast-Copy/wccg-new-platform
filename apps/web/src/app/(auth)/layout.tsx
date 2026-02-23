@@ -15,7 +15,7 @@ export default function AuthLayout({
             alt="WCCG 104.5 FM"
             width={300}
             height={194}
-            className="w-[200px] h-auto brightness-0 invert"
+            className="w-[250px] h-auto brightness-0 invert"
             priority
           />
         </Link>

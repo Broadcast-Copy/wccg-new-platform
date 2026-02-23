@@ -60,7 +60,7 @@ export default function MainLayout({
                 alt="WCCG 104.5 FM"
                 width={300}
                 height={194}
-                className="w-[100px] h-auto brightness-0 invert"
+                className="w-[140px] h-auto brightness-0 invert"
                 priority
               />
             </Link>
@@ -113,7 +113,7 @@ export default function MainLayout({
                   alt="WCCG 104.5 FM"
                   width={300}
                   height={194}
-                  className="w-[120px] h-auto brightness-0 invert"
+                  className="w-[160px] h-auto brightness-0 invert"
                 />
               </div>
               <p className="text-sm text-white/40 leading-relaxed max-w-xs">
