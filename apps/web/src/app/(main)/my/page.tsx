@@ -2,7 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Star, Ticket, Heart, TrendingUp, ChevronRight } from "lucide-react";
+import {
+  Star,
+  Ticket,
+  Heart,
+  TrendingUp,
+  ChevronRight,
+  CalendarDays,
+  Building2,
+  Mic,
+  Music,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -312,6 +322,80 @@ export default function UserDashboardPage() {
             </CardContent>
           </Card>
         </Link>
+      </div>
+
+      {/* More Options */}
+      <div>
+        <h2 className="mb-3 text-lg font-semibold">More Options</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Link href="/my/events">
+            <Card className="transition-colors hover:bg-muted/50">
+              <CardContent className="flex items-center gap-3 pt-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#7401df]/10">
+                  <CalendarDays className="h-5 w-5 text-[#7401df]" />
+                </div>
+                <div>
+                  <p className="font-medium">My Events</p>
+                  <p className="text-sm text-muted-foreground">
+                    Manage your events and tickets
+                  </p>
+                </div>
+                <ChevronRight className="ml-auto h-5 w-5 text-muted-foreground" />
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/my/directory">
+            <Card className="transition-colors hover:bg-muted/50">
+              <CardContent className="flex items-center gap-3 pt-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#74ddc7]/10">
+                  <Building2 className="h-5 w-5 text-[#74ddc7]" />
+                </div>
+                <div>
+                  <p className="font-medium">My Directory</p>
+                  <p className="text-sm text-muted-foreground">
+                    Manage your business listings
+                  </p>
+                </div>
+                <ChevronRight className="ml-auto h-5 w-5 text-muted-foreground" />
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/my/podcasts">
+            <Card className="transition-colors hover:bg-muted/50">
+              <CardContent className="flex items-center gap-3 pt-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#7401df]/10">
+                  <Mic className="h-5 w-5 text-[#7401df]" />
+                </div>
+                <div>
+                  <p className="font-medium">My Podcasts</p>
+                  <p className="text-sm text-muted-foreground">
+                    Create and manage podcasts
+                  </p>
+                </div>
+                <ChevronRight className="ml-auto h-5 w-5 text-muted-foreground" />
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/dashboard/mixes">
+            <Card className="transition-colors hover:bg-muted/50">
+              <CardContent className="flex items-center gap-3 pt-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#74ddc7]/10">
+                  <Music className="h-5 w-5 text-[#74ddc7]" />
+                </div>
+                <div>
+                  <p className="font-medium">My Mixes</p>
+                  <p className="text-sm text-muted-foreground">
+                    Upload and manage DJ mixes
+                  </p>
+                </div>
+                <ChevronRight className="ml-auto h-5 w-5 text-muted-foreground" />
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
       </div>
     </div>
   );

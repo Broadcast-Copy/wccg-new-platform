@@ -23,6 +23,7 @@ const navLinks = [
   { href: "/shows", label: "Shows", icon: Mic },
   { href: "/schedule", label: "Schedule", icon: CalendarDays },
   { href: "/events", label: "Events", icon: CalendarDays },
+  { href: "/mixes", label: "Mixes", icon: Headphones },
   { href: "/community", label: "Community", icon: Users2 },
   { href: "/contact", label: "Connect", icon: Mail },
 ];
@@ -133,6 +134,7 @@ export default function MainLayout({
                 <Link href="/discover" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Discover</Link>
                 <Link href="/shows" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Shows</Link>
                 <Link href="/hosts" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Hosts &amp; DJs</Link>
+                <Link href="/mixes" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">DJ Mixes</Link>
                 <Link href="/schedule" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Schedule</Link>
               </nav>
             </div>
@@ -153,9 +155,9 @@ export default function MainLayout({
               <h3 className="text-xs font-semibold text-white/60 uppercase tracking-widest">Support</h3>
               <nav className="flex flex-col gap-2">
                 <Link href="/contact" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Contact Us</Link>
-                <Link href="/contact" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Advertise</Link>
-                <Link href="/contact" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Submit Music</Link>
-                <Link href="/contact" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Creator Services</Link>
+                <Link href="/contact#advertise" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Advertise</Link>
+                <Link href="/contact#submit-music" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Submit Music</Link>
+                <Link href="/contact#creator-services" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Creator Services</Link>
               </nav>
             </div>
           </div>

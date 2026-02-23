@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Hero } from "@/components/home/hero";
 import { LiveNowRail } from "@/components/home/live-now-rail";
 import { UpNextRail } from "@/components/home/up-next-rail";
@@ -18,6 +21,7 @@ import {
   Mic,
   Zap,
 } from "lucide-react";
+import { apiClient } from "@/lib/api-client";
 
 interface EventItem {
   id: string;
@@ -27,20 +31,6 @@ interface EventItem {
   venue?: string;
   imageUrl?: string;
   isFree?: boolean;
-}
-
-async function getUpcomingEvents(): Promise<EventItem[]> {
-  try {
-    const apiUrl =
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
-    const res = await fetch(`${apiUrl}/events?limit=3`, {
-      next: { revalidate: 60 },
-    });
-    if (!res.ok) return [];
-    return res.json();
-  } catch {
-    return [];
-  }
 }
 
 const channels = [
@@ -57,7 +47,7 @@ const platformFeatures = [
     href: "/channels",
     icon: Radio,
     title: "6 Live Channels",
-    description: "Curated music, talk, and sports — streaming 24/7",
+    description: "Curated music, talk, and sports \u2014 streaming 24/7",
     color: "from-[#74ddc7] to-[#0d9488]",
   },
   {
@@ -97,15 +87,66 @@ const platformFeatures = [
   },
 ];
 
-export default async function HomePage() {
-  const events = await getUpcomingEvents();
+function UpcomingEventsSection() {
+  const [events, setEvents] = useState<EventItem[]>([]);
 
+  useEffect(() => {
+    apiClient<EventItem[]>("/events?limit=3")
+      .then(setEvents)
+      .catch(() => setEvents([]));
+  }, []);
+
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-white">
+          Upcoming Events
+        </h2>
+        <Button variant="ghost" size="sm" asChild className="text-white/40 hover:text-[#74ddc7]">
+          <Link href="/events">
+            View All
+            <ArrowRight className="ml-1 h-4 w-4" />
+          </Link>
+        </Button>
+      </div>
+      {events.length > 0 ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {events.map((event) => (
+            <EventCard
+              key={event.id}
+              eventId={event.id}
+              title={event.title}
+              description={event.description}
+              date={new Date(event.startDate).toLocaleDateString("en-US", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+              venue={event.venue}
+              ticketPrice={event.isFree ? "Free" : "Ticketed"}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="flex h-32 items-center justify-center rounded-xl border border-white/[0.06] bg-[#141420]">
+          <p className="text-sm text-white/30">
+            No upcoming events at the moment. Check back soon!
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+export default function HomePage() {
   return (
     <div className="space-y-10">
       {/* Hero Ribbon */}
       <Hero />
 
-      {/* Channel Carousel — iHeartRadio "Live Radio Dial" style */}
+      {/* Channel Carousel */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -152,7 +193,7 @@ export default async function HomePage() {
       {/* Up Next Rail */}
       <UpNextRail />
 
-      {/* Platform Features — iHeartRadio genre-grid inspired */}
+      {/* Platform Features */}
       <section className="space-y-4">
         <h2 className="text-xl font-bold text-white">
           Explore the Platform
@@ -179,56 +220,16 @@ export default async function HomePage() {
                   </p>
                 </div>
               </div>
-              {/* Hover glow */}
               <div className={`absolute -inset-1 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-[0.03] rounded-xl transition-opacity`} />
             </Link>
           ))}
         </div>
       </section>
 
-      {/* Upcoming Events */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">
-            Upcoming Events
-          </h2>
-          <Button variant="ghost" size="sm" asChild className="text-white/40 hover:text-[#74ddc7]">
-            <Link href="/events">
-              View All
-              <ArrowRight className="ml-1 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-        {events.length > 0 ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {events.map((event) => (
-              <EventCard
-                key={event.id}
-                eventId={event.id}
-                title={event.title}
-                description={event.description}
-                date={new Date(event.startDate).toLocaleDateString("en-US", {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                })}
-                venue={event.venue}
-                ticketPrice={event.isFree ? "Free" : "Ticketed"}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="flex h-32 items-center justify-center rounded-xl border border-white/[0.06] bg-[#141420]">
-            <p className="text-sm text-white/30">
-              No upcoming events at the moment. Check back soon!
-            </p>
-          </div>
-        )}
-      </section>
+      {/* Upcoming Events — client-side fetched */}
+      <UpcomingEventsSection />
 
-      {/* CTA Banner — Riverside/SiriusXM-inspired bold accent section */}
+      {/* CTA Banner */}
       <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#7401df] to-[#3b82f6] p-8 md:p-12">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute inset-0" style={{

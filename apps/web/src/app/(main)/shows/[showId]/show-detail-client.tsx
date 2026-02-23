@@ -76,44 +76,10 @@ interface Show {
   updatedAt: string;
 }
 
-// ─── YouTube Channel IDs for shows ──────────────────────────────────────
+// ─── Shared data imports ────────────────────────────────────────────────
 
-const SHOW_YOUTUBE: Record<string, { name: string; url: string }> = {
-  show_streetz_morning: {
-    name: "Streetz Morning Takeover",
-    url: "https://www.youtube.com/embed?listType=search&list=Streetz+Morning+Takeover+WCCG",
-  },
-  show_angela_yee: {
-    name: "Way Up with Angela Yee",
-    url: "https://www.youtube.com/embed?listType=search&list=Way+Up+Angela+Yee",
-  },
-  show_bootleg_kev: {
-    name: "Bootleg Kev",
-    url: "https://www.youtube.com/embed?listType=search&list=Bootleg+Kev+Show",
-  },
-  show_posted_corner: {
-    name: "Posted on The Corner",
-    url: "https://www.youtube.com/embed?listType=search&list=Incognito+Posted+Corner",
-  },
-  show_shorty_corleone: {
-    name: "Crank with Shorty Corleone",
-    url: "https://www.youtube.com/embed?listType=search&list=Shorty+Corleone+WCCG",
-  },
-};
-
-const SHOW_SCHEDULES: Record<string, string> = {
-  show_streetz_morning: "Weekdays 6:00 AM - 10:00 AM",
-  show_angela_yee: "Weekdays 10:00 AM - 2:00 PM",
-  show_posted_corner: "Weekdays 2:00 PM - 6:00 PM",
-  show_bootleg_kev: "Weekdays 6:00 PM - 10:00 PM",
-  show_shorty_corleone: "Weekdays 10:00 PM - 2:00 AM",
-  show_sunday_snacks: "Sundays 6:00 AM - 8:00 AM",
-  show_praise_mix: "Sundays 6:00 AM - 7:00 AM",
-  show_marvin_sapp: "Sundays 7:00 AM - 8:00 AM",
-  show_mix_squad: "Mix Squad Radio - 24/7",
-  show_duke_football: "Duke Football Season",
-  show_duke_basketball: "Duke Basketball Season",
-};
+import { getShowById } from "@/data/shows";
+import { YouTubeGrid } from "@/components/youtube/youtube-grid";
 
 // ─── Helpers ────────────────────────────────────────────────────────────
 
@@ -267,9 +233,11 @@ function PodcastPlayer({
 
 // ─── YouTube Feed ───────────────────────────────────────────────────────
 
-function YouTubeFeed({ showId }: { showId: string }) {
-  const yt = SHOW_YOUTUBE[showId];
-  if (!yt) {
+function YouTubeFeed({ showId, showName }: { showId: string; showName: string }) {
+  const showData = getShowById(showId);
+  const youtube = showData?.youtube;
+
+  if (!youtube) {
     return (
       <div className="flex h-48 items-center justify-center rounded-lg border bg-muted/50">
         <div className="text-center space-y-2">
@@ -281,20 +249,12 @@ function YouTubeFeed({ showId }: { showId: string }) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="aspect-video w-full overflow-hidden rounded-lg border bg-black">
-        <iframe
-          src={yt.url}
-          className="h-full w-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          title={`${yt.name} videos`}
-        />
-      </div>
-      <p className="text-sm text-muted-foreground text-center">
-        Latest videos from {yt.name}
-      </p>
-    </div>
+    <YouTubeGrid
+      channelUrl={youtube.channelUrl}
+      searchQuery={youtube.searchQuery || showName}
+      title={`${showName} Videos`}
+      maxVideos={6}
+    />
   );
 }
 
@@ -360,8 +320,9 @@ export default function ShowDetailPage() {
     );
   }
 
-  const schedule = SHOW_SCHEDULES[show.id];
-  const hasYT = !!SHOW_YOUTUBE[show.id];
+  const showData = getShowById(show.id);
+  const schedule = showData?.timeSlot ?? null;
+  const hasYT = !!showData?.youtube?.channelUrl;
 
   return (
     <div className="space-y-8">
@@ -562,7 +523,7 @@ export default function ShowDetailPage() {
         {/* Videos Tab */}
         {hasYT && (
           <TabsContent value="videos">
-            <YouTubeFeed showId={show.id} />
+            <YouTubeFeed showId={show.id} showName={show.name} />
           </TabsContent>
         )}
       </Tabs>

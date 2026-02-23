@@ -735,7 +735,7 @@ export default function CommunityDirectoryPage() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <Button size="lg" className="bg-teal-600 hover:bg-teal-500 text-white" asChild>
-              <Link href="/contact"><Plus className="mr-2 h-4 w-4" /> Submit Your Business</Link>
+              <Link href="/my/directory"><Plus className="mr-2 h-4 w-4" /> Submit Your Business</Link>
             </Button>
             <Button variant="outline" size="lg" className="border-slate-700 text-slate-300 hover:text-white" asChild>
               <a href="tel:9104836111"><Phone className="mr-2 h-4 w-4" /> Call (910) 483-6111</a>

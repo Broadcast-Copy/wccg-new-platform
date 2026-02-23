@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/hooks/use-auth";
+import { useUserRoles } from "@/hooks/use-user-roles";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,9 +14,13 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  CalendarDays,
   Heart,
   LayoutDashboard,
   LogOut,
+  MapPin,
+  Mic,
+  ShieldCheck,
   Star,
   Ticket,
 } from "lucide-react";
@@ -23,6 +28,7 @@ import { toast } from "sonner";
 
 export function UserMenu() {
   const { user, signOut, isLoading } = useAuth();
+  const { isAdmin, isHost } = useUserRoles();
   const router = useRouter();
 
   if (isLoading) {
@@ -77,12 +83,51 @@ export function UserMenu() {
           </div>
         </div>
         <DropdownMenuSeparator />
+
+        {/* Role-based dashboard links */}
+        {isAdmin && (
+          <DropdownMenuItem asChild>
+            <Link href="/admin">
+              <ShieldCheck className="mr-2 h-4 w-4" />
+              Admin Panel
+            </Link>
+          </DropdownMenuItem>
+        )}
+        {isHost && (
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard">
+              <Mic className="mr-2 h-4 w-4" />
+              Host Dashboard
+            </Link>
+          </DropdownMenuItem>
+        )}
+        {(isAdmin || isHost) && <DropdownMenuSeparator />}
+
         <DropdownMenuItem asChild>
           <Link href="/my">
             <LayoutDashboard className="mr-2 h-4 w-4" />
             My Dashboard
           </Link>
         </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/my/events">
+            <CalendarDays className="mr-2 h-4 w-4" />
+            My Events
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/my/tickets">
+            <Ticket className="mr-2 h-4 w-4" />
+            My Tickets
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/my/directory">
+            <MapPin className="mr-2 h-4 w-4" />
+            My Listings
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/my/favorites">
             <Heart className="mr-2 h-4 w-4" />
@@ -93,12 +138,6 @@ export function UserMenu() {
           <Link href="/my/points">
             <Star className="mr-2 h-4 w-4" />
             My Points
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/my/tickets">
-            <Ticket className="mr-2 h-4 w-4" />
-            My Tickets
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

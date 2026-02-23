@@ -5,16 +5,13 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   LayoutDashboard,
+  User,
   Radio,
-  Mic,
-  Users as UsersIcon,
-  Calendar,
-  CalendarClock,
-  Gift,
+  Music,
+  Upload,
   Menu,
   ArrowLeft,
-  MapPin,
-  Disc3,
+  Headphones,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,17 +24,12 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
-const adminNavItems = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/streams", label: "Streams", icon: Radio },
-  { href: "/admin/shows", label: "Shows", icon: Mic },
-  { href: "/admin/hosts", label: "Hosts", icon: UsersIcon },
-  { href: "/admin/schedule", label: "Schedule", icon: CalendarClock },
-  { href: "/admin/events", label: "Events", icon: Calendar },
-  { href: "/admin/directory", label: "Directory", icon: MapPin },
-  { href: "/admin/mixes", label: "DJ Mixes", icon: Disc3 },
-  { href: "/admin/points", label: "Points & Rewards", icon: Gift },
-  { href: "/admin/users", label: "Users", icon: UsersIcon },
+const djNavItems = [
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/profile", label: "My Profile", icon: User },
+  { href: "/dashboard/shows", label: "My Shows", icon: Radio },
+  { href: "/dashboard/mixes", label: "My Mixes", icon: Music },
+  { href: "/dashboard/mixes/upload", label: "Upload Mix", icon: Upload },
 ];
 
 function SidebarNav() {
@@ -45,11 +37,16 @@ function SidebarNav() {
 
   return (
     <nav className="space-y-1 p-4">
-      {adminNavItems.map((item) => {
+      {djNavItems.map((item) => {
         const isActive =
-          item.href === "/admin"
-            ? pathname === "/admin"
-            : pathname.startsWith(item.href);
+          item.href === "/dashboard"
+            ? pathname === "/dashboard"
+            : pathname === item.href || pathname.startsWith(item.href + "/");
+        // Avoid /dashboard/mixes matching /dashboard/mixes/upload when on upload page
+        const isExactMixes =
+          item.href === "/dashboard/mixes" &&
+          pathname.startsWith("/dashboard/mixes/upload");
+        const active = isActive && !isExactMixes;
         const Icon = item.icon;
         return (
           <Link
@@ -57,9 +54,9 @@ function SidebarNav() {
             href={item.href}
             className={cn(
               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              isActive
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              active
+                ? "bg-[#74ddc7]/15 text-[#74ddc7] border border-[#74ddc7]/30"
+                : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
             )}
           >
             <Icon className="size-4" />
@@ -71,7 +68,7 @@ function SidebarNav() {
   );
 }
 
-export default function AdminLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -79,17 +76,18 @@ export default function AdminLayout({
   const [sheetOpen, setSheetOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-[#0a0a0f]">
       {/* Desktop Sidebar */}
-      <aside className="hidden w-64 shrink-0 border-r bg-muted/30 md:block">
-        <div className="flex h-16 items-center border-b px-6">
-          <Link href="/admin" className="text-lg font-bold">
-            WCCG Admin
+      <aside className="hidden w-64 shrink-0 border-r border-white/10 bg-[#0d0d14] md:block">
+        <div className="flex h-16 items-center gap-2 border-b border-white/10 px-6">
+          <Headphones className="size-5 text-[#74ddc7]" />
+          <Link href="/dashboard" className="text-lg font-bold text-white">
+            DJ <span className="text-[#74ddc7]">Dashboard</span>
           </Link>
         </div>
         <ScrollArea className="h-[calc(100vh-4rem)]">
           <SidebarNav />
-          <div className="border-t p-4">
+          <div className="border-t border-white/10 p-4">
             <Link
               href="/"
               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
@@ -103,7 +101,7 @@ export default function AdminLayout({
 
       {/* Main Content */}
       <div className="flex-1">
-        <header className="flex h-16 items-center gap-4 border-b px-6">
+        <header className="flex h-16 items-center gap-4 border-b border-white/10 bg-[#0d0d14]/80 px-6 backdrop-blur-sm">
           {/* Mobile menu */}
           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger asChild>
@@ -112,14 +110,20 @@ export default function AdminLayout({
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-0">
-              <SheetHeader className="border-b px-6 py-4">
-                <SheetTitle>WCCG Admin</SheetTitle>
+            <SheetContent
+              side="left"
+              className="w-64 border-white/10 bg-[#0d0d14] p-0"
+            >
+              <SheetHeader className="border-b border-white/10 px-6 py-4">
+                <SheetTitle className="flex items-center gap-2 text-white">
+                  <Headphones className="size-5 text-[#74ddc7]" />
+                  DJ <span className="text-[#74ddc7]">Dashboard</span>
+                </SheetTitle>
               </SheetHeader>
               <div onClick={() => setSheetOpen(false)}>
                 <SidebarNav />
               </div>
-              <div className="border-t p-4">
+              <div className="border-t border-white/10 p-4">
                 <Link
                   href="/"
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
@@ -131,7 +135,12 @@ export default function AdminLayout({
               </div>
             </SheetContent>
           </Sheet>
-          <h2 className="text-lg font-semibold">Admin Panel</h2>
+          <div className="flex items-center gap-2">
+            <Headphones className="size-5 text-[#74ddc7] md:hidden" />
+            <h2 className="text-lg font-semibold text-white">
+              DJ <span className="text-[#74ddc7]">Dashboard</span>
+            </h2>
+          </div>
         </header>
         <main className="p-6">{children}</main>
       </div>
