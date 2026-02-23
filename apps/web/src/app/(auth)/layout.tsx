@@ -11,11 +11,11 @@ export default function AuthLayout({
       <div className="mb-8">
         <Link href="/">
           <Image
-            src="/images/logos/wccg-logo-black.png"
+            src="/images/logos/wccg-logo.png"
             alt="WCCG 104.5 FM"
-            width={300}
-            height={194}
-            className="h-16 w-auto brightness-0 invert"
+            width={1000}
+            height={1000}
+            className="h-20 w-auto brightness-0 invert"
             priority
           />
         </Link>

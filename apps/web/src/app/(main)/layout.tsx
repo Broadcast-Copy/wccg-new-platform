@@ -56,11 +56,11 @@ export default function MainLayout({
               className="flex items-center gap-2.5 group"
             >
               <Image
-                src="/images/logos/wccg-logo-black.png"
+                src="/images/logos/wccg-logo.png"
                 alt="WCCG 104.5 FM"
-                width={300}
-                height={194}
-                className="h-9 w-auto brightness-0 invert"
+                width={1000}
+                height={1000}
+                className="h-10 w-auto brightness-0 invert"
                 priority
               />
             </Link>
@@ -109,11 +109,11 @@ export default function MainLayout({
             <div className="space-y-3 md:col-span-2">
               <div className="flex items-center gap-2.5">
                 <Image
-                  src="/images/logos/wccg-logo-black.png"
+                  src="/images/logos/wccg-logo.png"
                   alt="WCCG 104.5 FM"
-                  width={300}
-                  height={194}
-                  className="h-10 w-auto brightness-0 invert"
+                  width={1000}
+                  height={1000}
+                  className="h-12 w-auto brightness-0 invert"
                 />
               </div>
               <p className="text-sm text-white/40 leading-relaxed max-w-xs">
