@@ -1,8 +1,13 @@
 import type { NextConfig } from 'next';
 
+const basePath = process.env.GITHUB_PAGES === 'true' ? '/wccg-new-platform' : '';
+
 const nextConfig: NextConfig = {
   output: 'export',
-  basePath: process.env.GITHUB_PAGES === 'true' ? '/wccg-new-platform' : '',
+  basePath,
+  env: {
+    NEXT_PUBLIC_BASE_PATH: basePath,
+  },
   images: {
     unoptimized: true,
     remotePatterns: [

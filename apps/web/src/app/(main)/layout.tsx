@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserMenu } from "@/components/auth/user-menu";
 import { MobileNav } from "@/components/navigation/mobile-nav";
-import Image from "next/image";
+import { AppImage as Image } from "@/components/ui/app-image";
 import {
   Compass,
   CalendarDays,

@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { AppImage as Image } from "@/components/ui/app-image";
 import Link from "next/link";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { Badge } from "@/components/ui/badge";

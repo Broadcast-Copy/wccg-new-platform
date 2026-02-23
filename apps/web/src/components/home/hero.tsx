@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import Link from "next/link";
-import Image from "next/image";
+import { AppImage as Image } from "@/components/ui/app-image";
 import {
   Pause,
   Play,

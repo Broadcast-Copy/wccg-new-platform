@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import { AppImage as Image } from "@/components/ui/app-image";
 import { ChannelCard } from "./channel-card";
 import { Radio, Sparkles } from "lucide-react";
 
