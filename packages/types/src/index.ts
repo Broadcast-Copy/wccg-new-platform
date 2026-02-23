@@ -6,3 +6,5 @@ export * from './favorites';
 export * from './points';
 export * from './events';
 export * from './api';
+export * from './directory';
+export * from './mixes';

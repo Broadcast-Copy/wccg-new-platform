@@ -18,6 +18,8 @@ import { PointsModule } from './modules/points/points.module.js';
 import { RewardsModule } from './modules/rewards/rewards.module.js';
 import { EventsModule } from './modules/events/events.module.js';
 import { MetadataModule } from './modules/metadata/metadata.module.js';
+import { DirectoryModule } from './modules/directory/directory.module.js';
+import { MixesModule } from './modules/mixes/mixes.module.js';
 
 // Root controller + service (health / info)
 import { AppController } from './app.controller.js';
@@ -43,6 +45,8 @@ import { AppService } from './app.service.js';
     RewardsModule,
     EventsModule,
     MetadataModule,
+    DirectoryModule,
+    MixesModule,
   ],
   controllers: [AppController],
   providers: [

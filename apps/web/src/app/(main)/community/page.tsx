@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { apiClient } from "@/lib/api-client";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
@@ -362,8 +363,43 @@ export default function CommunityDirectoryPage() {
   const [activeProgram, setActiveProgram] = useState<Program>(PROGRAMS[0]);
   const listRef = useRef<HTMLDivElement>(null);
 
+  // ── API-backed directory data (falls back to hardcoded BUSINESSES) ──
+  const [businesses, setBusinesses] = useState<Business[]>(BUSINESSES);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchListings() {
+      try {
+        const data = await apiClient<any[]>("/directory");
+        if (!cancelled && data && data.length > 0) {
+          // Map API camelCase response → Business interface
+          const mapped: Business[] = data.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            category: item.category as Category,
+            address: item.address ?? "",
+            city: item.city ?? "",
+            county: item.county ?? "",
+            phone: item.phone ?? "",
+            description: item.description ?? "",
+            website: item.website ?? undefined,
+            imageUrl: item.imageUrl ?? undefined,
+            featured: item.featured ?? false,
+            lat: item.lat ?? 0,
+            lng: item.lng ?? 0,
+          }));
+          setBusinesses(mapped);
+        }
+      } catch {
+        // API unavailable — keep hardcoded fallback (already set as initial state)
+      }
+    }
+    fetchListings();
+    return () => { cancelled = true; };
+  }, []);
+
   const filteredBusinesses = useMemo(() => {
-    return BUSINESSES.filter((b) => {
+    return businesses.filter((b) => {
       const matchesCategory = activeCategory === "All" || b.category === activeCategory;
       const matchesCounty = activeCounty === "All" || b.county === activeCounty;
       const matchesSearch =
@@ -379,21 +415,21 @@ export default function CommunityDirectoryPage() {
   }, [searchQuery, activeCategory, activeCounty]);
 
   const categoryCount = useMemo(() => {
-    const base = BUSINESSES.filter((b) => activeCounty === "All" || b.county === activeCounty);
+    const base = businesses.filter((b) => activeCounty === "All" || b.county === activeCounty);
     const counts: Record<string, number> = { All: base.length };
     for (const b of base) {
       counts[b.category] = (counts[b.category] || 0) + 1;
     }
     return counts;
-  }, [activeCounty]);
+  }, [activeCounty, businesses]);
 
   const countyCount = useMemo(() => {
-    const counts: Record<string, number> = { All: BUSINESSES.length };
-    for (const b of BUSINESSES) {
+    const counts: Record<string, number> = { All: businesses.length };
+    for (const b of businesses) {
       counts[b.county] = (counts[b.county] || 0) + 1;
     }
     return counts;
-  }, []);
+  }, [businesses]);
 
   const handleMarkerClick = useCallback((business: Business) => {
     setSelectedBusiness(business);
@@ -419,7 +455,7 @@ export default function CommunityDirectoryPage() {
         <div className="relative z-10 mx-auto max-w-4xl text-center space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full bg-teal-500/10 border border-teal-500/20 px-4 py-1.5 text-sm font-medium text-teal-400">
             <Building2 className="h-4 w-4" />
-            Serving {COUNTIES.length} Counties &middot; {BUSINESSES.length}+ Listings
+            Serving {COUNTIES.length} Counties &middot; {businesses.length}+ Listings
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
             Community Directory

@@ -62,6 +62,28 @@ export class UsersService {
   }
 
   /**
+   * Get the current user's roles as an array of role name strings.
+   */
+  async findMyRoles(userId: string) {
+    this.logger.debug(`Finding roles for user ${userId}`);
+
+    const { data: userRoles, error } = await this.db.from('user_roles')
+      .select('role_id')
+      .eq('profile_id', userId);
+
+    if (error) throw error;
+
+    const roles = (userRoles ?? []).map((ur: any) => ur.role_id);
+
+    // If no roles assigned, default to listener
+    if (roles.length === 0) {
+      return { roles: ['listener'] };
+    }
+
+    return { roles };
+  }
+
+  /**
    * Update user profile (admin updating any user).
    * Admins can update all fields including is_active and roles.
    */

@@ -36,6 +36,14 @@ export class UsersController {
   }
 
   /**
+   * GET /users/me/roles — Get the current user's roles.
+   */
+  @Get('me/roles')
+  getMyRoles(@CurrentUser() user: SupabaseUser) {
+    return this.usersService.findMyRoles(user.sub);
+  }
+
+  /**
    * PATCH /users/me — Update the current user's own profile.
    */
   @Patch('me')

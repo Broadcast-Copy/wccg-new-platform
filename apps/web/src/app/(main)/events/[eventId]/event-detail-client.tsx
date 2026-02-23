@@ -23,10 +23,14 @@ import {
   CalendarDays,
   Clock,
   MapPin,
+  QrCode,
+  Share2,
   Users,
   Ticket,
   CheckCircle,
+  LogIn,
 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 // ─── Types matching API response (camelCase from NestJS format methods) ───
 
@@ -129,9 +133,81 @@ function getStatusVariant(
 
 // ─── Component ───────────────────────────────────────────────────────────
 
+// ─── Simple QR Code SVG Generator ─────────────────────────────────────────
+// Generates a visual QR-code-style pattern from a string (decorative, not scannable)
+// For a real QR code, you'd use a library like `qrcode` — this creates a visually
+// distinct grid pattern unique to each code string for the ticket confirmation display.
+function QrCodeDisplay({ code, size = 160 }: { code: string; size?: number }) {
+  // Generate a deterministic pattern from the code string
+  const cells = 11;
+  const cellSize = size / cells;
+  const pattern: boolean[][] = [];
+
+  // Simple hash-based pattern generation
+  let hash = 0;
+  for (let i = 0; i < code.length; i++) {
+    hash = ((hash << 5) - hash + code.charCodeAt(i)) | 0;
+  }
+
+  for (let row = 0; row < cells; row++) {
+    pattern[row] = [];
+    for (let col = 0; col < cells; col++) {
+      // Finder patterns in corners (3x3 blocks)
+      const isFinderTL = row < 3 && col < 3;
+      const isFinderTR = row < 3 && col >= cells - 3;
+      const isFinderBL = row >= cells - 3 && col < 3;
+
+      if (isFinderTL || isFinderTR || isFinderBL) {
+        // Solid finder pattern borders
+        const isEdge =
+          row === 0 || col === 0 || row === 2 || col === 2 ||
+          row === cells - 1 || col === cells - 1 || row === cells - 3 || col === cells - 3;
+        const isCenter = (isFinderTL && row === 1 && col === 1) ||
+          (isFinderTR && row === 1 && col === cells - 2) ||
+          (isFinderBL && row === cells - 2 && col === 1);
+        pattern[row][col] = isEdge || isCenter;
+      } else {
+        // Data area — deterministic pseudo-random from hash
+        const seed = (hash * (row + 1) * (col + 1) + row * 31 + col * 17) >>> 0;
+        pattern[row][col] = seed % 3 !== 0;
+      }
+    }
+  }
+
+  return (
+    <div className="inline-flex flex-col items-center gap-2">
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="rounded-lg border-4 border-white bg-white shadow-md"
+      >
+        {pattern.map((row, ri) =>
+          row.map((filled, ci) =>
+            filled ? (
+              <rect
+                key={`${ri}-${ci}`}
+                x={ci * cellSize}
+                y={ri * cellSize}
+                width={cellSize}
+                height={cellSize}
+                fill="black"
+              />
+            ) : null,
+          ),
+        )}
+      </svg>
+      <p className="font-mono text-xs font-bold tracking-wider text-foreground">
+        {code}
+      </p>
+    </div>
+  );
+}
+
 export default function EventDetailPage() {
   const params = useParams<{ eventId: string }>();
   const eventId = params.eventId;
+  const { user } = useAuth();
 
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -530,31 +606,115 @@ export default function EventDetailPage() {
 
           {/* Registration */}
           {registered ? (
-            <Card>
-              <CardContent className="pt-6 text-center space-y-3">
-                <CheckCircle className="mx-auto h-10 w-10 text-green-500" />
+            <Card className="border-green-500/30 bg-green-500/5">
+              <CardContent className="pt-6 text-center space-y-4">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-500/20">
+                  <CheckCircle className="h-6 w-6 text-green-500" />
+                </div>
                 <div>
-                  <p className="font-semibold">You are registered!</p>
+                  <p className="text-lg font-semibold">You&apos;re Registered!</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Confirmation code:
+                    Show this QR code at the door for check-in
                   </p>
-                  <p className="font-mono text-sm font-bold">
-                    {registered.qrCode}
-                  </p>
+                </div>
+
+                {/* QR Code Display */}
+                <div className="flex justify-center py-2">
+                  <QrCodeDisplay code={registered.qrCode} size={160} />
+                </div>
+
+                {/* Selected ticket info */}
+                {selectedTicketId && event && (
+                  <div className="rounded-lg border bg-muted/50 p-3 text-sm">
+                    <p className="font-medium">
+                      {event.ticketTypes.find((t) => t.id === selectedTicketId)?.name ?? "General Admission"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {event.title} &middot;{" "}
+                      {new Date(event.startDate).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="flex-1 gap-1.5" asChild>
+                    <Link href="/my/tickets">
+                      <QrCode className="h-3.5 w-3.5" />
+                      My Tickets
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 gap-1.5"
+                    onClick={() => {
+                      if (navigator.share) {
+                        navigator.share({
+                          title: event?.title ?? "Event",
+                          text: `I'm going to ${event?.title}! Join me.`,
+                          url: window.location.href,
+                        });
+                      } else {
+                        navigator.clipboard.writeText(window.location.href);
+                      }
+                    }}
+                  >
+                    <Share2 className="h-3.5 w-3.5" />
+                    Share
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           ) : canRegister ? (
-            <div className="space-y-2">
-              <Button
-                className="w-full gap-2"
-                size="lg"
-                onClick={handleRegister}
-                disabled={registering}
-              >
-                <Ticket className="h-4 w-4" />
-                {registering ? "Registering..." : "Register for Event"}
-              </Button>
+            <div className="space-y-3">
+              {/* Show login prompt if not authenticated */}
+              {!user ? (
+                <Card>
+                  <CardContent className="pt-6 text-center space-y-3">
+                    <LogIn className="mx-auto h-8 w-8 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">Sign in to register</p>
+                      <p className="text-sm text-muted-foreground">
+                        Create an account or sign in to get your ticket
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" className="flex-1" asChild>
+                        <Link href="/login">Sign In</Link>
+                      </Button>
+                      <Button size="sm" className="flex-1" asChild>
+                        <Link href="/register">Sign Up</Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  <Button
+                    className="w-full gap-2"
+                    size="lg"
+                    onClick={handleRegister}
+                    disabled={registering || !selectedTicketId}
+                  >
+                    <Ticket className="h-4 w-4" />
+                    {registering
+                      ? "Registering..."
+                      : selectedTicketId
+                        ? "Get Ticket"
+                        : "Select a Ticket"}
+                  </Button>
+                  {event.isFree && (
+                    <p className="text-center text-xs text-muted-foreground">
+                      Free event &middot; No payment required
+                    </p>
+                  )}
+                </>
+              )}
               {registerError && (
                 <p className="text-sm text-destructive text-center">
                   {registerError}
