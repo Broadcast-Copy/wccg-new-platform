@@ -17,6 +17,8 @@ import {
   Disc3,
   Shield,
   ScrollText,
+  BarChart3,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,6 +44,8 @@ const adminNavItems = [
   { href: "/admin/moderation", label: "Moderation", icon: Shield },
   { href: "/admin/users", label: "Users", icon: UsersIcon },
   { href: "/admin/audit", label: "Audit Log", icon: ScrollText },
+  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 function SidebarNav() {
