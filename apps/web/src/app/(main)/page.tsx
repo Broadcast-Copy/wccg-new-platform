@@ -33,7 +33,7 @@ interface EventItem {
 }
 
 const channels = [
-  { id: "stream_wccg", name: "WCCG 104.5", tagline: "Hip Hop & R&B", color: "from-[#74ddc7] to-[#0d9488]", logo: "/images/logos/1045fm-logo.png" },
+  { id: "stream_wccg", name: "WCCG 104.5", tagline: "Hip Hop & R&B", color: "from-[#74ddc7] to-[#0d9488]", logo: "/images/logos/wccg-logo.png" },
   { id: "stream_soul", name: "Soul 104.5", tagline: "Classic Soul & R&B", color: "from-[#7401df] to-[#4c1d95]", logo: "/images/logos/soul-1045-logo.png" },
   { id: "stream_hot", name: "Hot 104.5", tagline: "Trending Hits", color: "from-[#ef4444] to-[#b91c1c]", logo: "/images/logos/hot-1045-logo.png" },
   { id: "stream_vibe", name: "Vibe 104.5", tagline: "Lo-Fi & Chill", color: "from-[#3b82f6] to-[#1d4ed8]", logo: "/images/logos/the-vibe-logo.png" },
@@ -171,15 +171,15 @@ export default function HomePage() {
             <Link
               key={ch.id}
               href={`/channels/${ch.id}`}
-              className="group flex-shrink-0 w-[160px] overflow-hidden rounded-xl border border-white/[0.06] bg-[#141420] transition-all hover:border-white/[0.12] hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5"
+              className="group flex-shrink-0 w-[180px] overflow-hidden rounded-xl border border-white/[0.06] bg-[#141420] transition-all hover:border-white/[0.12] hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5"
             >
-              <div className="h-24 bg-white flex items-center justify-center relative overflow-hidden p-4">
+              <div className="h-32 bg-white flex items-center justify-center relative overflow-hidden p-3">
                 <AppImage
                   src={ch.logo}
                   alt={ch.name}
-                  width={200}
-                  height={200}
-                  className="h-16 w-auto object-contain"
+                  width={300}
+                  height={300}
+                  className="h-24 w-auto object-contain"
                 />
               </div>
               <div className={`p-3 bg-gradient-to-br ${ch.color}`}>
