@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Hero } from "@/components/home/hero";
 import { LiveNowRail } from "@/components/home/live-now-rail";
 import { UpNextRail } from "@/components/home/up-next-rail";
+import { WeatherWidget } from "@/components/weather/weather-widget";
 import { EventCard } from "@/components/events/event-card";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,8 @@ import {
   Headphones,
   Music,
   Mic,
+  Trophy,
+  Ticket,
 } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 
@@ -46,7 +49,7 @@ const platformFeatures = [
     href: "/channels",
     icon: Radio,
     title: "6 Live Channels",
-    description: "Curated music, talk, and sports \u2014 streaming 24/7",
+    description: "Curated music, talk, and sports — streaming 24/7",
     color: "from-[#74ddc7] to-[#0d9488]",
   },
   {
@@ -60,8 +63,15 @@ const platformFeatures = [
     href: "/community",
     icon: Users2,
     title: "Community Directory",
-    description: "73+ local businesses across 7 NC counties",
+    description: "118+ local services across 9 NC counties",
     color: "from-[#3b82f6] to-[#1d4ed8]",
+  },
+  {
+    href: "/contests",
+    icon: Trophy,
+    title: "Contests & Giveaways",
+    description: "Win cash, tickets, merch, and exclusive prizes",
+    color: "from-[#dc2626] to-[#b91c1c]",
   },
   {
     href: "/marketplace",
@@ -76,13 +86,6 @@ const platformFeatures = [
     title: "mY1045 Perks",
     description: "Earn points, unlock exclusive rewards",
     color: "from-[#7401df] to-[#4c1d95]",
-  },
-  {
-    href: "/contact",
-    icon: Megaphone,
-    title: "Advertise & Promote",
-    description: "Reach our audience with your brand",
-    color: "from-[#ef4444] to-[#b91c1c]",
   },
 ];
 
@@ -196,6 +199,84 @@ export default function HomePage() {
 
       {/* Up Next Rail */}
       <UpNextRail />
+
+      {/* Weather + Contests side-by-side */}
+      <section className="grid gap-4 lg:grid-cols-3">
+        {/* Weather Widget */}
+        <div className="lg:col-span-1">
+          <h2 className="text-xl font-bold text-white mb-4">Local Weather</h2>
+          <WeatherWidget />
+        </div>
+
+        {/* Active Contests teaser */}
+        <div className="lg:col-span-2">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-white">Contests &amp; Giveaways</h2>
+              <div className="flex items-center gap-1.5 rounded-full bg-[#dc2626]/10 border border-[#dc2626]/20 px-2.5 py-0.5">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#dc2626] opacity-75" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#dc2626]" />
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#dc2626]">Live</span>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm" asChild className="text-white/40 hover:text-[#74ddc7]">
+              <Link href="/contests">
+                View All
+                <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {/* Contest card 1 */}
+            <Link
+              href="/contests"
+              className="group rounded-xl border border-white/[0.06] bg-[#141420] overflow-hidden transition-all hover:border-white/[0.12] hover:-translate-y-0.5"
+            >
+              <div className="h-2 bg-gradient-to-r from-[#7401df] to-[#3b82f6]" />
+              <div className="p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider">
+                    <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" /></span>
+                    Live
+                  </span>
+                  <span className="text-xs text-white/30">Sweepstakes</span>
+                </div>
+                <h3 className="font-bold text-white group-hover:text-[#74ddc7] transition-colors">mY1045 Cash Drop</h3>
+                <p className="text-sm text-white/40 line-clamp-2">Download the mY1045 app and check in daily for your chance to win $1,045 cash!</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-black text-[#74ddc7]">$1,045</span>
+                  <span className="text-xs text-white/30">15,320 entries</span>
+                </div>
+              </div>
+            </Link>
+
+            {/* Contest card 2 */}
+            <Link
+              href="/contests"
+              className="group rounded-xl border border-white/[0.06] bg-[#141420] overflow-hidden transition-all hover:border-white/[0.12] hover:-translate-y-0.5"
+            >
+              <div className="h-2 bg-gradient-to-r from-[#ec4899] to-[#be185d]" />
+              <div className="p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider">
+                    <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" /></span>
+                    Live
+                  </span>
+                  <span className="text-xs text-white/30">Giveaway</span>
+                </div>
+                <h3 className="font-bold text-white group-hover:text-[#74ddc7] transition-colors">Sneaker Sunday Giveaway</h3>
+                <p className="text-sm text-white/40 line-clamp-2">Text KICKS to 104-5 every Sunday for your chance to win limited edition sneakers!</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-black text-[#74ddc7]">$250</span>
+                  <span className="text-xs text-white/30">4,210 entries</span>
+                </div>
+              </div>
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* Platform Features */}
       <section className="space-y-4">

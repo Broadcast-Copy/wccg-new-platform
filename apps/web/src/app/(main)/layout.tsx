@@ -17,6 +17,7 @@ import {
   Search,
   Mic,
   Gift,
+  Trophy,
 } from "lucide-react";
 
 const navLinks = [
@@ -25,6 +26,7 @@ const navLinks = [
   { href: "/shows", label: "Shows", icon: Mic },
   { href: "/schedule", label: "Schedule", icon: CalendarDays },
   { href: "/events", label: "Events", icon: CalendarDays },
+  { href: "/contests", label: "Contests", icon: Trophy },
   { href: "/mixes", label: "Mixes", icon: Headphones },
   { href: "/community", label: "Community", icon: Users2 },
   { href: "/contact", label: "Connect", icon: Mail },
@@ -139,6 +141,7 @@ export default function MainLayout({
                 <Link href="/sitemap" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Sitemap</Link>
                 <Link href="/innovation-center" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Innovation Center</Link>
                 <Link href="/brand-guidelines" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Brand Guidelines</Link>
+                <Link href="/contests" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Contests &amp; Giveaways</Link>
                 <Link href="/contest-guidelines" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Contest Guidelines</Link>
               </nav>
             </div>
