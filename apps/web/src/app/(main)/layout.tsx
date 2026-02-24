@@ -101,7 +101,7 @@ export default function MainLayout({
 
       {/* Main content — pb accounts for bottom tab bar + player */}
       <main className="flex-1 pb-32">
-        <div className="container py-6">{children}</div>
+        <div className="container pt-8 pb-6">{children}</div>
       </main>
 
       {/* Footer */}
