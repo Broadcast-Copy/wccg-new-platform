@@ -22,6 +22,7 @@ import {
   Settings,
   Database,
   Activity,
+  Rocket,
   type LucideIcon,
 } from "lucide-react";
 
@@ -97,6 +98,7 @@ export const ROLE_CONFIGS: Record<RoleId, RoleConfig> = {
       { href: "/portal/overview#analytics", label: "Analytics", icon: BarChart3 },
       { href: "/portal/overview#settings", label: "Settings", icon: Settings },
       { href: "/portal/prd", label: "Platform PRD", icon: FileText },
+      { href: "/portal/roadmap", label: "Build Roadmap", icon: Rocket },
     ],
   },
   sales: {
