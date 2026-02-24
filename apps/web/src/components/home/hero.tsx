@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import Link from "next/link";
 import { AppImage as Image } from "@/components/ui/app-image";
-import { Pause, Play, Compass } from "lucide-react";
+import { Pause, ArrowDownRight } from "lucide-react";
 import { HERO_SHOWS } from "@/data/shows";
 
 const MAIN_STREAM_URL =
@@ -102,12 +102,12 @@ export function Hero() {
               </div>
             ))}
 
-            {/* Gradient overlay for readability on mobile (full image visible) */}
+            {/* Gradient overlay for readability on mobile */}
             <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/80 via-black/30 to-transparent md:hidden" />
           </div>
 
-          {/* ── Show name overlay — visible on left side on desktop ── */}
-          <div className="absolute bottom-14 left-0 z-30 px-5 pb-4 md:bottom-4 md:max-w-[45%]">
+          {/* ── Show name overlay — mobile only ── */}
+          <div className="absolute bottom-14 left-0 z-30 px-5 pb-4 md:hidden">
             <Link
               href={`/shows/${currentSlide.id}`}
               className="group inline-block"
@@ -124,8 +124,8 @@ export function Hero() {
             </Link>
           </div>
 
-          {/* ── Dot indicators — bottom-left under show name ── */}
-          <div className="absolute bottom-4 left-5 z-30 flex items-center gap-1.5 md:bottom-4">
+          {/* ── Dot indicators — mobile only ── */}
+          <div className="absolute bottom-4 left-5 z-30 flex items-center gap-1.5 md:hidden">
             {HERO_SHOWS.map((_, index) => (
               <button
                 key={index}
@@ -146,15 +146,13 @@ export function Hero() {
             ))}
           </div>
 
-          {/* ── RIGHT PIECE: Content panel with curved edge (sits ON TOP) ── */}
+          {/* ── RIGHT PIECE: Content panel with convex curved edge ── */}
           <div className="absolute inset-0 z-20 flex items-end md:items-stretch pointer-events-none">
-            {/* On mobile: content at bottom over gradient */}
+            {/* Mobile: content at bottom over gradient */}
             <div className="w-full px-6 py-6 pb-16 md:hidden pointer-events-auto">
               <div className="space-y-4">
                 <h1 className="text-2xl sm:text-3xl font-black leading-[1.1] text-white drop-shadow-lg">
-                  Hip Hop, Sports,{" "}
-                  <span className="text-[#74ddc7]">Reactions</span> And
-                  Podcasts.
+                  Hip Hop, Sports, Reactions And Podcasts.
                 </h1>
                 <p className="text-sm text-white/60 max-w-sm leading-relaxed drop-shadow">
                   Experience premium digital content wherever you are!
@@ -173,8 +171,8 @@ export function Hero() {
                       </>
                     ) : (
                       <>
-                        <Play className="mr-2 h-4 w-4" />
                         Now Streaming
+                        <ArrowDownRight className="ml-2 h-4 w-4" />
                       </>
                     )}
                   </Button>
@@ -185,15 +183,15 @@ export function Hero() {
                     asChild
                   >
                     <Link href="/discover">
-                      <Compass className="mr-2 h-4 w-4" />
                       Discover More
+                      <ArrowDownRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
                 </div>
               </div>
             </div>
 
-            {/* On desktop: right panel with CONVEX curved left edge overlapping image */}
+            {/* Desktop: right panel with CONVEX curved left edge */}
             <div className="hidden md:flex md:ml-auto md:w-[50%] lg:w-[45%] relative pointer-events-auto">
               {/* Convex curved edge SVG — bulges LEFT into the image area */}
               <div className="absolute top-0 bottom-0 -left-[80px] w-[80px] z-10">
@@ -208,15 +206,13 @@ export function Hero() {
               </div>
 
               {/* Content area */}
-              <div className="relative bg-[#0a0a0f] flex flex-col justify-center px-10 py-12 lg:px-14 w-full">
+              <div className="relative bg-[#0a0a0f] rounded-tr-2xl flex flex-col justify-center px-10 py-12 lg:px-14 w-full">
                 {/* Glow orb */}
                 <div className="absolute -right-20 -top-20 h-[300px] w-[300px] rounded-full bg-[rgba(116,1,223,0.08)] blur-[100px]" />
 
                 <div className="relative z-10 space-y-6">
                   <h1 className="text-3xl lg:text-4xl xl:text-5xl font-black leading-[1.1] text-white">
-                    Hip Hop, Sports,{" "}
-                    <span className="text-[#74ddc7]">Reactions</span> And
-                    Podcasts.
+                    Hip Hop, Sports, Reactions And Podcasts.
                   </h1>
 
                   <p className="text-base lg:text-lg text-white/50 max-w-md leading-relaxed">
@@ -237,8 +233,8 @@ export function Hero() {
                         </>
                       ) : (
                         <>
-                          <Play className="mr-2 h-5 w-5" />
                           Now Streaming
+                          <ArrowDownRight className="ml-2 h-5 w-5" />
                         </>
                       )}
                     </Button>
@@ -249,8 +245,8 @@ export function Hero() {
                       asChild
                     >
                       <Link href="/discover">
-                        <Compass className="mr-2 h-4 w-4" />
                         Discover More
+                        <ArrowDownRight className="ml-2 h-4 w-4" />
                       </Link>
                     </Button>
                   </div>
