@@ -20,6 +20,8 @@ import {
   BarChart3,
   Settings,
   UserCog,
+  Home,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -142,6 +144,20 @@ export default function AdminLayout({
             </SheetContent>
           </Sheet>
           <h2 className="text-lg font-semibold">Admin Panel</h2>
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="outline" size="sm" className="gap-2" asChild>
+              <Link href="/">
+                <Home className="size-4" />
+                <span className="hidden sm:inline">Homepage</span>
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" asChild>
+              <Link href="/portal">
+                <ExternalLink className="size-3.5" />
+                <span className="hidden sm:inline">Portal</span>
+              </Link>
+            </Button>
+          </div>
         </header>
         <main className="p-6">{children}</main>
       </div>

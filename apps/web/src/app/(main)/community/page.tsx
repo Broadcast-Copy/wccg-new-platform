@@ -29,6 +29,12 @@ import {
   UserCheck,
   Building2,
   Droplets,
+  Hospital,
+  Users,
+  Trash2,
+  PawPrint,
+  Wheat,
+  Medal,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -74,9 +80,15 @@ type Category =
   | "Government Offices"
   | "Courts & Legal"
   | "Health Services"
+  | "Hospitals"
+  | "Senior & Social Services"
   | "Libraries & Education"
   | "Parks & Recreation"
-  | "Military";
+  | "Waste Management"
+  | "Animal Services"
+  | "Agriculture"
+  | "Military"
+  | "Veteran Services";
 
 // ---------------------------------------------------------------------------
 // Category metadata
@@ -85,34 +97,46 @@ type Category =
 const CATEGORIES: { label: Category; icon: React.ElementType }[] = [
   { label: "Police & Sheriff", icon: Shield },
   { label: "Fire & EMS", icon: Flame },
+  { label: "Hospitals", icon: Hospital },
+  { label: "Health Services", icon: HeartPulse },
+  { label: "Senior & Social Services", icon: Users },
   { label: "Utilities", icon: Zap },
+  { label: "Waste Management", icon: Trash2 },
   { label: "Transportation", icon: Bus },
   { label: "Government Offices", icon: Landmark },
   { label: "Courts & Legal", icon: Scale },
-  { label: "Health Services", icon: HeartPulse },
+  { label: "Animal Services", icon: PawPrint },
+  { label: "Agriculture", icon: Wheat },
   { label: "Libraries & Education", icon: BookOpen },
   { label: "Parks & Recreation", icon: Trees },
   { label: "Military", icon: Swords },
+  { label: "Veteran Services", icon: Medal },
 ];
 
 const CATEGORY_COLORS: Record<Category, { badge: string; marker: string }> = {
   "Police & Sheriff":       { badge: "bg-blue-500/20 text-blue-300 border-blue-500/30", marker: "#3b82f6" },
   "Fire & EMS":             { badge: "bg-red-500/20 text-red-300 border-red-500/30", marker: "#ef4444" },
+  Hospitals:                { badge: "bg-rose-500/20 text-rose-300 border-rose-500/30", marker: "#f43f5e" },
+  "Health Services":        { badge: "bg-green-500/20 text-green-300 border-green-500/30", marker: "#22c55e" },
+  "Senior & Social Services": { badge: "bg-violet-500/20 text-violet-300 border-violet-500/30", marker: "#8b5cf6" },
   Utilities:                { badge: "bg-amber-500/20 text-amber-300 border-amber-500/30", marker: "#f59e0b" },
+  "Waste Management":       { badge: "bg-stone-500/20 text-stone-300 border-stone-500/30", marker: "#78716c" },
   Transportation:           { badge: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30", marker: "#10b981" },
   "Government Offices":     { badge: "bg-sky-500/20 text-sky-300 border-sky-500/30", marker: "#0ea5e9" },
   "Courts & Legal":         { badge: "bg-slate-500/20 text-slate-300 border-slate-500/30", marker: "#64748b" },
-  "Health Services":        { badge: "bg-green-500/20 text-green-300 border-green-500/30", marker: "#22c55e" },
+  "Animal Services":        { badge: "bg-pink-500/20 text-pink-300 border-pink-500/30", marker: "#ec4899" },
+  Agriculture:              { badge: "bg-lime-500/20 text-lime-300 border-lime-500/30", marker: "#84cc16" },
   "Libraries & Education":  { badge: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30", marker: "#6366f1" },
   "Parks & Recreation":     { badge: "bg-teal-500/20 text-teal-300 border-teal-500/30", marker: "#14b8a6" },
   Military:                 { badge: "bg-orange-500/20 text-orange-300 border-orange-500/30", marker: "#f97316" },
+  "Veteran Services":       { badge: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30", marker: "#06b6d4" },
 };
 
 // ---------------------------------------------------------------------------
 // Counties & areas covered
 // ---------------------------------------------------------------------------
 
-const COUNTIES = ["Cumberland", "Bladen", "Hoke", "Lee", "Scotland", "Moore", "Robeson", "Harnett"] as const;
+const COUNTIES = ["Cumberland", "Sampson", "Bladen", "Hoke", "Lee", "Scotland", "Moore", "Robeson", "Harnett"] as const;
 
 // ---------------------------------------------------------------------------
 // Government Services Directory Data
@@ -172,6 +196,62 @@ const SERVICE_LISTINGS: ServiceListing[] = [
   { id: "c28", name: "Fort Liberty Military Police", category: "Military", address: "Reilly Rd, Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 396-0391", description: "On-post law enforcement and security. Non-emergency dispatch for Fort Liberty installation.", lat: 35.1400, lng: -79.0050 },
   { id: "c29", name: "Womack Army Medical Center", category: "Military", address: "2817 Reilly Rd, Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 907-6000", description: "Military hospital providing medical care for active duty, retirees, and dependents at Fort Liberty.", website: "https://womack.tricare.mil", featured: true, lat: 35.1390, lng: -79.0030 },
   { id: "c30", name: "Fort Liberty Fire & Emergency Services", category: "Military", address: "Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 396-0011", description: "On-post fire protection, emergency medical services, and hazmat response for Fort Liberty.", lat: 35.1420, lng: -79.0080 },
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // SAMPSON COUNTY — Clinton, Roseboro, Newton Grove, Garland
+  // ════════════════════════════════════════════════════════════════════════════
+
+  // ── Police & Sheriff ─────────────────────────────────────────────────────
+  { id: "sp01", name: "Clinton Police Department", category: "Police & Sheriff", address: "222 Lisbon St, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 592-3105", description: "Municipal police for the City of Clinton — patrol, criminal investigations, and community programs.", website: "https://www.cityofclintonnc.com/184/Police", lat: 35.0128, lng: -78.3233 },
+  { id: "sp02", name: "Sampson County Sheriff's Office", category: "Police & Sheriff", address: "112 Fontana St, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 592-4141", description: "County-wide law enforcement, detention center, and civil process for all of Sampson County.", website: "https://www.sampsonsheriff.com", featured: true, lat: 35.0100, lng: -78.3250 },
+
+  // ── Fire & EMS ───────────────────────────────────────────────────────────
+  { id: "sp03", name: "Clinton Fire Department", category: "Fire & EMS", address: "222 Wall St, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 299-4902", description: "City fire department providing fire suppression, rescue, and first responder emergency services.", website: "https://www.cityofclintonnc.com/168/Fire", lat: 35.0120, lng: -78.3240 },
+  { id: "sp04", name: "Sampson County Emergency Services", category: "Fire & EMS", address: "530 Commerce St, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 592-8996", description: "County EMS, 911 dispatch, emergency management, and fire marshal for Sampson County.", website: "https://www.sampsoncountync.gov/Government/Departments-A-Z/Emergency-Services", lat: 35.0100, lng: -78.3200 },
+
+  // ── Hospitals ──────────────────────────────────────────────────────────
+  { id: "sp05", name: "Sampson Regional Medical Center", category: "Hospitals", address: "607 Beaman St, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 592-8511", description: "Full-service community hospital with 24/7 emergency department, surgery, imaging, rehab, and specialty care serving Sampson County.", website: "https://www.sampsonrmc.org", featured: true, lat: 35.0078, lng: -78.3236 },
+
+  // ── Health Services ────────────────────────────────────────────────────
+  { id: "sp06", name: "Sampson County Health Department", category: "Health Services", address: "360 County Complex Rd, Bldg E, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 592-1131", description: "Public health — immunizations, WIC, family planning, communicable disease testing, environmental health, and wellness clinics.", website: "https://www.sampsoncountync.gov/Government/Departments-A-Z/Health-Department", featured: true, lat: 35.0045, lng: -78.3400 },
+
+  // ── Senior & Social Services ───────────────────────────────────────────
+  { id: "sp07", name: "Sampson County Dept. of Social Services", category: "Senior & Social Services", address: "360 County Complex Rd, Suite 100, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 592-7131", description: "Social services — food assistance (SNAP), Medicaid, child welfare, foster care, energy assistance, and family support programs.", website: "https://www.sampsoncountync.gov/Government/Departments-A-Z/Social-Services", featured: true, lat: 35.0047, lng: -78.3402 },
+  { id: "sp08", name: "Sampson County Department of Aging", category: "Senior & Social Services", address: "406 County Complex Rd, Suite 120, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 592-4653", description: "Senior services — home-delivered meals, adult day care, transportation assistance, caregiver support, and senior center programming.", website: "https://www.sampsoncountync.gov/Government/Departments-A-Z/Aging-Services", lat: 35.0043, lng: -78.3398 },
+
+  // ── Waste Management ───────────────────────────────────────────────────
+  { id: "sp09", name: "Sampson County Solid Waste & Landfill", category: "Waste Management", address: "7434 Roseboro Hwy, Roseboro, NC 28382", city: "Roseboro", county: "Sampson", phone: "(910) 525-4132", description: "County landfill and solid waste disposal operated by GFL Environmental. Convenience sites across the county for residential drop-off.", website: "https://gflenv.com/sampson-county-landfill/", featured: true, lat: 34.9500, lng: -78.5100 },
+  { id: "sp10", name: "City of Clinton Sanitation Services", category: "Waste Management", address: "221 Lisbon St, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 299-4909", description: "Municipal trash pickup and curbside recycling for Clinton city residents. Weekly collection schedule and bulk item pickup.", website: "https://www.cityofclintonnc.com", lat: 35.0128, lng: -78.3233 },
+
+  // ── Animal Services ────────────────────────────────────────────────────
+  { id: "sp11", name: "Sampson County Animal Shelter", category: "Animal Services", address: "168 Agriculture Pl, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 592-8493", description: "County animal shelter — stray intake, adoptions, animal control, and lost pet recovery for all of Sampson County.", website: "https://www.sampsoncountync.gov/Government/Departments-A-Z/Animal-Shelter", featured: true, lat: 34.9850, lng: -78.3200 },
+
+  // ── Agriculture ────────────────────────────────────────────────────────
+  { id: "sp12", name: "N.C. Cooperative Extension — Sampson County", category: "Agriculture", address: "55 Agriculture Pl, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 592-7161", description: "NC State University agricultural extension — farming education, 4-H youth programs, livestock resources, and crop management assistance.", website: "https://sampson.ces.ncsu.edu/", featured: true, lat: 34.9855, lng: -78.3205 },
+  { id: "sp13", name: "USDA Farm Service Agency — Sampson County", category: "Agriculture", address: "80 County Complex Rd, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 592-4791", description: "Federal farm programs — crop insurance, conservation programs, farm loans, and disaster assistance for Sampson County farmers.", lat: 35.0048, lng: -78.3405 },
+  { id: "sp14", name: "Sampson County Agri-Exposition Center", category: "Agriculture", address: "414 Warsaw Rd, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 592-6451", description: "Agricultural exposition and event facility hosting livestock shows, farm equipment expos, 4-H events, and community gatherings.", website: "https://www.sampsonexpocenter.com", lat: 35.0150, lng: -78.2900 },
+
+  // ── Veteran Services ───────────────────────────────────────────────────
+  { id: "sp15", name: "Sampson County Veterans Service Office", category: "Veteran Services", address: "335 County Complex Rd, Suite 100, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 592-2862", description: "Veterans benefits assistance — VA claims, disability compensation, pension, healthcare enrollment, and burial benefits for Sampson County veterans.", website: "https://www.sampsoncountync.gov/Government/Departments-A-Z/Veterans-Office", featured: true, lat: 35.0046, lng: -78.3401 },
+
+  // ── Government Offices ─────────────────────────────────────────────────
+  { id: "sp16", name: "Sampson County Administration", category: "Government Offices", address: "435 Rowan Rd, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 592-6308", description: "County government — county manager, board of commissioners, planning, permitting, tax administration, and public records.", website: "https://www.sampsoncountync.gov", featured: true, lat: 35.0045, lng: -78.3400 },
+  { id: "sp17", name: "City of Clinton — City Hall", category: "Government Offices", address: "221 Lisbon St, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 299-4900", description: "Municipal government — permits, utility billing, code enforcement, city council, and public services.", website: "https://www.cityofclintonnc.com", lat: 35.0128, lng: -78.3233 },
+  { id: "sp18", name: "Sampson County Board of Elections", category: "Government Offices", address: "120 County Complex Rd, Suite 110, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 592-5796", description: "Voter registration, early voting, election day polling locations, absentee ballots, and election results.", website: "https://www.sampsoncountync.gov/Government/Departments-A-Z/Board-of-Elections", lat: 35.0044, lng: -78.3399 },
+  { id: "sp19", name: "Sampson County Register of Deeds", category: "Government Offices", address: "126-A W Elizabeth St, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 592-8026", description: "Public records — property deeds, marriage licenses, birth and death certificates, military discharge records.", website: "https://www.sampsonrod.org", lat: 35.0120, lng: -78.3230 },
+
+  // ── Courts & Legal ─────────────────────────────────────────────────────
+  { id: "sp20", name: "Sampson County Courthouse", category: "Courts & Legal", address: "101 E Main St, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 596-6600", description: "District and superior court — civil and criminal proceedings, clerk of court, district attorney, and family court.", website: "https://www.nccourts.gov/locations/sampson-county", lat: 35.0130, lng: -78.3220 },
+
+  // ── Utilities ──────────────────────────────────────────────────────────
+  { id: "sp21", name: "City of Clinton Public Works & Utilities", category: "Utilities", address: "200 John St, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 299-4905", description: "Municipal water, sewer, and trash services for Clinton city limits. New connections, billing, and emergency repairs.", website: "https://www.cityofclintonnc.com/1364/Utility-Billing", lat: 35.0100, lng: -78.3200 },
+  { id: "sp22", name: "Sampson County Public Works (County Water)", category: "Utilities", address: "827 Southeast Blvd, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 592-0188", description: "County water system for rural Sampson County. Water connections, billing, and after-hours emergency line.", website: "https://www.sampsoncountync.gov/Government/Departments-A-Z/Public-Works", lat: 34.9950, lng: -78.3100 },
+
+  // ── Transportation ─────────────────────────────────────────────────────
+  { id: "sp23", name: "Sampson Area Transportation (SAT)", category: "Transportation", address: "311 County Complex Rd, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 299-0127", description: "Public transit for Sampson County — demand-response rides, medical transport, and senior/veteran reduced fares.", website: "https://www.sampsoncountync.gov/Government/Departments-A-Z/Public-Transportation", lat: 35.0045, lng: -78.3400 },
+
+  // ── Libraries & Education ──────────────────────────────────────────────
+  { id: "sp24", name: "Sampson-Clinton Public Library", category: "Libraries & Education", address: "217 Graham St, Clinton, NC 28328", city: "Clinton", county: "Sampson", phone: "(910) 592-4153", description: "Main branch of Sampson County library system with 92,000+ volumes, computer access, children's programs, and branches in Garland, Newton Grove, and Roseboro.", website: "https://www.sampsoncountync.gov/Government/Departments-A-Z/Library", lat: 35.0140, lng: -78.3230 },
 
   // ════════════════════════════════════════════════════════════════════════════
   // BLADEN COUNTY — Elizabethtown, Bladenboro, Clarkton
@@ -391,11 +471,11 @@ export default function CommunityServicesPage() {
             Community Services Directory
           </h1>
           <p className="mx-auto max-w-2xl text-slate-400 text-base sm:text-lg">
-            Find government services, public safety, utilities, and transportation
-            across Cumberland County, Fort Liberty, and the surrounding region.
+            Find government services, public safety, hospitals, utilities, agriculture,
+            and more across Cumberland, Sampson, and the surrounding counties.
           </p>
           <div className="flex flex-wrap justify-center gap-2 pt-2">
-            {["Police", "Fire", "Utilities", "Transit", "Courts", "Health"].map((tag) => (
+            {["Police", "Fire", "Hospitals", "Utilities", "Agriculture", "Veterans", "Transit", "Animal Services"].map((tag) => (
               <span key={tag} className="rounded-full bg-slate-800/80 border border-slate-700/50 px-3 py-1 text-xs text-slate-400">
                 {tag}
               </span>
@@ -414,7 +494,7 @@ export default function CommunityServicesPage() {
           </div>
           <div>
             <h2 className="text-xl font-bold text-white">Government Services</h2>
-            <p className="text-sm text-slate-400">Search police, fire, utilities, transportation &amp; more across 8 counties</p>
+            <p className="text-sm text-slate-400">Search police, fire, hospitals, utilities, agriculture &amp; more across {COUNTIES.length} counties</p>
           </div>
         </div>
 

@@ -17,9 +17,15 @@ type Category =
   | "Government Offices"
   | "Courts & Legal"
   | "Health Services"
+  | "Hospitals"
+  | "Senior & Social Services"
   | "Libraries & Education"
   | "Parks & Recreation"
-  | "Military";
+  | "Waste Management"
+  | "Animal Services"
+  | "Agriculture"
+  | "Military"
+  | "Veteran Services";
 
 interface ServiceListing {
   id: string;
