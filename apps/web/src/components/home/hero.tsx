@@ -193,9 +193,9 @@ export function Hero() {
               </div>
             </div>
 
-            {/* On desktop: right panel with curved left edge overlapping image */}
-            <div className="hidden md:flex md:ml-auto md:w-[50%] lg:w-[48%] relative pointer-events-auto">
-              {/* Curved edge SVG — the wave that overlaps onto the image */}
+            {/* On desktop: right panel with CONVEX curved left edge overlapping image */}
+            <div className="hidden md:flex md:ml-auto md:w-[50%] lg:w-[45%] relative pointer-events-auto">
+              {/* Convex curved edge SVG — bulges LEFT into the image area */}
               <div className="absolute top-0 bottom-0 -left-[80px] w-[80px] z-10">
                 <svg
                   viewBox="0 0 80 100"
@@ -203,7 +203,7 @@ export function Hero() {
                   className="h-full w-full"
                   fill="#0a0a0f"
                 >
-                  <path d="M80,0 L80,100 L0,100 C30,85 50,65 55,50 C50,35 30,15 0,0 Z" />
+                  <path d="M80,0 C45,0 0,15 0,50 C0,85 45,100 80,100 Z" />
                 </svg>
               </div>
 
