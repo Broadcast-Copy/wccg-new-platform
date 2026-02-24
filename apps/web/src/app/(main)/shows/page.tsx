@@ -108,7 +108,8 @@ export default async function ShowsPage() {
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {activeShows.map((show) => (
               <ShowCard key={show.id} showId={show.id} title={show.name} description={show.description}
-                hostName={show.hosts?.find((h) => h.isPrimary)?.name ?? show.hosts?.[0]?.name} imageUrl={show.imageUrl} />
+                hostName={show.hosts?.find((h) => h.isPrimary)?.name ?? show.hosts?.[0]?.name} imageUrl={show.imageUrl}
+                hosts={show.hosts?.map((h) => ({ name: h.name, avatarUrl: h.avatarUrl }))} />
             ))}
           </div>
         </section>
@@ -125,7 +126,8 @@ export default async function ShowsPage() {
           <div className="grid gap-5 opacity-60 sm:grid-cols-2 lg:grid-cols-3">
             {inactiveShows.map((show) => (
               <ShowCard key={show.id} showId={show.id} title={show.name} description={show.description}
-                hostName={show.hosts?.find((h) => h.isPrimary)?.name ?? show.hosts?.[0]?.name} imageUrl={show.imageUrl} />
+                hostName={show.hosts?.find((h) => h.isPrimary)?.name ?? show.hosts?.[0]?.name} imageUrl={show.imageUrl}
+                hosts={show.hosts?.map((h) => ({ name: h.name, avatarUrl: h.avatarUrl }))} />
             ))}
           </div>
         </section>
