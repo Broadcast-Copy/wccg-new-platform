@@ -173,18 +173,18 @@ export default function HomePage() {
               href={`/channels/${ch.id}`}
               className="group flex-shrink-0 w-[160px] overflow-hidden rounded-xl border border-white/[0.06] bg-[#141420] transition-all hover:border-white/[0.12] hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5"
             >
-              <div className={`h-24 bg-gradient-to-br ${ch.color} flex items-center justify-center relative overflow-hidden p-4`}>
+              <div className="h-24 bg-white flex items-center justify-center relative overflow-hidden p-4">
                 <AppImage
                   src={ch.logo}
                   alt={ch.name}
                   width={200}
                   height={200}
-                  className="h-16 w-auto object-contain drop-shadow-lg"
+                  className="h-16 w-auto object-contain"
                 />
               </div>
-              <div className="p-3">
+              <div className={`p-3 bg-gradient-to-br ${ch.color}`}>
                 <h3 className="text-sm font-bold text-white truncate">{ch.name}</h3>
-                <p className="text-xs text-white/40 mt-0.5">{ch.tagline}</p>
+                <p className="text-xs text-white/70 mt-0.5">{ch.tagline}</p>
               </div>
             </Link>
           ))}
