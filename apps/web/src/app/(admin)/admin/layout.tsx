@@ -15,6 +15,8 @@ import {
   ArrowLeft,
   MapPin,
   Disc3,
+  Shield,
+  ScrollText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,7 +39,9 @@ const adminNavItems = [
   { href: "/admin/directory", label: "Directory", icon: MapPin },
   { href: "/admin/mixes", label: "DJ Mixes", icon: Disc3 },
   { href: "/admin/points", label: "Points & Rewards", icon: Gift },
+  { href: "/admin/moderation", label: "Moderation", icon: Shield },
   { href: "/admin/users", label: "Users", icon: UsersIcon },
+  { href: "/admin/audit", label: "Audit Log", icon: ScrollText },
 ];
 
 function SidebarNav() {

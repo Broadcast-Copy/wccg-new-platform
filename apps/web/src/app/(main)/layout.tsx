@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserMenu } from "@/components/auth/user-menu";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { MobileNav } from "@/components/navigation/mobile-nav";
 import { AppImage as Image } from "@/components/ui/app-image";
 import {
@@ -91,6 +92,7 @@ export default function MainLayout({
             <button className="hidden sm:flex h-8 w-8 items-center justify-center rounded-full text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-colors">
               <Search className="h-4 w-4" />
             </button>
+            <NotificationBell />
             <UserMenu />
             <MobileNav navLinks={navLinks} />
           </div>
