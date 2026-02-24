@@ -60,10 +60,11 @@ export default function MainLayout({
                 alt="WCCG 104.5 FM"
                 width={500}
                 height={324}
-                className="w-[120px] h-auto brightness-0 invert"
+                className="w-[120px] h-auto"
                 priority
               />
             </Link>
+
 
             {/* Desktop nav links */}
             <nav className="hidden items-center gap-0.5 lg:flex">
@@ -113,7 +114,7 @@ export default function MainLayout({
                   alt="WCCG 104.5 FM"
                   width={500}
                   height={324}
-                  className="w-[140px] h-auto brightness-0 invert"
+                  className="w-[140px] h-auto"
                 />
               </div>
               <p className="text-sm text-white/40 leading-relaxed max-w-xs">
