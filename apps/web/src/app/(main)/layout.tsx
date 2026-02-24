@@ -105,9 +105,9 @@ export default function MainLayout({
       {/* Footer */}
       <footer className="border-t border-white/[0.06] bg-[#07070c] pb-28">
         <div className="container py-10">
-          <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-5">
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-6">
             {/* Brand */}
-            <div className="space-y-3 md:col-span-2">
+            <div className="space-y-3 sm:col-span-2 lg:col-span-2">
               <div className="flex items-center gap-2.5">
                 <Image
                   src="/images/logos/1045fm-logo.png"
@@ -128,51 +128,68 @@ export default function MainLayout({
               </div>
             </div>
 
-            {/* Listen */}
+            {/* Connect */}
             <div className="space-y-3">
-              <h3 className="text-xs font-semibold text-white/60 uppercase tracking-widest">Listen</h3>
-              <nav className="flex flex-col gap-2">
-                <Link href="/channels" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Channel Guide</Link>
-                <Link href="/discover" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Discover</Link>
-                <Link href="/shows" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Shows</Link>
-                <Link href="/hosts" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Hosts &amp; DJs</Link>
-                <Link href="/mixes" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">DJ Mixes</Link>
-                <Link href="/schedule" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Schedule</Link>
-              </nav>
-            </div>
-
-            {/* Community */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold text-white/60 uppercase tracking-widest">Community</h3>
-              <nav className="flex flex-col gap-2">
-                <Link href="/events" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Events &amp; Tickets</Link>
-                <Link href="/community" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Community Directory</Link>
-                <Link href="/marketplace" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Marketplace</Link>
-                <Link href="/rewards" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">mY1045 Perks</Link>
-              </nav>
-            </div>
-
-            {/* Support */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold text-white/60 uppercase tracking-widest">Support</h3>
-              <nav className="flex flex-col gap-2">
+              <h3 className="text-xs font-semibold text-white/60 uppercase tracking-widest">Connect</h3>
+              <nav className="flex flex-col gap-1.5">
                 <Link href="/contact" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Contact Us</Link>
-                <Link href="/contact#advertise" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Advertise</Link>
-                <Link href="/contact#submit-music" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Submit Music</Link>
-                <Link href="/contact#creator-services" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Creator Services</Link>
+                <Link href="/faq" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">FAQ</Link>
+                <Link href="/sitemap" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Sitemap</Link>
+                <Link href="/innovation-center" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Innovation Center</Link>
+                <Link href="/brand-guidelines" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Brand Guidelines</Link>
+                <Link href="/contest-guidelines" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Contest Guidelines</Link>
+              </nav>
+            </div>
+
+            {/* For Advertisers */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-white/60 uppercase tracking-widest">For Advertisers</h3>
+              <nav className="flex flex-col gap-1.5">
+                <Link href="/advertise" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Become An Advertiser</Link>
+                <Link href="/advertise/portal" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Advertiser Portal</Link>
+                <Link href="/advertise/guidelines" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Advertiser Guidelines</Link>
+                <Link href="/advertise/media-kit" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">WCCG Media Kit</Link>
+              </nav>
+            </div>
+
+            {/* Careers */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-white/60 uppercase tracking-widest">Careers</h3>
+              <nav className="flex flex-col gap-1.5">
+                <Link href="/careers" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Employment</Link>
+                <Link href="/careers/internships" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Internships</Link>
+                <Link href="/careers/volunteer" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Volunteer</Link>
+                <Link href="/careers/trainings" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Trainings &amp; Guides</Link>
+                <Link href="/eeo" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">EEO</Link>
+              </nav>
+            </div>
+
+            {/* For Creators */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-white/60 uppercase tracking-widest">For Creators</h3>
+              <nav className="flex flex-col gap-1.5">
+                <Link href="/creators" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Become A Creator</Link>
+                <Link href="/creators/podcast" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Podcast &amp; Launch</Link>
+                <Link href="/creators/upload-music" className="text-sm text-white/35 hover:text-[#74ddc7] transition-colors">Upload Music</Link>
               </nav>
             </div>
           </div>
 
-          <div className="mt-8 border-t border-white/[0.06] pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          {/* Legal Links Row */}
+          <div className="mt-8 border-t border-white/[0.06] pt-6">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4">
+              <span className="text-xs font-semibold text-white/40 uppercase tracking-widest mr-2">Legal</span>
+              <Link href="/privacy" className="text-xs text-white/25 hover:text-white/50 transition-colors">Privacy Policy</Link>
+              <Link href="/terms" className="text-xs text-white/25 hover:text-white/50 transition-colors">Terms of Service</Link>
+              <Link href="/legal" className="text-xs text-white/25 hover:text-white/50 transition-colors">Legal</Link>
+              <Link href="/contest-rules" className="text-xs text-white/25 hover:text-white/50 transition-colors">Contest Rules</Link>
+              <Link href="/public-file" className="text-xs text-white/25 hover:text-white/50 transition-colors">Public Inspection File</Link>
+              <Link href="/public-file-help" className="text-xs text-white/25 hover:text-white/50 transition-colors">Public File Help</Link>
+              <Link href="/fcc-applications" className="text-xs text-white/25 hover:text-white/50 transition-colors">FCC Applications</Link>
+            </div>
             <p className="text-xs text-white/20">
               &copy; {new Date().getFullYear()} Carson Communications / WCCG 104.5 FM. All rights reserved.
             </p>
-            <div className="flex items-center gap-4 text-xs text-white/20">
-              <Link href="/privacy" className="hover:text-white/50 transition-colors">Privacy Policy</Link>
-              <Link href="/terms" className="hover:text-white/50 transition-colors">Terms</Link>
-              <Link href="/legal" className="hover:text-white/50 transition-colors">Legal</Link>
-            </div>
           </div>
         </div>
       </footer>
