@@ -83,6 +83,18 @@
   --sidebar-ring: #74ddc7;
 }
 
+@utility container {
+  margin-inline: auto;
+  padding-inline: 1rem;
+  max-width: 1280px;
+  @media (width >= 640px) {
+    padding-inline: 1.5rem;
+  }
+  @media (width >= 1024px) {
+    padding-inline: 2rem;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
