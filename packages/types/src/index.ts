@@ -8,3 +8,6 @@ export * from './events';
 export * from './api';
 export * from './directory';
 export * from './mixes';
+export * from './podcasts';
+export * from './advertising';
+export * from './social';

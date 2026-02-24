@@ -20,6 +20,11 @@ import { EventsModule } from './modules/events/events.module.js';
 import { MetadataModule } from './modules/metadata/metadata.module.js';
 import { DirectoryModule } from './modules/directory/directory.module.js';
 import { MixesModule } from './modules/mixes/mixes.module.js';
+import { PodcastsModule } from './modules/podcasts/podcasts.module.js';
+import { AdvertisingModule } from './modules/advertising/advertising.module.js';
+import { FollowsModule } from './modules/follows/follows.module.js';
+import { NotificationsModule } from './modules/notifications/notifications.module.js';
+import { ModerationModule } from './modules/moderation/moderation.module.js';
 
 // Root controller + service (health / info)
 import { AppController } from './app.controller.js';
@@ -47,6 +52,11 @@ import { AppService } from './app.service.js';
     MetadataModule,
     DirectoryModule,
     MixesModule,
+    PodcastsModule,
+    AdvertisingModule,
+    FollowsModule,
+    NotificationsModule,
+    ModerationModule,
   ],
   controllers: [AppController],
   providers: [
