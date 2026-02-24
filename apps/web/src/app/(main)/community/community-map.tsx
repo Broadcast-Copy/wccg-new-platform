@@ -10,19 +10,18 @@ import "leaflet/dist/leaflet.css";
 // ---------------------------------------------------------------------------
 
 type Category =
-  | "Restaurants"
-  | "Auto Services"
-  | "Beauty & Barber"
-  | "Health & Wellness"
-  | "Legal Services"
-  | "Real Estate"
-  | "Education"
-  | "Churches"
-  | "Entertainment"
-  | "Home Services"
-  | "Government & Services";
+  | "Police & Sheriff"
+  | "Fire & EMS"
+  | "Utilities"
+  | "Transportation"
+  | "Government Offices"
+  | "Courts & Legal"
+  | "Health Services"
+  | "Libraries & Education"
+  | "Parks & Recreation"
+  | "Military";
 
-interface Business {
+interface ServiceListing {
   id: string;
   name: string;
   category: Category;
@@ -32,16 +31,16 @@ interface Business {
   phone: string;
   description: string;
   website?: string;
-  imageUrl?: string;
   featured?: boolean;
+  claimed?: boolean;
   lat: number;
   lng: number;
 }
 
 interface CommunityMapProps {
-  businesses: Business[];
-  selectedBusiness: Business | null;
-  onMarkerClick: (business: Business) => void;
+  businesses: ServiceListing[];
+  selectedBusiness: ServiceListing | null;
+  onMarkerClick: (business: ServiceListing) => void;
   center: [number, number];
   categoryColors: Record<string, { badge: string; marker: string }>;
 }
@@ -116,8 +115,8 @@ function MapController({
   selectedBusiness,
   businesses,
 }: {
-  selectedBusiness: Business | null;
-  businesses: Business[];
+  selectedBusiness: ServiceListing | null;
+  businesses: ServiceListing[];
 }) {
   const map = useMap();
 
@@ -236,19 +235,19 @@ export default function CommunityMap({
           </Popup>
         </Marker>
 
-        {/* Business markers */}
-        {businesses.map((business) => {
-          const color = categoryColors[business.category]?.marker || "#14b8a6";
-          const isSelected = selectedBusiness?.id === business.id;
+        {/* Service listing markers */}
+        {businesses.map((listing) => {
+          const color = categoryColors[listing.category]?.marker || "#14b8a6";
+          const isSelected = selectedBusiness?.id === listing.id;
           const icon = createMarkerIcon(color, isSelected);
 
           return (
             <Marker
-              key={business.id}
-              position={[business.lat, business.lng]}
+              key={listing.id}
+              position={[listing.lat, listing.lng]}
               icon={icon}
               eventHandlers={{
-                click: () => onMarkerClick(business),
+                click: () => onMarkerClick(listing),
               }}
             >
               <Popup>
@@ -264,31 +263,31 @@ export default function CommunityMap({
                       }}
                     />
                     <span style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                      {business.category}
+                      {listing.category}
                     </span>
-                    {business.featured && (
+                    {listing.featured && (
                       <span style={{ fontSize: 10, background: "#fef3c7", color: "#92400e", padding: "1px 6px", borderRadius: 8, marginLeft: "auto" }}>
                         Featured
                       </span>
                     )}
                   </div>
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a", marginBottom: 4 }}>
-                    {business.name}
+                    {listing.name}
                   </div>
                   <div style={{ fontSize: 12, color: "#64748b", marginBottom: 6, lineHeight: 1.4 }}>
-                    {business.description.length > 100
-                      ? business.description.slice(0, 100) + "…"
-                      : business.description}
+                    {listing.description.length > 100
+                      ? listing.description.slice(0, 100) + "…"
+                      : listing.description}
                   </div>
                   <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 2 }}>
-                    {business.address}
+                    {listing.address}
                   </div>
                   <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 8 }}>
-                    {business.phone}
+                    {listing.phone}
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
                     <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.address)}`}
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(listing.address)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -299,9 +298,9 @@ export default function CommunityMap({
                     >
                       Get Directions
                     </a>
-                    {business.website && (
+                    {listing.website && (
                       <a
-                        href={business.website}
+                        href={listing.website}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
