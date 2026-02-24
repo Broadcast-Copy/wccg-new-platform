@@ -18,6 +18,10 @@ import {
   CreditCard,
   TrendingUp,
   Target,
+  Shield,
+  Settings,
+  Database,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 
@@ -25,7 +29,7 @@ import {
 // Role IDs
 // ---------------------------------------------------------------------------
 
-export type RoleId = "sales" | "dj" | "creator" | "advertiser" | "listener";
+export type RoleId = "admin" | "sales" | "dj" | "creator" | "advertiser" | "listener";
 
 // ---------------------------------------------------------------------------
 // Nav item shape
@@ -70,6 +74,31 @@ export interface RoleConfig {
 // ---------------------------------------------------------------------------
 
 export const ROLE_CONFIGS: Record<RoleId, RoleConfig> = {
+  admin: {
+    id: "admin",
+    label: "Administrator",
+    shortLabel: "Admin",
+    description: "Full platform control — users, streams, content, analytics, and system settings",
+    icon: Shield,
+    accentColor: "#10b981",
+    accentBg: "bg-[#10b981]/15",
+    accentText: "text-[#10b981]",
+    accentBorder: "border-[#10b981]/30",
+    mockUser: {
+      name: "Keisha Palmer",
+      email: "keisha@wccg.fm",
+      initials: "KP",
+    },
+    navItems: [
+      { href: "/portal/overview", label: "Overview", icon: LayoutDashboard },
+      { href: "/portal/overview#users", label: "Users", icon: Users },
+      { href: "/portal/overview#streams", label: "Streams", icon: Radio },
+      { href: "/portal/overview#content", label: "Content", icon: Database },
+      { href: "/portal/overview#analytics", label: "Analytics", icon: BarChart3 },
+      { href: "/portal/overview#settings", label: "Settings", icon: Settings },
+      { href: "/portal/prd", label: "Platform PRD", icon: FileText },
+    ],
+  },
   sales: {
     id: "sales",
     label: "Sales Manager",
@@ -187,4 +216,4 @@ export const ROLE_CONFIGS: Record<RoleId, RoleConfig> = {
   },
 };
 
-export const ROLE_IDS: RoleId[] = ["sales", "dj", "creator", "advertiser", "listener"];
+export const ROLE_IDS: RoleId[] = ["admin", "sales", "dj", "creator", "advertiser", "listener"];

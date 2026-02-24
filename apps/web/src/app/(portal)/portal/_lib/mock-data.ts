@@ -22,6 +22,10 @@ import {
   Upload,
   CalendarDays,
   Image,
+  Shield,
+  Activity,
+  Settings,
+  Database,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -67,6 +71,33 @@ export interface RoleMockData {
   activity: ActivityItem[];
   actions: QuickAction[];
 }
+
+// ---------------------------------------------------------------------------
+// Admin mock data
+// ---------------------------------------------------------------------------
+
+const adminData: RoleMockData = {
+  stats: [
+    { title: "Total Users", value: "3,847", icon: Users, color: "text-[#10b981]", bgColor: "bg-[#10b981]/10" },
+    { title: "Active Streams", value: "6", icon: Radio, color: "text-[#74ddc7]", bgColor: "bg-[#74ddc7]/10" },
+    { title: "Monthly Revenue", value: "$67,420", icon: DollarSign, color: "text-[#f97316]", bgColor: "bg-[#f97316]/10" },
+    { title: "Platform Uptime", value: "99.8%", icon: Activity, color: "text-[#3b82f6]", bgColor: "bg-[#3b82f6]/10" },
+  ],
+  activity: [
+    { id: "ad1", text: "New user registration spike — 47 users today", time: "1 hour ago", icon: Users, color: "text-[#10b981]" },
+    { id: "ad2", text: "Stream WCCG-Main auto-restarted after timeout", time: "3 hours ago", icon: Radio, color: "text-[#74ddc7]" },
+    { id: "ad3", text: "Monthly analytics report generated", time: "6 hours ago", icon: BarChart3, color: "text-[#3b82f6]" },
+    { id: "ad4", text: "DJ SpinWiz approved as new host", time: "1 day ago", icon: Shield, color: "text-[#7401df]" },
+    { id: "ad5", text: "System backup completed successfully", time: "1 day ago", icon: Database, color: "text-[#f97316]" },
+    { id: "ad6", text: "Ad campaign approval queue: 3 pending", time: "2 days ago", icon: Megaphone, color: "text-[#ef4444]" },
+  ],
+  actions: [
+    { label: "Manage Users", href: "#users", icon: Users },
+    { label: "View Analytics", href: "#analytics", icon: BarChart3 },
+    { label: "System Settings", href: "#settings", icon: Settings },
+    { label: "View PRD", href: "/portal/prd", icon: FileText },
+  ],
+};
 
 // ---------------------------------------------------------------------------
 // Sales mock data
@@ -196,6 +227,7 @@ const listenerData: RoleMockData = {
 // ---------------------------------------------------------------------------
 
 export const MOCK_DATA: Record<RoleId, RoleMockData> = {
+  admin: adminData,
   sales: salesData,
   dj: djData,
   creator: creatorData,
