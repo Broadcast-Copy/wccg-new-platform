@@ -7,6 +7,7 @@ import { UpNextRail } from "@/components/home/up-next-rail";
 import { EventCard } from "@/components/events/event-card";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { AppImage } from "@/components/ui/app-image";
 import {
   ArrowRight,
   Radio,
@@ -18,7 +19,6 @@ import {
   Headphones,
   Music,
   Mic,
-  Zap,
 } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 
@@ -33,12 +33,12 @@ interface EventItem {
 }
 
 const channels = [
-  { id: "stream_wccg", name: "WCCG 104.5", tagline: "Hip Hop & R&B", color: "from-[#74ddc7] to-[#0d9488]", icon: Radio },
-  { id: "stream_soul", name: "Soul 104.5", tagline: "Classic Soul & R&B", color: "from-[#7401df] to-[#4c1d95]", icon: Headphones },
-  { id: "stream_hot", name: "Hot 104.5", tagline: "Trending Hits", color: "from-[#ef4444] to-[#b91c1c]", icon: Zap },
-  { id: "stream_vibe", name: "Vibe 104.5", tagline: "Lo-Fi & Chill", color: "from-[#3b82f6] to-[#1d4ed8]", icon: Music },
-  { id: "stream_yard", name: "The Yard", tagline: "HBCU & Culture", color: "from-[#f59e0b] to-[#d97706]", icon: Mic },
-  { id: "stream_mixsquad", name: "MixSquad", tagline: "DJ Mixes 24/7", color: "from-[#ec4899] to-[#be185d]", icon: Headphones },
+  { id: "stream_wccg", name: "WCCG 104.5", tagline: "Hip Hop & R&B", color: "from-[#74ddc7] to-[#0d9488]", logo: "/images/logos/1045fm-logo.png" },
+  { id: "stream_soul", name: "Soul 104.5", tagline: "Classic Soul & R&B", color: "from-[#7401df] to-[#4c1d95]", logo: "/images/logos/soul-1045-logo.png" },
+  { id: "stream_hot", name: "Hot 104.5", tagline: "Trending Hits", color: "from-[#ef4444] to-[#b91c1c]", logo: "/images/logos/hot-1045-logo.png" },
+  { id: "stream_vibe", name: "Vibe 104.5", tagline: "Lo-Fi & Chill", color: "from-[#3b82f6] to-[#1d4ed8]", logo: "/images/logos/the-vibe-logo.png" },
+  { id: "stream_yard", name: "The Yard", tagline: "HBCU & Culture", color: "from-[#f59e0b] to-[#d97706]", logo: "/images/logos/yard-riddim-logo.png" },
+  { id: "stream_mixsquad", name: "MixSquad", tagline: "DJ Mixes 24/7", color: "from-[#ec4899] to-[#be185d]", logo: "/images/logos/mix-squad-logo.png" },
 ];
 
 const platformFeatures = [
@@ -173,9 +173,14 @@ export default function HomePage() {
               href={`/channels/${ch.id}`}
               className="group flex-shrink-0 w-[160px] overflow-hidden rounded-xl border border-white/[0.06] bg-[#141420] transition-all hover:border-white/[0.12] hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5"
             >
-              <div className={`h-24 bg-gradient-to-br ${ch.color} flex items-center justify-center relative overflow-hidden`}>
-                <ch.icon className="h-8 w-8 text-white/80" />
-                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTTAgMGgyMHYyMEgweiIgZmlsbD0ibm9uZSIvPjxjaXJjbGUgY3g9IjEwIiBjeT0iMTAiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNnKSIvPjwvc3ZnPg==')] opacity-30" />
+              <div className={`h-24 bg-gradient-to-br ${ch.color} flex items-center justify-center relative overflow-hidden p-4`}>
+                <AppImage
+                  src={ch.logo}
+                  alt={ch.name}
+                  width={200}
+                  height={200}
+                  className="h-16 w-auto object-contain drop-shadow-lg"
+                />
               </div>
               <div className="p-3">
                 <h3 className="text-sm font-bold text-white truncate">{ch.name}</h3>
