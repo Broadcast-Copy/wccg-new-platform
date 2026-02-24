@@ -6,6 +6,7 @@ import Link from "next/link";
 import { apiClient } from "@/lib/api-client";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { FavoriteButton } from "@/components/favorites/favorite-button";
+import { FollowButton } from "@/components/social/follow-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -393,7 +394,10 @@ export default function ShowDetailPage() {
                 </p>
               )}
             </div>
-            <FavoriteButton itemType="show" itemId={show.id} />
+            <div className="flex items-center gap-2">
+              <FollowButton targetType="show" targetId={show.id} size="sm" />
+              <FavoriteButton itemType="show" itemId={show.id} />
+            </div>
           </div>
         </div>
       </div>

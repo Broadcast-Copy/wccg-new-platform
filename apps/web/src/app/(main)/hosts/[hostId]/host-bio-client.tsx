@@ -20,6 +20,8 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
+import { FollowButton } from "@/components/social/follow-button";
+import { FollowerCount } from "@/components/social/follower-count";
 import {
   ArrowLeft,
   Mic,
@@ -353,9 +355,14 @@ export default function HostBioPage() {
             </p>
           )}
 
-          {/* Social links */}
+          {/* Follow + Social links */}
+          <div className="flex items-center gap-3 pt-2 flex-wrap">
+            <FollowButton targetType="host" targetId={host.id} />
+            <FollowerCount targetType="host" targetId={host.id} />
+          </div>
+
           {hostData && (
-            <div className="pt-2">
+            <div className="pt-1">
               <SocialLinksBar hostData={hostData} />
             </div>
           )}
