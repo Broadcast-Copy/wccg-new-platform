@@ -1,5 +1,7 @@
 import { ShowCard } from "@/components/shows/show-card";
 import { Mic2, Zap, Podcast } from "lucide-react";
+import { ALL_SHOWS } from "@/data/shows";
+import { getHostsByShowId } from "@/data/hosts";
 
 export const metadata = {
   title: "Shows | WCCG 104.5 FM",
@@ -26,14 +28,38 @@ interface Show {
   updatedAt: string;
 }
 
+function getLocalShows(): Show[] {
+  return ALL_SHOWS.map((s) => {
+    const hosts = getHostsByShowId(s.id);
+    return {
+      id: s.id,
+      name: s.name,
+      slug: s.slug,
+      description: s.description,
+      imageUrl: s.showImageUrl || s.imageUrl || undefined,
+      isActive: s.isActive,
+      hosts: hosts.map((h, i) => ({
+        id: h.id,
+        name: h.name,
+        slug: h.id,
+        avatarUrl: h.imageUrl ?? undefined,
+        isPrimary: i === 0,
+      })),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  });
+}
+
 async function getShows(): Promise<Show[]> {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
     const res = await fetch(`${apiUrl}/shows`, { next: { revalidate: 300 } });
-    if (!res.ok) return [];
-    return res.json();
+    if (!res.ok) return getLocalShows();
+    const data = await res.json();
+    return data.length > 0 ? data : getLocalShows();
   } catch {
-    return [];
+    return getLocalShows();
   }
 }
 

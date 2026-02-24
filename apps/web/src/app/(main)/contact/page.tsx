@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,6 +47,17 @@ export default function ContactPage() {
     submitting: false,
     error: null,
   });
+
+  // Auto-select tab based on URL hash (e.g., /contact#advertise)
+  useEffect(() => {
+    const hashMap: Record<string, FormType> = {
+      "#advertise": "advertiser",
+      "#submit-music": "music",
+      "#creator-services": "creator",
+    };
+    const tab = hashMap[window.location.hash];
+    if (tab) setActiveForm(tab);
+  }, []);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

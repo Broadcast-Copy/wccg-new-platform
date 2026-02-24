@@ -78,8 +78,38 @@ interface Show {
 
 // ─── Shared data imports ────────────────────────────────────────────────
 
-import { getShowById } from "@/data/shows";
+import { getShowById, getShowBySlug, type ShowData } from "@/data/shows";
+import { getHostsByShowId } from "@/data/hosts";
 import { YouTubeGrid } from "@/components/youtube/youtube-grid";
+
+// ─── Local data fallback ────────────────────────────────────────────────
+
+function localShowFallback(showId: string): Show | null {
+  const data: ShowData | undefined =
+    getShowById(showId) || getShowBySlug(showId);
+  if (!data) return null;
+  const hosts = getHostsByShowId(data.id);
+  return {
+    id: data.id,
+    name: data.name,
+    slug: data.slug,
+    description: data.description,
+    imageUrl: data.showImageUrl || data.imageUrl,
+    isActive: data.isActive,
+    hosts: hosts.map((h, i) => ({
+      id: h.id,
+      name: h.name,
+      slug: h.id,
+      bio: h.bio,
+      avatarUrl: h.imageUrl,
+      email: null,
+      isPrimary: i === 0,
+    })),
+    episodes: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────
 
@@ -276,8 +306,13 @@ export default function ShowDetailPage() {
         setLoading(true);
         const data = await apiClient<Show>(`/shows/${showId}`);
         if (!cancelled) { setShow(data); setError(null); }
-      } catch (err: unknown) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load show");
+      } catch {
+        // Fallback to local static data when API is unavailable
+        const local = localShowFallback(showId);
+        if (!cancelled) {
+          if (local) { setShow(local); setError(null); }
+          else setError("Show not found");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }

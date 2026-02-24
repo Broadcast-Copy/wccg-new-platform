@@ -178,9 +178,12 @@ export function Hero() {
 
               <div className="flex items-center gap-2 text-[rgba(116,221,199,0.9)]">
                 <Users className="h-4 w-4" />
-                <p className="text-base font-medium md:text-lg">
+                <Link
+                  href={`/shows/${currentSlide.id}`}
+                  className="text-base font-medium md:text-lg hover:underline"
+                >
                   {currentSlide.hostNames}
-                </p>
+                </Link>
               </div>
 
               <p className="hidden max-w-lg text-sm leading-relaxed text-white/50 sm:block md:text-base">
