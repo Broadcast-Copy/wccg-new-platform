@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { X, Minimize2, Maximize2 } from "lucide-react";
+import { useListeningTracker } from "@/hooks/use-listening-tracker";
 
 // ---------------------------------------------------------------------------
 // SecureNet Player URL — the hosted Cirrus player for WCCG
@@ -69,6 +70,9 @@ export function StreamPlayerProvider({ children }: { children: ReactNode }) {
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [isOpen, close]);
+
+  // Track listening sessions via overlay open/close state
+  useListeningTracker(isOpen);
 
   return (
     <StreamPlayerContext.Provider value={{ isOpen, open, close, toggle }}>

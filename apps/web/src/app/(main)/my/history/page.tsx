@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Radio,
   Headphones,
@@ -14,6 +14,7 @@ import {
   TrendingUp,
   CalendarDays,
   RotateCcw,
+  Trash2,
 } from "lucide-react";
 import {
   Card,
@@ -24,372 +25,18 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  getHistoryEntries,
+  getListeningStats,
+  clearHistory,
+  type HistoryEntry,
+} from "@/lib/listening-history";
+import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 
 // ─── Types ─────────────────────────────────────────────────────────────
 
 type ContentType = "all" | "live" | "mix" | "podcast";
 type DateRange = "today" | "week" | "month" | "all";
-
-interface HistoryEntry {
-  id: string;
-  type: "live" | "mix" | "podcast";
-  title: string;
-  artist: string;
-  listenedDuration: string;
-  totalDuration: string | null;
-  listenedMinutes: number;
-  totalMinutes: number | null;
-  timestamp: string;
-  date: string;
-  dateGroup: "Today" | "Yesterday" | "This Week" | "Earlier This Month" | "Older";
-}
-
-// ─── Mock Data ─────────────────────────────────────────────────────────
-
-const MOCK_HISTORY: HistoryEntry[] = [
-  // Today
-  {
-    id: "h-001",
-    type: "live",
-    title: "Streetz Morning Takeover",
-    artist: "DJ Streetz",
-    listenedDuration: "2h 15m",
-    totalDuration: null,
-    listenedMinutes: 135,
-    totalMinutes: null,
-    timestamp: "8:00 AM",
-    date: "2026-02-24",
-    dateGroup: "Today",
-  },
-  {
-    id: "h-002",
-    type: "live",
-    title: "Way Up with Angela Yee",
-    artist: "Angela Yee",
-    listenedDuration: "45m",
-    totalDuration: null,
-    listenedMinutes: 45,
-    totalMinutes: null,
-    timestamp: "10:30 AM",
-    date: "2026-02-24",
-    dateGroup: "Today",
-  },
-  {
-    id: "h-003",
-    type: "mix",
-    title: "Summer Vibes Vol. 3",
-    artist: "DJ SpinWiz",
-    listenedDuration: "32m",
-    totalDuration: "1h 05m",
-    listenedMinutes: 32,
-    totalMinutes: 65,
-    timestamp: "1:15 PM",
-    date: "2026-02-24",
-    dateGroup: "Today",
-  },
-  {
-    id: "h-004",
-    type: "podcast",
-    title: "The Culture Corner - Ep. 88",
-    artist: "Marcus James",
-    listenedDuration: "22m",
-    totalDuration: "48m",
-    listenedMinutes: 22,
-    totalMinutes: 48,
-    timestamp: "3:45 PM",
-    date: "2026-02-24",
-    dateGroup: "Today",
-  },
-  // Yesterday
-  {
-    id: "h-005",
-    type: "live",
-    title: "Posted on the Corner",
-    artist: "Big Ced",
-    listenedDuration: "1h 30m",
-    totalDuration: null,
-    listenedMinutes: 90,
-    totalMinutes: null,
-    timestamp: "7:00 PM",
-    date: "2026-02-23",
-    dateGroup: "Yesterday",
-  },
-  {
-    id: "h-006",
-    type: "podcast",
-    title: "Bootleg Kev Show - Highlights Ep. 42",
-    artist: "Bootleg Kev",
-    listenedDuration: "28m",
-    totalDuration: "28m",
-    listenedMinutes: 28,
-    totalMinutes: 28,
-    timestamp: "3:20 PM",
-    date: "2026-02-23",
-    dateGroup: "Yesterday",
-  },
-  {
-    id: "h-007",
-    type: "mix",
-    title: "Late Night R&B Mix",
-    artist: "DJ Rayn",
-    listenedDuration: "55m",
-    totalDuration: "1h 20m",
-    listenedMinutes: 55,
-    totalMinutes: 80,
-    timestamp: "11:00 PM",
-    date: "2026-02-23",
-    dateGroup: "Yesterday",
-  },
-  {
-    id: "h-008",
-    type: "live",
-    title: "Afternoon Drive",
-    artist: "Tasha K",
-    listenedDuration: "1h 10m",
-    totalDuration: null,
-    listenedMinutes: 70,
-    totalMinutes: null,
-    timestamp: "4:00 PM",
-    date: "2026-02-23",
-    dateGroup: "Yesterday",
-  },
-  // This Week
-  {
-    id: "h-009",
-    type: "live",
-    title: "Sunday Snacks",
-    artist: "Chef Mike",
-    listenedDuration: "3h 12m",
-    totalDuration: null,
-    listenedMinutes: 192,
-    totalMinutes: null,
-    timestamp: "Sun 7:00 PM",
-    date: "2026-02-22",
-    dateGroup: "This Week",
-  },
-  {
-    id: "h-010",
-    type: "podcast",
-    title: "Way Up Recap - Weekly",
-    artist: "Angela Yee",
-    listenedDuration: "15m",
-    totalDuration: "15m",
-    listenedMinutes: 15,
-    totalMinutes: 15,
-    timestamp: "Sat 9:00 AM",
-    date: "2026-02-21",
-    dateGroup: "This Week",
-  },
-  {
-    id: "h-011",
-    type: "mix",
-    title: "Club Bangers 2026",
-    artist: "DJ TommyGee",
-    listenedDuration: "1h 08m",
-    totalDuration: "1h 08m",
-    listenedMinutes: 68,
-    totalMinutes: 68,
-    timestamp: "Fri 10:00 PM",
-    date: "2026-02-20",
-    dateGroup: "This Week",
-  },
-  {
-    id: "h-012",
-    type: "live",
-    title: "The Bootleg Kev Show",
-    artist: "Bootleg Kev",
-    listenedDuration: "2h 45m",
-    totalDuration: null,
-    listenedMinutes: 165,
-    totalMinutes: null,
-    timestamp: "Thu 12:00 PM",
-    date: "2026-02-19",
-    dateGroup: "This Week",
-  },
-  {
-    id: "h-013",
-    type: "podcast",
-    title: "WCCG Community Voices - Ep. 19",
-    artist: "Reverend Thomas",
-    listenedDuration: "38m",
-    totalDuration: "42m",
-    listenedMinutes: 38,
-    totalMinutes: 42,
-    timestamp: "Thu 8:30 AM",
-    date: "2026-02-19",
-    dateGroup: "This Week",
-  },
-  {
-    id: "h-014",
-    type: "mix",
-    title: "Throwback Thursday Mix",
-    artist: "DJ Streetz",
-    listenedDuration: "47m",
-    totalDuration: "47m",
-    listenedMinutes: 47,
-    totalMinutes: 47,
-    timestamp: "Thu 6:00 PM",
-    date: "2026-02-19",
-    dateGroup: "This Week",
-  },
-  {
-    id: "h-015",
-    type: "live",
-    title: "Midday Vibes",
-    artist: "Tasha K",
-    listenedDuration: "1h 55m",
-    totalDuration: null,
-    listenedMinutes: 115,
-    totalMinutes: null,
-    timestamp: "Wed 12:00 PM",
-    date: "2026-02-18",
-    dateGroup: "This Week",
-  },
-  {
-    id: "h-016",
-    type: "mix",
-    title: "Gospel Sundays Mix",
-    artist: "DJ Grace",
-    listenedDuration: "1h 22m",
-    totalDuration: "1h 30m",
-    listenedMinutes: 82,
-    totalMinutes: 90,
-    timestamp: "Wed 9:00 AM",
-    date: "2026-02-18",
-    dateGroup: "This Week",
-  },
-  {
-    id: "h-017",
-    type: "podcast",
-    title: "Hip-Hop Headlines - Ep. 201",
-    artist: "Marcus James",
-    listenedDuration: "35m",
-    totalDuration: "35m",
-    listenedMinutes: 35,
-    totalMinutes: 35,
-    timestamp: "Tue 7:15 PM",
-    date: "2026-02-17",
-    dateGroup: "This Week",
-  },
-  {
-    id: "h-018",
-    type: "live",
-    title: "Late Night Slow Jams",
-    artist: "DJ Rayn",
-    listenedDuration: "2h 05m",
-    totalDuration: null,
-    listenedMinutes: 125,
-    totalMinutes: null,
-    timestamp: "Tue 10:00 PM",
-    date: "2026-02-17",
-    dateGroup: "This Week",
-  },
-  // Earlier This Month
-  {
-    id: "h-019",
-    type: "live",
-    title: "Streetz Morning Takeover",
-    artist: "DJ Streetz",
-    listenedDuration: "2h 30m",
-    totalDuration: null,
-    listenedMinutes: 150,
-    totalMinutes: null,
-    timestamp: "Feb 14, 8:00 AM",
-    date: "2026-02-14",
-    dateGroup: "Earlier This Month",
-  },
-  {
-    id: "h-020",
-    type: "mix",
-    title: "Valentine's Day Special Mix",
-    artist: "DJ Rayn",
-    listenedDuration: "1h 45m",
-    totalDuration: "1h 45m",
-    listenedMinutes: 105,
-    totalMinutes: 105,
-    timestamp: "Feb 14, 8:00 PM",
-    date: "2026-02-14",
-    dateGroup: "Earlier This Month",
-  },
-  {
-    id: "h-021",
-    type: "podcast",
-    title: "Black History Month Special - Pt. 2",
-    artist: "Reverend Thomas",
-    listenedDuration: "52m",
-    totalDuration: "55m",
-    listenedMinutes: 52,
-    totalMinutes: 55,
-    timestamp: "Feb 12, 10:00 AM",
-    date: "2026-02-12",
-    dateGroup: "Earlier This Month",
-  },
-  {
-    id: "h-022",
-    type: "live",
-    title: "Saturday Night Live on WCCG",
-    artist: "DJ TommyGee",
-    listenedDuration: "4h 00m",
-    totalDuration: null,
-    listenedMinutes: 240,
-    totalMinutes: null,
-    timestamp: "Feb 8, 9:00 PM",
-    date: "2026-02-08",
-    dateGroup: "Earlier This Month",
-  },
-  {
-    id: "h-023",
-    type: "mix",
-    title: "Trap Essentials Vol. 12",
-    artist: "DJ SpinWiz",
-    listenedDuration: "38m",
-    totalDuration: "52m",
-    listenedMinutes: 38,
-    totalMinutes: 52,
-    timestamp: "Feb 7, 2:30 PM",
-    date: "2026-02-07",
-    dateGroup: "Earlier This Month",
-  },
-  {
-    id: "h-024",
-    type: "podcast",
-    title: "Black History Month Special - Pt. 1",
-    artist: "Reverend Thomas",
-    listenedDuration: "48m",
-    totalDuration: "48m",
-    listenedMinutes: 48,
-    totalMinutes: 48,
-    timestamp: "Feb 5, 10:00 AM",
-    date: "2026-02-05",
-    dateGroup: "Earlier This Month",
-  },
-  {
-    id: "h-025",
-    type: "live",
-    title: "Way Up with Angela Yee",
-    artist: "Angela Yee",
-    listenedDuration: "1h 12m",
-    totalDuration: null,
-    listenedMinutes: 72,
-    totalMinutes: null,
-    timestamp: "Feb 3, 10:00 AM",
-    date: "2026-02-03",
-    dateGroup: "Earlier This Month",
-  },
-  {
-    id: "h-026",
-    type: "mix",
-    title: "New Month New Vibes",
-    artist: "DJ Grace",
-    listenedDuration: "1h 00m",
-    totalDuration: "1h 00m",
-    listenedMinutes: 60,
-    totalMinutes: 60,
-    timestamp: "Feb 1, 6:00 PM",
-    date: "2026-02-01",
-    dateGroup: "Earlier This Month",
-  },
-];
 
 // ─── Helpers ───────────────────────────────────────────────────────────
 
@@ -493,10 +140,36 @@ export default function ListeningHistoryPage() {
   const [contentType, setContentType] = useState<ContentType>("all");
   const [dateRange, setDateRange] = useState<DateRange>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
+  const [stats, setStats] = useState({
+    totalHours: 0,
+    remainingMinutes: 0,
+    totalSessions: 0,
+    totalTracks: 0,
+    topArtist: "—",
+  });
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const { open: openStreamPlayer } = useStreamPlayer();
+
+  // Load history from localStorage
+  useEffect(() => {
+    setHistoryEntries(getHistoryEntries());
+    setStats(getListeningStats());
+  }, [refreshKey]);
+
+  // Refresh history every 30 seconds to pick up active session changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setHistoryEntries(getHistoryEntries());
+      setStats(getListeningStats());
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Filter entries
   const filteredEntries = useMemo(() => {
-    let entries = MOCK_HISTORY;
+    let entries = historyEntries;
 
     // Filter by content type
     if (contentType !== "all") {
@@ -517,7 +190,7 @@ export default function ListeningHistoryPage() {
     }
 
     return entries;
-  }, [contentType, dateRange, searchQuery]);
+  }, [contentType, dateRange, searchQuery, historyEntries]);
 
   // Group entries by date
   const groupedEntries = useMemo(() => {
@@ -535,19 +208,34 @@ export default function ListeningHistoryPage() {
     (group) => groupedEntries[group] && groupedEntries[group].length > 0
   );
 
-  // Stats
-  const totalMinutes = MOCK_HISTORY.reduce((sum, e) => sum + e.listenedMinutes, 0);
-  const totalHours = Math.floor(totalMinutes / 60);
-  const remainingMinutes = totalMinutes % 60;
+  const handleClearHistory = () => {
+    if (window.confirm("Are you sure you want to clear all listening history? This cannot be undone.")) {
+      clearHistory();
+      setRefreshKey((k) => k + 1);
+    }
+  };
 
   return (
     <div className="space-y-6">
       {/* ─── Header ──────────────────────────────────────────────────── */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Listening History</h1>
-        <p className="text-muted-foreground">
-          Everything you have listened to on WCCG 104.5 FM
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Listening History</h1>
+          <p className="text-muted-foreground">
+            Everything you have listened to on WCCG 104.5 FM
+          </p>
+        </div>
+        {historyEntries.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+            onClick={handleClearHistory}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Clear History
+          </Button>
+        )}
       </div>
 
       {/* ─── Stats Row ───────────────────────────────────────────────── */}
@@ -566,20 +254,22 @@ export default function ListeningHistoryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {totalHours}h {remainingMinutes}m
+              {stats.totalHours > 0 || stats.remainingMinutes > 0
+                ? `${stats.totalHours}h ${stats.remainingMinutes}m`
+                : "0m"}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              <span className="text-emerald-500">+3h 12m</span> from last week
+              Across {stats.totalSessions} session{stats.totalSessions !== 1 ? "s" : ""}
             </p>
           </CardContent>
         </Card>
 
-        {/* Tracks Played */}
+        {/* Tracks Heard */}
         <Card>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Tracks Played
+                Tracks Heard
               </CardTitle>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/10">
                 <TrendingUp className="h-4 w-4 text-teal-500" />
@@ -587,19 +277,21 @@ export default function ListeningHistoryPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,847</div>
+            <div className="text-2xl font-bold">
+              {stats.totalTracks.toLocaleString()}
+            </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              <span className="text-emerald-500">+124</span> this month
+              Unique songs identified
             </p>
           </CardContent>
         </Card>
 
-        {/* Favorite Genre */}
+        {/* Top Artist */}
         <Card>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Favorite Genre
+                Most Heard Artist
               </CardTitle>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10">
                 <Music className="h-4 w-4 text-red-500" />
@@ -607,9 +299,9 @@ export default function ListeningHistoryPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Hip-Hop</div>
+            <div className="text-2xl font-bold truncate">{stats.topArtist}</div>
             <p className="mt-1 text-xs text-muted-foreground">
-              68% of your listening time
+              Based on track plays
             </p>
           </CardContent>
         </Card>
@@ -686,26 +378,40 @@ export default function ListeningHistoryPage() {
             </div>
             <div>
               <h3 className="text-lg font-semibold">
-                No listening history found
+                {historyEntries.length === 0
+                  ? "No listening history yet"
+                  : "No listening history found"}
               </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Try adjusting your filters or search to find what you are
-                looking for.
+              <p className="mt-1 text-sm text-muted-foreground max-w-sm">
+                {historyEntries.length === 0
+                  ? "Start listening to WCCG 104.5 FM and your history will appear here automatically."
+                  : "Try adjusting your filters or search to find what you are looking for."}
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={() => {
-                setContentType("all");
-                setDateRange("all");
-                setSearchQuery("");
-              }}
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              Reset Filters
-            </Button>
+            {historyEntries.length === 0 ? (
+              <Button
+                size="sm"
+                className="gap-1.5 bg-[#74ddc7] text-[#0a0a0f] hover:bg-[#74ddc7]/80"
+                onClick={openStreamPlayer}
+              >
+                <Radio className="h-3.5 w-3.5" />
+                Listen Live
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  setContentType("all");
+                  setDateRange("all");
+                  setSearchQuery("");
+                }}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Reset Filters
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -721,7 +427,7 @@ export default function ListeningHistoryPage() {
                   </h2>
                   <Badge variant="secondary" className="text-xs">
                     {groupedEntries[group].length}{" "}
-                    {groupedEntries[group].length === 1 ? "item" : "items"}
+                    {groupedEntries[group].length === 1 ? "session" : "sessions"}
                   </Badge>
                 </div>
               </div>
@@ -740,7 +446,7 @@ export default function ListeningHistoryPage() {
       {/* ─── Summary Footer ──────────────────────────────────────────── */}
       {orderedGroups.length > 0 && (
         <div className="text-center text-sm text-muted-foreground">
-          Showing {filteredEntries.length} of {MOCK_HISTORY.length} entries
+          Showing {filteredEntries.length} of {historyEntries.length} sessions
         </div>
       )}
     </div>
@@ -750,6 +456,8 @@ export default function ListeningHistoryPage() {
 // ─── History Item Component ────────────────────────────────────────────
 
 function HistoryItem({ entry }: { entry: HistoryEntry }) {
+  const { open: openStreamPlayer } = useStreamPlayer();
+
   const hasProgress = entry.totalMinutes !== null && entry.totalMinutes > 0;
   const progressPercent = hasProgress
     ? Math.min(
@@ -824,9 +532,10 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
           variant="outline"
           size="sm"
           className="shrink-0 gap-1.5"
+          onClick={openStreamPlayer}
         >
           <Play className="h-3 w-3" />
-          <span className="hidden sm:inline">Play Again</span>
+          <span className="hidden sm:inline">Listen</span>
         </Button>
       </CardContent>
     </Card>
