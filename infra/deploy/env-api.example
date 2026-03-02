@@ -1,0 +1,5 @@
+# apps/api/.env — Copy this to /var/www/wccg-new-platform/apps/api/.env
+SUPABASE_URL=https://lmoqvvkhibfiwudgdopb.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+PORT=3001
+NODE_ENV=production
