@@ -2,14 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useAudioPlayer } from "@/hooks/use-audio-player";
 import Link from "next/link";
 import { AppImage as Image } from "@/components/ui/app-image";
-import { Pause, ArrowDownRight } from "lucide-react";
+import { ArrowDownRight } from "lucide-react";
 import { HERO_SHOWS } from "@/data/shows";
 
-const MAIN_STREAM_URL =
-  process.env.NEXT_PUBLIC_MAIN_STREAM_URL || "https://ice66.securenetsystems.net/WCCG";
+const SECURENET_PLAYER_URL = "https://streamdb7web.securenetsystems.net/cirruscontent/WCCG";
 
 const SLIDE_INTERVAL = 8000;
 
@@ -23,13 +21,11 @@ const TICKER_ITEMS = [
 ];
 
 export function Hero() {
-  const { play, pause, isPlaying, currentStream } = useAudioPlayer();
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isMainStreamPlaying = isPlaying && currentStream === MAIN_STREAM_URL;
   const currentSlide = HERO_SHOWS[activeIndex];
 
   const advanceSlide = useCallback(() => {
@@ -48,15 +44,11 @@ export function Hero() {
   }, [activeIndex, isPaused, advanceSlide]);
 
   const handleListenLive = () => {
-    if (isMainStreamPlaying) {
-      pause();
-    } else {
-      play(MAIN_STREAM_URL, {
-        streamName: "WCCG 104.5 FM",
-        title: currentSlide.name,
-        artist: currentSlide.hostNames,
-      });
-    }
+    window.open(
+      SECURENET_PLAYER_URL,
+      "wccg_player",
+      "width=400,height=660,scrollbars=no,resizable=yes",
+    );
   };
 
   const goToSlide = (index: number) => {
@@ -150,17 +142,8 @@ export function Hero() {
                 className="group relative overflow-hidden rounded-full border-0 bg-[#dc2626] text-white font-bold shadow-lg shadow-red-500/20 hover:bg-[#b91c1c] px-5"
               >
                 <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                {isMainStreamPlaying ? (
-                  <>
-                    <Pause className="mr-2 h-4 w-4" />
-                    Pause Stream
-                  </>
-                ) : (
-                  <>
-                    Now Streaming
-                    <ArrowDownRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
+                Now Streaming
+                <ArrowDownRight className="ml-2 h-4 w-4" />
               </Button>
               <Button
                 variant="outline"
@@ -296,17 +279,8 @@ export function Hero() {
                   className="group relative overflow-hidden rounded-full border-0 bg-[#dc2626] text-white font-bold shadow-lg shadow-red-500/20 hover:bg-[#b91c1c] hover:shadow-red-500/30 px-6"
                 >
                   <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                  {isMainStreamPlaying ? (
-                    <>
-                      <Pause className="mr-2 h-5 w-5" />
-                      Pause Stream
-                    </>
-                  ) : (
-                    <>
-                      Now Streaming
-                      <ArrowDownRight className="ml-2 h-5 w-5" />
-                    </>
-                  )}
+                  Now Streaming
+                  <ArrowDownRight className="ml-2 h-5 w-5" />
                 </Button>
                 <Button
                   variant="outline"

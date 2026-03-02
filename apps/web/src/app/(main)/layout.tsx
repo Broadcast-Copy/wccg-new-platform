@@ -7,7 +7,6 @@ import { UserMenu } from "@/components/auth/user-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { MobileNav } from "@/components/navigation/mobile-nav";
 import { AppImage as Image } from "@/components/ui/app-image";
-import { useAudioPlayer } from "@/hooks/use-audio-player";
 import {
   Compass,
   CalendarDays,
@@ -22,10 +21,9 @@ import {
   Trophy,
   ChevronDown,
   HelpCircle,
-  Pause,
 } from "lucide-react";
 
-const MAIN_STREAM_URL = "https://ice66.securenetsystems.net/WCCG";
+const SECURENET_PLAYER_URL = "https://streamdb7web.securenetsystems.net/cirruscontent/WCCG";
 
 // Simplified top nav: Home, Discover, Streaming (mega menu), Support
 const navLinks = [
@@ -113,42 +111,22 @@ function StreamingMegaMenu() {
 }
 
 function ListenLiveButton() {
-  const { play, pause, isPlaying, currentStream } = useAudioPlayer();
-  const isMainStreamPlaying = isPlaying && currentStream === MAIN_STREAM_URL;
-
   const handleClick = () => {
-    if (isMainStreamPlaying) {
-      pause();
-    } else {
-      play(MAIN_STREAM_URL, { streamName: "WCCG 104.5 FM" });
-    }
+    window.open(
+      SECURENET_PLAYER_URL,
+      "wccg_player",
+      "width=400,height=660,scrollbars=no,resizable=yes",
+    );
   };
 
   return (
     <button
       onClick={handleClick}
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold transition-all ${
-        isMainStreamPlaying
-          ? "bg-[#74ddc7] text-[#0a0a0f] shadow-[0_0_12px_rgba(116,221,199,0.3)]"
-          : "bg-[#74ddc7]/10 text-[#74ddc7] border border-[#74ddc7]/20 hover:bg-[#74ddc7]/20"
-      }`}
-      aria-label={isMainStreamPlaying ? "Pause live stream" : "Listen live"}
+      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold transition-all bg-[#74ddc7]/10 text-[#74ddc7] border border-[#74ddc7]/20 hover:bg-[#74ddc7]/20"
+      aria-label="Listen live"
     >
-      {isMainStreamPlaying ? (
-        <>
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#0a0a0f] opacity-50" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-[#0a0a0f]" />
-          </span>
-          <span className="hidden sm:inline">Live</span>
-          <Pause className="h-3 w-3 sm:hidden" />
-        </>
-      ) : (
-        <>
-          <Radio className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Listen Live</span>
-        </>
-      )}
+      <Radio className="h-3.5 w-3.5" />
+      <span className="hidden sm:inline">Listen Live</span>
     </button>
   );
 }
