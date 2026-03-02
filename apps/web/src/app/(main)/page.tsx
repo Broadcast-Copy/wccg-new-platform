@@ -194,6 +194,39 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Platform Features */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-bold text-white">
+          Explore the Platform
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {platformFeatures.map((feature) => (
+            <Link
+              key={feature.href + feature.title}
+              href={feature.href}
+              className="group relative overflow-hidden rounded-xl border border-white/[0.06] bg-[#141420] p-5 transition-all hover:border-white/[0.12] hover:shadow-lg hover:shadow-black/20"
+            >
+              <div className="flex items-start gap-4">
+                <div
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${feature.color}`}
+                >
+                  <feature.icon className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white group-hover:text-[#74ddc7] transition-colors">
+                    {feature.title}
+                  </h3>
+                  <p className="mt-1 text-sm text-white/40">
+                    {feature.description}
+                  </p>
+                </div>
+              </div>
+              <div className={`absolute -inset-1 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-[0.03] rounded-xl transition-opacity`} />
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* Live Now Rail */}
       <LiveNowRail />
 
@@ -275,39 +308,6 @@ export default function HomePage() {
               </div>
             </Link>
           </div>
-        </div>
-      </section>
-
-      {/* Platform Features */}
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold text-white">
-          Explore the Platform
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {platformFeatures.map((feature) => (
-            <Link
-              key={feature.href + feature.title}
-              href={feature.href}
-              className="group relative overflow-hidden rounded-xl border border-white/[0.06] bg-[#141420] p-5 transition-all hover:border-white/[0.12] hover:shadow-lg hover:shadow-black/20"
-            >
-              <div className="flex items-start gap-4">
-                <div
-                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${feature.color}`}
-                >
-                  <feature.icon className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-white group-hover:text-[#74ddc7] transition-colors">
-                    {feature.title}
-                  </h3>
-                  <p className="mt-1 text-sm text-white/40">
-                    {feature.description}
-                  </p>
-                </div>
-              </div>
-              <div className={`absolute -inset-1 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-[0.03] rounded-xl transition-opacity`} />
-            </Link>
-          ))}
         </div>
       </section>
 

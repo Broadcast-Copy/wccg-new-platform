@@ -178,12 +178,12 @@ export function Hero() {
 
           {/* ── News Ticker (mobile) ── */}
           <div className="border-t border-white/[0.06] flex items-center h-9 overflow-hidden">
-            <div className="flex-shrink-0 flex items-center gap-2 px-4 border-r border-white/[0.06] h-full bg-[#dc2626]">
+            <div className="flex-shrink-0 flex items-center gap-2 px-4 border-r border-white/[0.06] h-full bg-white/[0.06]">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
               </span>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-white whitespace-nowrap">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-white/70 whitespace-nowrap">
                 Platform Updates
               </span>
             </div>
@@ -326,12 +326,12 @@ export function Hero() {
           {/* ── News Ticker (bottom of right card) ── */}
           <div className="relative z-20 border-t border-white/[0.06] flex items-center h-9 overflow-hidden">
             {/* Label */}
-            <div className="flex-shrink-0 flex items-center gap-2 px-4 border-r border-white/[0.06] h-full bg-[#dc2626]">
+            <div className="flex-shrink-0 flex items-center gap-2 px-4 border-r border-white/[0.06] h-full bg-white/[0.06]">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
               </span>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-white whitespace-nowrap">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-white/70 whitespace-nowrap">
                 Platform Updates
               </span>
             </div>
