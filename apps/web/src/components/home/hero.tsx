@@ -175,6 +175,32 @@ export function Hero() {
               </Button>
             </div>
           </div>
+
+          {/* ── News Ticker (mobile) ── */}
+          <div className="border-t border-white/[0.06] flex items-center h-9 overflow-hidden">
+            <div className="flex-shrink-0 flex items-center gap-2 px-4 border-r border-white/[0.06] h-full bg-[#dc2626]">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
+              </span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-white whitespace-nowrap">
+                Platform Updates
+              </span>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <div className="animate-marquee flex items-center gap-8 whitespace-nowrap">
+                {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
+                  <span
+                    key={i}
+                    className="text-xs text-white/50 flex items-center gap-8"
+                  >
+                    {item}
+                    <span className="text-white/20">•</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -236,7 +262,7 @@ export function Hero() {
         </div>
 
         {/* ── RIGHT CARD: Content panel with curved top-left ── */}
-        <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0e0e16]">
+        <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0e0e16] flex flex-col">
           {/* Convex curve overlay — top-left corner curves inward */}
           <div className="absolute top-0 left-0 w-[120px] h-full z-10 pointer-events-none">
             <svg
@@ -253,7 +279,7 @@ export function Hero() {
           <div className="absolute -right-20 -top-20 h-[300px] w-[300px] rounded-full bg-[rgba(116,1,223,0.06)] blur-[100px]" />
 
           {/* Content */}
-          <div className="relative z-20 flex flex-col justify-center h-full px-10 py-12 lg:px-14">
+          <div className="relative z-20 flex flex-col justify-center flex-1 px-10 py-12 lg:px-14">
             <div className="space-y-6">
               <h1 className="text-3xl lg:text-4xl xl:text-5xl font-black leading-[1.1] text-white">
                 Hip Hop, Sports, Reactions And Podcasts.
@@ -296,34 +322,34 @@ export function Hero() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* ── News Ticker ── */}
-      <div className="mt-4 relative border border-white/[0.06] rounded-xl bg-[#0e0e16] flex items-center h-9 overflow-hidden">
-        {/* Label */}
-        <div className="flex-shrink-0 flex items-center gap-2 px-4 border-r border-white/[0.06] h-full bg-[#dc2626] rounded-l-xl">
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
-          </span>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-white whitespace-nowrap">
-            Platform Updates
-          </span>
-        </div>
-
-        {/* Scrolling text */}
-        <div className="flex-1 overflow-hidden">
-          <div className="animate-marquee flex items-center gap-8 whitespace-nowrap">
-            {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
-              <span
-                key={i}
-                className="text-xs text-white/50 flex items-center gap-8"
-              >
-                {item}
-                <span className="text-white/20">•</span>
+          {/* ── News Ticker (bottom of right card) ── */}
+          <div className="relative z-20 border-t border-white/[0.06] flex items-center h-9 overflow-hidden">
+            {/* Label */}
+            <div className="flex-shrink-0 flex items-center gap-2 px-4 border-r border-white/[0.06] h-full bg-[#dc2626]">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
               </span>
-            ))}
+              <span className="text-[11px] font-bold uppercase tracking-wider text-white whitespace-nowrap">
+                Platform Updates
+              </span>
+            </div>
+
+            {/* Scrolling text */}
+            <div className="flex-1 overflow-hidden">
+              <div className="animate-marquee flex items-center gap-8 whitespace-nowrap">
+                {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
+                  <span
+                    key={i}
+                    className="text-xs text-white/50 flex items-center gap-8"
+                  >
+                    {item}
+                    <span className="text-white/20">•</span>
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
