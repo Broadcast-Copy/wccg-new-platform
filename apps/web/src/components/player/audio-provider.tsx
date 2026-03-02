@@ -52,6 +52,7 @@ export const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(
  */
 export function AudioProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const currentStreamRef = useRef<string | null>(null);
   const [currentStream, setCurrentStream] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolumeState] = useState(0.8);
@@ -89,16 +90,22 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       const audio = audioRef.current;
       if (!audio) return;
 
-      // If the same stream is requested and it's paused, just resume
-      if (audio.src === streamUrl && audio.paused) {
+      // If the same base stream is requested and it's paused, just resume
+      if (currentStreamRef.current === streamUrl && audio.paused) {
         audio.play().catch(console.error);
         return;
       }
 
+      // Generate a unique play session ID for SecureNet Icecast streams
+      const sessionId = crypto.randomUUID().replace(/-/g, "").substring(0, 32).toUpperCase();
+      const separator = streamUrl.includes("?") ? "&" : "?";
+      const srcWithSession = `${streamUrl}${separator}playSessionID=${sessionId}`;
+
       // Load a new stream
-      audio.src = streamUrl;
+      audio.src = srcWithSession;
       audio.load();
       audio.play().catch(console.error);
+      currentStreamRef.current = streamUrl;
       setCurrentStream(streamUrl);
       if (newMetadata) {
         setMetadata(newMetadata);
