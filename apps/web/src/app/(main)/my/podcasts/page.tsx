@@ -14,6 +14,9 @@ import {
   Hash,
   Play,
   Pencil,
+  Video,
+  Radio,
+  Camera,
 } from "lucide-react";
 import {
   Card,
@@ -87,6 +90,8 @@ interface PodcastEpisode {
   updatedAt: string;
 }
 
+type ProductionType = "audio" | "video-live" | "video-recorded";
+
 interface CreateSeriesForm {
   title: string;
   description: string;
@@ -94,6 +99,7 @@ interface CreateSeriesForm {
   language: string;
   coverImageUrl: string;
   tags: string;
+  productionType: ProductionType;
 }
 
 interface CreateEpisodeForm {
@@ -136,6 +142,7 @@ const INITIAL_SERIES_FORM: CreateSeriesForm = {
   language: "en",
   coverImageUrl: "",
   tags: "",
+  productionType: "audio",
 };
 
 const INITIAL_EPISODE_FORM: CreateEpisodeForm = {
@@ -706,13 +713,13 @@ export default function MyPodcastsPage() {
         open={showCreateSeriesDialog}
         onOpenChange={setShowCreateSeriesDialog}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-xl">
           <form onSubmit={handleCreateSeries}>
             <DialogHeader>
               <DialogTitle>Create Podcast Series</DialogTitle>
               <DialogDescription>
-                Set up a new podcast series. You can add episodes after
-                creating the series.
+                Set up a new podcast series. Cover art is optional — you can
+                add it later. Choose your production style below.
               </DialogDescription>
             </DialogHeader>
 
@@ -748,6 +755,85 @@ export default function MyPodcastsPage() {
                   }
                   rows={3}
                 />
+              </div>
+
+              {/* ── Production Type Selector ──────────────────────────── */}
+              <div className="space-y-2">
+                <Label>Production Type</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Audio Only */}
+                  <button
+                    type="button"
+                    onClick={() => setSeriesForm((f) => ({ ...f, productionType: "audio" }))}
+                    className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all text-center ${
+                      seriesForm.productionType === "audio"
+                        ? "border-[#7401df] bg-[#7401df]/10 ring-1 ring-[#7401df]/30"
+                        : "border-white/[0.08] bg-white/[0.02] hover:border-white/[0.15] hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    <Mic className={`h-6 w-6 ${seriesForm.productionType === "audio" ? "text-[#7401df]" : "text-white/50"}`} />
+                    <div>
+                      <p className={`text-xs font-semibold ${seriesForm.productionType === "audio" ? "text-[#7401df]" : "text-white/70"}`}>Audio Only</p>
+                      <p className="text-[10px] text-white/30 mt-0.5">Traditional podcast</p>
+                    </div>
+                  </button>
+
+                  {/* Video Studio — Live */}
+                  <button
+                    type="button"
+                    onClick={() => setSeriesForm((f) => ({ ...f, productionType: "video-live" }))}
+                    className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all text-center ${
+                      seriesForm.productionType === "video-live"
+                        ? "border-[#dc2626] bg-[#dc2626]/10 ring-1 ring-[#dc2626]/30"
+                        : "border-white/[0.08] bg-white/[0.02] hover:border-white/[0.15] hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    <Radio className={`h-6 w-6 ${seriesForm.productionType === "video-live" ? "text-[#dc2626]" : "text-white/50"}`} />
+                    <div>
+                      <p className={`text-xs font-semibold ${seriesForm.productionType === "video-live" ? "text-[#dc2626]" : "text-white/70"}`}>Live Broadcast</p>
+                      <p className="text-[10px] text-white/30 mt-0.5">2-camera studio</p>
+                    </div>
+                  </button>
+
+                  {/* Video Studio — Recorded */}
+                  <button
+                    type="button"
+                    onClick={() => setSeriesForm((f) => ({ ...f, productionType: "video-recorded" }))}
+                    className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all text-center ${
+                      seriesForm.productionType === "video-recorded"
+                        ? "border-[#74ddc7] bg-[#74ddc7]/10 ring-1 ring-[#74ddc7]/30"
+                        : "border-white/[0.08] bg-white/[0.02] hover:border-white/[0.15] hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    <Video className={`h-6 w-6 ${seriesForm.productionType === "video-recorded" ? "text-[#74ddc7]" : "text-white/50"}`} />
+                    <div>
+                      <p className={`text-xs font-semibold ${seriesForm.productionType === "video-recorded" ? "text-[#74ddc7]" : "text-white/70"}`}>Record &amp; Edit</p>
+                      <p className="text-[10px] text-white/30 mt-0.5">2-camera studio</p>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Studio info box for video modes */}
+                {(seriesForm.productionType === "video-live" || seriesForm.productionType === "video-recorded") && (
+                  <div className="mt-2 rounded-lg border border-white/[0.08] bg-white/[0.03] p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Camera className="h-4 w-4 text-white/50" />
+                      <span className="text-xs font-semibold text-white/70">
+                        {seriesForm.productionType === "video-live" ? "Live Video Studio" : "Video Recording Studio"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-white/40 leading-relaxed">
+                      {seriesForm.productionType === "video-live"
+                        ? "After creating your series, you'll be taken to the podcast studio with a 2-camera setup. Your live video feed will be broadcasted in real-time to listeners."
+                        : "After creating your series, you'll be taken to the podcast studio with a 2-camera setup. Record your episode, then edit and publish when you're ready."}
+                    </p>
+                    <div className="flex items-center gap-3 text-[10px] text-white/30">
+                      <span className="flex items-center gap-1"><Camera className="h-3 w-3" /> Camera 1: Host</span>
+                      <span className="flex items-center gap-1"><Camera className="h-3 w-3" /> Camera 2: Guest</span>
+                      <span className="flex items-center gap-1"><Mic className="h-3 w-3" /> Multi-track audio</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Category and Language row */}
@@ -798,9 +884,11 @@ export default function MyPodcastsPage() {
                 </div>
               </div>
 
-              {/* Cover Image URL */}
+              {/* Cover Image URL — clearly optional */}
               <div className="space-y-2">
-                <Label htmlFor="series-cover">Cover Image URL</Label>
+                <Label htmlFor="series-cover">
+                  Cover Image URL <span className="text-xs text-white/30 font-normal">(optional)</span>
+                </Label>
                 <Input
                   id="series-cover"
                   type="url"
@@ -813,6 +901,9 @@ export default function MyPodcastsPage() {
                     }))
                   }
                 />
+                <p className="text-xs text-muted-foreground">
+                  You can add cover art later. A default will be generated if left empty.
+                </p>
               </div>
 
               {/* Tags */}
@@ -849,7 +940,11 @@ export default function MyPodcastsPage() {
                 {creatingSeries && (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 )}
-                Create Series
+                {seriesForm.productionType === "audio"
+                  ? "Create Series"
+                  : seriesForm.productionType === "video-live"
+                    ? "Create & Go Live"
+                    : "Create & Open Studio"}
               </Button>
             </DialogFooter>
           </form>

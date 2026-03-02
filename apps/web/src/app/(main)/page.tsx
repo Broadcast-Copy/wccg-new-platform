@@ -10,12 +10,14 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   ArrowRight,
+  ArrowDownRight,
   Radio,
   CalendarDays,
   Users2,
   ShoppingBag,
   Gift,
   Trophy,
+  Mail,
 } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 
@@ -262,6 +264,51 @@ export default function HomePage() {
 
       {/* Upcoming Events — client-side fetched */}
       <UpcomingEventsSection />
+
+      {/* Email Subscription CTA — matches wccg1045fm.com red banner */}
+      <section className="relative overflow-hidden rounded-2xl bg-[#dc2626] p-8 md:p-12">
+        <div className="absolute inset-0 opacity-[0.08]">
+          <div className="absolute inset-0" style={{
+            backgroundImage: "radial-gradient(circle at 30% 40%, rgba(255,255,255,0.4) 0%, transparent 50%), radial-gradient(circle at 70% 70%, rgba(0,0,0,0.2) 0%, transparent 40%)"
+          }} />
+        </div>
+        <div className="relative z-10 flex flex-col items-center text-center gap-5 max-w-2xl mx-auto">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm">
+            <Mail className="h-7 w-7 text-white" />
+          </div>
+          <h2 className="text-2xl md:text-3xl font-black text-white leading-tight">
+            Enhance Your Listening Experience Without Sacrificing Quality
+          </h2>
+          <p className="text-white/70 text-sm md:text-base max-w-lg">
+            Get exclusive contest alerts, event invites, new show announcements, and community updates delivered straight to your inbox.
+          </p>
+          <form
+            className="flex w-full max-w-md gap-2 mt-1"
+            onSubmit={(e) => {
+              e.preventDefault();
+              // Email subscription will be handled by API when available
+            }}
+          >
+            <input
+              type="email"
+              placeholder="Enter your email..."
+              required
+              className="flex-1 rounded-full bg-white px-5 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-white/40"
+            />
+            <Button
+              type="submit"
+              size="lg"
+              className="rounded-full bg-[#0a0a0f] text-white font-bold hover:bg-[#0a0a0f]/80 shadow-lg px-6 shrink-0"
+            >
+              Subscribe
+              <ArrowDownRight className="ml-1.5 h-4 w-4" />
+            </Button>
+          </form>
+          <p className="text-[11px] text-white/40">
+            No spam ever. Unsubscribe anytime.
+          </p>
+        </div>
+      </section>
 
       {/* CTA Banner */}
       <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#7401df] to-[#3b82f6] p-8 md:p-12">
