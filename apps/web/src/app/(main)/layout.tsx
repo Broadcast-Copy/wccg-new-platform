@@ -25,10 +25,11 @@ import {
 
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 
-// Simplified top nav: Home, Discover, Streaming (mega menu), Support
+// Desktop nav: Home, Discover, [Streaming mega], Support
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/discover", label: "Discover" },
+  // Streaming mega menu is rendered separately between Discover and Support
   { href: "/contact", label: "Support" },
 ];
 
@@ -60,6 +61,25 @@ const bottomTabs = [
   { href: "/shows", label: "Shows", icon: Mic },
   { href: "/rewards", label: "Perks", icon: Gift },
 ];
+
+function NavLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
+  const isActive =
+    href === "/"
+      ? pathname === "/"
+      : pathname === href || pathname.startsWith(href + "/");
+  return (
+    <Link
+      href={href}
+      className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all ${
+        isActive
+          ? "bg-white/10 text-[#74ddc7]"
+          : "text-white/50 hover:text-white/80 hover:bg-white/[0.04]"
+      }`}
+    >
+      {label}
+    </Link>
+  );
+}
 
 function StreamingMegaMenu() {
   const [open, setOpen] = useState(false);
@@ -138,53 +158,41 @@ export default function MainLayout({
 
   return (
     <div className="flex min-h-screen flex-col bg-[#0a0a0f]">
+      {/* Top spacer — 50px breathing room above header */}
+      <div className="h-[50px] bg-[#0a0a0f]" />
+
       {/* Top Header — minimal, SiriusXM-inspired */}
       <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#0a0a0f]/95 backdrop-blur-xl">
-        <div className="container flex h-14 items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link
-              href="/"
-              className="flex items-center gap-2.5 group"
-            >
-              <Image
-                src="/images/logos/1045fm-logo.png"
-                alt="WCCG 104.5 FM"
-                width={500}
-                height={324}
-                className="w-[120px] h-auto"
-                priority
-              />
-            </Link>
+        <div className="container flex h-16 items-center">
+          {/* Left: Logo */}
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 group shrink-0"
+          >
+            <Image
+              src="/images/logos/1045fm-logo.png"
+              alt="WCCG 104.5 FM"
+              width={500}
+              height={324}
+              className="w-[120px] h-auto"
+              priority
+            />
+          </Link>
 
+          {/* Center: Nav links — Home, Discover, Streaming, Support */}
+          <nav className="hidden lg:flex items-center justify-center gap-0.5 flex-1">
+            {/* Home */}
+            <NavLink href="/" label="Home" pathname={pathname} />
+            {/* Discover */}
+            <NavLink href="/discover" label="Discover" pathname={pathname} />
+            {/* Streaming mega menu */}
+            <StreamingMegaMenu />
+            {/* Support */}
+            <NavLink href="/contact" label="Support" pathname={pathname} />
+          </nav>
 
-            {/* Desktop nav links — simplified */}
-            <nav className="hidden items-center gap-0.5 lg:flex">
-              {navLinks.map((link) => {
-                const isActive =
-                  link.href === "/"
-                    ? pathname === "/"
-                    : pathname === link.href || pathname.startsWith(link.href + "/");
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all ${
-                      isActive
-                        ? "bg-white/10 text-[#74ddc7]"
-                        : "text-white/50 hover:text-white/80 hover:bg-white/[0.04]"
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                );
-              })}
-
-              {/* Streaming mega menu */}
-              <StreamingMegaMenu />
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-2">
+          {/* Right: Controls */}
+          <div className="flex items-center gap-2 ml-auto">
             <ListenLiveButton />
             <button className="hidden sm:flex h-8 w-8 items-center justify-center rounded-full text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-colors">
               <Search className="h-4 w-4" />
