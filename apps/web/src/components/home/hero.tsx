@@ -6,8 +6,7 @@ import Link from "next/link";
 import { AppImage as Image } from "@/components/ui/app-image";
 import { ArrowDownRight } from "lucide-react";
 import { HERO_SHOWS } from "@/data/shows";
-
-const SECURENET_PLAYER_URL = "https://streamdb7web.securenetsystems.net/cirruscontent/WCCG";
+import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 
 const SLIDE_INTERVAL = 8000;
 
@@ -43,12 +42,10 @@ export function Hero() {
     };
   }, [activeIndex, isPaused, advanceSlide]);
 
+  const { open: openStreamPlayer } = useStreamPlayer();
+
   const handleListenLive = () => {
-    window.open(
-      SECURENET_PLAYER_URL,
-      "wccg_player",
-      "width=400,height=660,scrollbars=no,resizable=yes",
-    );
+    openStreamPlayer();
   };
 
   const goToSlide = (index: number) => {

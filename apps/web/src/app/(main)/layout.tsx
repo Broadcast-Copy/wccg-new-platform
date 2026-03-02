@@ -23,7 +23,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 
-const SECURENET_PLAYER_URL = "https://streamdb7web.securenetsystems.net/cirruscontent/WCCG";
+import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 
 // Simplified top nav: Home, Discover, Streaming (mega menu), Support
 const navLinks = [
@@ -111,18 +111,16 @@ function StreamingMegaMenu() {
 }
 
 function ListenLiveButton() {
-  const handleClick = () => {
-    window.open(
-      SECURENET_PLAYER_URL,
-      "wccg_player",
-      "width=400,height=660,scrollbars=no,resizable=yes",
-    );
-  };
+  const { open, isOpen } = useStreamPlayer();
 
   return (
     <button
-      onClick={handleClick}
-      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold transition-all bg-[#74ddc7]/10 text-[#74ddc7] border border-[#74ddc7]/20 hover:bg-[#74ddc7]/20"
+      onClick={open}
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold transition-all ${
+        isOpen
+          ? "bg-[#74ddc7] text-[#0a0a0f]"
+          : "bg-[#74ddc7]/10 text-[#74ddc7] border border-[#74ddc7]/20 hover:bg-[#74ddc7]/20"
+      }`}
       aria-label="Listen live"
     >
       <Radio className="h-3.5 w-3.5" />

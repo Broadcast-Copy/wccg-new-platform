@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { AppImage as Image } from "@/components/ui/app-image";
-import { useAudioPlayer } from "@/hooks/use-audio-player";
+import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 import Link from "next/link";
-import { Radio, Sparkles, Play, Pause, Megaphone } from "lucide-react";
+import { Radio, Sparkles, Play, Megaphone } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -95,36 +95,21 @@ const CATEGORIES = [
 // ---------------------------------------------------------------------------
 
 function ChannelTile({ stream }: { stream: Stream }) {
-  const { play, pause, isPlaying, currentStream } = useAudioPlayer();
-  const isThisPlaying = isPlaying && currentStream === stream.streamUrl;
+  const { open } = useStreamPlayer();
   const logo = CHANNEL_LOGOS[stream.id];
   const subtitle = CHANNEL_SUBTITLES[stream.id] || stream.description || "";
   const artists = CHANNEL_ARTISTS[stream.id] || "";
-  const showImage = stream.metadata?.currentShowImage || stream.metadata?.albumArt;
 
   const handleTogglePlay = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isThisPlaying) {
-      pause();
-    } else if (stream.streamUrl) {
-      play(stream.streamUrl, {
-        title: stream.metadata?.currentTrack,
-        artist: stream.metadata?.currentArtist,
-        streamName: stream.name,
-        albumArt: stream.metadata?.albumArt ?? logo,
-      });
-    }
+    open();
   };
 
   return (
     <div
       id={`channel-${stream.id}`}
-      className={`group relative overflow-hidden rounded-2xl border bg-white/[0.03] transition-all duration-300 hover:bg-white/[0.05] ${
-        isThisPlaying
-          ? "border-[#74ddc7]/30 shadow-lg shadow-[#74ddc7]/5"
-          : "border-white/[0.08] hover:border-white/[0.12]"
-      }`}
+      className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] transition-all duration-300 hover:bg-white/[0.05] hover:border-white/[0.12]"
     >
       <div className="flex items-stretch">
         {/* Left: Logo + Station Info */}
@@ -187,49 +172,14 @@ function ChannelTile({ stream }: { stream: Stream }) {
           <button
             onClick={handleTogglePlay}
             className="relative group/play"
-            aria-label={isThisPlaying ? "Pause" : "Play"}
+            aria-label="Listen Live"
           >
-            {showImage ? (
-              <div className="relative h-14 w-14 sm:h-20 sm:w-20 rounded-xl overflow-hidden ring-2 ring-white/[0.08] group-hover/play:ring-[#74ddc7]/30 transition-all">
-                <Image
-                  src={showImage}
-                  alt="Live Now"
-                  fill
-                  className="object-cover"
-                  sizes="80px"
-                />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover/play:opacity-100 transition-opacity">
-                  {isThisPlaying ? (
-                    <Pause className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                  ) : (
-                    <Play className="h-5 w-5 sm:h-6 sm:w-6 text-white ml-0.5" />
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div
-                className={`flex h-14 w-14 sm:h-20 sm:w-20 items-center justify-center rounded-xl transition-all ${
-                  isThisPlaying
-                    ? "bg-[#74ddc7] text-[#0a0a0f]"
-                    : "bg-white/[0.06] text-white/50 hover:bg-[#74ddc7]/20 hover:text-[#74ddc7]"
-                }`}
-              >
-                {isThisPlaying ? (
-                  <Pause className="h-6 w-6 sm:h-7 sm:w-7" />
-                ) : (
-                  <Play className="h-6 w-6 sm:h-7 sm:w-7 ml-0.5" />
-                )}
-              </div>
-            )}
-            {isThisPlaying && (
-              <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#74ddc7] opacity-75" />
-                <span className="relative inline-flex h-3 w-3 rounded-full bg-[#74ddc7]" />
-              </span>
-            )}
+            <div className="flex h-14 w-14 sm:h-20 sm:w-20 items-center justify-center rounded-xl transition-all bg-white/[0.06] text-white/50 hover:bg-[#74ddc7]/20 hover:text-[#74ddc7]">
+              <Play className="h-6 w-6 sm:h-7 sm:w-7 ml-0.5" />
+            </div>
           </button>
           <span className="text-[10px] sm:text-[11px] font-semibold text-white/50 uppercase tracking-wider">
-            {isThisPlaying ? "Playing" : "Live Now"}
+            Live Now
           </span>
         </div>
       </div>

@@ -37,7 +37,7 @@ import {
   GOSPEL_SHOWS,
   type ShowData,
 } from "@/data/shows";
-import { useAudioPlayer } from "@/hooks/use-audio-player";
+import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 
 // ─── Category helpers ──────────────────────────────────────────────────
 
@@ -172,8 +172,7 @@ const quickLinks = [
 // ─── Page component ────────────────────────────────────────────────────
 
 export default function DiscoverPage() {
-  const { play, isPlaying, currentStream } = useAudioPlayer();
-  const mainStreamUrl = process.env.NEXT_PUBLIC_MAIN_STREAM_URL || "https://stream.wccg.com/main";
+  const { open: openStreamPlayer } = useStreamPlayer();
 
   return (
     <div className="space-y-12">
@@ -205,15 +204,7 @@ export default function DiscoverPage() {
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Button
                 size="lg"
-                onClick={() => {
-                  if (!isPlaying || currentStream !== mainStreamUrl) {
-                    play(mainStreamUrl, {
-                      streamName: "WCCG 104.5 FM",
-                      title: "Live Stream",
-                      artist: "WCCG",
-                    });
-                  }
-                }}
+                onClick={openStreamPlayer}
                 className="rounded-full bg-[#dc2626] text-white font-bold hover:bg-[#b91c1c] px-6"
               >
                 <Play className="mr-2 h-4 w-4" />

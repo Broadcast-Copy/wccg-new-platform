@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { AppImage as Image } from "@/components/ui/app-image";
-import { useAudioPlayer } from "@/hooks/use-audio-player";
+import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 import Link from "next/link";
-import { Play, Pause, Clock, Mic2, Radio } from "lucide-react";
+import { Play, Clock, Mic2, Radio } from "lucide-react";
 import {
   WEEKDAY_SHOWS,
   SATURDAY_SHOWS,
@@ -27,40 +27,22 @@ const DAY_TABS = [
   },
 ] as const;
 
-// Main stream URL
-const MAIN_STREAM_URL = "https://ice66.securenetsystems.net/WCCG";
-
 // ---------------------------------------------------------------------------
 // Show Tile
 // ---------------------------------------------------------------------------
 
 function ShowTile({ show }: { show: ShowData }) {
-  const { play, pause, isPlaying, currentStream } = useAudioPlayer();
-  const isThisPlaying = isPlaying && currentStream === MAIN_STREAM_URL;
+  const { open } = useStreamPlayer();
   const heroImage = show.showImageUrl || show.imageUrl;
 
   const handleTogglePlay = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isThisPlaying) {
-      pause();
-    } else {
-      play(MAIN_STREAM_URL, {
-        streamName: show.name,
-        artist: show.hostNames,
-        albumArt: heroImage ?? undefined,
-      });
-    }
+    open();
   };
 
   return (
-    <div
-      className={`group relative overflow-hidden rounded-2xl border bg-white/[0.03] transition-all duration-300 hover:bg-white/[0.05] ${
-        isThisPlaying
-          ? "border-[#74ddc7]/30 shadow-lg shadow-[#74ddc7]/5"
-          : "border-white/[0.08] hover:border-white/[0.12]"
-      }`}
-    >
+    <div className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] transition-all duration-300 hover:bg-white/[0.05] hover:border-white/[0.12]">
       <div className="flex items-stretch">
         {/* Left: Show Info */}
         <div className="flex flex-1 items-center gap-4 sm:gap-5 p-4 sm:p-6">
@@ -136,30 +118,14 @@ function ShowTile({ show }: { show: ShowData }) {
           <button
             onClick={handleTogglePlay}
             className="relative group/play"
-            aria-label={isThisPlaying ? "Pause" : "Play"}
+            aria-label="Listen Live"
           >
-            <div
-              className={`flex h-14 w-14 sm:h-20 sm:w-20 items-center justify-center rounded-xl transition-all ${
-                isThisPlaying
-                  ? "bg-[#74ddc7] text-[#0a0a0f]"
-                  : "bg-white/[0.06] text-white/50 hover:bg-[#74ddc7]/20 hover:text-[#74ddc7]"
-              }`}
-            >
-              {isThisPlaying ? (
-                <Pause className="h-6 w-6 sm:h-7 sm:w-7" />
-              ) : (
-                <Play className="h-6 w-6 sm:h-7 sm:w-7 ml-0.5" />
-              )}
+            <div className="flex h-14 w-14 sm:h-20 sm:w-20 items-center justify-center rounded-xl transition-all bg-white/[0.06] text-white/50 hover:bg-[#74ddc7]/20 hover:text-[#74ddc7]">
+              <Play className="h-6 w-6 sm:h-7 sm:w-7 ml-0.5" />
             </div>
-            {isThisPlaying && (
-              <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#74ddc7] opacity-75" />
-                <span className="relative inline-flex h-3 w-3 rounded-full bg-[#74ddc7]" />
-              </span>
-            )}
           </button>
           <span className="text-[10px] sm:text-[11px] font-semibold text-white/50 uppercase tracking-wider">
-            {isThisPlaying ? "Playing" : "Listen"}
+            Listen
           </span>
         </div>
       </div>
