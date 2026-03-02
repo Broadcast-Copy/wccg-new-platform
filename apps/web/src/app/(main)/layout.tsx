@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useRef, useEffect } from "react";
 import { UserMenu } from "@/components/auth/user-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { MobileNav } from "@/components/navigation/mobile-nav";
@@ -18,9 +19,26 @@ import {
   Mic,
   Gift,
   Trophy,
+  ChevronDown,
+  HelpCircle,
 } from "lucide-react";
 
+// Simplified top nav: Home, Discover, Streaming (mega menu), Support
 const navLinks = [
+  { href: "/", label: "Home" },
+  { href: "/discover", label: "Discover" },
+  { href: "/contact", label: "Support" },
+];
+
+const streamingChannels = [
+  { href: "/channels", label: "WCCG 104.5 FM", description: "Hip Hop, Sports & Podcasts" },
+  { href: "/channels", label: "SOUL 104.5 FM", description: "Classic Soul & R&B" },
+  { href: "/channels", label: "HOT 104.5 FM", description: "Today's Hottest Hits" },
+  { href: "/channels", label: "104.5 THE VIBE", description: "Non-stop Vibes & Chill" },
+];
+
+// Full nav links for mobile drawer (keep full navigation there)
+const mobileNavLinks = [
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/channels", label: "Listen", icon: Headphones },
   { href: "/shows", label: "Shows", icon: Mic },
@@ -40,6 +58,55 @@ const bottomTabs = [
   { href: "/shows", label: "Shows", icon: Mic },
   { href: "/rewards", label: "Perks", icon: Gift },
 ];
+
+function StreamingMegaMenu() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+  const isActive = pathname.startsWith("/channels");
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={`inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all ${
+          isActive || open
+            ? "bg-white/10 text-[#74ddc7]"
+            : "text-white/50 hover:text-white/80 hover:bg-white/[0.04]"
+        }`}
+      >
+        Streaming
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 mt-2 w-72 rounded-xl border border-white/[0.08] bg-[#141420] p-2 shadow-2xl">
+          {streamingChannels.map((channel) => (
+            <Link
+              key={channel.label}
+              href={channel.href}
+              onClick={() => setOpen(false)}
+              className="flex flex-col gap-0.5 rounded-lg px-3 py-2.5 hover:bg-white/[0.06] transition-colors"
+            >
+              <span className="text-sm font-semibold text-white">{channel.label}</span>
+              <span className="text-xs text-white/40">{channel.description}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function MainLayout({
   children,
@@ -69,10 +136,13 @@ export default function MainLayout({
             </Link>
 
 
-            {/* Desktop nav links */}
+            {/* Desktop nav links — simplified */}
             <nav className="hidden items-center gap-0.5 lg:flex">
               {navLinks.map((link) => {
-                const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
+                const isActive =
+                  link.href === "/"
+                    ? pathname === "/"
+                    : pathname === link.href || pathname.startsWith(link.href + "/");
                 return (
                   <Link
                     key={link.href}
@@ -87,6 +157,9 @@ export default function MainLayout({
                   </Link>
                 );
               })}
+
+              {/* Streaming mega menu */}
+              <StreamingMegaMenu />
             </nav>
           </div>
 
@@ -96,7 +169,7 @@ export default function MainLayout({
             </button>
             <NotificationBell />
             <UserMenu />
-            <MobileNav navLinks={navLinks} />
+            <MobileNav navLinks={mobileNavLinks} />
           </div>
         </div>
       </header>

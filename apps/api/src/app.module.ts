@@ -25,6 +25,9 @@ import { AdvertisingModule } from './modules/advertising/advertising.module.js';
 import { FollowsModule } from './modules/follows/follows.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { ModerationModule } from './modules/moderation/moderation.module.js';
+import { CmsModule } from './modules/cms/cms.module.js';
+import { AdsModule } from './modules/ads/ads.module.js';
+import { NavigationModule } from './modules/navigation/navigation.module.js';
 
 // Root controller + service (health / info)
 import { AppController } from './app.controller.js';
@@ -57,6 +60,11 @@ import { AppService } from './app.service.js';
     FollowsModule,
     NotificationsModule,
     ModerationModule,
+
+    // ── CMS / Admin-managed content ─────────────────────────────────
+    CmsModule,
+    AdsModule,
+    NavigationModule,
   ],
   controllers: [AppController],
   providers: [
