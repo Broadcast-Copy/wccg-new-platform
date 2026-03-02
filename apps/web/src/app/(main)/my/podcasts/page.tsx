@@ -713,19 +713,19 @@ export default function MyPodcastsPage() {
         open={showCreateSeriesDialog}
         onOpenChange={setShowCreateSeriesDialog}
       >
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-lg">
           <form onSubmit={handleCreateSeries}>
             <DialogHeader>
               <DialogTitle>Create Podcast Series</DialogTitle>
               <DialogDescription>
-                Set up a new podcast series. Cover art is optional — you can
-                add it later. Choose your production style below.
+                Set up a new podcast series. Choose your production style
+                below.
               </DialogDescription>
             </DialogHeader>
 
             <div className="mt-4 space-y-4">
               {/* Title */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="series-title">
                   Title <span className="text-red-400">*</span>
                 </Label>
@@ -741,7 +741,7 @@ export default function MyPodcastsPage() {
               </div>
 
               {/* Description */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="series-description">Description</Label>
                 <Textarea
                   id="series-description"
@@ -753,92 +753,67 @@ export default function MyPodcastsPage() {
                       description: e.target.value,
                     }))
                   }
-                  rows={3}
+                  rows={2}
                 />
               </div>
 
               {/* ── Production Type Selector ──────────────────────────── */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label>Production Type</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {/* Audio Only */}
-                  <button
-                    type="button"
-                    onClick={() => setSeriesForm((f) => ({ ...f, productionType: "audio" }))}
-                    className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all text-center ${
-                      seriesForm.productionType === "audio"
-                        ? "border-[#7401df] bg-[#7401df]/10 ring-1 ring-[#7401df]/30"
-                        : "border-white/[0.08] bg-white/[0.02] hover:border-white/[0.15] hover:bg-white/[0.04]"
-                    }`}
-                  >
-                    <Mic className={`h-6 w-6 ${seriesForm.productionType === "audio" ? "text-[#7401df]" : "text-white/50"}`} />
-                    <div>
-                      <p className={`text-xs font-semibold ${seriesForm.productionType === "audio" ? "text-[#7401df]" : "text-white/70"}`}>Audio Only</p>
-                      <p className="text-[10px] text-white/30 mt-0.5">Traditional podcast</p>
-                    </div>
-                  </button>
-
-                  {/* Video Studio — Live */}
-                  <button
-                    type="button"
-                    onClick={() => setSeriesForm((f) => ({ ...f, productionType: "video-live" }))}
-                    className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all text-center ${
-                      seriesForm.productionType === "video-live"
-                        ? "border-[#dc2626] bg-[#dc2626]/10 ring-1 ring-[#dc2626]/30"
-                        : "border-white/[0.08] bg-white/[0.02] hover:border-white/[0.15] hover:bg-white/[0.04]"
-                    }`}
-                  >
-                    <Radio className={`h-6 w-6 ${seriesForm.productionType === "video-live" ? "text-[#dc2626]" : "text-white/50"}`} />
-                    <div>
-                      <p className={`text-xs font-semibold ${seriesForm.productionType === "video-live" ? "text-[#dc2626]" : "text-white/70"}`}>Live Broadcast</p>
-                      <p className="text-[10px] text-white/30 mt-0.5">2-camera studio</p>
-                    </div>
-                  </button>
-
-                  {/* Video Studio — Recorded */}
-                  <button
-                    type="button"
-                    onClick={() => setSeriesForm((f) => ({ ...f, productionType: "video-recorded" }))}
-                    className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all text-center ${
-                      seriesForm.productionType === "video-recorded"
-                        ? "border-[#74ddc7] bg-[#74ddc7]/10 ring-1 ring-[#74ddc7]/30"
-                        : "border-white/[0.08] bg-white/[0.02] hover:border-white/[0.15] hover:bg-white/[0.04]"
-                    }`}
-                  >
-                    <Video className={`h-6 w-6 ${seriesForm.productionType === "video-recorded" ? "text-[#74ddc7]" : "text-white/50"}`} />
-                    <div>
-                      <p className={`text-xs font-semibold ${seriesForm.productionType === "video-recorded" ? "text-[#74ddc7]" : "text-white/70"}`}>Record &amp; Edit</p>
-                      <p className="text-[10px] text-white/30 mt-0.5">2-camera studio</p>
-                    </div>
-                  </button>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(
+                    [
+                      { key: "audio" as const, label: "Audio", sub: "Podcast", icon: Mic, color: "#7401df" },
+                      { key: "video-live" as const, label: "Live", sub: "Broadcast", icon: Radio, color: "#dc2626" },
+                      { key: "video-recorded" as const, label: "Record", sub: "& Edit", icon: Video, color: "#74ddc7" },
+                    ] as const
+                  ).map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => setSeriesForm((f) => ({ ...f, productionType: opt.key }))}
+                      className={`flex flex-col items-center gap-1 rounded-lg border px-2 py-2.5 transition-all text-center ${
+                        seriesForm.productionType === opt.key
+                          ? `border-[${opt.color}] bg-[${opt.color}]/10 ring-1 ring-[${opt.color}]/30`
+                          : "border-white/[0.08] bg-white/[0.02] hover:border-white/[0.15]"
+                      }`}
+                      style={
+                        seriesForm.productionType === opt.key
+                          ? { borderColor: opt.color, backgroundColor: `${opt.color}1a`, boxShadow: `0 0 0 1px ${opt.color}4d` }
+                          : undefined
+                      }
+                    >
+                      <opt.icon className="h-5 w-5" style={{ color: seriesForm.productionType === opt.key ? opt.color : "rgba(255,255,255,0.4)" }} />
+                      <p className="text-[11px] font-semibold leading-tight" style={{ color: seriesForm.productionType === opt.key ? opt.color : "rgba(255,255,255,0.6)" }}>
+                        {opt.label}
+                      </p>
+                      <p className="text-[9px] text-white/30 leading-tight">{opt.sub}</p>
+                    </button>
+                  ))}
                 </div>
 
                 {/* Studio info box for video modes */}
-                {(seriesForm.productionType === "video-live" || seriesForm.productionType === "video-recorded") && (
-                  <div className="mt-2 rounded-lg border border-white/[0.08] bg-white/[0.03] p-3 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Camera className="h-4 w-4 text-white/50" />
-                      <span className="text-xs font-semibold text-white/70">
+                {seriesForm.productionType !== "audio" && (
+                  <div className="mt-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] p-2.5">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Camera className="h-3.5 w-3.5 text-white/50" />
+                      <span className="text-[11px] font-semibold text-white/70">
                         {seriesForm.productionType === "video-live" ? "Live Video Studio" : "Video Recording Studio"}
                       </span>
                     </div>
-                    <p className="text-[11px] text-white/40 leading-relaxed">
+                    <p className="text-[10px] text-white/40 leading-relaxed">
+                      2-camera setup with multi-track audio.
                       {seriesForm.productionType === "video-live"
-                        ? "After creating your series, you'll be taken to the podcast studio with a 2-camera setup. Your live video feed will be broadcasted in real-time to listeners."
-                        : "After creating your series, you'll be taken to the podcast studio with a 2-camera setup. Record your episode, then edit and publish when you're ready."}
+                        ? " Stream live to listeners in real-time."
+                        : " Record, edit, then publish."}
                     </p>
-                    <div className="flex items-center gap-3 text-[10px] text-white/30">
-                      <span className="flex items-center gap-1"><Camera className="h-3 w-3" /> Camera 1: Host</span>
-                      <span className="flex items-center gap-1"><Camera className="h-3 w-3" /> Camera 2: Guest</span>
-                      <span className="flex items-center gap-1"><Mic className="h-3 w-3" /> Multi-track audio</span>
-                    </div>
                   </div>
                 )}
               </div>
 
               {/* Category and Language row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
                   <Label htmlFor="series-category">Category</Label>
                   <Select
                     value={seriesForm.category}
@@ -847,7 +822,7 @@ export default function MyPodcastsPage() {
                     }
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select category" />
+                      <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
                       {PODCAST_CATEGORIES.map((cat) => (
@@ -859,7 +834,7 @@ export default function MyPodcastsPage() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="series-language">Language</Label>
                   <Select
                     value={seriesForm.language}
@@ -868,7 +843,7 @@ export default function MyPodcastsPage() {
                     }
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select language" />
+                      <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="en">English</SelectItem>
@@ -885,9 +860,9 @@ export default function MyPodcastsPage() {
               </div>
 
               {/* Cover Image URL — clearly optional */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="series-cover">
-                  Cover Image URL <span className="text-xs text-white/30 font-normal">(optional)</span>
+                  Cover Art <span className="text-[10px] text-white/30 font-normal">(optional)</span>
                 </Label>
                 <Input
                   id="series-cover"
@@ -901,25 +876,19 @@ export default function MyPodcastsPage() {
                     }))
                   }
                 />
-                <p className="text-xs text-muted-foreground">
-                  You can add cover art later. A default will be generated if left empty.
-                </p>
               </div>
 
               {/* Tags */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="series-tags">Tags</Label>
                 <Input
                   id="series-tags"
-                  placeholder="music, interviews, culture (comma-separated)"
+                  placeholder="music, interviews, culture"
                   value={seriesForm.tags}
                   onChange={(e) =>
                     setSeriesForm((f) => ({ ...f, tags: e.target.value }))
                   }
                 />
-                <p className="text-xs text-muted-foreground">
-                  Separate tags with commas
-                </p>
               </div>
             </div>
 

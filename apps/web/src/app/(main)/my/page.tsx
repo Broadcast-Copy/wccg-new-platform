@@ -12,6 +12,17 @@ import {
   Building2,
   Mic,
   Music,
+  Radio,
+  Users,
+  BarChart3,
+  Shield,
+  Megaphone,
+  Settings,
+  FileText,
+  Clock,
+  ListMusic,
+  Eye,
+  Headphones,
 } from "lucide-react";
 import {
   Card,
@@ -24,6 +35,8 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { apiClient } from "@/lib/api-client";
 
+// ─── Types ──────────────────────────────────────────────────────────────
+
 interface DashboardStats {
   pointsBalance: number;
   favoritesCount: number;
@@ -35,6 +48,8 @@ interface DashboardStats {
     createdAt: string;
   }>;
 }
+
+// ─── Helpers ────────────────────────────────────────────────────────────
 
 function formatDate(dateStr: string) {
   try {
@@ -63,6 +78,8 @@ function reasonLabel(reason: string) {
       return reason;
   }
 }
+
+// ─── Component ──────────────────────────────────────────────────────────
 
 export default function UserDashboardPage() {
   const { user } = useAuth();
@@ -147,73 +164,266 @@ export default function UserDashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">My Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground">
-          Your WCCG activity at a glance
+          Station management &amp; your WCCG activity
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Link href="/my/points">
-          <Card className="transition-colors hover:bg-muted/50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Points Balance
-              </CardTitle>
-              <Star className="h-4 w-4 text-yellow-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {loading
-                  ? "--"
-                  : stats.pointsBalance.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground">WCCG Points</p>
-            </CardContent>
-          </Card>
-        </Link>
+      {/* ═══════════════════════════════════════════════════════════════════
+          ADMIN: Station Overview
+          ═══════════════════════════════════════════════════════════════════ */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Shield className="h-4 w-4 text-[#dc2626]" />
+          <h2 className="text-lg font-semibold">Station Control</h2>
+          <Badge className="border-[#dc2626]/30 bg-[#dc2626]/10 text-[#dc2626] text-[10px]">
+            Admin
+          </Badge>
+        </div>
 
-        <Link href="/my/tickets">
-          <Card className="transition-colors hover:bg-muted/50">
+        {/* Live status cards */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Stream status */}
+          <Card className="border-white/[0.06]">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Event Tickets
+                Stream Status
               </CardTitle>
-              <Ticket className="h-4 w-4 text-blue-500" />
+              <Radio className="h-4 w-4 text-[#74ddc7]" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {loading ? "--" : stats.ticketsCount}
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#74ddc7] opacity-75" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#74ddc7]" />
+                </span>
+                <span className="text-lg font-bold text-[#74ddc7]">LIVE</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Active registrations
+              <p className="text-xs text-muted-foreground mt-1">
+                WCCG 104.5 FM — On Air
               </p>
             </CardContent>
           </Card>
-        </Link>
 
-        <Link href="/my/favorites">
-          <Card className="transition-colors hover:bg-muted/50">
+          {/* Active Listeners */}
+          <Card className="border-white/[0.06]">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Favorites</CardTitle>
-              <Heart className="h-4 w-4 text-red-500" />
+              <CardTitle className="text-sm font-medium">
+                Active Listeners
+              </CardTitle>
+              <Headphones className="h-4 w-4 text-[#7401df]" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {loading ? "--" : stats.favoritesCount}
-              </div>
+              <div className="text-2xl font-bold">--</div>
+              <p className="text-xs text-muted-foreground">Current sessions</p>
+            </CardContent>
+          </Card>
+
+          {/* Today&apos;s Page Views */}
+          <Card className="border-white/[0.06]">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Page Views</CardTitle>
+              <Eye className="h-4 w-4 text-blue-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">--</div>
+              <p className="text-xs text-muted-foreground">Today</p>
+            </CardContent>
+          </Card>
+
+          {/* Registered Users */}
+          <Card className="border-white/[0.06]">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Users
+              </CardTitle>
+              <Users className="h-4 w-4 text-[#74ddc7]" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">--</div>
               <p className="text-xs text-muted-foreground">
-                Saved shows & streams
+                Registered accounts
               </p>
             </CardContent>
           </Card>
-        </Link>
-      </div>
+        </div>
 
-      {/* Recent Points Activity */}
+        {/* Admin quick actions */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Link href="/my/admin/content">
+            <Card className="group border-white/[0.06] transition-all hover:border-[#7401df]/30 hover:bg-[#7401df]/5">
+              <CardContent className="flex items-center gap-3 pt-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#7401df]/10 group-hover:bg-[#7401df]/20 transition-colors">
+                  <FileText className="h-5 w-5 text-[#7401df]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">Content Manager</p>
+                  <p className="text-xs text-muted-foreground">
+                    Shows, schedule, playlists
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-[#7401df] transition-colors" />
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/my/admin/users">
+            <Card className="group border-white/[0.06] transition-all hover:border-[#74ddc7]/30 hover:bg-[#74ddc7]/5">
+              <CardContent className="flex items-center gap-3 pt-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#74ddc7]/10 group-hover:bg-[#74ddc7]/20 transition-colors">
+                  <Users className="h-5 w-5 text-[#74ddc7]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">User Management</p>
+                  <p className="text-xs text-muted-foreground">
+                    Roles, permissions, accounts
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-[#74ddc7] transition-colors" />
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/my/admin/analytics">
+            <Card className="group border-white/[0.06] transition-all hover:border-blue-400/30 hover:bg-blue-400/5">
+              <CardContent className="flex items-center gap-3 pt-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-400/10 group-hover:bg-blue-400/20 transition-colors">
+                  <BarChart3 className="h-5 w-5 text-blue-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">Analytics</p>
+                  <p className="text-xs text-muted-foreground">
+                    Listeners, engagement, trends
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-blue-400 transition-colors" />
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/my/admin/broadcast">
+            <Card className="group border-white/[0.06] transition-all hover:border-[#dc2626]/30 hover:bg-[#dc2626]/5">
+              <CardContent className="flex items-center gap-3 pt-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#dc2626]/10 group-hover:bg-[#dc2626]/20 transition-colors">
+                  <Radio className="h-5 w-5 text-[#dc2626]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">Broadcast Controls</p>
+                  <p className="text-xs text-muted-foreground">
+                    Stream, automation, fallback
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-[#dc2626] transition-colors" />
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/my/admin/announcements">
+            <Card className="group border-white/[0.06] transition-all hover:border-yellow-400/30 hover:bg-yellow-400/5">
+              <CardContent className="flex items-center gap-3 pt-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-400/10 group-hover:bg-yellow-400/20 transition-colors">
+                  <Megaphone className="h-5 w-5 text-yellow-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">Announcements</p>
+                  <p className="text-xs text-muted-foreground">
+                    Push alerts, banners, news
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-yellow-400 transition-colors" />
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/my/admin/settings">
+            <Card className="group border-white/[0.06] transition-all hover:border-white/20 hover:bg-white/5">
+              <CardContent className="flex items-center gap-3 pt-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/[0.06] group-hover:bg-white/10 transition-colors">
+                  <Settings className="h-5 w-5 text-white/60" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">Station Settings</p>
+                  <p className="text-xs text-muted-foreground">
+                    Branding, integrations, config
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-white/60 transition-colors" />
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          USER: Personal Stats
+          ═══════════════════════════════════════════════════════════════════ */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold">My Activity</h2>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Link href="/my/points">
+            <Card className="transition-colors hover:bg-muted/50">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Points Balance
+                </CardTitle>
+                <Star className="h-4 w-4 text-yellow-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {loading ? "--" : stats.pointsBalance.toLocaleString()}
+                </div>
+                <p className="text-xs text-muted-foreground">WCCG Points</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/my/tickets">
+            <Card className="transition-colors hover:bg-muted/50">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Event Tickets
+                </CardTitle>
+                <Ticket className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {loading ? "--" : stats.ticketsCount}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Active registrations
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/my/favorites">
+            <Card className="transition-colors hover:bg-muted/50">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Favorites
+                </CardTitle>
+                <Heart className="h-4 w-4 text-red-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {loading ? "--" : stats.favoritesCount}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Saved shows &amp; streams
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          Recent Points Activity
+          ═══════════════════════════════════════════════════════════════════ */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -254,8 +464,8 @@ export default function UserDashboardPage() {
                     <div
                       className={`flex h-8 w-8 items-center justify-center rounded-full ${
                         tx.amount > 0
-                          ? "bg-green-100 text-green-600"
-                          : "bg-red-100 text-red-600"
+                          ? "bg-green-500/10 text-green-400"
+                          : "bg-red-500/10 text-red-400"
                       }`}
                     >
                       <Star className="h-4 w-4" />
@@ -273,8 +483,8 @@ export default function UserDashboardPage() {
                     variant="outline"
                     className={
                       tx.amount > 0
-                        ? "border-green-200 text-green-600"
-                        : "border-red-200 text-red-600"
+                        ? "border-green-500/30 text-green-400"
+                        : "border-red-500/30 text-red-400"
                     }
                   >
                     {tx.amount > 0 ? "+" : ""}
@@ -287,116 +497,43 @@ export default function UserDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Quick Links */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Link href="/events">
-          <Card className="transition-colors hover:bg-muted/50">
-            <CardContent className="flex items-center gap-3 pt-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <Ticket className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium">Browse Events</p>
-                <p className="text-sm text-muted-foreground">
-                  Find upcoming community events
-                </p>
-              </div>
-              <ChevronRight className="ml-auto h-5 w-5 text-muted-foreground" />
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/rewards">
-          <Card className="transition-colors hover:bg-muted/50">
-            <CardContent className="flex items-center gap-3 pt-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <Star className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium">Rewards Catalog</p>
-                <p className="text-sm text-muted-foreground">
-                  Redeem points for exclusive rewards
-                </p>
-              </div>
-              <ChevronRight className="ml-auto h-5 w-5 text-muted-foreground" />
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
-
-      {/* More Options */}
-      <div>
-        <h2 className="mb-3 text-lg font-semibold">More Options</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Link href="/my/events">
-            <Card className="transition-colors hover:bg-muted/50">
-              <CardContent className="flex items-center gap-3 pt-6">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#7401df]/10">
-                  <CalendarDays className="h-5 w-5 text-[#7401df]" />
-                </div>
-                <div>
-                  <p className="font-medium">My Events</p>
-                  <p className="text-sm text-muted-foreground">
-                    Manage your events and tickets
-                  </p>
-                </div>
-                <ChevronRight className="ml-auto h-5 w-5 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/my/directory">
-            <Card className="transition-colors hover:bg-muted/50">
-              <CardContent className="flex items-center gap-3 pt-6">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#74ddc7]/10">
-                  <Building2 className="h-5 w-5 text-[#74ddc7]" />
-                </div>
-                <div>
-                  <p className="font-medium">My Directory</p>
-                  <p className="text-sm text-muted-foreground">
-                    Manage your business listings
-                  </p>
-                </div>
-                <ChevronRight className="ml-auto h-5 w-5 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/my/podcasts">
-            <Card className="transition-colors hover:bg-muted/50">
-              <CardContent className="flex items-center gap-3 pt-6">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#7401df]/10">
-                  <Mic className="h-5 w-5 text-[#7401df]" />
-                </div>
-                <div>
-                  <p className="font-medium">My Podcasts</p>
-                  <p className="text-sm text-muted-foreground">
-                    Create and manage podcasts
-                  </p>
-                </div>
-                <ChevronRight className="ml-auto h-5 w-5 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/dashboard/mixes">
-            <Card className="transition-colors hover:bg-muted/50">
-              <CardContent className="flex items-center gap-3 pt-6">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#74ddc7]/10">
-                  <Music className="h-5 w-5 text-[#74ddc7]" />
-                </div>
-                <div>
-                  <p className="font-medium">My Mixes</p>
-                  <p className="text-sm text-muted-foreground">
-                    Upload and manage DJ mixes
-                  </p>
-                </div>
-                <ChevronRight className="ml-auto h-5 w-5 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
+      {/* ═══════════════════════════════════════════════════════════════════
+          Quick Links
+          ═══════════════════════════════════════════════════════════════════ */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Quick Links</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { href: "/my/history", label: "Listening History", desc: "Track what you heard", icon: Clock, color: "#74ddc7" },
+            { href: "/my/podcasts", label: "My Podcasts", desc: "Create & manage", icon: Mic, color: "#7401df" },
+            { href: "/my/events", label: "My Events", desc: "Events & tickets", icon: CalendarDays, color: "#7401df" },
+            { href: "/my/directory", label: "My Directory", desc: "Business listings", icon: Building2, color: "#74ddc7" },
+            { href: "/dashboard/mixes", label: "My Mixes", desc: "Upload DJ mixes", icon: Music, color: "#74ddc7" },
+            { href: "/events", label: "Browse Events", desc: "Upcoming events", icon: Ticket, color: "#7401df" },
+            { href: "/rewards", label: "Rewards Catalog", desc: "Redeem points", icon: Star, color: "#dc2626" },
+            { href: "/schedule", label: "Schedule", desc: "What\u2019s on today", icon: ListMusic, color: "#7401df" },
+          ].map((item) => (
+            <Link key={item.href} href={item.href}>
+              <Card className="group border-white/[0.06] transition-all hover:border-white/[0.12] hover:bg-white/[0.02]">
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors"
+                    style={{ backgroundColor: `${item.color}15` }}
+                  >
+                    <item.icon className="h-4 w-4" style={{ color: item.color }} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{item.label}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">
+                      {item.desc}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
         </div>
-      </div>
+      </section>
     </div>
   );
 }
