@@ -24,6 +24,8 @@ import {
   Megaphone,
   Navigation,
   LogOut,
+  Podcast,
+  ListMusic,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,6 +64,13 @@ const navSections = [
       { href: "/admin/events", label: "Events", icon: Calendar },
       { href: "/admin/directory", label: "Directory", icon: MapPin },
       { href: "/admin/mixes", label: "DJ Mixes", icon: Disc3 },
+    ],
+  },
+  {
+    label: "Creator Studio",
+    items: [
+      { href: "/admin/podcasts", label: "Podcasts", icon: Podcast },
+      { href: "/admin/podcasts/episodes", label: "Episodes", icon: ListMusic },
     ],
   },
   {

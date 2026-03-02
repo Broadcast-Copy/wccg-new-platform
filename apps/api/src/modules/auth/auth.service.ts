@@ -111,4 +111,22 @@ export class AuthService {
       return 'listener';
     }
   }
+
+  /**
+   * Get all roles for a user as an array of strings.
+   */
+  async getUserRoles(userId: string): Promise<string[]> {
+    try {
+      const { data: userRoles, error } = await this.db.from('user_roles')
+        .select('role_id')
+        .eq('profile_id', userId);
+
+      if (error || !userRoles || userRoles.length === 0) return ['listener'];
+
+      return userRoles.map((ur: any) => ur.role_id as string);
+    } catch (err) {
+      this.logger.error(`Failed to get roles for user ${userId}: ${(err as Error).message}`);
+      return ['listener'];
+    }
+  }
 }

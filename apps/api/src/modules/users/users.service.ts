@@ -135,6 +135,110 @@ export class UsersService {
     return this.update(userId, sanitized);
   }
 
+  // ─── Impersonation ──────────────────────────────────────────
+
+  /**
+   * Verify that the requesting user has super_admin role.
+   */
+  async isSuperAdmin(userId: string): Promise<boolean> {
+    const { data, error } = await this.db.from('user_roles')
+      .select('role_id')
+      .eq('profile_id', userId)
+      .eq('role_id', 'super_admin')
+      .maybeSingle();
+
+    if (error) return false;
+    return !!data;
+  }
+
+  /**
+   * Get full dashboard data for a target user (for impersonation).
+   * Returns the user's profile, roles, podcasts, points, etc.
+   */
+  async getUserDashboard(targetUserId: string) {
+    const profile = await this.findById(targetUserId);
+    if (!profile) throw new NotFoundException('Target user not found');
+
+    // Fetch user's podcast series
+    const { data: podcasts } = await this.db.from('podcast_series')
+      .select('id, title, status, subscriber_count, total_plays, created_at')
+      .eq('creator_id', targetUserId)
+      .order('created_at', { ascending: false });
+
+    // Fetch user's podcast episodes count
+    const { count: episodeCount } = await this.db.from('podcast_episodes')
+      .select('id', { count: 'exact', head: true })
+      .in('series_id', (podcasts ?? []).map((p: any) => p.id));
+
+    // Fetch user's points balance
+    const { data: pointsData } = await this.db.from('point_balances')
+      .select('balance')
+      .eq('profile_id', targetUserId)
+      .maybeSingle();
+
+    // Fetch user's favorites count
+    const { count: favoritesCount } = await this.db.from('favorites')
+      .select('id', { count: 'exact', head: true })
+      .eq('profile_id', targetUserId);
+
+    return {
+      profile,
+      podcasts: (podcasts ?? []).map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        status: p.status,
+        subscriberCount: p.subscriber_count,
+        totalPlays: p.total_plays,
+        createdAt: p.created_at,
+      })),
+      stats: {
+        podcastSeries: (podcasts ?? []).length,
+        podcastEpisodes: episodeCount ?? 0,
+        points: pointsData?.balance ?? 0,
+        favorites: favoritesCount ?? 0,
+      },
+    };
+  }
+
+  /**
+   * Log an impersonation event.
+   */
+  async logImpersonation(adminId: string, targetUserId: string, action: 'start' | 'end') {
+    await this.db.from('impersonation_log')
+      .insert({
+        admin_id: adminId,
+        target_user_id: targetUserId,
+        action,
+      });
+  }
+
+  /**
+   * Update a user's roles (super_admin only).
+   */
+  async updateRoles(userId: string, roles: string[]) {
+    this.logger.debug(`Updating roles for ${userId}: ${roles.join(', ')}`);
+
+    // Validate user exists
+    const existing = await this.findById(userId);
+    if (!existing) throw new NotFoundException('User not found');
+
+    // Delete existing roles
+    await this.db.from('user_roles')
+      .delete()
+      .eq('profile_id', userId);
+
+    // Insert new roles
+    if (roles.length > 0) {
+      const rows = roles.map((roleId) => ({
+        profile_id: userId,
+        role_id: roleId,
+      }));
+      await this.db.from('user_roles').insert(rows);
+    }
+
+    return this.findById(userId);
+  }
+
   // ─── Private helpers ──────────────────────────────────────────
 
   private formatProfile(row: any) {

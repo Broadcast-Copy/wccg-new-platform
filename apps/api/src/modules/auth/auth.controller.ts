@@ -9,15 +9,17 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   /**
-   * GET /auth/me — Return the current user's identity from the JWT.
-   * Useful for the frontend to confirm authentication state.
+   * GET /auth/me — Return the current user's identity with database roles.
    */
   @Get('me')
-  getMe(@CurrentUser() user: SupabaseUser) {
+  async getMe(@CurrentUser() user: SupabaseUser) {
+    const role = await this.authService.getUserRole(user.sub);
+    const allRoles = await this.authService.getUserRoles(user.sub);
     return {
       id: user.sub,
       email: user.email,
-      role: user.app_metadata?.role ?? 'listener',
+      role,
+      roles: allRoles,
     };
   }
 
