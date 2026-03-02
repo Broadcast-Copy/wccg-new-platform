@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# WCCG Platform — Deploy Script
+# WCCG Platform — Deploy Script (cPanel / NVM)
 # ============================================================
 # Run from repo root: bash infra/deploy/deploy.sh
 # Re-run anytime to pull latest code and redeploy.
@@ -8,7 +8,11 @@
 
 set -euo pipefail
 
-APP_DIR="/var/www/wccg-new-platform"
+# Source NVM so node/pnpm/pm2 are in PATH
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+APP_DIR="$HOME/wccg-new-platform"
 cd "$APP_DIR"
 
 echo "=== WCCG Deploy ==="
@@ -41,8 +45,8 @@ echo ""
 echo "Services:"
 pm2 list
 echo ""
-echo "Admin:  http://localhost:3002/admin"
-echo "API:    http://localhost:3001/api/v1"
+echo "Admin:  https://admin.wccg1045.com"
+echo "API:    https://api.wccg1045fm.com"
 echo ""
 echo "Check logs:"
 echo "  pm2 logs wccg-api"

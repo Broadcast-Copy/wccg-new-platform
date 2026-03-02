@@ -25,6 +25,8 @@ export interface AudioPlayerContextValue {
   resume: () => void;
   /** Set the volume (0 to 1). */
   setVolume: (volume: number) => void;
+  /** Update metadata for the currently playing stream (e.g., from now-playing polling). */
+  updateMetadata: (metadata: Partial<StreamMetadata>) => void;
   /** The URL of the currently loaded stream, or null if none. */
   currentStream: string | null;
   /** Whether audio is currently playing. */
@@ -121,6 +123,10 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     setVolumeState(clamped);
   }, []);
 
+  const updateMetadata = useCallback((partial: Partial<StreamMetadata>) => {
+    setMetadata((prev) => ({ ...prev, ...partial }));
+  }, []);
+
   return (
     <AudioPlayerContext.Provider
       value={{
@@ -128,6 +134,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         pause,
         resume,
         setVolume,
+        updateMetadata,
         currentStream,
         isPlaying,
         volume,

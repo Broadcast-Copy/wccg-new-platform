@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { AppImage as Image } from "@/components/ui/app-image";
-import { ChannelCard } from "./channel-card";
-import { Radio, Sparkles } from "lucide-react";
+import { useAudioPlayer } from "@/hooks/use-audio-player";
+import Link from "next/link";
+import { Radio, Sparkles, Play, Pause, Megaphone } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -17,6 +18,8 @@ interface StreamMetadata {
   listenerCount?: number;
   isLive?: boolean;
   lastUpdated?: string;
+  currentShowName?: string;
+  currentShowImage?: string;
 }
 
 interface Stream {
@@ -39,7 +42,7 @@ interface ChannelGuideGridProps {
 }
 
 // ---------------------------------------------------------------------------
-// Channel logos for the featured rail
+// Channel logos
 // ---------------------------------------------------------------------------
 
 const CHANNEL_LOGOS: Record<string, string> = {
@@ -49,6 +52,26 @@ const CHANNEL_LOGOS: Record<string, string> = {
   stream_vibe: "/images/logos/the-vibe-logo.png",
   stream_yard: "/images/logos/yard-riddim-logo.png",
   stream_mixsquad: "/images/logos/mix-squad-logo.png",
+};
+
+// Channel subtitles
+const CHANNEL_SUBTITLES: Record<string, string> = {
+  stream_wccg: "Hip Hop and Hot R&B",
+  stream_soul: "Classic Soul & R&B",
+  stream_hot: "Today's Hottest Hits",
+  stream_vibe: "Non-stop Vibes & Chill",
+  stream_yard: "Caribbean & Reggae",
+  stream_mixsquad: "DJ Mixes & Live Sets",
+};
+
+// Channel featured artists
+const CHANNEL_ARTISTS: Record<string, string> = {
+  stream_wccg: "J. Cole, Kendrick Lamar, Cardi B, Future, Glorilla, Chris Brown...",
+  stream_soul: "Aretha Franklin, Marvin Gaye, Al Green, Stevie Wonder...",
+  stream_hot: "Drake, Doja Cat, SZA, Lil Baby, Metro Boomin...",
+  stream_vibe: "H.E.R., Daniel Caesar, Khalid, Jhené Aiko, Lucky Daye...",
+  stream_yard: "Shaggy, Sean Paul, Vybz Kartel, Alkaline...",
+  stream_mixsquad: "Guest DJs, live mixes, exclusive sets...",
 };
 
 // ---------------------------------------------------------------------------
@@ -68,6 +91,153 @@ const CATEGORIES = [
 ];
 
 // ---------------------------------------------------------------------------
+// Wide Channel Tile
+// ---------------------------------------------------------------------------
+
+function ChannelTile({ stream }: { stream: Stream }) {
+  const { play, pause, isPlaying, currentStream } = useAudioPlayer();
+  const isThisPlaying = isPlaying && currentStream === stream.streamUrl;
+  const logo = CHANNEL_LOGOS[stream.id];
+  const subtitle = CHANNEL_SUBTITLES[stream.id] || stream.description || "";
+  const artists = CHANNEL_ARTISTS[stream.id] || "";
+  const showImage = stream.metadata?.currentShowImage || stream.metadata?.albumArt;
+
+  const handleTogglePlay = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isThisPlaying) {
+      pause();
+    } else if (stream.streamUrl) {
+      play(stream.streamUrl, {
+        title: stream.metadata?.currentTrack,
+        artist: stream.metadata?.currentArtist,
+        streamName: stream.name,
+        albumArt: stream.metadata?.albumArt ?? logo,
+      });
+    }
+  };
+
+  return (
+    <div
+      id={`channel-${stream.id}`}
+      className={`group relative overflow-hidden rounded-2xl border bg-white/[0.03] transition-all duration-300 hover:bg-white/[0.05] ${
+        isThisPlaying
+          ? "border-[#74ddc7]/30 shadow-lg shadow-[#74ddc7]/5"
+          : "border-white/[0.08] hover:border-white/[0.12]"
+      }`}
+    >
+      <div className="flex items-stretch">
+        {/* Left: Logo + Station Info */}
+        <div className="flex flex-1 items-center gap-4 sm:gap-5 p-4 sm:p-6">
+          {/* Station Logo */}
+          <Link
+            href={`/channels/${stream.id}`}
+            className="relative flex-shrink-0 h-16 w-16 sm:h-[88px] sm:w-[88px] rounded-xl overflow-hidden bg-white/[0.06] border border-white/[0.08] hover:border-white/[0.15] transition-colors"
+          >
+            {logo ? (
+              <Image
+                src={logo}
+                alt={stream.name}
+                fill
+                className="object-cover"
+                sizes="88px"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <Radio className="h-8 w-8 text-white/40" />
+              </div>
+            )}
+          </Link>
+
+          {/* Station Info */}
+          <div className="flex-1 min-w-0 space-y-1">
+            <Link href={`/channels/${stream.id}`}>
+              <h3 className="text-base sm:text-xl font-bold text-white group-hover:text-[#74ddc7] transition-colors">
+                {stream.name}
+              </h3>
+            </Link>
+            {subtitle && (
+              <p className="text-xs sm:text-sm text-[#74ddc7]/70 font-medium">{subtitle}</p>
+            )}
+            {artists && (
+              <p className="text-xs sm:text-sm text-white/40 line-clamp-1 hidden sm:block">{artists}</p>
+            )}
+
+            {/* Links */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 pt-1">
+              <Link
+                href={`/channels/${stream.id}`}
+                className="text-[11px] sm:text-xs text-white/40 hover:text-white/70 transition-colors underline underline-offset-2"
+              >
+                Show Information & Schedules
+              </Link>
+              <Link
+                href={`/advertise?channel=${stream.id}`}
+                className="inline-flex items-center gap-1 text-[11px] sm:text-xs text-white/30 hover:text-[#74ddc7] transition-colors uppercase tracking-wider font-medium"
+              >
+                <Megaphone className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                Advertise on this channel
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Live Now / Play */}
+        <div className="flex flex-col items-center justify-center gap-2 px-4 sm:px-8 py-4 border-l border-white/[0.06] bg-white/[0.02] min-w-[100px] sm:min-w-[140px]">
+          <button
+            onClick={handleTogglePlay}
+            className="relative group/play"
+            aria-label={isThisPlaying ? "Pause" : "Play"}
+          >
+            {showImage ? (
+              <div className="relative h-14 w-14 sm:h-20 sm:w-20 rounded-xl overflow-hidden ring-2 ring-white/[0.08] group-hover/play:ring-[#74ddc7]/30 transition-all">
+                <Image
+                  src={showImage}
+                  alt="Live Now"
+                  fill
+                  className="object-cover"
+                  sizes="80px"
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover/play:opacity-100 transition-opacity">
+                  {isThisPlaying ? (
+                    <Pause className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                  ) : (
+                    <Play className="h-5 w-5 sm:h-6 sm:w-6 text-white ml-0.5" />
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div
+                className={`flex h-14 w-14 sm:h-20 sm:w-20 items-center justify-center rounded-xl transition-all ${
+                  isThisPlaying
+                    ? "bg-[#74ddc7] text-[#0a0a0f]"
+                    : "bg-white/[0.06] text-white/50 hover:bg-[#74ddc7]/20 hover:text-[#74ddc7]"
+                }`}
+              >
+                {isThisPlaying ? (
+                  <Pause className="h-6 w-6 sm:h-7 sm:w-7" />
+                ) : (
+                  <Play className="h-6 w-6 sm:h-7 sm:w-7 ml-0.5" />
+                )}
+              </div>
+            )}
+            {isThisPlaying && (
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#74ddc7] opacity-75" />
+                <span className="relative inline-flex h-3 w-3 rounded-full bg-[#74ddc7]" />
+              </span>
+            )}
+          </button>
+          <span className="text-[10px] sm:text-[11px] font-semibold text-white/50 uppercase tracking-wider">
+            {isThisPlaying ? "Playing" : "Live Now"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -81,7 +251,6 @@ export function ChannelGuideGrid({ streams }: ChannelGuideGridProps) {
           (s) => s.category?.toUpperCase() === selectedCategory.toUpperCase(),
         );
 
-  // Only show categories that have at least one stream
   const categoriesWithStreams = CATEGORIES.filter(
     (cat) =>
       cat.key === "All" ||
@@ -89,49 +258,7 @@ export function ChannelGuideGrid({ streams }: ChannelGuideGridProps) {
   );
 
   return (
-    <div className="space-y-8">
-      {/* Featured Channels — Logo Carousel */}
-      <div className="relative">
-        <div className="flex items-center gap-6 overflow-x-auto pb-2 scrollbar-hide">
-          {streams.map((stream) => {
-            const logo = CHANNEL_LOGOS[stream.id];
-            return (
-              <button
-                key={stream.id}
-                onClick={() => {
-                  // Scroll the card into view
-                  const el = document.getElementById(`channel-${stream.id}`);
-                  el?.scrollIntoView({ behavior: "smooth", block: "center" });
-                }}
-                className="group flex flex-col items-center gap-2 flex-shrink-0"
-              >
-                <div className="relative h-20 w-20 rounded-2xl overflow-hidden bg-gradient-to-br from-gray-800 to-gray-900 ring-2 ring-border/50 group-hover:ring-primary/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-xl group-hover:shadow-primary/10">
-                  {logo ? (
-                    <Image
-                      src={logo}
-                      alt={stream.name}
-                      fill
-                      className="object-cover"
-                      sizes="80px"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <Radio className="h-8 w-8 text-white/50" />
-                    </div>
-                  )}
-                  {stream.metadata?.isLive && (
-                    <div className="absolute bottom-1 right-1 h-2.5 w-2.5 rounded-full bg-green-400 ring-2 ring-card shadow-lg shadow-green-400/50" />
-                  )}
-                </div>
-                <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors max-w-[80px] truncate text-center">
-                  {stream.name.replace("104.5", "").replace("FM", "").trim() || stream.name}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
+    <div className="space-y-6">
       {/* Category Filter Pills */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
         {categoriesWithStreams.map((cat) => {
@@ -140,16 +267,16 @@ export function ChannelGuideGrid({ streams }: ChannelGuideGridProps) {
             <button
               key={cat.key}
               onClick={() => setSelectedCategory(cat.key)}
-              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
+              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-all ${
                 isActive
-                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "bg-[#74ddc7] text-[#0a0a0f] shadow-md shadow-[#74ddc7]/20"
+                  : "bg-white/[0.06] text-white/50 hover:bg-white/[0.1] hover:text-white/80"
               }`}
             >
               {cat.icon && <cat.icon className="h-3.5 w-3.5" />}
               {cat.label}
               {cat.key === "All" && (
-                <span className={`ml-0.5 text-xs ${isActive ? "text-primary-foreground/70" : "text-muted-foreground/60"}`}>
+                <span className={`ml-0.5 text-xs ${isActive ? "text-[#0a0a0f]/60" : "text-white/30"}`}>
                   {streams.length}
                 </span>
               )}
@@ -158,35 +285,22 @@ export function ChannelGuideGrid({ streams }: ChannelGuideGridProps) {
         })}
       </div>
 
-      {/* Channels Grid */}
+      {/* Wide Channel Tiles — stacked vertically */}
       {filteredStreams.length > 0 ? (
-        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="flex flex-col gap-4">
           {filteredStreams.map((stream) => (
-            <div key={stream.id} id={`channel-${stream.id}`}>
-              <ChannelCard
-                streamId={stream.id}
-                name={stream.name}
-                description={stream.description}
-                streamUrl={stream.streamUrl}
-                category={stream.category}
-                isLive={stream.metadata?.isLive}
-                currentTrack={stream.metadata?.currentTrack}
-                currentArtist={stream.metadata?.currentArtist}
-                albumArt={stream.metadata?.albumArt}
-                listenerCount={stream.metadata?.listenerCount}
-              />
-            </div>
+            <ChannelTile key={stream.id} stream={stream} />
           ))}
         </div>
       ) : (
-        <div className="flex flex-col h-48 items-center justify-center rounded-2xl border border-dashed border-border/50 bg-muted/20">
-          <Radio className="h-8 w-8 text-muted-foreground/40 mb-3" />
-          <p className="text-sm font-medium text-muted-foreground">
+        <div className="flex flex-col h-48 items-center justify-center rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.02]">
+          <Radio className="h-8 w-8 text-white/20 mb-3" />
+          <p className="text-sm font-medium text-white/40">
             {selectedCategory === "All"
               ? "No channels available at the moment."
               : `No ${CATEGORIES.find((c) => c.key === selectedCategory)?.label ?? selectedCategory} channels available.`}
           </p>
-          <p className="text-xs text-muted-foreground/60 mt-1">Check back soon for new content</p>
+          <p className="text-xs text-white/20 mt-1">Check back soon for new content</p>
         </div>
       )}
     </div>

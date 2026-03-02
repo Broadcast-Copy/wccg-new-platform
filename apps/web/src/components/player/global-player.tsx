@@ -1,12 +1,28 @@
 "use client";
 
+import { useEffect } from "react";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
+import { useNowPlaying } from "@/hooks/use-now-playing";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, Volume2, VolumeX, Radio } from "lucide-react";
 
 export function GlobalPlayer() {
-  const { isPlaying, pause, resume, volume, setVolume, metadata, currentStream } =
+  const { isPlaying, pause, resume, volume, setVolume, metadata, currentStream, updateMetadata } =
     useAudioPlayer();
+
+  // Poll for now-playing metadata while stream is active
+  const { data: nowPlaying } = useNowPlaying(isPlaying);
+
+  // Update metadata when now-playing data changes
+  useEffect(() => {
+    if (nowPlaying && (nowPlaying.title || nowPlaying.artist)) {
+      updateMetadata({
+        title: nowPlaying.title || undefined,
+        artist: nowPlaying.artist || undefined,
+        albumArt: nowPlaying.albumArt || undefined,
+      });
+    }
+  }, [nowPlaying, updateMetadata]);
 
   if (!currentStream) {
     return null;

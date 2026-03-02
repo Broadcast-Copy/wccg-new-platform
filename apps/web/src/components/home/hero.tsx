@@ -9,7 +9,7 @@ import { Pause, ArrowDownRight } from "lucide-react";
 import { HERO_SHOWS } from "@/data/shows";
 
 const MAIN_STREAM_URL =
-  process.env.NEXT_PUBLIC_MAIN_STREAM_URL || "https://stream.wccg.com/main";
+  process.env.NEXT_PUBLIC_MAIN_STREAM_URL || "https://ice66.securenetsystems.net/WCCG";
 
 const SLIDE_INTERVAL = 8000;
 

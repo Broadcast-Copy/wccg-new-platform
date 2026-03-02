@@ -8,7 +8,6 @@ import { WeatherWidget } from "@/components/weather/weather-widget";
 import { EventCard } from "@/components/events/event-card";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { AppImage } from "@/components/ui/app-image";
 import {
   ArrowRight,
   Radio,
@@ -16,12 +15,7 @@ import {
   Users2,
   ShoppingBag,
   Gift,
-  Megaphone,
-  Headphones,
-  Music,
-  Mic,
   Trophy,
-  Ticket,
 } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 
@@ -34,15 +28,6 @@ interface EventItem {
   imageUrl?: string;
   isFree?: boolean;
 }
-
-const channels = [
-  { id: "stream_wccg", name: "WCCG 104.5", tagline: "Hip Hop & R&B", color: "from-[#74ddc7] to-[#0d9488]", logo: "/images/logos/wccg-logo.png" },
-  { id: "stream_soul", name: "Soul 104.5", tagline: "Classic Soul & R&B", color: "from-[#7401df] to-[#4c1d95]", logo: "/images/logos/soul-1045-logo.png" },
-  { id: "stream_hot", name: "Hot 104.5", tagline: "Trending Hits", color: "from-[#ef4444] to-[#b91c1c]", logo: "/images/logos/hot-1045-logo.png" },
-  { id: "stream_vibe", name: "Vibe 104.5", tagline: "Lo-Fi & Chill", color: "from-[#3b82f6] to-[#1d4ed8]", logo: "/images/logos/the-vibe-logo.png" },
-  { id: "stream_yard", name: "The Yard", tagline: "HBCU & Culture", color: "from-[#f59e0b] to-[#d97706]", logo: "/images/logos/yard-riddim-logo.png" },
-  { id: "stream_mixsquad", name: "MixSquad", tagline: "DJ Mixes 24/7", color: "from-[#ec4899] to-[#be185d]", logo: "/images/logos/mix-squad-logo.png" },
-];
 
 const platformFeatures = [
   {
@@ -148,50 +133,14 @@ export default function HomePage() {
       {/* Hero Ribbon */}
       <Hero />
 
-      {/* Channel Carousel */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold text-white">Now Streaming</h2>
-            <div className="flex items-center gap-1.5 rounded-full bg-[#74ddc7]/10 border border-[#74ddc7]/20 px-2.5 py-0.5">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#74ddc7] opacity-75" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#74ddc7]" />
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#74ddc7]">6 Live</span>
-            </div>
-          </div>
-          <Button variant="ghost" size="sm" asChild className="text-white/40 hover:text-[#74ddc7]">
-            <Link href="/channels">
-              View All
-              <ArrowRight className="ml-1 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-          {channels.map((ch) => (
-            <Link
-              key={ch.id}
-              href={`/channels/${ch.id}`}
-              className="group flex-shrink-0 w-[180px] overflow-hidden rounded-xl border border-white/[0.06] bg-[#141420] transition-all hover:border-white/[0.12] hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5"
-            >
-              <div className="h-32 bg-white flex items-center justify-center relative overflow-hidden p-3">
-                <AppImage
-                  src={ch.logo}
-                  alt={ch.name}
-                  width={300}
-                  height={300}
-                  className="h-24 w-auto object-contain"
-                />
-              </div>
-              <div className={`p-3 bg-gradient-to-br ${ch.color}`}>
-                <h3 className="text-sm font-bold text-white truncate">{ch.name}</h3>
-                <p className="text-xs text-white/70 mt-0.5">{ch.tagline}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
+      {/* Platform Headline */}
+      <section className="text-center py-4">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight">
+          One Platform. Endless Possibilities.
+        </h1>
+        <p className="mt-3 max-w-2xl mx-auto text-sm sm:text-base text-white/50 leading-relaxed">
+          Your hub for tickets, streaming, weather &amp; news updates, community discovery, podcast booking, dynamic advertising, and digital media services, all in one place.
+        </p>
       </section>
 
       {/* Platform Features */}

@@ -22,7 +22,11 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
-            cd /var/www/wccg-new-platform
+            # Source NVM so node/pnpm/pm2 are in PATH
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+            cd ~/wccg-new-platform
 
             echo "=== Pulling latest code ==="
             git pull origin main
