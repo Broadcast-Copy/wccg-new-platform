@@ -229,14 +229,13 @@ export default function DiscoverPage() {
       {/* ── Community Banner ─────────────────────────────────────────── */}
       <section className="rounded-2xl border border-border bg-card overflow-hidden">
         <div className="flex flex-col md:flex-row items-stretch">
-          {/* Left: Station image */}
-          <div className="relative w-full md:w-[45%] min-h-[220px] md:min-h-[280px] bg-gradient-to-br from-[#1a1a2e] to-[#0a0a0f] flex items-center justify-center overflow-hidden">
+          {/* Left: Community image */}
+          <div className="relative w-full md:w-[45%] min-h-[220px] md:min-h-[280px] overflow-hidden">
             <AppImage
-              src="/images/logos/wccg-logo.png"
-              alt="WCCG 104.5 FM"
-              width={320}
-              height={240}
-              className="object-contain p-8"
+              src="/images/discover-hero-1.png"
+              alt="WCCG 104.5 FM Community"
+              fill
+              className="object-cover"
             />
           </div>
 
