@@ -169,19 +169,22 @@ function StreamingMegaMenu() {
 
                   {/* Color swatch + tilted white card + logo */}
                   <div
-                    className="relative h-16 flex-1 rounded-xl overflow-hidden"
+                    className="relative h-20 flex-1 rounded-xl overflow-hidden"
                     style={{ backgroundColor: channel.color }}
                   >
                     {/* Tilted white card */}
-                    <div className="absolute -top-[10%] -right-[5%] -bottom-[10%] left-[15%] bg-white rounded-xl -rotate-6" />
-                    {/* Logo on top */}
-                    <Image
-                      src={channel.logo}
-                      alt={channel.label}
-                      fill
-                      className="relative z-10 object-contain p-1"
-                      sizes="400px"
-                    />
+                    <div className="absolute -top-[15%] -right-[5%] -bottom-[15%] left-[20%] bg-white rounded-2xl -rotate-6" />
+                    {/* Logo on top — fills the white card area */}
+                    <div className="absolute inset-0 left-[18%] z-10 flex items-center justify-center">
+                      <Image
+                        src={channel.logo}
+                        alt={channel.label}
+                        width={200}
+                        height={80}
+                        className="object-contain max-h-[90%] w-auto"
+                        sizes="300px"
+                      />
+                    </div>
                   </div>
                 </Link>
               ))}
