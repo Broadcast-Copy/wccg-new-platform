@@ -81,14 +81,14 @@ function RadioOption({
         className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
           checked
             ? "border-[#74ddc7] bg-[#74ddc7]"
-            : "border-white/30 group-hover:border-white/50"
+            : "border-white/30 group-hover:border-foreground/50"
         }`}
         onClick={() => onChange(value)}
       >
-        {checked && <div className="w-2 h-2 rounded-full bg-[#0a0a0f]" />}
+        {checked && <div className="w-2 h-2 rounded-full bg-background" />}
       </div>
       <span
-        className="text-sm text-white/70 group-hover:text-white/90"
+        className="text-sm text-foreground/70 group-hover:text-foreground/90"
         onClick={() => onChange(value)}
       >
         {label}
@@ -112,7 +112,7 @@ function CheckboxOption({
         className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
           checked
             ? "border-[#74ddc7] bg-[#74ddc7]"
-            : "border-white/30 group-hover:border-white/50"
+            : "border-white/30 group-hover:border-foreground/50"
         }`}
       >
         {checked && (
@@ -131,7 +131,7 @@ function CheckboxOption({
           </svg>
         )}
       </div>
-      <span className="text-sm text-white/70 group-hover:text-white/90">
+      <span className="text-sm text-foreground/70 group-hover:text-foreground/90">
         {label}
       </span>
     </label>
@@ -201,7 +201,7 @@ export default function VoiceOverPage() {
           <h1 className="text-3xl font-bold text-white mb-3">
             Request Submitted!
           </h1>
-          <p className="text-gray-400 max-w-md mx-auto mb-6">
+          <p className="text-white/60 max-w-md mx-auto mb-6">
             Thank you for your voice over and narration request. Our production
             team will review your submission and contact you within 1-2 business
             days.
@@ -235,10 +235,10 @@ export default function VoiceOverPage() {
               <Headphones className="h-8 w-8 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-2">
                 Voice Over &amp; Narration
               </h1>
-              <p className="text-base text-gray-400 max-w-2xl">
+              <p className="text-base text-muted-foreground max-w-2xl">
                 Professional voice over and narration services that bring your
                 content to life. Whether you&apos;re creating a commercial,
                 documentary, audiobook, e-learning module, or branded content,
@@ -250,11 +250,11 @@ export default function VoiceOverPage() {
       </div>
 
       {/* Pre-form info */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6">
-        <h2 className="text-lg font-semibold text-white mb-3">
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h2 className="text-lg font-semibold text-foreground mb-3">
           Before You Begin
         </h2>
-        <p className="text-sm text-white/50 mb-4">
+        <p className="text-sm text-muted-foreground mb-4">
           Please have the following ready before completing this form:
         </p>
         <ul className="space-y-2">
@@ -267,7 +267,7 @@ export default function VoiceOverPage() {
           ].map((item) => (
             <li
               key={item}
-              className="flex items-center gap-2 text-sm text-white/60"
+              className="flex items-center gap-2 text-sm text-foreground/60"
             >
               <CheckCircle2 className="h-3.5 w-3.5 text-[#74ddc7] shrink-0" />
               {item}
@@ -277,17 +277,17 @@ export default function VoiceOverPage() {
       </div>
 
       {/* Form */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] overflow-hidden">
-        <div className="border-b border-white/[0.06] p-4">
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="border-b border-border p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Step {step} of {TOTAL_STEPS}
             </span>
             <span className="text-xs font-bold text-[#74ddc7]">
               {progress}%
             </span>
           </div>
-          <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
+          <div className="h-2 bg-foreground/[0.06] rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-[#3b82f6] to-[#74ddc7] rounded-full transition-all duration-500"
               style={{ width: `${progress}%` }}
@@ -299,33 +299,33 @@ export default function VoiceOverPage() {
           {/* Step 1: Project Information */}
           {step === 1 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Project Information
               </h3>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Project Title or Working Title
                 </Label>
                 <Input
                   value={formData.projectTitle}
                   onChange={(e) => updateField("projectTitle", e.target.value)}
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                 />
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Type of Voice Work Needed
                 </Label>
                 <select
                   value={formData.voiceWorkType}
                   onChange={(e) => updateField("voiceWorkType", e.target.value)}
-                  className="mt-1 w-full rounded-md bg-white/[0.04] border border-white/[0.08] text-white/70 px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md bg-foreground/[0.04] border border-border text-foreground/70 px-3 py-2 text-sm"
                 >
-                  <option value="" className="bg-[#141420]">
+                  <option value="" className="bg-card">
                     Select type...
                   </option>
                   {voiceWorkTypes.map((type) => (
-                    <option key={type} value={type} className="bg-[#141420]">
+                    <option key={type} value={type} className="bg-card">
                       {type}
                     </option>
                   ))}
@@ -337,11 +337,11 @@ export default function VoiceOverPage() {
           {/* Step 2: Script & Messaging */}
           {step === 2 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Script &amp; Messaging
               </h3>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Do you have a script ready?
                 </Label>
                 <div className="space-y-2">
@@ -363,18 +363,18 @@ export default function VoiceOverPage() {
               </div>
               {formData.hasScript === "Yes (upload below)" && (
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Upload Script or Draft
                   </Label>
-                  <div className="mt-2 rounded-lg border border-dashed border-white/[0.12] p-6 text-center cursor-pointer hover:border-white/[0.2] transition-colors">
-                    <p className="text-sm text-white/40">
+                  <div className="mt-2 rounded-lg border border-dashed border-input p-6 text-center cursor-pointer hover:border-foreground/20 transition-colors">
+                    <p className="text-sm text-muted-foreground">
                       Click or drag a file to upload
                     </p>
                   </div>
                 </div>
               )}
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Estimated Script Length
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -398,14 +398,14 @@ export default function VoiceOverPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Key Words or Phrases to Emphasize
                 </Label>
                 <Textarea
                   value={formData.keyWords}
                   onChange={(e) => updateField("keyWords", e.target.value)}
                   placeholder="List any words or phrases that should be emphasized..."
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 min-h-[80px]"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60 min-h-[80px]"
                 />
               </div>
             </div>
@@ -414,11 +414,11 @@ export default function VoiceOverPage() {
           {/* Step 3: Vocal Style & Tone */}
           {step === 3 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Vocal Style &amp; Tone
               </h3>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Preferred Vocal Tone
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -433,7 +433,7 @@ export default function VoiceOverPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Voice Gender Preference
                 </Label>
                 <div className="flex gap-6">
@@ -450,7 +450,7 @@ export default function VoiceOverPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Accent or Delivery Preference
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -474,11 +474,11 @@ export default function VoiceOverPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Upload Reference Audio (optional)
                 </Label>
-                <div className="mt-2 rounded-lg border border-dashed border-white/[0.12] p-6 text-center cursor-pointer hover:border-white/[0.2] transition-colors">
-                  <p className="text-sm text-white/40">
+                <div className="mt-2 rounded-lg border border-dashed border-input p-6 text-center cursor-pointer hover:border-foreground/20 transition-colors">
+                  <p className="text-sm text-muted-foreground">
                     Click or drag a file to upload
                   </p>
                 </div>
@@ -489,11 +489,11 @@ export default function VoiceOverPage() {
           {/* Step 4: Technical Requirements */}
           {step === 4 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Technical Requirements
               </h3>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Preferred File Format
                 </Label>
                 <div className="flex flex-wrap gap-4">
@@ -512,7 +512,7 @@ export default function VoiceOverPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Delivery Style
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -527,7 +527,7 @@ export default function VoiceOverPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Do you require timed narration (matching video or visual
                   cues)?
                 </Label>
@@ -545,7 +545,7 @@ export default function VoiceOverPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Do you need multiple takes?
                 </Label>
                 <div className="flex gap-6">
@@ -567,11 +567,11 @@ export default function VoiceOverPage() {
           {/* Step 5: Usage & Deliverables */}
           {step === 5 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Usage &amp; Deliverables
               </h3>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Where will this voiceover be used?
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -588,7 +588,7 @@ export default function VoiceOverPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Expected Length of Final Audio (minutes)
                 </Label>
                 <Input
@@ -597,22 +597,22 @@ export default function VoiceOverPage() {
                     updateField("expectedLength", e.target.value)
                   }
                   placeholder="e.g., 2 minutes"
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 max-w-[200px]"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60 max-w-[200px]"
                 />
               </div>
               <div>
-                <Label className="text-white/70">Delivery Deadline</Label>
+                <Label className="text-foreground/70">Delivery Deadline</Label>
                 <Input
                   type="date"
                   value={formData.deliveryDeadline}
                   onChange={(e) =>
                     updateField("deliveryDeadline", e.target.value)
                   }
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white max-w-[200px]"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground max-w-[200px]"
                 />
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Rush Project?
                 </Label>
                 <div className="flex gap-6">
@@ -634,21 +634,21 @@ export default function VoiceOverPage() {
           {/* Step 6: Budget & Additional Details */}
           {step === 6 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Budget &amp; Additional Details
               </h3>
               <div>
-                <Label className="text-white/70">Estimated Budget ($)</Label>
+                <Label className="text-foreground/70">Estimated Budget ($)</Label>
                 <Input
                   type="text"
                   value={formData.budget}
                   onChange={(e) => updateField("budget", e.target.value)}
                   placeholder="e.g. $150 - $500"
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                 />
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Do you need a formal quote before recording begins?
                 </Label>
                 <div className="flex gap-6">
@@ -665,7 +665,7 @@ export default function VoiceOverPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Additional Notes or Special Instructions
                 </Label>
                 <Textarea
@@ -674,7 +674,7 @@ export default function VoiceOverPage() {
                     updateField("additionalNotes", e.target.value)
                   }
                   placeholder="Any additional details about your project..."
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 min-h-[100px]"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60 min-h-[100px]"
                 />
               </div>
             </div>
@@ -683,57 +683,57 @@ export default function VoiceOverPage() {
           {/* Step 7: Contact Information */}
           {step === 7 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Contact Information
               </h3>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Your Name <span className="text-red-400">*</span>
                   </Label>
                   <Input
                     value={formData.name}
                     onChange={(e) => updateField("name", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Business or Organization
                   </Label>
                   <Input
                     value={formData.business}
                     onChange={(e) => updateField("business", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Email Address <span className="text-red-400">*</span>
                   </Label>
                   <Input
                     type="email"
                     value={formData.email}
                     onChange={(e) => updateField("email", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Phone Number <span className="text-red-400">*</span>
                   </Label>
                   <Input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => updateField("phone", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Preferred Method of Communication
                 </Label>
                 <div className="flex flex-wrap gap-4">
@@ -753,12 +753,12 @@ export default function VoiceOverPage() {
           )}
 
           {/* Navigation */}
-          <div className="flex items-center justify-between pt-4 border-t border-white/[0.06]">
+          <div className="flex items-center justify-between pt-4 border-t border-border">
             <Button
               variant="outline"
               onClick={() => setStep(Math.max(1, step - 1))}
               disabled={step === 1}
-              className="border-white/[0.12] text-white/70 hover:bg-white/[0.04] disabled:opacity-30"
+              className="border-input text-foreground/70 hover:bg-foreground/[0.04] disabled:opacity-30"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
@@ -785,8 +785,8 @@ export default function VoiceOverPage() {
       </div>
 
       {/* Info footer */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 text-center">
-        <p className="text-sm text-white/40">
+      <div className="rounded-xl border border-border bg-card p-6 text-center">
+        <p className="text-sm text-muted-foreground">
           Carson Communications Studio · 115 Gillespie Street, Fayetteville, NC
           28301
           <br />

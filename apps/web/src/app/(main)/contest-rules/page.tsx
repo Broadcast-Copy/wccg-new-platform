@@ -59,8 +59,8 @@ export default function ContestRulesPage() {
               <Trophy className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Official Contest Rules</h1>
-              <p className="text-white/50 mt-1">General rules for all WCCG 104.5 FM contests</p>
+              <h1 className="text-3xl font-bold text-foreground">Official Contest Rules</h1>
+              <p className="text-muted-foreground mt-1">General rules for all WCCG 104.5 FM contests</p>
             </div>
           </div>
         </div>
@@ -76,27 +76,27 @@ export default function ContestRulesPage() {
 
       <div className="space-y-4">
         {rules.map((rule, index) => (
-          <div key={rule.title} className="rounded-xl border border-white/[0.06] bg-[#141420] p-5">
+          <div key={rule.title} className="rounded-xl border border-border bg-card p-5">
             <div className="flex items-start gap-3">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#74ddc7]/10 text-[#74ddc7] text-xs font-bold">
                 {index + 1}
               </span>
               <div>
-                <h3 className="font-semibold text-white mb-1">{rule.title}</h3>
-                <p className="text-sm text-white/40 leading-relaxed">{rule.content}</p>
+                <h3 className="font-semibold text-foreground mb-1">{rule.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{rule.content}</p>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 text-center space-y-2">
-        <p className="text-white/50 text-sm">
+      <div className="rounded-xl border border-border bg-card p-6 text-center space-y-2">
+        <p className="text-muted-foreground text-sm">
           Questions about contest rules?{" "}
           <Link href="/contact" className="text-[#74ddc7] hover:underline">Contact us</Link>
           {" "}or call (910) 484-4932.
         </p>
-        <p className="text-xs text-white/25">
+        <p className="text-xs text-muted-foreground/60">
           Last updated: January 2026
         </p>
       </div>

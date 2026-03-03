@@ -61,8 +61,8 @@ export default function MediaKitPage() {
               <FileText className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">WCCG Media Kit</h1>
-              <p className="text-white/50 mt-1">Everything you need to partner with us</p>
+              <h1 className="text-3xl font-bold text-foreground">WCCG Media Kit</h1>
+              <p className="text-muted-foreground mt-1">Everything you need to partner with us</p>
             </div>
           </div>
         </div>
@@ -71,25 +71,25 @@ export default function MediaKitPage() {
       {/* Key Stats */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-          <div key={stat.label} className="rounded-xl border border-white/[0.06] bg-[#141420] p-5 text-center">
+          <div key={stat.label} className="rounded-xl border border-border bg-card p-5 text-center">
             <stat.icon className="h-6 w-6 text-[#74ddc7] mx-auto mb-2" />
-            <div className="text-2xl font-black text-white">{stat.value}</div>
-            <div className="text-xs text-white/40 mt-0.5">{stat.label}</div>
+            <div className="text-2xl font-black text-foreground">{stat.value}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">{stat.label}</div>
           </div>
         ))}
       </div>
 
       {/* Demographics */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
         <div className="flex items-center gap-2">
           <Users className="h-5 w-5 text-[#74ddc7]" />
-          <h2 className="text-xl font-semibold text-white">Audience Demographics</h2>
+          <h2 className="text-xl font-semibold text-foreground">Audience Demographics</h2>
         </div>
         <div className="grid gap-2">
           {demographics.map((item) => (
             <div key={item.label} className="flex justify-between items-center py-2 border-b border-white/[0.04]">
-              <span className="text-sm text-white/40">{item.label}</span>
-              <span className="text-sm text-white font-medium text-right">{item.value}</span>
+              <span className="text-sm text-muted-foreground">{item.label}</span>
+              <span className="text-sm text-foreground font-medium text-right">{item.value}</span>
             </div>
           ))}
         </div>
@@ -97,15 +97,15 @@ export default function MediaKitPage() {
 
       {/* Advertising Products */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-white">Advertising Products</h2>
+        <h2 className="text-xl font-semibold text-foreground">Advertising Products</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {adProducts.map((product) => (
-            <div key={product.title} className="rounded-xl border border-white/[0.06] bg-[#141420] p-5 space-y-3">
-              <h3 className="font-semibold text-white">{product.title}</h3>
-              <p className="text-sm text-white/40 leading-relaxed">{product.description}</p>
+            <div key={product.title} className="rounded-xl border border-border bg-card p-5 space-y-3">
+              <h3 className="font-semibold text-foreground">{product.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{product.description}</p>
               <ul className="space-y-1">
                 {product.features.map((f, i) => (
-                  <li key={i} className="text-xs text-white/30 flex items-center gap-1.5">
+                  <li key={i} className="text-xs text-muted-foreground/70 flex items-center gap-1.5">
                     <span className="h-1 w-1 rounded-full bg-[#74ddc7]" />
                     {f}
                   </li>
@@ -126,7 +126,7 @@ export default function MediaKitPage() {
           <Button asChild className="rounded-full bg-white text-[#dc2626] font-bold hover:bg-white/90 px-6">
             <Link href="/advertise">Request a Proposal</Link>
           </Button>
-          <Button asChild variant="outline" className="rounded-full border-white/30 text-white hover:bg-white/10 px-6">
+          <Button asChild variant="outline" className="rounded-full border-white/30 text-white hover:bg-foreground/10 px-6">
             <Link href="/advertise/guidelines">View Ad Specs</Link>
           </Button>
         </div>

@@ -96,14 +96,14 @@ function RadioOption({
         className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
           checked
             ? "border-[#74ddc7] bg-[#74ddc7]"
-            : "border-white/30 group-hover:border-white/50"
+            : "border-white/30 group-hover:border-foreground/50"
         }`}
         onClick={() => onChange(value)}
       >
-        {checked && <div className="w-2 h-2 rounded-full bg-[#0a0a0f]" />}
+        {checked && <div className="w-2 h-2 rounded-full bg-background" />}
       </div>
       <span
-        className="text-sm text-white/70 group-hover:text-white/90"
+        className="text-sm text-foreground/70 group-hover:text-foreground/90"
         onClick={() => onChange(value)}
       >
         {label}
@@ -127,7 +127,7 @@ function CheckboxOption({
         className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
           checked
             ? "border-[#74ddc7] bg-[#74ddc7]"
-            : "border-white/30 group-hover:border-white/50"
+            : "border-white/30 group-hover:border-foreground/50"
         }`}
       >
         {checked && (
@@ -146,7 +146,7 @@ function CheckboxOption({
           </svg>
         )}
       </div>
-      <span className="text-sm text-white/70 group-hover:text-white/90">
+      <span className="text-sm text-foreground/70 group-hover:text-foreground/90">
         {label}
       </span>
     </label>
@@ -235,7 +235,7 @@ export default function LiveOnSitePage() {
           <h1 className="text-3xl font-bold text-white mb-3">
             Request Submitted!
           </h1>
-          <p className="text-gray-400 max-w-md mx-auto mb-6">
+          <p className="text-white/60 max-w-md mx-auto mb-6">
             Thank you for your live and on-site services request. Our events
             team will review your submission and contact you within 1-2 business
             days.
@@ -269,10 +269,10 @@ export default function LiveOnSitePage() {
               <Radio className="h-8 w-8 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-2">
                 Live &amp; On-Site Services
               </h1>
-              <p className="text-base text-gray-400 max-w-2xl">
+              <p className="text-base text-muted-foreground max-w-2xl">
                 Bring your event to life with professional live and on-site
                 production. High-quality audio, video, and on-air engagement for
                 community events, grand openings, concerts, festivals, and
@@ -284,11 +284,11 @@ export default function LiveOnSitePage() {
       </div>
 
       {/* Pre-form info */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6">
-        <h2 className="text-lg font-semibold text-white mb-3">
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h2 className="text-lg font-semibold text-foreground mb-3">
           Before You Begin
         </h2>
-        <p className="text-sm text-white/50 mb-4">
+        <p className="text-sm text-muted-foreground mb-4">
           Please have the following ready before completing this form:
         </p>
         <ul className="space-y-2">
@@ -301,7 +301,7 @@ export default function LiveOnSitePage() {
           ].map((item) => (
             <li
               key={item}
-              className="flex items-center gap-2 text-sm text-white/60"
+              className="flex items-center gap-2 text-sm text-foreground/60"
             >
               <CheckCircle2 className="h-3.5 w-3.5 text-[#74ddc7] shrink-0" />
               {item}
@@ -311,18 +311,18 @@ export default function LiveOnSitePage() {
       </div>
 
       {/* Form */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] overflow-hidden">
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
         {/* Progress bar */}
-        <div className="border-b border-white/[0.06] p-4">
+        <div className="border-b border-border p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Step {step} of {TOTAL_STEPS}
             </span>
             <span className="text-xs font-bold text-[#74ddc7]">
               {progress}%
             </span>
           </div>
-          <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
+          <div className="h-2 bg-foreground/[0.06] rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-[#dc2626] to-[#74ddc7] rounded-full transition-all duration-500"
               style={{ width: `${progress}%` }}
@@ -334,33 +334,33 @@ export default function LiveOnSitePage() {
           {/* Step 1: Event Details */}
           {step === 1 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Event Details
               </h3>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Event Name <span className="text-red-400">*</span>
                   </Label>
                   <Input
                     value={formData.eventName}
                     onChange={(e) => updateField("eventName", e.target.value)}
                     placeholder="Your event name"
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">Event Type</Label>
+                  <Label className="text-foreground/70">Event Type</Label>
                   <select
                     value={formData.eventType}
                     onChange={(e) => updateField("eventType", e.target.value)}
-                    className="mt-1 w-full rounded-md bg-white/[0.04] border border-white/[0.08] text-white/70 px-3 py-2 text-sm"
+                    className="mt-1 w-full rounded-md bg-foreground/[0.04] border border-border text-foreground/70 px-3 py-2 text-sm"
                   >
-                    <option value="" className="bg-[#141420]">
+                    <option value="" className="bg-card">
                       Select event type...
                     </option>
                     {eventTypes.map((type) => (
-                      <option key={type} value={type} className="bg-[#141420]">
+                      <option key={type} value={type} className="bg-card">
                         {type}
                       </option>
                     ))}
@@ -368,110 +368,110 @@ export default function LiveOnSitePage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70">Event Description</Label>
+                <Label className="text-foreground/70">Event Description</Label>
                 <Textarea
                   value={formData.eventDescription}
                   onChange={(e) =>
                     updateField("eventDescription", e.target.value)
                   }
                   placeholder="Describe the purpose and activities of your event..."
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 min-h-[100px]"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60 min-h-[100px]"
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-3">
                 <div>
-                  <Label className="text-white/70">Event Date</Label>
+                  <Label className="text-foreground/70">Event Date</Label>
                   <Input
                     type="date"
                     value={formData.eventDate}
                     onChange={(e) => updateField("eventDate", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">Start Time</Label>
+                  <Label className="text-foreground/70">Start Time</Label>
                   <Input
                     type="time"
                     value={formData.startTime}
                     onChange={(e) => updateField("startTime", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">End Time</Label>
+                  <Label className="text-foreground/70">End Time</Label>
                   <Input
                     type="time"
                     value={formData.endTime}
                     onChange={(e) => updateField("endTime", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground"
                   />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-white/70">Address Line 1</Label>
+                  <Label className="text-foreground/70">Address Line 1</Label>
                   <Input
                     value={formData.address1}
                     onChange={(e) => updateField("address1", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">Address Line 2</Label>
+                  <Label className="text-foreground/70">Address Line 2</Label>
                   <Input
                     value={formData.address2}
                     onChange={(e) => updateField("address2", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-4">
                 <div>
-                  <Label className="text-white/70">City</Label>
+                  <Label className="text-foreground/70">City</Label>
                   <Input
                     value={formData.city}
                     onChange={(e) => updateField("city", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">State</Label>
+                  <Label className="text-foreground/70">State</Label>
                   <select
                     value={formData.state}
                     onChange={(e) => updateField("state", e.target.value)}
-                    className="mt-1 w-full rounded-md bg-white/[0.04] border border-white/[0.08] text-white/70 px-3 py-2 text-sm"
+                    className="mt-1 w-full rounded-md bg-foreground/[0.04] border border-border text-foreground/70 px-3 py-2 text-sm"
                   >
-                    <option value="" className="bg-[#141420]">
+                    <option value="" className="bg-card">
                       —
                     </option>
                     {US_STATES.map((s) => (
-                      <option key={s} value={s} className="bg-[#141420]">
+                      <option key={s} value={s} className="bg-card">
                         {s}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <Label className="text-white/70">Zip Code</Label>
+                  <Label className="text-foreground/70">Zip Code</Label>
                   <Input
                     value={formData.zip}
                     onChange={(e) => updateField("zip", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">Estimated Attendance</Label>
+                  <Label className="text-foreground/70">Estimated Attendance</Label>
                   <Input
                     value={formData.estimatedAttendance}
                     onChange={(e) =>
                       updateField("estimatedAttendance", e.target.value)
                     }
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Indoor or Outdoor Event
                 </Label>
                 <div className="flex gap-6">
@@ -493,10 +493,10 @@ export default function LiveOnSitePage() {
           {/* Step 2: Service Selection */}
           {step === 2 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Service Selection
               </h3>
-              <p className="text-sm text-white/40">
+              <p className="text-sm text-muted-foreground">
                 Select the services you need for your event.
               </p>
               <div className="space-y-3">
@@ -519,7 +519,7 @@ export default function LiveOnSitePage() {
                     className={`block cursor-pointer rounded-xl border p-4 transition-all ${
                       formData.services.includes(svc.value)
                         ? "border-[#74ddc7]/50 bg-[#74ddc7]/[0.05]"
-                        : "border-white/[0.06] hover:border-white/[0.12]"
+                        : "border-border hover:border-input"
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -550,8 +550,8 @@ export default function LiveOnSitePage() {
                       <div
                         onClick={() => toggleArrayItem("services", svc.value)}
                       >
-                        <p className="font-semibold text-white">{svc.value}</p>
-                        <p className="mt-1 text-sm text-white/40">{svc.desc}</p>
+                        <p className="font-semibold text-foreground">{svc.value}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">{svc.desc}</p>
                       </div>
                     </div>
                   </label>
@@ -563,12 +563,12 @@ export default function LiveOnSitePage() {
           {/* Step 3: DJ Selection */}
           {step === 3 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 DJ Selection
               </h3>
               {!formData.services.includes("Live Remote") && (
-                <div className="rounded-lg bg-white/[0.04] border border-white/[0.08] p-4 text-center">
-                  <p className="text-sm text-white/40">
+                <div className="rounded-lg bg-foreground/[0.04] border border-border p-4 text-center">
+                  <p className="text-sm text-muted-foreground">
                     DJ selection is available when &quot;Live Remote&quot; is
                     selected. You can skip this step.
                   </p>
@@ -577,22 +577,22 @@ export default function LiveOnSitePage() {
               {formData.services.includes("Live Remote") && (
                 <>
                   <div>
-                    <Label className="text-white/70">Select a DJ</Label>
+                    <Label className="text-foreground/70">Select a DJ</Label>
                     <select
                       value={formData.selectedDJ}
                       onChange={(e) =>
                         updateField("selectedDJ", e.target.value)
                       }
-                      className="mt-1 w-full rounded-md bg-white/[0.04] border border-white/[0.08] text-white/70 px-3 py-2 text-sm"
+                      className="mt-1 w-full rounded-md bg-foreground/[0.04] border border-border text-foreground/70 px-3 py-2 text-sm"
                     >
-                      <option value="" className="bg-[#141420]">
+                      <option value="" className="bg-card">
                         Select a DJ...
                       </option>
                       {djList.map((dj) => (
                         <option
                           key={dj}
                           value={dj}
-                          className="bg-[#141420]"
+                          className="bg-card"
                         >
                           {dj}
                         </option>
@@ -600,15 +600,15 @@ export default function LiveOnSitePage() {
                     </select>
                   </div>
                   <div>
-                    <Label className="text-white/70">Event Duration</Label>
+                    <Label className="text-foreground/70">Event Duration</Label>
                     <select
                       value={formData.eventDuration}
                       onChange={(e) =>
                         updateField("eventDuration", e.target.value)
                       }
-                      className="mt-1 w-full rounded-md bg-white/[0.04] border border-white/[0.08] text-white/70 px-3 py-2 text-sm"
+                      className="mt-1 w-full rounded-md bg-foreground/[0.04] border border-border text-foreground/70 px-3 py-2 text-sm"
                     >
-                      <option value="" className="bg-[#141420]">
+                      <option value="" className="bg-card">
                         Select duration...
                       </option>
                       {["1 Hour", "2 Hours", "3 Hours", "4 Hours"].map(
@@ -616,7 +616,7 @@ export default function LiveOnSitePage() {
                           <option
                             key={opt}
                             value={opt}
-                            className="bg-[#141420]"
+                            className="bg-card"
                           >
                             {opt}
                           </option>
@@ -625,7 +625,7 @@ export default function LiveOnSitePage() {
                     </select>
                   </div>
                   <div>
-                    <Label className="text-white/70 mb-2 block">
+                    <Label className="text-foreground/70 mb-2 block">
                       Equipment Provision
                     </Label>
                     <div className="flex flex-wrap gap-4">
@@ -646,7 +646,7 @@ export default function LiveOnSitePage() {
                     </div>
                   </div>
                   <div>
-                    <Label className="text-white/70 mb-2 block">
+                    <Label className="text-foreground/70 mb-2 block">
                       Music Type
                     </Label>
                     <div className="grid gap-2 sm:grid-cols-2">
@@ -668,12 +668,12 @@ export default function LiveOnSitePage() {
           {/* Step 4: Live Remote Details */}
           {step === 4 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Live Remote Details
               </h3>
               {!formData.services.includes("Live Remote") && (
-                <div className="rounded-lg bg-white/[0.04] border border-white/[0.08] p-4 text-center">
-                  <p className="text-sm text-white/40">
+                <div className="rounded-lg bg-foreground/[0.04] border border-border p-4 text-center">
+                  <p className="text-sm text-muted-foreground">
                     This step is for &quot;Live Remote&quot; bookings. You can
                     skip this step.
                   </p>
@@ -682,7 +682,7 @@ export default function LiveOnSitePage() {
               {formData.services.includes("Live Remote") && (
                 <>
                   <div>
-                    <Label className="text-white/70 mb-2 block">
+                    <Label className="text-foreground/70 mb-2 block">
                       Purpose of Live Remote
                     </Label>
                     <div className="grid gap-2 sm:grid-cols-2">
@@ -711,12 +711,12 @@ export default function LiveOnSitePage() {
                           updateField("remotePurposeOther", e.target.value)
                         }
                         placeholder="Please specify..."
-                        className="mt-3 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                        className="mt-3 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                       />
                     )}
                   </div>
                   <div>
-                    <Label className="text-white/70 mb-2 block">
+                    <Label className="text-foreground/70 mb-2 block">
                       Live on-air mentions wanted?
                     </Label>
                     <div className="flex gap-6">
@@ -733,7 +733,7 @@ export default function LiveOnSitePage() {
                     </div>
                   </div>
                   <div>
-                    <Label className="text-white/70">
+                    <Label className="text-foreground/70">
                       Space &amp; Parking Requirements
                     </Label>
                     <Textarea
@@ -742,7 +742,7 @@ export default function LiveOnSitePage() {
                         updateField("spaceParking", e.target.value)
                       }
                       placeholder="Describe space and parking available for our van and equipment..."
-                      className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 min-h-[80px]"
+                      className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60 min-h-[80px]"
                     />
                   </div>
                 </>
@@ -753,14 +753,14 @@ export default function LiveOnSitePage() {
           {/* Step 5: Live Broadcast from Your Venue */}
           {step === 5 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Live Broadcast from Your Venue
               </h3>
               {!formData.services.includes(
                 "Live Broadcast from Your Venue"
               ) && (
-                <div className="rounded-lg bg-white/[0.04] border border-white/[0.08] p-4 text-center">
-                  <p className="text-sm text-white/40">
+                <div className="rounded-lg bg-foreground/[0.04] border border-border p-4 text-center">
+                  <p className="text-sm text-muted-foreground">
                     This step is for &quot;Live Broadcast&quot; bookings. You
                     can skip this step.
                   </p>
@@ -771,7 +771,7 @@ export default function LiveOnSitePage() {
               ) && (
                 <>
                   <div>
-                    <Label className="text-white/70 mb-2 block">
+                    <Label className="text-foreground/70 mb-2 block">
                       Type of On-Air Broadcast
                     </Label>
                     <div className="space-y-2">
@@ -792,7 +792,7 @@ export default function LiveOnSitePage() {
                     </div>
                   </div>
                   <div>
-                    <Label className="text-white/70 mb-2 block">
+                    <Label className="text-foreground/70 mb-2 block">
                       Audio output capability?
                     </Label>
                     <div className="flex flex-wrap gap-4">
@@ -812,7 +812,7 @@ export default function LiveOnSitePage() {
                   </div>
                   <div className="grid gap-4 sm:grid-cols-3">
                     <div>
-                      <Label className="text-white/70">
+                      <Label className="text-foreground/70">
                         Technical Contact Name
                       </Label>
                       <Input
@@ -820,11 +820,11 @@ export default function LiveOnSitePage() {
                         onChange={(e) =>
                           updateField("techContactName", e.target.value)
                         }
-                        className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                        className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                       />
                     </div>
                     <div>
-                      <Label className="text-white/70">
+                      <Label className="text-foreground/70">
                         Technical Contact Phone
                       </Label>
                       <Input
@@ -833,11 +833,11 @@ export default function LiveOnSitePage() {
                         onChange={(e) =>
                           updateField("techContactPhone", e.target.value)
                         }
-                        className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                        className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                       />
                     </div>
                     <div>
-                      <Label className="text-white/70">
+                      <Label className="text-foreground/70">
                         Technical Contact Email
                       </Label>
                       <Input
@@ -846,7 +846,7 @@ export default function LiveOnSitePage() {
                         onChange={(e) =>
                           updateField("techContactEmail", e.target.value)
                         }
-                        className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                        className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                       />
                     </div>
                   </div>
@@ -858,12 +858,12 @@ export default function LiveOnSitePage() {
           {/* Step 6: Live Stream Production */}
           {step === 6 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Live Stream Production
               </h3>
               {!formData.services.includes("Live Stream Production") && (
-                <div className="rounded-lg bg-white/[0.04] border border-white/[0.08] p-4 text-center">
-                  <p className="text-sm text-white/40">
+                <div className="rounded-lg bg-foreground/[0.04] border border-border p-4 text-center">
+                  <p className="text-sm text-muted-foreground">
                     This step is for &quot;Live Stream Production&quot;
                     bookings. You can skip this step.
                   </p>
@@ -872,7 +872,7 @@ export default function LiveOnSitePage() {
               {formData.services.includes("Live Stream Production") && (
                 <>
                   <div>
-                    <Label className="text-white/70 mb-2 block">
+                    <Label className="text-foreground/70 mb-2 block">
                       Live Stream Platforms
                     </Label>
                     <div className="grid gap-2 sm:grid-cols-2">
@@ -895,7 +895,7 @@ export default function LiveOnSitePage() {
                     </div>
                   </div>
                   <div>
-                    <Label className="text-white/70 mb-2 block">
+                    <Label className="text-foreground/70 mb-2 block">
                       Stream Type
                     </Label>
                     <div className="flex flex-wrap gap-4">
@@ -914,7 +914,7 @@ export default function LiveOnSitePage() {
                     </div>
                   </div>
                   <div>
-                    <Label className="text-white/70 mb-2 block">
+                    <Label className="text-foreground/70 mb-2 block">
                       Multiple cameras needed?
                     </Label>
                     <div className="flex gap-6">
@@ -931,7 +931,7 @@ export default function LiveOnSitePage() {
                     </div>
                   </div>
                   <div>
-                    <Label className="text-white/70 mb-2 block">
+                    <Label className="text-foreground/70 mb-2 block">
                       Internet provision needed?
                     </Label>
                     <div className="flex gap-6">
@@ -955,11 +955,11 @@ export default function LiveOnSitePage() {
           {/* Step 7: Technical Requirements */}
           {step === 7 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Technical Requirements
               </h3>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Power Access Available?
                 </Label>
                 <div className="flex flex-wrap gap-4">
@@ -976,7 +976,7 @@ export default function LiveOnSitePage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Stage or Booth Setup Needed?
                 </Label>
                 <div className="flex flex-wrap gap-4">
@@ -993,7 +993,7 @@ export default function LiveOnSitePage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Equipment You Will Provide
                 </Label>
                 <Textarea
@@ -1002,7 +1002,7 @@ export default function LiveOnSitePage() {
                     updateField("equipmentProvided", e.target.value)
                   }
                   placeholder="List any equipment you will be providing..."
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 min-h-[80px]"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60 min-h-[80px]"
                 />
               </div>
             </div>
@@ -1011,11 +1011,11 @@ export default function LiveOnSitePage() {
           {/* Step 8: Marketing & Promotion */}
           {step === 8 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Marketing &amp; Promotion
               </h3>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Would you like WCCG to promote your event?
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -1037,11 +1037,11 @@ export default function LiveOnSitePage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Upload Flyers, Logos, or Branding
                 </Label>
-                <div className="mt-2 rounded-lg border border-dashed border-white/[0.12] p-6 text-center cursor-pointer hover:border-white/[0.2] transition-colors">
-                  <p className="text-sm text-white/40">
+                <div className="mt-2 rounded-lg border border-dashed border-input p-6 text-center cursor-pointer hover:border-foreground/20 transition-colors">
+                  <p className="text-sm text-muted-foreground">
                     Click or drag a file to upload
                   </p>
                 </div>
@@ -1052,22 +1052,22 @@ export default function LiveOnSitePage() {
           {/* Step 9: Contact Information */}
           {step === 9 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Contact Information
               </h3>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Your Name <span className="text-red-400">*</span>
                   </Label>
                   <Input
                     value={formData.name}
                     onChange={(e) => updateField("name", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Organization / Business Name
                   </Label>
                   <Input
@@ -1075,36 +1075,36 @@ export default function LiveOnSitePage() {
                     onChange={(e) =>
                       updateField("organization", e.target.value)
                     }
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Email Address <span className="text-red-400">*</span>
                   </Label>
                   <Input
                     type="email"
                     value={formData.email}
                     onChange={(e) => updateField("email", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Phone Number <span className="text-red-400">*</span>
                   </Label>
                   <Input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => updateField("phone", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Preferred Method of Communication
                 </Label>
                 <div className="flex flex-wrap gap-4">
@@ -1121,7 +1121,7 @@ export default function LiveOnSitePage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Additional Notes or Special Requests
                 </Label>
                 <Textarea
@@ -1130,19 +1130,19 @@ export default function LiveOnSitePage() {
                     updateField("additionalNotes", e.target.value)
                   }
                   placeholder="Any additional information..."
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 min-h-[100px]"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60 min-h-[100px]"
                 />
               </div>
             </div>
           )}
 
           {/* Navigation */}
-          <div className="flex items-center justify-between pt-4 border-t border-white/[0.06]">
+          <div className="flex items-center justify-between pt-4 border-t border-border">
             <Button
               variant="outline"
               onClick={() => setStep(Math.max(1, step - 1))}
               disabled={step === 1}
-              className="border-white/[0.12] text-white/70 hover:bg-white/[0.04] disabled:opacity-30"
+              className="border-input text-foreground/70 hover:bg-foreground/[0.04] disabled:opacity-30"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
@@ -1153,7 +1153,7 @@ export default function LiveOnSitePage() {
                 <Button
                   variant="ghost"
                   onClick={() => setStep(step + 1)}
-                  className="text-white/40 hover:text-white/60 hover:bg-white/[0.04]"
+                  className="text-muted-foreground hover:text-foreground/60 hover:bg-foreground/[0.04]"
                 >
                   Skip Step
                 </Button>
@@ -1181,8 +1181,8 @@ export default function LiveOnSitePage() {
       </div>
 
       {/* Info footer */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 text-center">
-        <p className="text-sm text-white/40">
+      <div className="rounded-xl border border-border bg-card p-6 text-center">
+        <p className="text-sm text-muted-foreground">
           Carson Communications Studio · 115 Gillespie Street, Fayetteville, NC
           28301
           <br />

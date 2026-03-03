@@ -13,11 +13,11 @@ export default function SchedulePage() {
       <div>
         <div className="flex items-center gap-3 mb-1">
           <Calendar className="h-6 w-6 text-[#74ddc7]" />
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
             Schedule of Programs
           </h1>
         </div>
-        <p className="text-sm text-white/40">
+        <p className="text-sm text-muted-foreground">
           WCCG 104.5 FM — Full weekly programming lineup
         </p>
       </div>

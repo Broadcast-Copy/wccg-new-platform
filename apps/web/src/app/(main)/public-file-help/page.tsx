@@ -40,57 +40,57 @@ export default function PublicFileHelpPage() {
               <HelpCircle className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Public File Help</h1>
-              <p className="text-white/50 mt-1">How to access the WCCG 104.5 FM public inspection file</p>
+              <h1 className="text-3xl font-bold text-foreground">Public File Help</h1>
+              <p className="text-muted-foreground mt-1">How to access the WCCG 104.5 FM public inspection file</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
-        <h2 className="text-xl font-semibold text-white">What is the Public Inspection File?</h2>
-        <p className="text-white/50 leading-relaxed">
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">What is the Public Inspection File?</h2>
+        <p className="text-muted-foreground leading-relaxed">
           The FCC requires broadcast stations to maintain a public inspection file containing information about station operations,
           programming, and regulatory compliance. This file is available to anyone who wishes to review it.
         </p>
-        <p className="text-white/50 leading-relaxed">
+        <p className="text-muted-foreground leading-relaxed">
           Common documents in the public file include ownership reports, political advertising records, EEO (Equal Employment Opportunity)
           reports, community issues lists, and contour maps.
         </p>
       </div>
 
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-white">How to Access</h2>
+        <h2 className="text-xl font-semibold text-foreground">How to Access</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           {steps.map((item) => (
-            <div key={item.step} className="rounded-xl border border-white/[0.06] bg-[#141420] p-5">
+            <div key={item.step} className="rounded-xl border border-border bg-card p-5">
               <div className="flex items-center gap-3 mb-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#74ddc7] text-[#0a0a0f] text-sm font-bold">
                   {item.step}
                 </span>
-                <h3 className="font-semibold text-white">{item.title}</h3>
+                <h3 className="font-semibold text-foreground">{item.title}</h3>
               </div>
-              <p className="text-sm text-white/40 pl-11">{item.description}</p>
+              <p className="text-sm text-muted-foreground pl-11">{item.description}</p>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
-        <h2 className="text-xl font-semibold text-white">In-Person Access</h2>
-        <p className="text-white/50 leading-relaxed">
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">In-Person Access</h2>
+        <p className="text-muted-foreground leading-relaxed">
           You may also review the public inspection file in person at our studio during regular business hours.
         </p>
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-white/50">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <MapPin className="h-4 w-4 text-[#74ddc7]" />
             115 Gillespie Street, Fayetteville, NC 28301
           </div>
-          <div className="flex items-center gap-2 text-sm text-white/50">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="h-4 w-4 text-[#74ddc7]" />
             Monday – Friday, 8:30 AM – 5:30 PM
           </div>
-          <div className="flex items-center gap-2 text-sm text-white/50">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Phone className="h-4 w-4 text-[#74ddc7]" />
             (910) 484-4932
           </div>
@@ -101,7 +101,7 @@ export default function PublicFileHelpPage() {
         <Button asChild className="rounded-full bg-[#74ddc7] text-[#0a0a0f] font-bold hover:bg-[#5fc4b0]">
           <Link href="/public-file">View Public Inspection File</Link>
         </Button>
-        <Button asChild variant="outline" className="rounded-full border-white/20 text-white hover:bg-white/5">
+        <Button asChild variant="outline" className="rounded-full border-white/20 text-foreground hover:bg-white/5">
           <Link href="/contact">Contact Us</Link>
         </Button>
       </div>

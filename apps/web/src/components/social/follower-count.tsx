@@ -63,7 +63,7 @@ export function FollowerCount({
   if (isLoading) {
     return (
       <div className={`flex items-center gap-1.5 ${className}`}>
-        <div className="h-3.5 w-12 animate-pulse rounded bg-white/[0.06]" />
+        <div className="h-3.5 w-12 animate-pulse rounded bg-foreground/[0.06]" />
       </div>
     );
   }
@@ -74,11 +74,11 @@ export function FollowerCount({
 
   return (
     <div
-      className={`flex items-center gap-1.5 text-sm text-white/40 ${className}`}
+      className={`flex items-center gap-1.5 text-sm text-muted-foreground ${className}`}
     >
       <Users2 className="h-3.5 w-3.5" />
       <span>
-        <span className="font-medium text-white/60">{formatCount(count)}</span>{" "}
+        <span className="font-medium text-foreground/60">{formatCount(count)}</span>{" "}
         {count === 1 ? "follower" : "followers"}
       </span>
     </div>

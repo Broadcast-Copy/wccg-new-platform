@@ -120,9 +120,9 @@ function getStatusColor(status: string): string {
     case "PENDING":
       return "border-yellow-500/30 bg-yellow-500/10 text-yellow-400";
     case "INACTIVE":
-      return "border-gray-500/30 bg-gray-500/10 text-gray-400";
+      return "border-gray-500/30 bg-gray-500/10 text-muted-foreground";
     default:
-      return "border-gray-500/30 bg-gray-500/10 text-gray-400";
+      return "border-gray-500/30 bg-gray-500/10 text-muted-foreground";
   }
 }
 
@@ -139,7 +139,7 @@ function getCategoryColor(category: string): string {
     case "Education":
       return "border-cyan-500/30 bg-cyan-500/10 text-cyan-400";
     default:
-      return "border-gray-500/30 bg-gray-500/10 text-gray-400";
+      return "border-gray-500/30 bg-gray-500/10 text-muted-foreground";
   }
 }
 

@@ -45,10 +45,10 @@ export function GlobalPlayer() {
   };
 
   return (
-    <div className="fixed bottom-14 left-0 right-0 z-50 border-t border-white/[0.06] bg-[#0e0e18]/95 backdrop-blur-xl">
+    <div className="fixed bottom-14 left-0 right-0 z-50 border-t border-border bg-[#0e0e18]/95 backdrop-blur-xl">
       <div className="container flex h-16 items-center gap-3">
         {/* Album Art / Station Icon */}
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#74ddc7]/20 to-[#7401df]/20 border border-white/[0.06]">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#74ddc7]/20 to-[#7401df]/20 border border-border">
           {metadata.albumArt ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
@@ -63,10 +63,10 @@ export function GlobalPlayer() {
 
         {/* Track Info */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm font-semibold text-white">
+          <span className="truncate text-sm font-semibold text-foreground">
             {metadata.title || metadata.streamName || "Unknown Track"}
           </span>
-          <span className="truncate text-xs text-white/40">
+          <span className="truncate text-xs text-muted-foreground">
             {metadata.artist || "WCCG 104.5 FM"}
           </span>
         </div>
@@ -105,7 +105,7 @@ export function GlobalPlayer() {
             size="icon"
             onClick={toggleMute}
             aria-label={volume === 0 ? "Unmute" : "Mute"}
-            className="h-8 w-8 rounded-full text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
+            className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.06]"
           >
             {volume === 0 ? (
               <VolumeX className="h-4 w-4" />

@@ -72,9 +72,9 @@ function FavoriteImage({
       className={`flex aspect-video w-full items-center justify-center rounded-md bg-gradient-to-br ${gradients[type]}`}
     >
       {type === "stream" ? (
-        <Radio className="size-10 text-white/70" />
+        <Radio className="size-10 text-foreground/70" />
       ) : (
-        <Tv className="size-10 text-white/70" />
+        <Tv className="size-10 text-foreground/70" />
       )}
     </div>
   );

@@ -85,9 +85,9 @@ function getStatusColor(status: string): string {
     case "CANCELLED":
       return "border-red-500/30 bg-red-500/10 text-red-400";
     case "COMPLETED":
-      return "border-gray-500/30 bg-gray-500/10 text-gray-400";
+      return "border-gray-500/30 bg-gray-500/10 text-muted-foreground";
     default:
-      return "border-gray-500/30 bg-gray-500/10 text-gray-400";
+      return "border-gray-500/30 bg-gray-500/10 text-muted-foreground";
   }
 }
 

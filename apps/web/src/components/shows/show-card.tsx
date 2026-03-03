@@ -39,7 +39,7 @@ interface ShowCardProps {
 
 /** Map dayPart string → badge style */
 function dayPartStyle(dayPart?: string): { bg: string; text: string } {
-  if (!dayPart) return { bg: "bg-white/[0.06]", text: "text-white/50" };
+  if (!dayPart) return { bg: "bg-foreground/[0.06]", text: "text-muted-foreground" };
   const d = dayPart.toLowerCase();
   if (d.includes("morning")) return { bg: "bg-amber-500/15", text: "text-amber-400" };
   if (d.includes("midday")) return { bg: "bg-[#74ddc7]/15", text: "text-[#74ddc7]" };
@@ -48,7 +48,7 @@ function dayPartStyle(dayPart?: string): { bg: string; text: string } {
   if (d.includes("overnight")) return { bg: "bg-blue-500/15", text: "text-blue-400" };
   if (d.includes("gospel")) return { bg: "bg-yellow-500/15", text: "text-yellow-400" };
   if (d.includes("mix")) return { bg: "bg-pink-500/15", text: "text-pink-400" };
-  return { bg: "bg-white/[0.06]", text: "text-white/50" };
+  return { bg: "bg-foreground/[0.06]", text: "text-muted-foreground" };
 }
 
 export function ShowCard({
@@ -70,7 +70,7 @@ export function ShowCard({
   const dpStyle = dayPartStyle(dayPart);
 
   return (
-    <Card className="group relative h-full border-white/[0.06] transition-all hover:border-white/[0.12] hover:shadow-lg hover:shadow-white/[0.02]">
+    <Card className="group relative h-full border-border transition-all hover:border-input hover:shadow-lg hover:shadow-white/[0.02]">
       {/* Favorite button — top-right, stops link propagation */}
       <div
         className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -115,7 +115,7 @@ export function ShowCard({
           </div>
 
           {description && (
-            <CardDescription className="mt-2 line-clamp-2 text-white/40">
+            <CardDescription className="mt-2 line-clamp-2 text-muted-foreground">
               {description}
             </CardDescription>
           )}
@@ -126,13 +126,13 @@ export function ShowCard({
           {(timeSlot || days) && (
             <div className="space-y-1.5">
               {timeSlot && (
-                <div className="flex items-center gap-1.5 text-xs text-white/60">
+                <div className="flex items-center gap-1.5 text-xs text-foreground/60">
                   <Clock className="h-3 w-3 shrink-0 text-[#74ddc7]" />
                   <span className="font-medium">{timeSlot}</span>
                 </div>
               )}
               {days && (
-                <div className="flex items-center gap-1.5 text-xs text-white/50">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Calendar className="h-3 w-3 shrink-0 text-[#7401df]" />
                   <span>{days}</span>
                 </div>

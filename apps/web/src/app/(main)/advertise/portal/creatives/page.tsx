@@ -88,7 +88,7 @@ const STATUS_STYLES: Record<string, string> = {
   PENDING: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
   APPROVED: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   REJECTED: "bg-red-500/10 text-red-400 border-red-500/20",
-  ARCHIVED: "bg-white/[0.06] text-white/40 border-white/[0.08]",
+  ARCHIVED: "bg-foreground/[0.06] text-muted-foreground border-border",
 };
 
 const TYPE_ICONS: Record<string, React.ElementType> = {
@@ -182,27 +182,27 @@ function UploadCreativeDialog({
           Upload Creative
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-[#1a1a2e] border-white/[0.06] text-white sm:max-w-lg">
+      <DialogContent className="bg-[#1a1a2e] border-border text-foreground sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-white">Upload Creative</DialogTitle>
-          <DialogDescription className="text-white/50">
+          <DialogTitle className="text-foreground">Upload Creative</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
             Add a new creative to one of your campaigns.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           {/* Campaign Select */}
           <div className="space-y-1.5">
-            <Label className="text-white/60">Campaign *</Label>
+            <Label className="text-foreground/60">Campaign *</Label>
             <Select
               value={form.campaignId}
               onValueChange={(val) => setForm({ ...form, campaignId: val })}
             >
-              <SelectTrigger className="w-full bg-white/[0.04] border-white/[0.08] text-white">
+              <SelectTrigger className="w-full bg-foreground/[0.04] border-border text-foreground">
                 <SelectValue placeholder="Select a campaign" />
               </SelectTrigger>
-              <SelectContent className="bg-[#1a1a2e] border-white/[0.06]">
+              <SelectContent className="bg-[#1a1a2e] border-border">
                 {campaigns.length === 0 ? (
-                  <SelectItem value="__none" disabled className="text-white/40">
+                  <SelectItem value="__none" disabled className="text-muted-foreground">
                     No campaigns available
                   </SelectItem>
                 ) : (
@@ -210,7 +210,7 @@ function UploadCreativeDialog({
                     <SelectItem
                       key={c.id}
                       value={c.id}
-                      className="text-white"
+                      className="text-foreground"
                     >
                       {c.name}
                     </SelectItem>
@@ -222,31 +222,31 @@ function UploadCreativeDialog({
 
           {/* Name */}
           <div className="space-y-1.5">
-            <Label className="text-white/60">Creative Name *</Label>
+            <Label className="text-foreground/60">Creative Name *</Label>
             <Input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="e.g. Summer Sale Audio Spot"
-              className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/20"
+              className="bg-foreground/[0.04] border-border text-foreground placeholder:text-foreground/20"
             />
           </div>
 
           {/* Type */}
           <div className="space-y-1.5">
-            <Label className="text-white/60">Creative Type *</Label>
+            <Label className="text-foreground/60">Creative Type *</Label>
             <Select
               value={form.creativeType}
               onValueChange={(val) => setForm({ ...form, creativeType: val })}
             >
-              <SelectTrigger className="w-full bg-white/[0.04] border-white/[0.08] text-white">
+              <SelectTrigger className="w-full bg-foreground/[0.04] border-border text-foreground">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
-              <SelectContent className="bg-[#1a1a2e] border-white/[0.06]">
+              <SelectContent className="bg-[#1a1a2e] border-border">
                 {CREATIVE_TYPES.map((type) => (
                   <SelectItem
                     key={type.value}
                     value={type.value}
-                    className="text-white"
+                    className="text-foreground"
                   >
                     {type.label}
                   </SelectItem>
@@ -257,37 +257,37 @@ function UploadCreativeDialog({
 
           {/* File URL */}
           <div className="space-y-1.5">
-            <Label className="text-white/60">File URL *</Label>
+            <Label className="text-foreground/60">File URL *</Label>
             <Input
               value={form.fileUrl}
               onChange={(e) => setForm({ ...form, fileUrl: e.target.value })}
               placeholder="https://cdn.example.com/ad-spot.mp3"
-              className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/20"
+              className="bg-foreground/[0.04] border-border text-foreground placeholder:text-foreground/20"
             />
-            <p className="text-[11px] text-white/30">
+            <p className="text-[11px] text-muted-foreground/70">
               Provide a direct URL to your creative file (audio, image, etc.)
             </p>
           </div>
 
           {/* Click URL */}
           <div className="space-y-1.5">
-            <Label className="text-white/60">Click-Through URL</Label>
+            <Label className="text-foreground/60">Click-Through URL</Label>
             <Input
               value={form.clickUrl}
               onChange={(e) => setForm({ ...form, clickUrl: e.target.value })}
               placeholder="https://yourwebsite.com/promo"
-              className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/20"
+              className="bg-foreground/[0.04] border-border text-foreground placeholder:text-foreground/20"
             />
           </div>
 
           {/* Alt Text */}
           <div className="space-y-1.5">
-            <Label className="text-white/60">Alt Text</Label>
+            <Label className="text-foreground/60">Alt Text</Label>
             <Input
               value={form.altText}
               onChange={(e) => setForm({ ...form, altText: e.target.value })}
               placeholder="Brief description for accessibility"
-              className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/20"
+              className="bg-foreground/[0.04] border-border text-foreground placeholder:text-foreground/20"
             />
           </div>
 
@@ -296,7 +296,7 @@ function UploadCreativeDialog({
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
-              className="border-white/[0.08] text-white/60 hover:bg-white/[0.04]"
+              className="border-border text-foreground/60 hover:bg-foreground/[0.04]"
             >
               Cancel
             </Button>
@@ -322,19 +322,19 @@ function UploadCreativeDialog({
 function CreativeCard({ creative }: { creative: Creative }) {
   const TypeIcon = TYPE_ICONS[creative.creativeType] || Monitor;
   const colors = TYPE_COLORS[creative.creativeType] || {
-    text: "text-white/40",
-    bg: "bg-white/[0.04]",
+    text: "text-muted-foreground",
+    bg: "bg-foreground/[0.04]",
   };
 
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-[#141420] overflow-hidden transition-all hover:border-white/[0.12] group">
+    <div className="rounded-xl border border-border bg-card overflow-hidden transition-all hover:border-input group">
       {/* Preview Placeholder */}
-      <div className="aspect-[16/9] bg-white/[0.02] flex items-center justify-center border-b border-white/[0.06] relative">
+      <div className="aspect-[16/9] bg-white/[0.02] flex items-center justify-center border-b border-border relative">
         <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${colors.bg}`}>
           <TypeIcon className={`h-7 w-7 ${colors.text}`} />
         </div>
         <Badge
-          className={`absolute top-3 right-3 text-[10px] border ${STATUS_STYLES[creative.status] || "bg-white/[0.06] text-white/40 border-white/[0.08]"}`}
+          className={`absolute top-3 right-3 text-[10px] border ${STATUS_STYLES[creative.status] || "bg-foreground/[0.06] text-muted-foreground border-border"}`}
         >
           {creative.status}
         </Badge>
@@ -342,11 +342,11 @@ function CreativeCard({ creative }: { creative: Creative }) {
 
       {/* Info */}
       <div className="p-4 space-y-2">
-        <h3 className="font-medium text-white text-sm truncate">
+        <h3 className="font-medium text-foreground text-sm truncate">
           {creative.name}
         </h3>
         <div className="flex items-center justify-between">
-          <span className="text-[11px] text-white/40">
+          <span className="text-[11px] text-muted-foreground">
             {creative.creativeType.replace(/_/g, " ")}
           </span>
         </div>
@@ -362,7 +362,7 @@ function CreativeCard({ creative }: { creative: Creative }) {
           </a>
         )}
         {creative.altText && (
-          <p className="text-[11px] text-white/30 truncate">
+          <p className="text-[11px] text-muted-foreground/70 truncate">
             {creative.altText}
           </p>
         )}
@@ -461,17 +461,17 @@ export default function CreativesPage() {
                 <div className="flex items-center gap-2 mb-1">
                   <Link
                     href="/advertise/portal"
-                    className="text-white/40 hover:text-white text-sm transition-colors"
+                    className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                   >
                     Portal
                   </Link>
-                  <span className="text-white/20">/</span>
-                  <span className="text-white text-sm font-medium">
+                  <span className="text-foreground/20">/</span>
+                  <span className="text-foreground text-sm font-medium">
                     Creatives
                   </span>
                 </div>
-                <h1 className="text-3xl font-bold text-white">Creatives</h1>
-                <p className="text-white/50 mt-1">
+                <h1 className="text-3xl font-bold text-foreground">Creatives</h1>
+                <p className="text-muted-foreground mt-1">
                   Manage your ad creative files and assets
                 </p>
               </div>
@@ -501,8 +501,8 @@ export default function CreativesPage() {
       {/* Loading */}
       {isLoading && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-white/40" />
-          <span className="ml-3 text-white/40 text-sm">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <span className="ml-3 text-muted-foreground text-sm">
             Loading creatives...
           </span>
         </div>
@@ -510,8 +510,8 @@ export default function CreativesPage() {
 
       {/* Auth required */}
       {!isLoading && !user && (
-        <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 text-center space-y-4">
-          <p className="text-white/50 text-sm">
+        <div className="rounded-xl border border-border bg-card p-6 sm:p-8 text-center space-y-4">
+          <p className="text-muted-foreground text-sm">
             Please{" "}
             <Link href="/login" className="text-[#74ddc7] hover:underline">
               sign in
@@ -536,18 +536,18 @@ export default function CreativesPage() {
             <div className="flex flex-wrap gap-2">
               {/* Type Filter */}
               <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-auto bg-[#141420] border-white/[0.06] text-white text-xs">
+                <SelectTrigger className="w-auto bg-card border-border text-foreground text-xs">
                   <SelectValue placeholder="All Types" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1a1a2e] border-white/[0.06]">
-                  <SelectItem value="ALL" className="text-white">
+                <SelectContent className="bg-[#1a1a2e] border-border">
+                  <SelectItem value="ALL" className="text-foreground">
                     All Types
                   </SelectItem>
                   {CREATIVE_TYPES.map((t) => (
                     <SelectItem
                       key={t.value}
                       value={t.value}
-                      className="text-white"
+                      className="text-foreground"
                     >
                       {t.label}
                       {typeCounts[t.value]
@@ -560,11 +560,11 @@ export default function CreativesPage() {
 
               {/* Status Filter */}
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-auto bg-[#141420] border-white/[0.06] text-white text-xs">
+                <SelectTrigger className="w-auto bg-card border-border text-foreground text-xs">
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1a1a2e] border-white/[0.06]">
-                  <SelectItem value="ALL" className="text-white">
+                <SelectContent className="bg-[#1a1a2e] border-border">
+                  <SelectItem value="ALL" className="text-foreground">
                     All Statuses
                   </SelectItem>
                   {["PENDING", "APPROVED", "REJECTED", "ARCHIVED"].map(
@@ -572,7 +572,7 @@ export default function CreativesPage() {
                       <SelectItem
                         key={status}
                         value={status}
-                        className="text-white"
+                        className="text-foreground"
                       >
                         {status}
                       </SelectItem>
@@ -582,7 +582,7 @@ export default function CreativesPage() {
               </Select>
             </div>
 
-            <p className="text-xs text-white/40">
+            <p className="text-xs text-muted-foreground">
               {filteredCreatives.length} creative
               {filteredCreatives.length !== 1 ? "s" : ""}
               {filterType !== "ALL" || filterStatus !== "ALL"
@@ -593,14 +593,14 @@ export default function CreativesPage() {
 
           {/* Creatives Grid */}
           {filteredCreatives.length === 0 ? (
-            <div className="rounded-xl border border-white/[0.06] bg-[#141420] px-5 py-16 text-center">
-              <ImagePlus className="h-10 w-10 text-white/20 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold text-white mb-1">
+            <div className="rounded-xl border border-border bg-card px-5 py-16 text-center">
+              <ImagePlus className="h-10 w-10 text-foreground/20 mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-foreground mb-1">
                 {creatives.length === 0
                   ? "No creatives yet"
                   : "No creatives match your filters"}
               </h3>
-              <p className="text-sm text-white/40 mb-4 max-w-sm mx-auto">
+              <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
                 {creatives.length === 0
                   ? "Upload your first ad creative to get started."
                   : "Try adjusting your filters to see more results."}
@@ -627,7 +627,7 @@ export default function CreativesPage() {
         <Button
           asChild
           variant="ghost"
-          className="text-white/40 hover:text-white"
+          className="text-muted-foreground hover:text-foreground"
         >
           <Link href="/advertise/portal">
             <ArrowLeft className="h-4 w-4 mr-1.5" />

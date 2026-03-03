@@ -177,9 +177,9 @@ function getSeriesStatusStyle(status: PodcastSeries["status"]): string {
     case "PAUSED":
       return "border-orange-500/30 bg-orange-500/10 text-orange-400";
     case "ARCHIVED":
-      return "border-gray-500/30 bg-gray-500/10 text-gray-400";
+      return "border-gray-500/30 bg-gray-500/10 text-muted-foreground";
     default:
-      return "border-gray-500/30 bg-gray-500/10 text-gray-400";
+      return "border-gray-500/30 bg-gray-500/10 text-muted-foreground";
   }
 }
 
@@ -192,9 +192,9 @@ function getEpisodeStatusStyle(status: PodcastEpisode["status"]): string {
     case "SCHEDULED":
       return "border-blue-500/30 bg-blue-500/10 text-blue-400";
     case "ARCHIVED":
-      return "border-gray-500/30 bg-gray-500/10 text-gray-400";
+      return "border-gray-500/30 bg-gray-500/10 text-muted-foreground";
     default:
-      return "border-gray-500/30 bg-gray-500/10 text-gray-400";
+      return "border-gray-500/30 bg-gray-500/10 text-muted-foreground";
   }
 }
 
@@ -487,7 +487,7 @@ export default function MyPodcastsPage() {
             return (
               <Card
                 key={s.id}
-                className="overflow-hidden border-white/[0.06] transition-colors"
+                className="overflow-hidden border-border transition-colors"
               >
                 {/* Series header row */}
                 <div
@@ -503,7 +503,7 @@ export default function MyPodcastsPage() {
                   }}
                 >
                   {/* Cover image or placeholder */}
-                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-[#141420]">
+                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-card">
                     {s.coverImageUrl ? (
                       <div
                         className="h-full w-full bg-cover bg-center"
@@ -511,7 +511,7 @@ export default function MyPodcastsPage() {
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#7401df]/60 via-[#7401df]/40 to-[#74ddc7]/30">
-                        <Podcast className="h-8 w-8 text-white/60" />
+                        <Podcast className="h-8 w-8 text-foreground/60" />
                       </div>
                     )}
                   </div>
@@ -575,7 +575,7 @@ export default function MyPodcastsPage() {
 
                 {/* Expanded episodes section */}
                 {isExpanded && (
-                  <CardContent className="border-t border-white/[0.06] pt-4">
+                  <CardContent className="border-t border-border pt-4">
                     {/* Episode actions bar */}
                     <div className="mb-4 flex items-center justify-between">
                       <h4 className="text-sm font-medium text-muted-foreground">
@@ -603,7 +603,7 @@ export default function MyPodcastsPage() {
                         </div>
                       </div>
                     ) : !episodes || episodes.length === 0 ? (
-                      <div className="flex h-24 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-white/[0.06] bg-[#141420]/50">
+                      <div className="flex h-24 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-card/50">
                         <p className="text-sm text-muted-foreground">
                           No episodes in this series yet.
                         </p>
@@ -621,23 +621,23 @@ export default function MyPodcastsPage() {
                         </Button>
                       </div>
                     ) : (
-                      <div className="rounded-lg border border-white/[0.06] overflow-hidden">
+                      <div className="rounded-lg border border-border overflow-hidden">
                         <Table>
                           <TableHeader>
-                            <TableRow className="border-white/[0.06] hover:bg-transparent">
-                              <TableHead className="text-xs text-white/50">
+                            <TableRow className="border-border hover:bg-transparent">
+                              <TableHead className="text-xs text-muted-foreground">
                                 #
                               </TableHead>
-                              <TableHead className="text-xs text-white/50">
+                              <TableHead className="text-xs text-muted-foreground">
                                 Title
                               </TableHead>
-                              <TableHead className="text-xs text-white/50">
+                              <TableHead className="text-xs text-muted-foreground">
                                 Status
                               </TableHead>
-                              <TableHead className="text-xs text-white/50">
+                              <TableHead className="text-xs text-muted-foreground">
                                 Date
                               </TableHead>
-                              <TableHead className="w-[80px] text-xs text-white/50">
+                              <TableHead className="w-[80px] text-xs text-muted-foreground">
                                 Actions
                               </TableHead>
                             </TableRow>
@@ -646,9 +646,9 @@ export default function MyPodcastsPage() {
                             {episodes.map((ep) => (
                               <TableRow
                                 key={ep.id}
-                                className="border-white/[0.06]"
+                                className="border-border"
                               >
-                                <TableCell className="text-sm text-white/50">
+                                <TableCell className="text-sm text-muted-foreground">
                                   {ep.seasonNumber != null &&
                                   ep.episodeNumber != null
                                     ? `S${ep.seasonNumber}E${ep.episodeNumber}`
@@ -680,7 +680,7 @@ export default function MyPodcastsPage() {
                                     {ep.status}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-xs text-white/50">
+                                <TableCell className="text-xs text-muted-foreground">
                                   {ep.publishedAt
                                     ? formatDate(ep.publishedAt)
                                     : formatDate(ep.createdAt)}
@@ -775,7 +775,7 @@ export default function MyPodcastsPage() {
                       className={`flex flex-col items-center gap-1 rounded-lg border px-2 py-2.5 transition-all text-center ${
                         seriesForm.productionType === opt.key
                           ? `border-[${opt.color}] bg-[${opt.color}]/10 ring-1 ring-[${opt.color}]/30`
-                          : "border-white/[0.08] bg-white/[0.02] hover:border-white/[0.15]"
+                          : "border-border bg-white/[0.02] hover:border-white/[0.15]"
                       }`}
                       style={
                         seriesForm.productionType === opt.key
@@ -787,21 +787,21 @@ export default function MyPodcastsPage() {
                       <p className="text-[11px] font-semibold leading-tight" style={{ color: seriesForm.productionType === opt.key ? opt.color : "rgba(255,255,255,0.6)" }}>
                         {opt.label}
                       </p>
-                      <p className="text-[9px] text-white/30 leading-tight">{opt.sub}</p>
+                      <p className="text-[9px] text-muted-foreground/70 leading-tight">{opt.sub}</p>
                     </button>
                   ))}
                 </div>
 
                 {/* Studio info box for video modes */}
                 {seriesForm.productionType !== "audio" && (
-                  <div className="mt-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] p-2.5">
+                  <div className="mt-1.5 rounded-lg border border-border bg-white/[0.03] p-2.5">
                     <div className="flex items-center gap-2 mb-1">
-                      <Camera className="h-3.5 w-3.5 text-white/50" />
-                      <span className="text-[11px] font-semibold text-white/70">
+                      <Camera className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-[11px] font-semibold text-foreground/70">
                         {seriesForm.productionType === "video-live" ? "Live Video Studio" : "Video Recording Studio"}
                       </span>
                     </div>
-                    <p className="text-[10px] text-white/40 leading-relaxed">
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">
                       2-camera setup with multi-track audio.
                       {seriesForm.productionType === "video-live"
                         ? " Stream live to listeners in real-time."
@@ -862,7 +862,7 @@ export default function MyPodcastsPage() {
               {/* Cover Image URL — clearly optional */}
               <div className="space-y-1.5">
                 <Label htmlFor="series-cover">
-                  Cover Art <span className="text-[10px] text-white/30 font-normal">(optional)</span>
+                  Cover Art <span className="text-[10px] text-muted-foreground/70 font-normal">(optional)</span>
                 </Label>
                 <Input
                   id="series-cover"

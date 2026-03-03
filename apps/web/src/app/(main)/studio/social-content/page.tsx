@@ -90,14 +90,14 @@ function RadioOption({
         className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
           checked
             ? "border-[#74ddc7] bg-[#74ddc7]"
-            : "border-white/30 group-hover:border-white/50"
+            : "border-white/30 group-hover:border-foreground/50"
         }`}
         onClick={() => onChange(value)}
       >
-        {checked && <div className="w-2 h-2 rounded-full bg-[#0a0a0f]" />}
+        {checked && <div className="w-2 h-2 rounded-full bg-background" />}
       </div>
       <span
-        className="text-sm text-white/70 group-hover:text-white/90"
+        className="text-sm text-foreground/70 group-hover:text-foreground/90"
         onClick={() => onChange(value)}
       >
         {label}
@@ -121,7 +121,7 @@ function CheckboxOption({
         className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
           checked
             ? "border-[#74ddc7] bg-[#74ddc7]"
-            : "border-white/30 group-hover:border-white/50"
+            : "border-white/30 group-hover:border-foreground/50"
         }`}
       >
         {checked && (
@@ -140,7 +140,7 @@ function CheckboxOption({
           </svg>
         )}
       </div>
-      <span className="text-sm text-white/70 group-hover:text-white/90">
+      <span className="text-sm text-foreground/70 group-hover:text-foreground/90">
         {label}
       </span>
     </label>
@@ -223,7 +223,7 @@ export default function SocialContentPage() {
           <h1 className="text-3xl font-bold text-white mb-3">
             Request Submitted!
           </h1>
-          <p className="text-gray-400 max-w-md mx-auto mb-6">
+          <p className="text-white/60 max-w-md mx-auto mb-6">
             Thank you for your social content creation request. Our creative
             team will review your submission and contact you within 1-2 business
             days.
@@ -257,10 +257,10 @@ export default function SocialContentPage() {
               <Palette className="h-8 w-8 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-2">
                 Social Content Creation
               </h1>
-              <p className="text-base text-gray-400 max-w-2xl">
+              <p className="text-base text-muted-foreground max-w-2xl">
                 Create social content that captures attention and drives
                 engagement. Your story deserves to stand out — let us help you
                 bring it to life.
@@ -271,11 +271,11 @@ export default function SocialContentPage() {
       </div>
 
       {/* Pre-form info */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6">
-        <h2 className="text-lg font-semibold text-white mb-3">
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h2 className="text-lg font-semibold text-foreground mb-3">
           Before You Begin
         </h2>
-        <p className="text-sm text-white/50 mb-4">
+        <p className="text-sm text-muted-foreground mb-4">
           Please have the following ready before completing this form:
         </p>
         <ul className="space-y-2">
@@ -288,7 +288,7 @@ export default function SocialContentPage() {
           ].map((item) => (
             <li
               key={item}
-              className="flex items-center gap-2 text-sm text-white/60"
+              className="flex items-center gap-2 text-sm text-foreground/60"
             >
               <CheckCircle2 className="h-3.5 w-3.5 text-[#74ddc7] shrink-0" />
               {item}
@@ -298,17 +298,17 @@ export default function SocialContentPage() {
       </div>
 
       {/* Form */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] overflow-hidden">
-        <div className="border-b border-white/[0.06] p-4">
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="border-b border-border p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Step {step} of {TOTAL_STEPS}
             </span>
             <span className="text-xs font-bold text-[#74ddc7]">
               {progress}%
             </span>
           </div>
-          <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
+          <div className="h-2 bg-foreground/[0.06] rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-[#ec4899] to-[#74ddc7] rounded-full transition-all duration-500"
               style={{ width: `${progress}%` }}
@@ -320,40 +320,40 @@ export default function SocialContentPage() {
           {/* Step 1: Project Details */}
           {step === 1 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Project Details
               </h3>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Project Title or Working Title
                 </Label>
                 <Input
                   value={formData.projectTitle}
                   onChange={(e) => updateField("projectTitle", e.target.value)}
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                 />
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Type of Content Requested
                 </Label>
                 <select
                   value={formData.contentType}
                   onChange={(e) => updateField("contentType", e.target.value)}
-                  className="mt-1 w-full rounded-md bg-white/[0.04] border border-white/[0.08] text-white/70 px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md bg-foreground/[0.04] border border-border text-foreground/70 px-3 py-2 text-sm"
                 >
-                  <option value="" className="bg-[#141420]">
+                  <option value="" className="bg-card">
                     Select content type...
                   </option>
                   {contentTypes.map((type) => (
-                    <option key={type} value={type} className="bg-[#141420]">
+                    <option key={type} value={type} className="bg-card">
                       {type}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Brief Project Description
                 </Label>
                 <Textarea
@@ -362,7 +362,7 @@ export default function SocialContentPage() {
                     updateField("projectDescription", e.target.value)
                   }
                   placeholder="Describe your idea, theme, message, or overall vision."
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 min-h-[100px]"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60 min-h-[100px]"
                 />
               </div>
             </div>
@@ -371,30 +371,30 @@ export default function SocialContentPage() {
           {/* Step 2: Goals & Audience */}
           {step === 2 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Goals &amp; Audience
               </h3>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   What is the main goal of this content?
                 </Label>
                 <select
                   value={formData.mainGoal}
                   onChange={(e) => updateField("mainGoal", e.target.value)}
-                  className="mt-1 w-full rounded-md bg-white/[0.04] border border-white/[0.08] text-white/70 px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md bg-foreground/[0.04] border border-border text-foreground/70 px-3 py-2 text-sm"
                 >
-                  <option value="" className="bg-[#141420]">
+                  <option value="" className="bg-card">
                     Select goal...
                   </option>
                   {goalOptions.map((goal) => (
-                    <option key={goal} value={goal} className="bg-[#141420]">
+                    <option key={goal} value={goal} className="bg-card">
                       {goal}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Who is your target audience?
                 </Label>
                 <Input
@@ -403,11 +403,11 @@ export default function SocialContentPage() {
                     updateField("targetAudience", e.target.value)
                   }
                   placeholder="Describe your target audience..."
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                 />
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   What tone or style do you want the content to have?
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -427,21 +427,21 @@ export default function SocialContentPage() {
           {/* Step 3: Branding Information */}
           {step === 3 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Branding Information
               </h3>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Upload Your Logo or Branding Assets
                 </Label>
-                <div className="mt-2 rounded-lg border border-dashed border-white/[0.12] p-6 text-center cursor-pointer hover:border-white/[0.2] transition-colors">
-                  <p className="text-sm text-white/40">
+                <div className="mt-2 rounded-lg border border-dashed border-input p-6 text-center cursor-pointer hover:border-foreground/20 transition-colors">
+                  <p className="text-sm text-muted-foreground">
                     Click or drag a file to upload
                   </p>
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Do you have brand colors or style guidelines?
                 </Label>
                 <div className="flex flex-wrap gap-4">
@@ -468,10 +468,10 @@ export default function SocialContentPage() {
                         updateField("brandColorDescription", e.target.value)
                       }
                       placeholder="Describe your brand colors..."
-                      className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                      className="bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                     />
-                    <div className="rounded-lg border border-dashed border-white/[0.12] p-4 text-center cursor-pointer hover:border-white/[0.2] transition-colors">
-                      <p className="text-sm text-white/40">
+                    <div className="rounded-lg border border-dashed border-input p-4 text-center cursor-pointer hover:border-foreground/20 transition-colors">
+                      <p className="text-sm text-muted-foreground">
                         Upload Brand Guidelines
                       </p>
                     </div>
@@ -484,21 +484,21 @@ export default function SocialContentPage() {
           {/* Step 4: Content Assets & Examples */}
           {step === 4 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Content Assets &amp; Examples
               </h3>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Upload Any Sample Photos, Videos, or Inspiration
                 </Label>
-                <div className="mt-2 rounded-lg border border-dashed border-white/[0.12] p-6 text-center cursor-pointer hover:border-white/[0.2] transition-colors">
-                  <p className="text-sm text-white/40">
+                <div className="mt-2 rounded-lg border border-dashed border-input p-6 text-center cursor-pointer hover:border-foreground/20 transition-colors">
+                  <p className="text-sm text-muted-foreground">
                     Click or drag files to upload
                   </p>
                 </div>
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Share links to content styles you like
                 </Label>
                 <div className="mt-2 space-y-2">
@@ -515,13 +515,13 @@ export default function SocialContentPage() {
                         updateField(`referenceLink${i}`, e.target.value)
                       }
                       placeholder={`Reference URL ${i}`}
-                      className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                      className="bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                     />
                   ))}
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Will you be providing raw footage?
                 </Label>
                 <div className="space-y-2">
@@ -543,14 +543,14 @@ export default function SocialContentPage() {
               </div>
               {formData.provideFootage === "Yes, I will upload" && (
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     List file types or recording quality
                   </Label>
                   <Textarea
                     value={formData.fileTypes}
                     onChange={(e) => updateField("fileTypes", e.target.value)}
                     placeholder="e.g., MP4 1080p, iPhone footage, etc."
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 min-h-[60px]"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60 min-h-[60px]"
                   />
                 </div>
               )}
@@ -560,11 +560,11 @@ export default function SocialContentPage() {
           {/* Step 5: Production Requirements */}
           {step === 5 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Production Requirements
               </h3>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Do you need us to film on-site?
                 </Label>
                 <div className="flex flex-wrap gap-4">
@@ -582,19 +582,19 @@ export default function SocialContentPage() {
               </div>
               {formData.needOnSiteFilming === "Yes" && (
                 <div>
-                  <Label className="text-white/70">Filming Location(s)</Label>
+                  <Label className="text-foreground/70">Filming Location(s)</Label>
                   <Input
                     value={formData.filmingLocation}
                     onChange={(e) =>
                       updateField("filmingLocation", e.target.value)
                     }
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
               )}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Preferred Recording Date #1
                   </Label>
                   <Input
@@ -603,24 +603,24 @@ export default function SocialContentPage() {
                     onChange={(e) =>
                       updateField("recordingDate1", e.target.value)
                     }
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">Time</Label>
+                  <Label className="text-foreground/70">Time</Label>
                   <Input
                     type="time"
                     value={formData.recordingTime1}
                     onChange={(e) =>
                       updateField("recordingTime1", e.target.value)
                     }
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground"
                   />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Preferred Recording Date #2
                   </Label>
                   <Input
@@ -629,23 +629,23 @@ export default function SocialContentPage() {
                     onChange={(e) =>
                       updateField("recordingDate2", e.target.value)
                     }
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">Time</Label>
+                  <Label className="text-foreground/70">Time</Label>
                   <Input
                     type="time"
                     value={formData.recordingTime2}
                     onChange={(e) =>
                       updateField("recordingTime2", e.target.value)
                     }
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground"
                   />
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Do you need multiple angles or cameras?
                 </Label>
                 <div className="flex gap-6">
@@ -662,7 +662,7 @@ export default function SocialContentPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Will your content include:
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -682,11 +682,11 @@ export default function SocialContentPage() {
           {/* Step 6: Deliverables */}
           {step === 6 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Deliverables
               </h3>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Where will this content be published?
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -703,7 +703,7 @@ export default function SocialContentPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   How many finished pieces do you need?
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-3">
@@ -720,7 +720,7 @@ export default function SocialContentPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Preferred Aspect Ratio
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -742,7 +742,7 @@ export default function SocialContentPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Preferred Delivery Timeline
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -770,11 +770,11 @@ export default function SocialContentPage() {
           {/* Step 7: Additional Services */}
           {step === 7 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Additional Services
               </h3>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Would you like us to handle posting and scheduling your
                   content?
                 </Label>
@@ -792,7 +792,7 @@ export default function SocialContentPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Do you want analytics tracking after posting?
                 </Label>
                 <div className="flex gap-6">
@@ -809,7 +809,7 @@ export default function SocialContentPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Do you need a caption written for your posts?
                 </Label>
                 <div className="flex gap-6">
@@ -831,11 +831,11 @@ export default function SocialContentPage() {
           {/* Step 8: Budget & Approval */}
           {step === 8 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Budget &amp; Approval
               </h3>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Estimated Budget for This Project ($)
                 </Label>
                 <Input
@@ -843,11 +843,11 @@ export default function SocialContentPage() {
                   value={formData.budget}
                   onChange={(e) => updateField("budget", e.target.value)}
                   placeholder="e.g. $300 - $1,000"
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                 />
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Do you need a formal quote before production begins?
                 </Label>
                 <div className="flex gap-6">
@@ -864,11 +864,11 @@ export default function SocialContentPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Upload Any Additional Documents or Notes
                 </Label>
-                <div className="mt-2 rounded-lg border border-dashed border-white/[0.12] p-6 text-center cursor-pointer hover:border-white/[0.2] transition-colors">
-                  <p className="text-sm text-white/40">
+                <div className="mt-2 rounded-lg border border-dashed border-input p-6 text-center cursor-pointer hover:border-foreground/20 transition-colors">
+                  <p className="text-sm text-muted-foreground">
                     Click or drag a file to upload
                   </p>
                 </div>
@@ -879,22 +879,22 @@ export default function SocialContentPage() {
           {/* Step 9: Contact Information */}
           {step === 9 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Contact Information
               </h3>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Your Name <span className="text-red-400">*</span>
                   </Label>
                   <Input
                     value={formData.name}
                     onChange={(e) => updateField("name", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Business or Brand Name
                   </Label>
                   <Input
@@ -902,36 +902,36 @@ export default function SocialContentPage() {
                     onChange={(e) =>
                       updateField("businessName", e.target.value)
                     }
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Email Address <span className="text-red-400">*</span>
                   </Label>
                   <Input
                     type="email"
                     value={formData.email}
                     onChange={(e) => updateField("email", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Phone Number <span className="text-red-400">*</span>
                   </Label>
                   <Input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => updateField("phone", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Preferred Method of Communication
                 </Label>
                 <div className="flex flex-wrap gap-4">
@@ -951,12 +951,12 @@ export default function SocialContentPage() {
           )}
 
           {/* Navigation */}
-          <div className="flex items-center justify-between pt-4 border-t border-white/[0.06]">
+          <div className="flex items-center justify-between pt-4 border-t border-border">
             <Button
               variant="outline"
               onClick={() => setStep(Math.max(1, step - 1))}
               disabled={step === 1}
-              className="border-white/[0.12] text-white/70 hover:bg-white/[0.04] disabled:opacity-30"
+              className="border-input text-foreground/70 hover:bg-foreground/[0.04] disabled:opacity-30"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
@@ -983,8 +983,8 @@ export default function SocialContentPage() {
       </div>
 
       {/* Info footer */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 text-center">
-        <p className="text-sm text-white/40">
+      <div className="rounded-xl border border-border bg-card p-6 text-center">
+        <p className="text-sm text-muted-foreground">
           Carson Communications Studio · 115 Gillespie Street, Fayetteville, NC
           28301
           <br />

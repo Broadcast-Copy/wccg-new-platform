@@ -61,8 +61,8 @@ export default function FAQPage() {
               <HelpCircle className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Frequently Asked Questions</h1>
-              <p className="text-white/50 mt-1">Everything you need to know about WCCG 104.5 FM</p>
+              <h1 className="text-3xl font-bold text-foreground">Frequently Asked Questions</h1>
+              <p className="text-muted-foreground mt-1">Everything you need to know about WCCG 104.5 FM</p>
             </div>
           </div>
         </div>
@@ -72,19 +72,19 @@ export default function FAQPage() {
         <section key={section.category} className="space-y-4">
           <div className="flex items-center gap-2">
             <section.icon className="h-5 w-5 text-[#74ddc7]" />
-            <h2 className="text-xl font-semibold text-white">{section.category}</h2>
+            <h2 className="text-xl font-semibold text-foreground">{section.category}</h2>
           </div>
           <div className="space-y-3">
             {section.items.map((faq) => (
               <details
                 key={faq.q}
-                className="group rounded-xl border border-white/[0.06] bg-[#141420] overflow-hidden"
+                className="group rounded-xl border border-border bg-card overflow-hidden"
               >
-                <summary className="flex cursor-pointer items-center justify-between p-5 text-white font-medium hover:bg-white/[0.02] transition-colors">
+                <summary className="flex cursor-pointer items-center justify-between p-5 text-foreground font-medium hover:bg-white/[0.02] transition-colors">
                   {faq.q}
-                  <span className="ml-4 text-white/30 group-open:rotate-180 transition-transform">▼</span>
+                  <span className="ml-4 text-muted-foreground/70 group-open:rotate-180 transition-transform">▼</span>
                 </summary>
-                <div className="px-5 pb-5 text-sm text-white/60 leading-relaxed border-t border-white/[0.04] pt-4">
+                <div className="px-5 pb-5 text-sm text-foreground/60 leading-relaxed border-t border-white/[0.04] pt-4">
                   {faq.a}
                 </div>
               </details>
@@ -93,8 +93,8 @@ export default function FAQPage() {
         </section>
       ))}
 
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 text-center">
-        <p className="text-white/50 text-sm">
+      <div className="rounded-xl border border-border bg-card p-6 text-center">
+        <p className="text-muted-foreground text-sm">
           Still have questions?{" "}
           <Link href="/contact" className="text-[#74ddc7] hover:underline">Contact us</Link>
           {" "}and we&apos;ll be happy to help.

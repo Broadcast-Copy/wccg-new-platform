@@ -149,7 +149,7 @@ export function ListingForm({ listing, onSave, onCancel }: ListingFormProps) {
             placeholder="e.g. Smith Auto Repair"
             required
             disabled={submitting}
-            className="border-white/15 bg-white/5 text-white placeholder:text-gray-500 focus:border-[#74ddc7]/50"
+            className="border-white/15 bg-white/5 text-foreground placeholder:text-muted-foreground focus:border-[#74ddc7]/50"
           />
         </div>
 
@@ -162,7 +162,7 @@ export function ListingForm({ listing, onSave, onCancel }: ListingFormProps) {
             onValueChange={setCategory}
             disabled={submitting}
           >
-            <SelectTrigger className="w-full border-white/15 bg-white/5 text-white">
+            <SelectTrigger className="w-full border-white/15 bg-white/5 text-foreground">
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
@@ -188,7 +188,7 @@ export function ListingForm({ listing, onSave, onCancel }: ListingFormProps) {
           placeholder="Brief description of the business..."
           rows={3}
           disabled={submitting}
-          className="border-white/15 bg-white/5 text-white placeholder:text-gray-500 focus:border-[#74ddc7]/50"
+          className="border-white/15 bg-white/5 text-foreground placeholder:text-muted-foreground focus:border-[#74ddc7]/50"
         />
       </div>
 
@@ -203,7 +203,7 @@ export function ListingForm({ listing, onSave, onCancel }: ListingFormProps) {
           onChange={(e) => setAddress(e.target.value)}
           placeholder="123 Main Street"
           disabled={submitting}
-          className="border-white/15 bg-white/5 text-white placeholder:text-gray-500 focus:border-[#74ddc7]/50"
+          className="border-white/15 bg-white/5 text-foreground placeholder:text-muted-foreground focus:border-[#74ddc7]/50"
         />
       </div>
 
@@ -219,7 +219,7 @@ export function ListingForm({ listing, onSave, onCancel }: ListingFormProps) {
             onChange={(e) => setCity(e.target.value)}
             placeholder="Fayetteville"
             disabled={submitting}
-            className="border-white/15 bg-white/5 text-white placeholder:text-gray-500 focus:border-[#74ddc7]/50"
+            className="border-white/15 bg-white/5 text-foreground placeholder:text-muted-foreground focus:border-[#74ddc7]/50"
           />
         </div>
 
@@ -230,7 +230,7 @@ export function ListingForm({ listing, onSave, onCancel }: ListingFormProps) {
             onValueChange={setCounty}
             disabled={submitting}
           >
-            <SelectTrigger className="w-full border-white/15 bg-white/5 text-white">
+            <SelectTrigger className="w-full border-white/15 bg-white/5 text-foreground">
               <SelectValue placeholder="Select county" />
             </SelectTrigger>
             <SelectContent>
@@ -252,7 +252,7 @@ export function ListingForm({ listing, onSave, onCancel }: ListingFormProps) {
             value={state}
             onChange={(e) => setState(e.target.value)}
             disabled={submitting}
-            className="border-white/15 bg-white/5 text-white placeholder:text-gray-500 focus:border-[#74ddc7]/50"
+            className="border-white/15 bg-white/5 text-foreground placeholder:text-muted-foreground focus:border-[#74ddc7]/50"
           />
         </div>
 
@@ -266,7 +266,7 @@ export function ListingForm({ listing, onSave, onCancel }: ListingFormProps) {
             onChange={(e) => setZipCode(e.target.value)}
             placeholder="28301"
             disabled={submitting}
-            className="border-white/15 bg-white/5 text-white placeholder:text-gray-500 focus:border-[#74ddc7]/50"
+            className="border-white/15 bg-white/5 text-foreground placeholder:text-muted-foreground focus:border-[#74ddc7]/50"
           />
         </div>
       </div>
@@ -283,7 +283,7 @@ export function ListingForm({ listing, onSave, onCancel }: ListingFormProps) {
             onChange={(e) => setPhone(e.target.value)}
             placeholder="(910) 555-1234"
             disabled={submitting}
-            className="border-white/15 bg-white/5 text-white placeholder:text-gray-500 focus:border-[#74ddc7]/50"
+            className="border-white/15 bg-white/5 text-foreground placeholder:text-muted-foreground focus:border-[#74ddc7]/50"
           />
         </div>
 
@@ -298,7 +298,7 @@ export function ListingForm({ listing, onSave, onCancel }: ListingFormProps) {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="info@business.com"
             disabled={submitting}
-            className="border-white/15 bg-white/5 text-white placeholder:text-gray-500 focus:border-[#74ddc7]/50"
+            className="border-white/15 bg-white/5 text-foreground placeholder:text-muted-foreground focus:border-[#74ddc7]/50"
           />
         </div>
       </div>
@@ -315,7 +315,7 @@ export function ListingForm({ listing, onSave, onCancel }: ListingFormProps) {
             onChange={(e) => setWebsite(e.target.value)}
             placeholder="https://www.business.com"
             disabled={submitting}
-            className="border-white/15 bg-white/5 text-white placeholder:text-gray-500 focus:border-[#74ddc7]/50"
+            className="border-white/15 bg-white/5 text-foreground placeholder:text-muted-foreground focus:border-[#74ddc7]/50"
           />
         </div>
 
@@ -329,7 +329,7 @@ export function ListingForm({ listing, onSave, onCancel }: ListingFormProps) {
             onChange={(e) => setImageUrl(e.target.value)}
             placeholder="https://example.com/photo.jpg"
             disabled={submitting}
-            className="border-white/15 bg-white/5 text-white placeholder:text-gray-500 focus:border-[#74ddc7]/50"
+            className="border-white/15 bg-white/5 text-foreground placeholder:text-muted-foreground focus:border-[#74ddc7]/50"
           />
         </div>
       </div>
@@ -367,7 +367,7 @@ export function ListingForm({ listing, onSave, onCancel }: ListingFormProps) {
             variant="outline"
             onClick={onCancel}
             disabled={submitting}
-            className="rounded-full border-white/20 text-white hover:bg-white/10"
+            className="rounded-full border-white/20 text-foreground hover:bg-foreground/10"
           >
             <X className="mr-2 h-4 w-4" />
             Cancel

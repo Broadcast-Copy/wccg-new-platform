@@ -23,7 +23,7 @@ export default function PortalRoleSelectPage() {
         <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#74ddc7] to-[#7401df]">
           <Radio className="size-8 text-white" />
         </div>
-        <h1 className="text-3xl font-bold text-white sm:text-4xl">
+        <h1 className="text-3xl font-bold text-foreground sm:text-4xl">
           WCCG <span className="text-[#74ddc7]">Platform Portal</span>
         </h1>
         <p className="mt-2 text-muted-foreground">
@@ -67,7 +67,7 @@ export default function PortalRoleSelectPage() {
                     </div>
                     <ChevronRight className="size-5 text-muted-foreground transition-transform group-hover:translate-x-1" style={{ color: config.accentColor }} />
                   </div>
-                  <h3 className="mb-1 text-lg font-semibold text-white">
+                  <h3 className="mb-1 text-lg font-semibold text-foreground">
                     {config.label}
                   </h3>
                   <p className="text-sm leading-relaxed text-muted-foreground">
@@ -75,7 +75,7 @@ export default function PortalRoleSelectPage() {
                   </p>
                   <div className="mt-4 flex items-center gap-2">
                     <div
-                      className="flex size-6 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                      className="flex size-6 items-center justify-center rounded-full text-[10px] font-bold text-foreground"
                       style={{ backgroundColor: config.accentColor }}
                     >
                       {config.mockUser.initials}

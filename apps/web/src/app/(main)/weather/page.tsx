@@ -22,10 +22,10 @@ export default function WeatherPage() {
               <CloudSun className="h-8 w-8 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-2">
                 Realtime Weather Forecast
               </h1>
-              <p className="text-base text-gray-400 max-w-2xl">
+              <p className="text-base text-muted-foreground max-w-2xl">
                 Stay ahead with real-time weather forecasts for Fayetteville, NC and the surrounding area. Plan your day or event with confidence.
               </p>
             </div>
@@ -36,14 +36,14 @@ export default function WeatherPage() {
                 <MapPin className="h-4 w-4 text-[#3b82f6]" />
                 <span className="text-sm font-medium text-gray-300">Location</span>
               </div>
-              <p className="mt-1 text-lg font-bold text-white">Fayetteville, NC</p>
+              <p className="mt-1 text-lg font-bold text-foreground">Fayetteville, NC</p>
             </div>
             <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
               <div className="flex items-center gap-2">
                 <Radio className="h-4 w-4 text-[#74ddc7]" />
                 <span className="text-sm font-medium text-gray-300">Station</span>
               </div>
-              <p className="mt-1 text-lg font-bold text-white">WCCG 104.5 FM</p>
+              <p className="mt-1 text-lg font-bold text-foreground">WCCG 104.5 FM</p>
             </div>
           </div>
         </div>
@@ -55,8 +55,8 @@ export default function WeatherPage() {
       </div>
 
       {/* Info */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 text-center max-w-xl mx-auto">
-        <p className="text-sm text-white/40">
+      <div className="rounded-xl border border-border bg-card p-6 text-center max-w-xl mx-auto">
+        <p className="text-sm text-muted-foreground">
           Weather data powered by Open-Meteo. Updated every 30 minutes.
           <br />
           Serving Cumberland, Harnett, Robeson, Hoke, Bladen, Sampson, Lee, Moore &amp; Scotland counties.

@@ -33,7 +33,7 @@ export function YouTubeGrid({
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600/20">
               <Youtube className="h-5 w-5 text-red-500" />
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-white">
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">
               {title}
             </h2>
           </div>

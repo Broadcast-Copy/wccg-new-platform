@@ -250,7 +250,7 @@ export default function StreamDetailPage() {
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
-                  <Radio className="h-12 w-12 text-white/60" />
+                  <Radio className="h-12 w-12 text-foreground/60" />
                 </div>
               )}
             </div>
@@ -265,7 +265,7 @@ export default function StreamDetailPage() {
                     LIVE NOW
                   </span>
                 )}
-                <Badge variant="outline" className="border-white/30 text-white/90 backdrop-blur-sm">
+                <Badge variant="outline" className="border-white/30 text-foreground/90 backdrop-blur-sm">
                   {stream.category.replace("_", " ")}
                 </Badge>
                 <Badge
@@ -279,13 +279,13 @@ export default function StreamDetailPage() {
               </div>
 
               {/* Title */}
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground tracking-tight">
                 {stream.name}
               </h1>
 
               {/* Description */}
               {stream.description && (
-                <p className="text-base text-white/70 max-w-2xl leading-relaxed">
+                <p className="text-base text-foreground/70 max-w-2xl leading-relaxed">
                   {stream.description}
                 </p>
               )}
@@ -299,7 +299,7 @@ export default function StreamDetailPage() {
                   className={`gap-2 rounded-full px-8 transition-all duration-200 ${
                     isThisPlaying
                       ? "bg-white text-black hover:bg-white/90 shadow-xl shadow-white/20"
-                      : "bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20"
+                      : "bg-white/15 text-foreground hover:bg-white/25 backdrop-blur-sm border border-white/20"
                   }`}
                 >
                   {isThisPlaying ? (
@@ -318,7 +318,7 @@ export default function StreamDetailPage() {
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-10 w-10 text-white/60 hover:text-white hover:bg-white/10 rounded-full"
+                  className="h-10 w-10 text-foreground/60 hover:text-foreground hover:bg-foreground/10 rounded-full"
                   onClick={() => {
                     if (navigator.share) {
                       navigator.share({

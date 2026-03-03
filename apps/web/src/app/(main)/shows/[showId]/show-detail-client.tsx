@@ -182,16 +182,16 @@ function PodcastPlayer({
               <Mic className="h-8 w-8" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-gray-400 uppercase tracking-wider">Now Playing</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Now Playing</p>
               <p className="font-semibold truncate text-lg">{ep?.title ?? showName}</p>
-              <p className="text-sm text-gray-400 truncate">{showName}</p>
+              <p className="text-sm text-muted-foreground truncate">{showName}</p>
             </div>
           </div>
           <div className="mt-4 flex items-center justify-center gap-4">
             <Button
               variant="ghost"
               size="icon"
-              className="text-white hover:bg-white/10"
+              className="text-foreground hover:bg-foreground/10"
               onClick={() => setIdx(Math.max(0, idx - 1))}
               disabled={idx === 0}
             >
@@ -208,7 +208,7 @@ function PodcastPlayer({
             <Button
               variant="ghost"
               size="icon"
-              className="text-white hover:bg-white/10"
+              className="text-foreground hover:bg-foreground/10"
               onClick={() => setIdx(Math.min(episodes.length - 1, idx + 1))}
               disabled={idx === episodes.length - 1}
             >
@@ -218,7 +218,7 @@ function PodcastPlayer({
           <div className="mt-3 h-1 rounded-full bg-white/20">
             <div className="h-1 w-1/3 rounded-full bg-teal-400" />
           </div>
-          <div className="mt-1 flex justify-between text-xs text-gray-500">
+          <div className="mt-1 flex justify-between text-xs text-muted-foreground">
             <span>0:00</span>
             <span>{ep?.duration ? formatDuration(ep.duration) : "--:--"}</span>
           </div>
@@ -382,14 +382,14 @@ export default function ShowDetailPage() {
                   {show.isActive ? "On Air" : "Off Air"}
                 </Badge>
                 {schedule && (
-                  <Badge variant="outline" className="border-white/30 text-white text-xs">
+                  <Badge variant="outline" className="border-white/30 text-foreground text-xs">
                     <Clock className="mr-1 h-3 w-3" />{schedule}
                   </Badge>
                 )}
               </div>
-              <h1 className="text-3xl font-bold text-white sm:text-4xl lg:text-5xl">{show.name}</h1>
+              <h1 className="text-3xl font-bold text-foreground sm:text-4xl lg:text-5xl">{show.name}</h1>
               {show.hosts.length > 0 && (
-                <p className="text-white/70 text-sm sm:text-base">
+                <p className="text-foreground/70 text-sm sm:text-base">
                   Hosted by {show.hosts.map((h) => h.name).join(", ")}
                 </p>
               )}

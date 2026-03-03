@@ -6,7 +6,7 @@ import { ALL_SPORTS_TEAMS } from "@/data/sports";
 
 export default function SportsPage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-5xl px-4 py-10 sm:py-16">
         {/* Header */}
         <div className="flex items-center gap-3 mb-2">
@@ -15,7 +15,7 @@ export default function SportsPage() {
             Sports
           </h1>
         </div>
-        <p className="text-white/50 mb-10 text-lg">
+        <p className="text-muted-foreground mb-10 text-lg">
           WCCG 104.5 FM Sports Coverage &mdash; Duke Blue Devils
         </p>
 
@@ -25,7 +25,7 @@ export default function SportsPage() {
             <Link
               key={team.id}
               href={`/sports/${team.slug}`}
-              className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] transition-all hover:border-white/[0.15] hover:bg-white/[0.05]"
+              className="group relative overflow-hidden rounded-2xl border border-border bg-white/[0.03] transition-all hover:border-white/[0.15] hover:bg-white/[0.05]"
             >
               {/* Gradient overlay */}
               <div
@@ -34,20 +34,20 @@ export default function SportsPage() {
 
               <div className="relative p-6 sm:p-8 space-y-4">
                 {/* Sport badge */}
-                <span className="inline-block rounded-full bg-white/[0.08] px-3 py-1 text-xs font-semibold text-white/70 uppercase tracking-wider">
+                <span className="inline-block rounded-full bg-foreground/[0.08] px-3 py-1 text-xs font-semibold text-foreground/70 uppercase tracking-wider">
                   {team.sport}
                 </span>
 
-                <h2 className="text-2xl font-extrabold text-white group-hover:text-[#74ddc7] transition-colors">
+                <h2 className="text-2xl font-extrabold text-foreground group-hover:text-[#74ddc7] transition-colors">
                   {team.name}
                 </h2>
 
-                <p className="text-sm text-white/40 line-clamp-2">
+                <p className="text-sm text-muted-foreground line-clamp-2">
                   {team.description}
                 </p>
 
                 {/* Quick info */}
-                <div className="flex flex-wrap gap-4 text-xs text-white/40">
+                <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1.5">
                     <MapPin className="h-3 w-3" />
                     <span>{team.venue}</span>

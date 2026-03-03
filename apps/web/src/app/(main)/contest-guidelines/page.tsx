@@ -38,16 +38,16 @@ export default function ContestGuidelinesPage() {
               <Trophy className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Contest Guidelines</h1>
-              <p className="text-white/50 mt-1">How to participate in WCCG 104.5 FM contests</p>
+              <h1 className="text-3xl font-bold text-foreground">Contest Guidelines</h1>
+              <p className="text-muted-foreground mt-1">How to participate in WCCG 104.5 FM contests</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
-        <h2 className="text-xl font-semibold text-white">Getting Started</h2>
-        <p className="text-white/50 leading-relaxed">
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Getting Started</h2>
+        <p className="text-muted-foreground leading-relaxed">
           WCCG 104.5 FM regularly hosts contests, giveaways, and promotions for our listeners.
           Follow these guidelines to participate fairly and maximize your chances of winning.
         </p>
@@ -55,14 +55,14 @@ export default function ContestGuidelinesPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Do's */}
-        <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 space-y-3">
+        <div className="rounded-xl border border-border bg-card p-6 space-y-3">
           <h2 className="text-xl font-semibold text-[#74ddc7] flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5" />
             Do&apos;s
           </h2>
           <ul className="space-y-2">
             {dos.map((item, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-white/50">
+              <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                 <CheckCircle2 className="h-4 w-4 text-[#74ddc7] mt-0.5 shrink-0" />
                 {item}
               </li>
@@ -71,14 +71,14 @@ export default function ContestGuidelinesPage() {
         </div>
 
         {/* Don'ts */}
-        <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 space-y-3">
+        <div className="rounded-xl border border-border bg-card p-6 space-y-3">
           <h2 className="text-xl font-semibold text-red-400 flex items-center gap-2">
             <XCircle className="h-5 w-5" />
             Don&apos;ts
           </h2>
           <ul className="space-y-2">
             {donts.map((item, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-white/50">
+              <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                 <XCircle className="h-4 w-4 text-red-400 mt-0.5 shrink-0" />
                 {item}
               </li>
@@ -87,8 +87,8 @@ export default function ContestGuidelinesPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
-        <h2 className="text-xl font-semibold text-white">Types of Contests</h2>
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Types of Contests</h2>
         <div className="grid gap-3 sm:grid-cols-3">
           {[
             { title: "Call-In", description: "Listen for the cue to call, then dial (910) 484-4932. Designated caller wins!" },
@@ -96,8 +96,8 @@ export default function ContestGuidelinesPage() {
             { title: "In-Person", description: "Visit WCCG events and promotions for on-site contest opportunities." },
           ].map((type) => (
             <div key={type.title} className="rounded-lg border border-white/[0.04] bg-white/[0.02] p-4">
-              <h3 className="font-semibold text-white mb-1">{type.title}</h3>
-              <p className="text-xs text-white/40">{type.description}</p>
+              <h3 className="font-semibold text-foreground mb-1">{type.title}</h3>
+              <p className="text-xs text-muted-foreground">{type.description}</p>
             </div>
           ))}
         </div>
@@ -107,7 +107,7 @@ export default function ContestGuidelinesPage() {
         <Button asChild className="rounded-full bg-[#74ddc7] text-[#0a0a0f] font-bold hover:bg-[#5fc4b0]">
           <Link href="/contest-rules">Official Contest Rules</Link>
         </Button>
-        <Button asChild variant="outline" className="rounded-full border-white/20 text-white hover:bg-white/5">
+        <Button asChild variant="outline" className="rounded-full border-white/20 text-foreground hover:bg-white/5">
           <Link href="/contact">Contact Us</Link>
         </Button>
       </div>

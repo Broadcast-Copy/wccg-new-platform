@@ -126,20 +126,20 @@ function Breadcrumb({
     <div className="flex items-center gap-1 text-sm overflow-x-auto scrollbar-hide">
       <button
         onClick={() => onNavigate(-1)}
-        className="flex items-center gap-1 text-white/50 hover:text-[#74ddc7] transition-colors shrink-0"
+        className="flex items-center gap-1 text-muted-foreground hover:text-[#74ddc7] transition-colors shrink-0"
       >
         <Home className="h-3.5 w-3.5" />
         <span className="font-medium">My Mixes</span>
       </button>
       {path.map((crumb, i) => (
         <div key={crumb.id} className="flex items-center gap-1 shrink-0">
-          <ChevronRight className="h-3.5 w-3.5 text-white/20" />
+          <ChevronRight className="h-3.5 w-3.5 text-foreground/20" />
           <button
             onClick={() => onNavigate(i)}
             className={`font-medium transition-colors ${
               i === path.length - 1
-                ? "text-white"
-                : "text-white/50 hover:text-[#74ddc7]"
+                ? "text-foreground"
+                : "text-muted-foreground hover:text-[#74ddc7]"
             }`}
           >
             {crumb.name}
@@ -164,23 +164,23 @@ function FolderCard({
     return (
       <button
         onClick={onClick}
-        className="group flex items-center gap-4 w-full rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 sm:p-4 transition-all hover:bg-white/[0.05] hover:border-white/[0.12] text-left"
+        className="group flex items-center gap-4 w-full rounded-xl border border-border bg-white/[0.02] p-3 sm:p-4 transition-all hover:bg-white/[0.05] hover:border-input text-left"
       >
-        <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10 border border-white/[0.06]">
+        <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10 border border-border">
           <Folder className="h-5 w-5 sm:h-6 sm:w-6 text-[#74ddc7]" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm sm:text-base font-semibold text-white group-hover:text-[#74ddc7] transition-colors truncate">
+          <p className="text-sm sm:text-base font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors truncate">
             {folder.name}
           </p>
-          <p className="text-xs text-white/30 mt-0.5">
+          <p className="text-xs text-muted-foreground/70 mt-0.5">
             {folder.itemCount ?? 0} items
           </p>
         </div>
-        <div className="hidden sm:block text-xs text-white/25">
+        <div className="hidden sm:block text-xs text-muted-foreground/60">
           {formatDate(folder.createdAt)}
         </div>
-        <ChevronRight className="h-4 w-4 text-white/20 group-hover:text-white/40 transition-colors" />
+        <ChevronRight className="h-4 w-4 text-foreground/20 group-hover:text-muted-foreground transition-colors" />
       </button>
     );
   }
@@ -188,16 +188,16 @@ function FolderCard({
   return (
     <button
       onClick={onClick}
-      className="group flex flex-col items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 transition-all hover:bg-white/[0.05] hover:border-white/[0.12] text-center"
+      className="group flex flex-col items-center gap-3 rounded-2xl border border-border bg-white/[0.02] p-5 transition-all hover:bg-white/[0.05] hover:border-input text-center"
     >
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10 border border-white/[0.06] group-hover:border-[#74ddc7]/20 transition-colors">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10 border border-border group-hover:border-[#74ddc7]/20 transition-colors">
         <Folder className="h-8 w-8 text-[#74ddc7]" />
       </div>
       <div>
-        <p className="text-sm font-semibold text-white group-hover:text-[#74ddc7] transition-colors truncate max-w-[140px]">
+        <p className="text-sm font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors truncate max-w-[140px]">
           {folder.name}
         </p>
-        <p className="text-[11px] text-white/30 mt-1">
+        <p className="text-[11px] text-muted-foreground/70 mt-1">
           {folder.itemCount ?? 0} items
         </p>
       </div>
@@ -218,15 +218,15 @@ function FileCard({
 
   if (viewMode === "list") {
     return (
-      <div className="group flex items-center gap-4 w-full rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 sm:p-4 transition-all hover:bg-white/[0.05] hover:border-white/[0.12]">
+      <div className="group flex items-center gap-4 w-full rounded-xl border border-border bg-white/[0.02] p-3 sm:p-4 transition-all hover:bg-white/[0.05] hover:border-input">
         {/* Icon */}
-        <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#7401df]/10 to-[#74ddc7]/5 border border-white/[0.06]">
-          <FileAudio className="h-5 w-5 sm:h-6 sm:w-6 text-white/40" />
+        <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#7401df]/10 to-[#74ddc7]/5 border border-border">
+          <FileAudio className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
         </div>
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm sm:text-base font-semibold text-white truncate">
+          <p className="text-sm sm:text-base font-semibold text-foreground truncate">
             {file.name}
           </p>
           <div className="flex items-center gap-3 mt-0.5">
@@ -236,13 +236,13 @@ function FileCard({
               </span>
             )}
             {file.duration && (
-              <span className="text-xs text-white/30 flex items-center gap-1">
+              <span className="text-xs text-muted-foreground/70 flex items-center gap-1">
                 <Clock className="h-3 w-3" />
                 {formatDuration(file.duration)}
               </span>
             )}
             {file.size && (
-              <span className="hidden sm:block text-xs text-white/25">
+              <span className="hidden sm:block text-xs text-muted-foreground/60">
                 {formatFileSize(file.size)}
               </span>
             )}
@@ -257,7 +257,7 @@ function FileCard({
         )}
 
         {/* Date */}
-        <div className="hidden sm:block text-xs text-white/25 shrink-0">
+        <div className="hidden sm:block text-xs text-muted-foreground/60 shrink-0">
           {formatDate(file.createdAt)}
         </div>
 
@@ -266,7 +266,7 @@ function FileCard({
           {file.audioUrl && (
             <button
               onClick={openPlayer}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-white/30 hover:text-[#74ddc7] hover:bg-[#74ddc7]/10 transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground/70 hover:text-[#74ddc7] hover:bg-[#74ddc7]/10 transition-colors"
               aria-label="Play"
             >
               <Play className="h-4 w-4" />
@@ -275,17 +275,17 @@ function FileCard({
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground/70 hover:text-foreground/60 hover:bg-foreground/[0.06] transition-colors"
               aria-label="More actions"
             >
               <MoreHorizontal className="h-4 w-4" />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-full mt-1 z-20 w-40 rounded-xl border border-white/[0.08] bg-[#141420] p-1.5 shadow-2xl">
-                <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-white/60 hover:bg-white/[0.06] hover:text-white transition-colors">
+              <div className="absolute right-0 top-full mt-1 z-20 w-40 rounded-xl border border-border bg-card p-1.5 shadow-2xl">
+                <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-foreground/60 hover:bg-foreground/[0.06] hover:text-foreground transition-colors">
                   <Pencil className="h-3.5 w-3.5" /> Rename
                 </button>
-                <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-white/60 hover:bg-white/[0.06] hover:text-white transition-colors">
+                <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-foreground/60 hover:bg-foreground/[0.06] hover:text-foreground transition-colors">
                   <Move className="h-3.5 w-3.5" /> Move to...
                 </button>
                 <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors">
@@ -301,7 +301,7 @@ function FileCard({
 
   // Grid card
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] transition-all hover:bg-white/[0.05] hover:border-white/[0.12]">
+    <div className="group relative overflow-hidden rounded-2xl border border-border bg-white/[0.02] transition-all hover:bg-white/[0.05] hover:border-input">
       {/* Cover / artwork area */}
       <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10">
         {file.coverImageUrl ? (
@@ -313,7 +313,7 @@ function FileCard({
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <Music className="h-16 w-16 text-white/15" />
+            <Music className="h-16 w-16 text-foreground/15" />
           </div>
         )}
 
@@ -329,7 +329,7 @@ function FileCard({
 
         {/* Duration badge */}
         {file.duration && (
-          <div className="absolute bottom-2 right-2 rounded-md bg-black/70 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
+          <div className="absolute bottom-2 right-2 rounded-md bg-black/70 px-2 py-0.5 text-[11px] font-medium text-foreground backdrop-blur-sm">
             {formatDuration(file.duration)}
           </div>
         )}
@@ -344,7 +344,7 @@ function FileCard({
 
       {/* Info */}
       <div className="p-3.5 space-y-1.5">
-        <p className="text-sm font-semibold text-white truncate">{file.name}</p>
+        <p className="text-sm font-semibold text-foreground truncate">{file.name}</p>
         <div className="flex items-center justify-between">
           {file.genre && (
             <span className="text-[10px] font-medium text-[#7401df] bg-[#7401df]/10 px-1.5 py-0.5 rounded">
@@ -352,7 +352,7 @@ function FileCard({
             </span>
           )}
           {file.size && (
-            <span className="text-[11px] text-white/25">
+            <span className="text-[11px] text-muted-foreground/60">
               {formatFileSize(file.size)}
             </span>
           )}
@@ -385,12 +385,12 @@ function UploadDropzone({
   };
 
   return (
-    <div className="rounded-2xl border-2 border-dashed border-white/[0.12] bg-white/[0.02] p-6 sm:p-8 space-y-4">
+    <div className="rounded-2xl border-2 border-dashed border-input bg-white/[0.02] p-6 sm:p-8 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-white">Upload Mixes</h3>
+        <h3 className="text-sm font-bold text-foreground">Upload Mixes</h3>
         <button
           onClick={onClose}
-          className="h-7 w-7 flex items-center justify-center rounded-full text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-colors"
+          className="h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.06] transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
@@ -404,7 +404,7 @@ function UploadDropzone({
         className={`flex flex-col items-center justify-center rounded-xl border border-dashed p-8 transition-colors cursor-pointer ${
           dragOver
             ? "border-[#74ddc7] bg-[#74ddc7]/10"
-            : "border-white/[0.08] hover:border-white/[0.15] hover:bg-white/[0.03]"
+            : "border-border hover:border-white/[0.15] hover:bg-white/[0.03]"
         }`}
         onClick={() => {
           const input = document.createElement("input");
@@ -418,11 +418,11 @@ function UploadDropzone({
           input.click();
         }}
       >
-        <CloudUpload className="h-10 w-10 text-white/20 mb-3" />
-        <p className="text-sm font-medium text-white/60">
+        <CloudUpload className="h-10 w-10 text-foreground/20 mb-3" />
+        <p className="text-sm font-medium text-foreground/60">
           Drag & drop audio files here
         </p>
-        <p className="text-xs text-white/30 mt-1">
+        <p className="text-xs text-muted-foreground/70 mt-1">
           or click to browse — .mp3, .wav, .m4a
         </p>
       </div>
@@ -430,26 +430,26 @@ function UploadDropzone({
       {/* Queued files */}
       {files.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-medium text-white/40 uppercase tracking-wider">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             {files.length} file{files.length !== 1 ? "s" : ""} ready
           </p>
           {files.map((file, i) => (
             <div
               key={`${file.name}-${i}`}
-              className="flex items-center gap-3 rounded-lg bg-white/[0.04] px-3 py-2"
+              className="flex items-center gap-3 rounded-lg bg-foreground/[0.04] px-3 py-2"
             >
               <FileAudio className="h-4 w-4 text-[#74ddc7] shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-white truncate">
+                <p className="text-xs font-medium text-foreground truncate">
                   {file.name}
                 </p>
-                <p className="text-[11px] text-white/30">
+                <p className="text-[11px] text-muted-foreground/70">
                   {formatFileSize(file.size)}
                 </p>
               </div>
               <button
                 onClick={() => removeFile(i)}
-                className="text-white/30 hover:text-red-400 transition-colors"
+                className="text-muted-foreground/70 hover:text-red-400 transition-colors"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -487,7 +487,7 @@ function NewFolderInput({
           if (e.key === "Escape") onCancel();
         }}
         placeholder="Folder name..."
-        className="flex-1 h-8 text-sm bg-transparent border-0 text-white placeholder:text-white/30 focus-visible:ring-0 focus-visible:ring-offset-0"
+        className="flex-1 h-8 text-sm bg-transparent border-0 text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-0 focus-visible:ring-offset-0"
       />
       <button
         onClick={() => name.trim() && onSubmit(name.trim())}
@@ -497,7 +497,7 @@ function NewFolderInput({
       </button>
       <button
         onClick={onCancel}
-        className="h-7 w-7 flex items-center justify-center rounded-full text-white/40 hover:bg-white/[0.06] transition-colors"
+        className="h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/[0.06] transition-colors"
       >
         <X className="h-4 w-4" />
       </button>
@@ -576,10 +576,10 @@ export default function MixesPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white">
+          <h1 className="text-2xl sm:text-3xl font-black text-foreground">
             My Mixes
           </h1>
-          <p className="text-sm text-white/40 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             {user
               ? "Manage your DJ mixes, sets, and recordings"
               : "Browse DJ mixes from WCCG hosts"}
@@ -588,15 +588,15 @@ export default function MixesPage() {
 
         {/* DJ Profile badge */}
         {user && (
-          <div className="flex items-center gap-3 rounded-xl bg-white/[0.03] border border-white/[0.06] px-4 py-2.5">
+          <div className="flex items-center gap-3 rounded-xl bg-white/[0.03] border border-border px-4 py-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df] to-[#74ddc7]">
               <Disc3 className="h-4 w-4 text-white" />
             </div>
             <div>
-              <p className="text-xs font-bold text-white">
+              <p className="text-xs font-bold text-foreground">
                 {user.user_metadata?.display_name || user.email?.split("@")[0] || "DJ"}
               </p>
-              <p className="text-[10px] text-white/30">DJ Profile</p>
+              <p className="text-[10px] text-muted-foreground/70">DJ Profile</p>
             </div>
           </div>
         )}
@@ -613,12 +613,12 @@ export default function MixesPage() {
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/30" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/70" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search..."
-              className="h-8 w-[160px] sm:w-[200px] pl-8 text-xs bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 focus-visible:border-[#74ddc7]/30 focus-visible:ring-0"
+              className="h-8 w-[160px] sm:w-[200px] pl-8 text-xs bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/70 focus-visible:border-[#74ddc7]/30 focus-visible:ring-0"
             />
           </div>
 
@@ -628,7 +628,7 @@ export default function MixesPage() {
               variant="ghost"
               size="sm"
               onClick={() => setShowNewFolder(true)}
-              className="h-8 text-xs text-white/50 hover:text-white hover:bg-white/[0.06]"
+              className="h-8 text-xs text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06]"
             >
               <FolderPlus className="mr-1.5 h-3.5 w-3.5" />
               New Folder
@@ -648,13 +648,13 @@ export default function MixesPage() {
           )}
 
           {/* View mode toggle */}
-          <div className="flex items-center rounded-lg border border-white/[0.08] bg-white/[0.03] p-0.5">
+          <div className="flex items-center rounded-lg border border-border bg-white/[0.03] p-0.5">
             <button
               onClick={() => setViewMode("list")}
               className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
                 viewMode === "list"
                   ? "bg-white/[0.1] text-[#74ddc7]"
-                  : "text-white/30 hover:text-white/60"
+                  : "text-muted-foreground/70 hover:text-foreground/60"
               }`}
               aria-label="List view"
             >
@@ -665,7 +665,7 @@ export default function MixesPage() {
               className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
                 viewMode === "grid"
                   ? "bg-white/[0.1] text-[#74ddc7]"
-                  : "text-white/30 hover:text-white/60"
+                  : "text-muted-foreground/70 hover:text-foreground/60"
               }`}
               aria-label="Grid view"
             >
@@ -690,16 +690,16 @@ export default function MixesPage() {
 
       {/* Storage usage bar */}
       {user && (
-        <div className="flex items-center gap-3 rounded-xl bg-white/[0.02] border border-white/[0.06] px-4 py-3">
-          <HardDrive className="h-4 w-4 text-white/30 shrink-0" />
+        <div className="flex items-center gap-3 rounded-xl bg-white/[0.02] border border-border px-4 py-3">
+          <HardDrive className="h-4 w-4 text-muted-foreground/70 shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] text-white/40">
+              <span className="text-[11px] text-muted-foreground">
                 {formatFileSize(usedStorage)} of {formatFileSize(totalStorage)} used
               </span>
-              <span className="text-[11px] text-white/30">{usagePercent}%</span>
+              <span className="text-[11px] text-muted-foreground/70">{usagePercent}%</span>
             </div>
-            <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+            <div className="h-1.5 rounded-full bg-foreground/[0.06] overflow-hidden">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-[#74ddc7] to-[#7401df] transition-all"
                 style={{ width: `${Math.min(usagePercent, 100)}%` }}
@@ -714,7 +714,7 @@ export default function MixesPage() {
         {/* Folders */}
         {filteredFolders.length > 0 && (
           <div>
-            <p className="text-[11px] font-bold text-white/25 uppercase tracking-widest mb-2">
+            <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-2">
               Folders
             </p>
             <div
@@ -739,7 +739,7 @@ export default function MixesPage() {
         {/* Files */}
         {filteredFiles.length > 0 && (
           <div>
-            <p className="text-[11px] font-bold text-white/25 uppercase tracking-widest mb-2">
+            <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-2">
               Files
             </p>
             <div
@@ -762,11 +762,11 @@ export default function MixesPage() {
 
         {/* Empty state */}
         {filteredFolders.length === 0 && filteredFiles.length === 0 && (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.02] py-16">
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-white/[0.02] py-16">
             {searchQuery ? (
               <>
-                <Search className="h-8 w-8 text-white/15 mb-3" />
-                <p className="text-sm font-medium text-white/40">
+                <Search className="h-8 w-8 text-foreground/15 mb-3" />
+                <p className="text-sm font-medium text-muted-foreground">
                   No results for &ldquo;{searchQuery}&rdquo;
                 </p>
                 <button
@@ -778,11 +778,11 @@ export default function MixesPage() {
               </>
             ) : user ? (
               <>
-                <CloudUpload className="h-10 w-10 text-white/15 mb-3" />
-                <p className="text-sm font-medium text-white/40">
+                <CloudUpload className="h-10 w-10 text-foreground/15 mb-3" />
+                <p className="text-sm font-medium text-muted-foreground">
                   No mixes yet
                 </p>
-                <p className="text-xs text-white/25 mt-1 mb-4">
+                <p className="text-xs text-muted-foreground/60 mt-1 mb-4">
                   Upload your first mix to get started
                 </p>
                 <Button
@@ -796,11 +796,11 @@ export default function MixesPage() {
               </>
             ) : (
               <>
-                <Music className="h-10 w-10 text-white/15 mb-3" />
-                <p className="text-sm font-medium text-white/40">
+                <Music className="h-10 w-10 text-foreground/15 mb-3" />
+                <p className="text-sm font-medium text-muted-foreground">
                   Sign in to manage your mixes
                 </p>
-                <p className="text-xs text-white/25 mt-1 mb-4">
+                <p className="text-xs text-muted-foreground/60 mt-1 mb-4">
                   Create folders, upload sets, and sync to your DJ profile
                 </p>
                 <Button size="sm" asChild className="rounded-full bg-[#74ddc7] text-[#0a0a0f] font-bold hover:bg-[#74ddc7]/80">

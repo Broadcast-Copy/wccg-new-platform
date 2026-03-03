@@ -99,14 +99,14 @@ const priorityConfig: Record<Priority, { label: string; color: string }> = {
   critical: { label: "Critical", color: "bg-red-500/20 text-red-400 border-red-500/30" },
   high: { label: "High", color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
   medium: { label: "Medium", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
-  low: { label: "Low", color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
+  low: { label: "Low", color: "bg-gray-500/20 text-muted-foreground border-gray-500/30" },
 };
 
 const statusConfig: Record<Status, { label: string; icon: LucideIcon; color: string }> = {
   shipped: { label: "Shipped", icon: CheckCircle2, color: "text-green-400" },
   "in-progress": { label: "In Progress", icon: Clock, color: "text-yellow-400" },
   planned: { label: "Planned", icon: CalendarDays, color: "text-blue-400" },
-  backlog: { label: "Backlog", icon: AlertCircle, color: "text-gray-500" },
+  backlog: { label: "Backlog", icon: AlertCircle, color: "text-muted-foreground" },
 };
 
 // ---------------------------------------------------------------------------
@@ -551,7 +551,7 @@ function CollapsibleModule({ module, accentColor }: { module: ServiceModule; acc
           <Icon className="size-4" style={{ color: module.color }} />
         </div>
         <div className="flex-1">
-          <h4 className="font-semibold text-white">{module.name}</h4>
+          <h4 className="font-semibold text-foreground">{module.name}</h4>
           <p className="text-xs text-muted-foreground">{module.description}</p>
         </div>
         <Badge variant="outline" className="mr-2 border-white/20 text-muted-foreground">
@@ -578,7 +578,7 @@ function CollapsibleModule({ module, accentColor }: { module: ServiceModule; acc
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <FIcon className="size-4 text-muted-foreground" />
-                    <span className="font-medium text-white">{feature.name}</span>
+                    <span className="font-medium text-foreground">{feature.name}</span>
                     <Badge
                       variant="outline"
                       className={cn("text-[10px]", pCfg.color)}
@@ -665,7 +665,7 @@ export default function PortalPRDPage() {
             <FileText className="size-5 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
               Platform <span className="text-[#74ddc7]">PRD</span>
             </h1>
             <p className="text-muted-foreground">
@@ -680,7 +680,7 @@ export default function PortalPRDPage() {
         <Card className="border-white/10 bg-[#12121a]">
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">Total Features</p>
-            <p className="text-3xl font-bold text-white">{totalFeatures}</p>
+            <p className="text-3xl font-bold text-foreground">{totalFeatures}</p>
           </CardContent>
         </Card>
         <Card className="border-white/10 bg-[#12121a]">
@@ -712,10 +712,10 @@ export default function PortalPRDPage() {
         </Card>
         <Card className="border-white/10 bg-[#12121a]">
           <CardContent className="flex items-center gap-3 pt-6">
-            <AlertCircle className="size-5 text-gray-500" />
+            <AlertCircle className="size-5 text-muted-foreground" />
             <div>
               <p className="text-sm text-muted-foreground">Backlog</p>
-              <p className="text-2xl font-bold text-gray-400">{backlogCount}</p>
+              <p className="text-2xl font-bold text-muted-foreground">{backlogCount}</p>
             </div>
           </CardContent>
         </Card>
@@ -726,7 +726,7 @@ export default function PortalPRDPage() {
         <Button
           variant={activeRole === null ? "default" : "outline"}
           size="sm"
-          className={activeRole === null ? "" : "border-white/10 text-muted-foreground hover:text-white"}
+          className={activeRole === null ? "" : "border-white/10 text-muted-foreground hover:text-foreground"}
           onClick={() => setActiveRole(null)}
         >
           All Roles
@@ -742,8 +742,8 @@ export default function PortalPRDPage() {
               className={cn(
                 "gap-1.5",
                 isActive
-                  ? "border-transparent text-white"
-                  : "border-white/10 text-muted-foreground hover:text-white"
+                  ? "border-transparent text-foreground"
+                  : "border-white/10 text-muted-foreground hover:text-foreground"
               )}
               style={isActive ? { backgroundColor: `${r.accentColor}30`, borderColor: `${r.accentColor}50` } : undefined}
               onClick={() => setActiveRole(isActive ? null : r.roleId)}
@@ -775,7 +775,7 @@ export default function PortalPRDPage() {
                 <RoleIcon className="size-5" style={{ color: rolePrd.accentColor }} />
               </div>
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-white">{rolePrd.roleLabel}</h2>
+                <h2 className="text-xl font-bold text-foreground">{rolePrd.roleLabel}</h2>
                 <p className="text-sm text-muted-foreground">{rolePrd.summary}</p>
               </div>
               <div className="hidden text-right sm:block">

@@ -122,7 +122,7 @@ export function FollowButton({
         variant="outline"
         size={size}
         disabled
-        className="min-w-[90px] border-white/[0.06]"
+        className="min-w-[90px] border-border"
       >
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
       </Button>

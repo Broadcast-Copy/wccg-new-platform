@@ -108,8 +108,8 @@ export default function SitemapPage() {
               <Map className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Sitemap</h1>
-              <p className="text-white/50 mt-1">Every page on the WCCG 104.5 FM platform</p>
+              <h1 className="text-3xl font-bold text-foreground">Sitemap</h1>
+              <p className="text-muted-foreground mt-1">Every page on the WCCG 104.5 FM platform</p>
             </div>
           </div>
         </div>
@@ -117,17 +117,17 @@ export default function SitemapPage() {
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {sections.map((section) => (
-          <div key={section.title} className="rounded-xl border border-white/[0.06] bg-[#141420] p-5 space-y-3">
+          <div key={section.title} className="rounded-xl border border-border bg-card p-5 space-y-3">
             <div className="flex items-center gap-2">
               <section.icon className="h-5 w-5 text-[#74ddc7]" />
-              <h2 className="text-lg font-semibold text-white">{section.title}</h2>
+              <h2 className="text-lg font-semibold text-foreground">{section.title}</h2>
             </div>
             <nav className="flex flex-col gap-1.5">
               {section.links.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="text-sm text-white/40 hover:text-[#74ddc7] transition-colors pl-7"
+                  className="text-sm text-muted-foreground hover:text-[#74ddc7] transition-colors pl-7"
                 >
                   {link.label}
                 </Link>

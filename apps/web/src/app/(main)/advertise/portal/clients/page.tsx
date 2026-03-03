@@ -502,7 +502,7 @@ const MOCK_CLIENTS: Client[] = [
 /* ---------- Constants ---------- */
 
 const STAGE_STYLES: Record<PipelineStage, string> = {
-  Lead: "bg-white/[0.06] text-white/50 border-white/[0.08]",
+  Lead: "bg-foreground/[0.06] text-muted-foreground border-border",
   Contacted: "bg-blue-500/10 text-blue-400 border-blue-500/20",
   Proposal: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
   Negotiation: "bg-orange-500/10 text-orange-400 border-orange-500/20",
@@ -520,7 +520,7 @@ const PIPELINE_COLORS: Record<PipelineStage, string> = {
 };
 
 const PIPELINE_TEXT_COLORS: Record<PipelineStage, string> = {
-  Lead: "text-white/60",
+  Lead: "text-foreground/60",
   Contacted: "text-blue-400",
   Proposal: "text-yellow-400",
   Negotiation: "text-orange-400",
@@ -543,7 +543,7 @@ const ACTIVITY_COLORS: Record<ActivityItem["type"], string> = {
   proposal: "text-yellow-400 bg-yellow-500/10",
   meeting: "text-emerald-400 bg-emerald-500/10",
   contract: "text-red-400 bg-red-500/10",
-  note: "text-white/40 bg-white/[0.06]",
+  note: "text-muted-foreground bg-foreground/[0.06]",
 };
 
 const CATEGORIES = [
@@ -626,10 +626,10 @@ function PipelineBar({ clients }: { clients: Client[] }) {
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-5">
+    <div className="rounded-xl border border-border bg-card p-5">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-white">Sales Pipeline</h2>
-        <span className="text-xs text-white/40">{total} total opportunities</span>
+        <h2 className="font-semibold text-foreground">Sales Pipeline</h2>
+        <span className="text-xs text-muted-foreground">{total} total opportunities</span>
       </div>
 
       {/* Visual bar */}
@@ -657,7 +657,7 @@ function PipelineBar({ clients }: { clients: Client[] }) {
                 {counts[stage]}
               </span>
             </div>
-            <span className="text-[10px] text-white/40 uppercase tracking-wider leading-none">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider leading-none">
               {stage}
             </span>
           </div>
@@ -667,7 +667,7 @@ function PipelineBar({ clients }: { clients: Client[] }) {
       {/* Arrow flow */}
       <div className="hidden sm:flex items-center justify-between mt-3 px-4">
         {stages.slice(0, -1).map((stage, i) => (
-          <div key={stage} className="flex items-center gap-1 text-white/20">
+          <div key={stage} className="flex items-center gap-1 text-foreground/20">
             <ChevronRight className="h-3 w-3" />
           </div>
         ))}
@@ -802,7 +802,7 @@ function ClientDetailDialog({
                           campaign.status === "Active"
                             ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                             : campaign.status === "Completed"
-                              ? "bg-white/[0.06] text-muted-foreground border-white/[0.08]"
+                              ? "bg-foreground/[0.06] text-muted-foreground border-border"
                               : "bg-red-500/10 text-red-400 border-red-500/20"
                         }`}
                       >
@@ -1139,10 +1139,10 @@ export default function ClientProfilesPage() {
                 <Users className="h-7 w-7 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-white">
+                <h1 className="text-3xl font-bold text-foreground">
                   Client Profiles
                 </h1>
-                <p className="text-white/50 mt-1">
+                <p className="text-muted-foreground mt-1">
                   WCCG 104.5 FM Sales CRM &mdash; Manage your advertising client relationships
                 </p>
               </div>
@@ -1150,19 +1150,19 @@ export default function ClientProfilesPage() {
             <div className="hidden sm:flex items-center gap-2">
               <Link
                 href="/advertise/portal"
-                className="text-xs text-white/40 hover:text-white transition-colors px-3 py-1.5 rounded-full border border-white/[0.06] hover:border-white/[0.12]"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-full border border-border hover:border-input"
               >
                 Dashboard
               </Link>
               <Link
                 href="/advertise/portal/campaigns"
-                className="text-xs text-white/40 hover:text-white transition-colors px-3 py-1.5 rounded-full border border-white/[0.06] hover:border-white/[0.12]"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-full border border-border hover:border-input"
               >
                 Campaigns
               </Link>
               <Link
                 href="/advertise/portal/billing"
-                className="text-xs text-white/40 hover:text-white transition-colors px-3 py-1.5 rounded-full border border-white/[0.06] hover:border-white/[0.12]"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-full border border-border hover:border-input"
               >
                 Billing
               </Link>
@@ -1174,19 +1174,19 @@ export default function ClientProfilesPage() {
       {/* Search & Filter Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
           <Input
             placeholder="Search clients by name, contact, category, or email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-[#141420] border-white/[0.06] text-white placeholder:text-white/30"
+            className="pl-10 bg-card border-border text-foreground placeholder:text-muted-foreground/70"
           />
         </div>
         <Select
           value={stageFilter}
           onValueChange={(v) => setStageFilter(v as PipelineStage | "All")}
         >
-          <SelectTrigger className="w-full sm:w-44 bg-[#141420] border-white/[0.06] text-white">
+          <SelectTrigger className="w-full sm:w-44 bg-card border-border text-foreground">
             <SelectValue placeholder="Filter by stage" />
           </SelectTrigger>
           <SelectContent>
@@ -1246,10 +1246,10 @@ export default function ClientProfilesPage() {
         ].map((stat) => (
           <div
             key={stat.label}
-            className="rounded-xl border border-white/[0.06] bg-[#141420] p-5"
+            className="rounded-xl border border-border bg-card p-5"
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs text-white/40 uppercase tracking-wider font-medium">
+              <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
                 {stat.label}
               </span>
               <div
@@ -1258,8 +1258,8 @@ export default function ClientProfilesPage() {
                 <stat.icon className={`h-4 w-4 ${stat.color}`} />
               </div>
             </div>
-            <p className="text-2xl font-bold text-white">{stat.value}</p>
-            <p className="text-xs text-white/30 mt-1">{stat.subtitle}</p>
+            <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">{stat.subtitle}</p>
           </div>
         ))}
       </div>
@@ -1268,11 +1268,11 @@ export default function ClientProfilesPage() {
       <PipelineBar clients={MOCK_CLIENTS} />
 
       {/* Client Table */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div>
-            <h2 className="font-semibold text-white">Client Directory</h2>
-            <p className="text-xs text-white/40 mt-0.5">
+            <h2 className="font-semibold text-foreground">Client Directory</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
               {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""} shown
               {stageFilter !== "All" && ` in ${stageFilter}`}
               {searchQuery && ` matching "${searchQuery}"`}
@@ -1281,7 +1281,7 @@ export default function ClientProfilesPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-white/50 hover:text-white"
+            className="text-muted-foreground hover:text-foreground"
             onClick={() => {
               setSearchQuery("");
               setStageFilter("All");
@@ -1294,9 +1294,9 @@ export default function ClientProfilesPage() {
 
         {filteredClients.length === 0 ? (
           <div className="px-5 py-12 text-center">
-            <Search className="h-8 w-8 text-white/20 mx-auto mb-3" />
-            <p className="text-sm text-white/40 mb-1">No clients found.</p>
-            <p className="text-xs text-white/30">
+            <Search className="h-8 w-8 text-foreground/20 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground mb-1">No clients found.</p>
+            <p className="text-xs text-muted-foreground/70">
               Try adjusting your search or filter criteria.
             </p>
           </div>
@@ -1304,25 +1304,25 @@ export default function ClientProfilesPage() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="border-white/[0.06] hover:bg-transparent">
-                  <TableHead className="text-white/40">Client</TableHead>
-                  <TableHead className="text-white/40 hidden md:table-cell">
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="text-muted-foreground">Client</TableHead>
+                  <TableHead className="text-muted-foreground hidden md:table-cell">
                     Contact
                   </TableHead>
-                  <TableHead className="text-white/40 hidden lg:table-cell">
+                  <TableHead className="text-muted-foreground hidden lg:table-cell">
                     Email
                   </TableHead>
-                  <TableHead className="text-white/40 hidden lg:table-cell">
+                  <TableHead className="text-muted-foreground hidden lg:table-cell">
                     Phone
                   </TableHead>
-                  <TableHead className="text-white/40">Stage</TableHead>
-                  <TableHead className="text-white/40 text-right">
+                  <TableHead className="text-muted-foreground">Stage</TableHead>
+                  <TableHead className="text-muted-foreground text-right">
                     Monthly
                   </TableHead>
-                  <TableHead className="text-white/40 hidden sm:table-cell">
+                  <TableHead className="text-muted-foreground hidden sm:table-cell">
                     Last Contact
                   </TableHead>
-                  <TableHead className="text-white/40 text-right">
+                  <TableHead className="text-muted-foreground text-right">
                     Actions
                   </TableHead>
                 </TableRow>
@@ -1331,26 +1331,26 @@ export default function ClientProfilesPage() {
                 {filteredClients.map((client) => (
                   <TableRow
                     key={client.id}
-                    className="border-white/[0.06] hover:bg-white/[0.02] cursor-pointer"
+                    className="border-border hover:bg-white/[0.02] cursor-pointer"
                     onClick={() => openDetail(client)}
                   >
                     <TableCell>
                       <div>
-                        <span className="text-white font-medium text-sm">
+                        <span className="text-foreground font-medium text-sm">
                           {client.businessName}
                         </span>
-                        <span className="block text-[11px] text-white/30">
+                        <span className="block text-[11px] text-muted-foreground/70">
                           {client.category}
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell text-white/60 text-sm">
+                    <TableCell className="hidden md:table-cell text-foreground/60 text-sm">
                       {client.contactPerson}
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell text-white/40 text-sm">
+                    <TableCell className="hidden lg:table-cell text-muted-foreground text-sm">
                       {client.email}
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell text-white/40 text-sm">
+                    <TableCell className="hidden lg:table-cell text-muted-foreground text-sm">
                       {client.phone}
                     </TableCell>
                     <TableCell>
@@ -1360,10 +1360,10 @@ export default function ClientProfilesPage() {
                         {client.stage}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right text-white font-medium text-sm">
+                    <TableCell className="text-right text-foreground font-medium text-sm">
                       {formatCurrency(client.monthlySpend)}
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell text-white/40 text-sm">
+                    <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
                       <span title={formatDate(client.lastContact)}>
                         {daysAgo(client.lastContact)}
                       </span>
@@ -1373,7 +1373,7 @@ export default function ClientProfilesPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 w-7 p-0 text-white/30 hover:text-white"
+                          className="h-7 w-7 p-0 text-muted-foreground/70 hover:text-foreground"
                           onClick={(e) => {
                             e.stopPropagation();
                             openDetail(client);
@@ -1384,7 +1384,7 @@ export default function ClientProfilesPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 w-7 p-0 text-white/30 hover:text-white"
+                          className="h-7 w-7 p-0 text-muted-foreground/70 hover:text-foreground"
                           onClick={(e) => {
                             e.stopPropagation();
                             toast.info(
@@ -1397,7 +1397,7 @@ export default function ClientProfilesPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 w-7 p-0 text-white/30 hover:text-white"
+                          className="h-7 w-7 p-0 text-muted-foreground/70 hover:text-foreground"
                           onClick={(e) => {
                             e.stopPropagation();
                             toast.info(
@@ -1419,47 +1419,47 @@ export default function ClientProfilesPage() {
 
       {/* Quick Stats Footer */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-5">
+        <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
               <Star className="h-4 w-4 text-emerald-400" />
             </div>
-            <span className="text-sm font-medium text-white">Top Client</span>
+            <span className="text-sm font-medium text-foreground">Top Client</span>
           </div>
-          <p className="text-lg font-bold text-white">Cape Fear Valley Health</p>
-          <p className="text-xs text-white/40 mt-0.5">
+          <p className="text-lg font-bold text-foreground">Cape Fear Valley Health</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
             $5,200/mo &mdash; 3 active campaigns
           </p>
         </div>
-        <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-5">
+        <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10">
               <Activity className="h-4 w-4 text-amber-400" />
             </div>
-            <span className="text-sm font-medium text-white">Hottest Lead</span>
+            <span className="text-sm font-medium text-foreground">Hottest Lead</span>
           </div>
-          <p className="text-lg font-bold text-white">Cross Creek Barbershop</p>
-          <p className="text-xs text-white/40 mt-0.5">
+          <p className="text-lg font-bold text-foreground">Cross Creek Barbershop</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Attended seminar &mdash; ready for proposal
           </p>
         </div>
-        <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-5">
+        <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10">
               <Calendar className="h-4 w-4 text-red-400" />
             </div>
-            <span className="text-sm font-medium text-white">Upcoming Renewal</span>
+            <span className="text-sm font-medium text-foreground">Upcoming Renewal</span>
           </div>
-          <p className="text-lg font-bold text-white">Segra Stadium</p>
-          <p className="text-xs text-white/40 mt-0.5">
+          <p className="text-lg font-bold text-foreground">Segra Stadium</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Contract expires Feb 28, 2026
           </p>
         </div>
       </div>
 
       {/* Portal Footer */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 text-center">
-        <p className="text-white/50 text-sm">
+      <div className="rounded-xl border border-border bg-card p-6 text-center">
+        <p className="text-muted-foreground text-sm">
           WCCG Sales CRM &mdash; Need help?{" "}
           <Link
             href="/contact"

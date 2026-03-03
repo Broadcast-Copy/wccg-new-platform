@@ -50,16 +50,16 @@ export default function InnovationCenterPage() {
               <Lightbulb className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Innovation Center</h1>
-              <p className="text-white/50 mt-1">The future of community radio, powered by technology</p>
+              <h1 className="text-3xl font-bold text-foreground">Innovation Center</h1>
+              <p className="text-muted-foreground mt-1">The future of community radio, powered by technology</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8">
-        <h2 className="text-xl font-semibold text-white mb-3">Our Vision</h2>
-        <p className="text-white/50 leading-relaxed">
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8">
+        <h2 className="text-xl font-semibold text-foreground mb-3">Our Vision</h2>
+        <p className="text-muted-foreground leading-relaxed">
           At WCCG 104.5 FM, we believe community radio should evolve with the times while staying true to its roots.
           Our Innovation Center showcases the technology and initiatives driving the next generation of broadcast media
           in the Fayetteville-Cumberland County area and beyond.
@@ -70,20 +70,20 @@ export default function InnovationCenterPage() {
         {innovations.map((item) => (
           <div
             key={item.title}
-            className="group rounded-xl border border-white/[0.06] bg-[#141420] p-5 transition-all hover:border-white/[0.12] hover:shadow-lg hover:shadow-black/20"
+            className="group rounded-xl border border-border bg-card p-5 transition-all hover:border-input hover:shadow-lg hover:shadow-black/20"
           >
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#7401df] to-[#3b82f6] mb-4">
               <item.icon className="h-5 w-5 text-white" />
             </div>
-            <h3 className="font-semibold text-white mb-2">{item.title}</h3>
-            <p className="text-sm text-white/40 leading-relaxed">{item.description}</p>
+            <h3 className="font-semibold text-foreground mb-2">{item.title}</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
           </div>
         ))}
       </div>
 
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 text-center space-y-3">
-        <h2 className="text-lg font-semibold text-white">Have an idea?</h2>
-        <p className="text-sm text-white/50 max-w-md mx-auto">
+      <div className="rounded-xl border border-border bg-card p-6 text-center space-y-3">
+        <h2 className="text-lg font-semibold text-foreground">Have an idea?</h2>
+        <p className="text-sm text-muted-foreground max-w-md mx-auto">
           We&apos;re always looking for new ways to serve our community. If you have an idea for how WCCG can innovate, we want to hear from you.
         </p>
         <Button asChild className="rounded-full bg-[#74ddc7] text-[#0a0a0f] font-bold hover:bg-[#5fc4b0]">

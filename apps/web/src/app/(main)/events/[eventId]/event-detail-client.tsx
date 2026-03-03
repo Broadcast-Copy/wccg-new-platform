@@ -370,17 +370,17 @@ export default function EventDetailPage() {
                 {event.status}
               </Badge>
               {event.isFree && (
-                <Badge variant="outline" className="border-white/30 text-white">
+                <Badge variant="outline" className="border-white/30 text-foreground">
                   Free Event
                 </Badge>
               )}
               {event.category && (
-                <Badge variant="outline" className="border-white/30 text-white">
+                <Badge variant="outline" className="border-white/30 text-foreground">
                   {event.category}
                 </Badge>
               )}
             </div>
-            <h1 className="text-2xl font-bold text-white sm:text-3xl">
+            <h1 className="text-2xl font-bold text-foreground sm:text-3xl">
               {event.title}
             </h1>
           </div>

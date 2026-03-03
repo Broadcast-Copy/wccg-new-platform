@@ -202,10 +202,10 @@ export default function StudioPage() {
               <Clapperboard className="h-8 w-8 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-2">
                 Studio &amp; Production Services
               </h1>
-              <p className="text-base text-gray-400 max-w-2xl">
+              <p className="text-base text-muted-foreground max-w-2xl">
                 Empowers creators with a full suite of studio production
                 services that deliver professional quality from concept to
                 completion.
@@ -217,14 +217,14 @@ export default function StudioPage() {
 
       {/* Full-Service Media Solutions */}
       <section className="space-y-5">
-        <h2 className="text-xl font-bold text-white">
+        <h2 className="text-xl font-bold text-foreground">
           Full-Service Media Solutions
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {services.map((service) => (
             <div
               key={service.title}
-              className="group relative flex flex-col overflow-hidden rounded-xl border border-white/[0.06] bg-[#141420] p-5 transition-all hover:border-white/[0.12] hover:shadow-lg hover:shadow-black/20"
+              className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:border-input hover:shadow-lg hover:shadow-black/20"
             >
               <div className="flex items-start gap-4 flex-1">
                 <div
@@ -233,15 +233,15 @@ export default function StudioPage() {
                   <service.icon className="h-5 w-5 text-white" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-white group-hover:text-[#74ddc7] transition-colors">
+                  <h3 className="font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors">
                     {service.title}
                   </h3>
-                  <p className="mt-1 text-sm text-white/40">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {service.description}
                   </p>
                 </div>
               </div>
-              <div className="mt-4 pt-4 border-t border-white/[0.06]">
+              <div className="mt-4 pt-4 border-t border-border">
                 <Button
                   size="sm"
                   asChild
@@ -263,14 +263,14 @@ export default function StudioPage() {
 
       {/* Professional Studios */}
       <section className="space-y-5">
-        <h2 className="text-xl font-bold text-white">
+        <h2 className="text-xl font-bold text-foreground">
           Professional Studios for Every Project
         </h2>
         <div className="grid gap-5 lg:grid-cols-2">
           {studios.map((studio) => (
             <div
               key={studio.name}
-              className="group relative overflow-hidden rounded-xl border border-white/[0.06] bg-[#141420] p-6 transition-all hover:border-white/[0.12]"
+              className="group relative overflow-hidden rounded-xl border border-border bg-card p-6 transition-all hover:border-input"
             >
               {/* Studio Header */}
               <div className="flex items-center gap-4 mb-4">
@@ -279,12 +279,12 @@ export default function StudioPage() {
                 >
                   <studio.icon className="h-6 w-6 text-white" />
                 </div>
-                <h3 className="text-lg font-bold text-white">{studio.name}</h3>
+                <h3 className="text-lg font-bold text-foreground">{studio.name}</h3>
               </div>
 
               {/* Note / Description */}
               {"note" in studio && studio.note && (
-                <p className="text-sm text-white/50 mb-3 italic">
+                <p className="text-sm text-muted-foreground mb-3 italic">
                   {studio.note}
                 </p>
               )}
@@ -311,7 +311,7 @@ export default function StudioPage() {
                           {section.features.map((feature: string) => (
                             <li
                               key={feature}
-                              className="flex items-start gap-2 text-sm text-white/60"
+                              className="flex items-start gap-2 text-sm text-foreground/60"
                             >
                               <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0 text-[#74ddc7]" />
                               {feature}
@@ -329,7 +329,7 @@ export default function StudioPage() {
                     (studio.features as string[]).map((feature: string) => (
                       <li
                         key={feature}
-                        className="flex items-start gap-2 text-sm text-white/60"
+                        className="flex items-start gap-2 text-sm text-foreground/60"
                       >
                         <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0 text-[#74ddc7]" />
                         {feature}
@@ -339,7 +339,7 @@ export default function StudioPage() {
               )}
 
               {/* Book CTA */}
-              <div className="mt-5 pt-4 border-t border-white/[0.06]">
+              <div className="mt-5 pt-4 border-t border-border">
                 <Button
                   size="sm"
                   asChild
@@ -394,7 +394,7 @@ export default function StudioPage() {
               variant="outline"
               size="lg"
               asChild
-              className="rounded-full border-white/30 text-white hover:bg-white/10 px-6"
+              className="rounded-full border-white/30 text-white hover:bg-foreground/10 px-6"
             >
               <Link href="/creators">For Creators</Link>
             </Button>
@@ -403,8 +403,8 @@ export default function StudioPage() {
       </section>
 
       {/* Info footer */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 text-center">
-        <p className="text-sm text-white/40">
+      <div className="rounded-xl border border-border bg-card p-6 text-center">
+        <p className="text-sm text-muted-foreground">
           Carson Communications Studio · 115 Gillespie Street, Fayetteville, NC
           28301
           <br />

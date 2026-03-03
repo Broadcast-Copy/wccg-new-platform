@@ -117,12 +117,12 @@ function RadioOption({
         className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
           checked
             ? "border-[#74ddc7] bg-[#74ddc7]"
-            : "border-white/30 group-hover:border-white/50"
+            : "border-white/30 group-hover:border-foreground/50"
         }`}
       >
-        {checked && <div className="w-2 h-2 rounded-full bg-[#0a0a0f]" />}
+        {checked && <div className="w-2 h-2 rounded-full bg-background" />}
       </div>
-      <span className="text-sm text-white/70 group-hover:text-white/90">
+      <span className="text-sm text-foreground/70 group-hover:text-foreground/90">
         {label}
       </span>
     </label>
@@ -144,7 +144,7 @@ function CheckboxOption({
         className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
           checked
             ? "border-[#74ddc7] bg-[#74ddc7]"
-            : "border-white/30 group-hover:border-white/50"
+            : "border-white/30 group-hover:border-foreground/50"
         }`}
       >
         {checked && (
@@ -163,7 +163,7 @@ function CheckboxOption({
           </svg>
         )}
       </div>
-      <span className="text-sm text-white/70 group-hover:text-white/90">
+      <span className="text-sm text-foreground/70 group-hover:text-foreground/90">
         {label}
       </span>
     </label>
@@ -242,7 +242,7 @@ export default function StudioBookingPage() {
           <h1 className="text-3xl font-bold text-white mb-3">
             Request Submitted!
           </h1>
-          <p className="text-gray-400 max-w-md mx-auto mb-6">
+          <p className="text-white/60 max-w-md mx-auto mb-6">
             Thank you for your studio booking request. Our production team will
             review your submission and contact you within 1-2 business days to
             confirm your booking.
@@ -276,10 +276,10 @@ export default function StudioBookingPage() {
               <Clapperboard className="h-8 w-8 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-2">
                 Studio Booking Request
               </h1>
-              <p className="text-base text-gray-400 max-w-2xl">
+              <p className="text-base text-muted-foreground max-w-2xl">
                 Welcome to the Carson Communications Studio Booking Portal,
                 where high-quality production meets flexibility and comfort.
               </p>
@@ -289,11 +289,11 @@ export default function StudioBookingPage() {
       </div>
 
       {/* Pre-form info */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6">
-        <h2 className="text-lg font-semibold text-white mb-3">
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h2 className="text-lg font-semibold text-foreground mb-3">
           Book Your Studio and Start Creating
         </h2>
-        <p className="text-sm text-white/50 mb-4">
+        <p className="text-sm text-muted-foreground mb-4">
           Please have the following ready before completing this form:
         </p>
         <ul className="space-y-2">
@@ -306,7 +306,7 @@ export default function StudioBookingPage() {
           ].map((item) => (
             <li
               key={item}
-              className="flex items-center gap-2 text-sm text-white/60"
+              className="flex items-center gap-2 text-sm text-foreground/60"
             >
               <CheckCircle2 className="h-3.5 w-3.5 text-[#74ddc7] shrink-0" />
               {item}
@@ -316,18 +316,18 @@ export default function StudioBookingPage() {
       </div>
 
       {/* Form */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] overflow-hidden">
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
         {/* Progress bar */}
-        <div className="border-b border-white/[0.06] p-4">
+        <div className="border-b border-border p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Step {step} of {TOTAL_STEPS}
             </span>
             <span className="text-xs font-bold text-[#74ddc7]">
               {progress}%
             </span>
           </div>
-          <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
+          <div className="h-2 bg-foreground/[0.06] rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-[#7401df] to-[#74ddc7] rounded-full transition-all duration-500"
               style={{ width: `${progress}%` }}
@@ -339,36 +339,36 @@ export default function StudioBookingPage() {
           {/* Step 1: Contact Information */}
           {step === 1 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Contact Information
               </h3>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Full Name <span className="text-red-400">*</span>
                   </Label>
                   <Input
                     value={formData.fullName}
                     onChange={(e) => updateField("fullName", e.target.value)}
                     placeholder="Your full name"
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Business / Organization
                   </Label>
                   <Input
                     value={formData.business}
                     onChange={(e) => updateField("business", e.target.value)}
                     placeholder="Business name (optional)"
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Email Address <span className="text-red-400">*</span>
                   </Label>
                   <Input
@@ -376,11 +376,11 @@ export default function StudioBookingPage() {
                     value={formData.email}
                     onChange={(e) => updateField("email", e.target.value)}
                     placeholder="you@example.com"
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Phone Number <span className="text-red-400">*</span>
                   </Label>
                   <Input
@@ -388,12 +388,12 @@ export default function StudioBookingPage() {
                     value={formData.phone}
                     onChange={(e) => updateField("phone", e.target.value)}
                     placeholder="(910) 000-0000"
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Preferred Method of Contact{" "}
                   <span className="text-red-400">*</span>
                 </Label>
@@ -416,7 +416,7 @@ export default function StudioBookingPage() {
           {/* Step 2: Select Your Studio */}
           {step === 2 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Select Your Studio
               </h3>
               <div className="space-y-3">
@@ -426,7 +426,7 @@ export default function StudioBookingPage() {
                     className={`block cursor-pointer rounded-xl border p-4 transition-all ${
                       formData.studio === studio.value
                         ? "border-[#74ddc7]/50 bg-[#74ddc7]/[0.05]"
-                        : "border-white/[0.06] hover:border-white/[0.12]"
+                        : "border-border hover:border-input"
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -439,16 +439,16 @@ export default function StudioBookingPage() {
                         onClick={() => updateField("studio", studio.value)}
                       >
                         {formData.studio === studio.value && (
-                          <div className="w-2 h-2 rounded-full bg-[#0a0a0f]" />
+                          <div className="w-2 h-2 rounded-full bg-background" />
                         )}
                       </div>
                       <div
                         onClick={() => updateField("studio", studio.value)}
                       >
-                        <p className="font-semibold text-white">
+                        <p className="font-semibold text-foreground">
                           {studio.label}
                         </p>
-                        <p className="mt-1 text-sm text-white/40">
+                        <p className="mt-1 text-sm text-muted-foreground">
                           {studio.description}
                         </p>
                       </div>
@@ -462,11 +462,11 @@ export default function StudioBookingPage() {
           {/* Step 3: Booking Details */}
           {step === 3 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Booking Details
               </h3>
               <div>
-                <Label className="text-white/70">Booking Type</Label>
+                <Label className="text-foreground/70">Booking Type</Label>
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
                   {bookingTypes.map((type) => (
                     <RadioOption
@@ -486,54 +486,54 @@ export default function StudioBookingPage() {
                       updateField("bookingTypeOther", e.target.value)
                     }
                     placeholder="Please specify..."
-                    className="mt-3 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-3 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 )}
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-white/70">Preferred Date</Label>
+                  <Label className="text-foreground/70">Preferred Date</Label>
                   <Input
                     type="date"
                     value={formData.preferredDate}
                     onChange={(e) =>
                       updateField("preferredDate", e.target.value)
                     }
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">Backup Date</Label>
+                  <Label className="text-foreground/70">Backup Date</Label>
                   <Input
                     type="date"
                     value={formData.backupDate}
                     onChange={(e) => updateField("backupDate", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground"
                   />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-white/70">Start Time</Label>
+                  <Label className="text-foreground/70">Start Time</Label>
                   <Input
                     type="time"
                     value={formData.startTime}
                     onChange={(e) => updateField("startTime", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">End Time</Label>
+                  <Label className="text-foreground/70">End Time</Label>
                   <Input
                     type="time"
                     value={formData.endTime}
                     onChange={(e) => updateField("endTime", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground"
                   />
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Total Time Needed
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-3">
@@ -555,11 +555,11 @@ export default function StudioBookingPage() {
           {/* Step 4: Technical Needs */}
           {step === 4 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Technical Needs
               </h3>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Require host broadcast mic?
                 </Label>
                 <div className="flex gap-6">
@@ -576,7 +576,7 @@ export default function StudioBookingPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Need guest microphones?
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-3">
@@ -599,7 +599,7 @@ export default function StudioBookingPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Need auxiliary inputs?
                 </Label>
                 <div className="flex flex-wrap gap-4">
@@ -620,7 +620,7 @@ export default function StudioBookingPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Will you be using:
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -635,7 +635,7 @@ export default function StudioBookingPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Special technical requirements?
                 </Label>
                 <Textarea
@@ -644,7 +644,7 @@ export default function StudioBookingPage() {
                     updateField("specialTechnical", e.target.value)
                   }
                   placeholder="Describe any special technical needs..."
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 min-h-[100px]"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60 min-h-[100px]"
                 />
               </div>
             </div>
@@ -653,22 +653,22 @@ export default function StudioBookingPage() {
           {/* Step 5: Content Details */}
           {step === 5 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Content Details
               </h3>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Content type being created
                 </Label>
                 <Textarea
                   value={formData.contentType}
                   onChange={(e) => updateField("contentType", e.target.value)}
                   placeholder="E.g., podcast episode, commercial recording, interview, gaming stream, reaction video, live show, etc."
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 min-h-[100px]"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60 min-h-[100px]"
                 />
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Bring additional equipment?
                 </Label>
                 <div className="flex gap-6">
@@ -690,12 +690,12 @@ export default function StudioBookingPage() {
                       updateField("bringEquipmentDetails", e.target.value)
                     }
                     placeholder="Please describe..."
-                    className="mt-3 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-3 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 )}
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Need equipment setup assistance?
                 </Label>
                 <div className="flex gap-6">
@@ -712,7 +712,7 @@ export default function StudioBookingPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Need engineer / production assistant?
                 </Label>
                 <div className="flex flex-wrap gap-4">
@@ -734,10 +734,10 @@ export default function StudioBookingPage() {
           {/* Step 6: Add-On Options */}
           {step === 6 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Add-On Options
               </h3>
-              <p className="text-sm text-white/40">
+              <p className="text-sm text-muted-foreground">
                 Select any additional services you would like to include with
                 your booking.
               </p>
@@ -757,11 +757,11 @@ export default function StudioBookingPage() {
           {/* Step 7: Additional Information */}
           {step === 7 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Additional Information
               </h3>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Additional details or special requests
                 </Label>
                 <Textarea
@@ -770,20 +770,20 @@ export default function StudioBookingPage() {
                     updateField("additionalDetails", e.target.value)
                   }
                   placeholder="Share any additional information about your booking..."
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 min-h-[120px]"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60 min-h-[120px]"
                 />
               </div>
               <div className="space-y-3">
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Upload Files (Logos, Show Notes, Scripts, Reference Content)
                 </Label>
                 {["Logos", "Show Notes", "Scripts", "Reference Content"].map(
                   (label) => (
                     <div
                       key={label}
-                      className="rounded-lg border border-dashed border-white/[0.12] p-4 text-center cursor-pointer hover:border-white/[0.2] transition-colors"
+                      className="rounded-lg border border-dashed border-input p-4 text-center cursor-pointer hover:border-foreground/20 transition-colors"
                     >
-                      <p className="text-sm text-white/40">
+                      <p className="text-sm text-muted-foreground">
                         {label} — Click or drag a file to upload
                       </p>
                     </div>
@@ -796,11 +796,11 @@ export default function StudioBookingPage() {
           {/* Step 8: Budget & Billing */}
           {step === 8 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Budget &amp; Billing
               </h3>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Estimated Budget Range ($)
                 </Label>
                 <Input
@@ -808,11 +808,11 @@ export default function StudioBookingPage() {
                   value={formData.budget}
                   onChange={(e) => updateField("budget", e.target.value)}
                   placeholder="e.g. $200 - $500"
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                 />
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Need invoice before session?
                 </Label>
                 <div className="flex gap-6">
@@ -829,7 +829,7 @@ export default function StudioBookingPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Payment Method
                 </Label>
                 <div className="flex flex-wrap gap-4">
@@ -849,12 +849,12 @@ export default function StudioBookingPage() {
           )}
 
           {/* Navigation */}
-          <div className="flex items-center justify-between pt-4 border-t border-white/[0.06]">
+          <div className="flex items-center justify-between pt-4 border-t border-border">
             <Button
               variant="outline"
               onClick={() => setStep(Math.max(1, step - 1))}
               disabled={step === 1}
-              className="border-white/[0.12] text-white/70 hover:bg-white/[0.04] disabled:opacity-30"
+              className="border-input text-foreground/70 hover:bg-foreground/[0.04] disabled:opacity-30"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
@@ -881,8 +881,8 @@ export default function StudioBookingPage() {
       </div>
 
       {/* Info footer */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 text-center">
-        <p className="text-sm text-white/40">
+      <div className="rounded-xl border border-border bg-card p-6 text-center">
+        <p className="text-sm text-muted-foreground">
           Carson Communications Studio · 115 Gillespie Street, Fayetteville, NC
           28301
           <br />

@@ -44,21 +44,21 @@ export default function VolunteerPage() {
               <Heart className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Volunteer with WCCG</h1>
-              <p className="text-white/50 mt-1">Make an impact in your community</p>
+              <h1 className="text-3xl font-bold text-foreground">Volunteer with WCCG</h1>
+              <p className="text-muted-foreground mt-1">Make an impact in your community</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
-        <h2 className="text-xl font-semibold text-white">Why Volunteer?</h2>
-        <p className="text-white/50 leading-relaxed">
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Why Volunteer?</h2>
+        <p className="text-muted-foreground leading-relaxed">
           WCCG 104.5 FM is more than a radio station — we&apos;re a community hub. Our volunteers play a vital role
           in connecting Fayetteville and surrounding communities through music, events, and outreach programs.
           Whether you can give a few hours or a few days, your contribution makes a difference.
         </p>
-        <div className="flex flex-wrap gap-4 text-sm text-white/50">
+        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <Users className="h-4 w-4 text-[#74ddc7]" />
             All ages welcome (16+ for most roles)
@@ -76,20 +76,20 @@ export default function VolunteerPage() {
 
       {/* Opportunities */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-white">Volunteer Opportunities</h2>
+        <h2 className="text-xl font-semibold text-foreground">Volunteer Opportunities</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {opportunities.map((opp) => (
-            <div key={opp.title} className="rounded-xl border border-white/[0.06] bg-[#141420] p-5">
-              <h3 className="font-semibold text-white mb-2">{opp.title}</h3>
-              <p className="text-sm text-white/40 leading-relaxed">{opp.description}</p>
+            <div key={opp.title} className="rounded-xl border border-border bg-card p-5">
+              <h3 className="font-semibold text-foreground mb-2">{opp.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{opp.description}</p>
             </div>
           ))}
         </div>
       </div>
 
       {/* Benefits */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
-        <h2 className="text-xl font-semibold text-white">Volunteer Perks</h2>
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Volunteer Perks</h2>
         <ul className="space-y-2">
           {[
             "WCCG volunteer T-shirt and lanyard",
@@ -99,7 +99,7 @@ export default function VolunteerPage() {
             "Networking with media professionals",
             "Letters of recommendation (after 50+ hours)",
           ].map((perk, i) => (
-            <li key={i} className="flex items-center gap-2 text-sm text-white/50">
+            <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
               <CheckCircle2 className="h-4 w-4 text-[#74ddc7] shrink-0" />
               {perk}
             </li>
@@ -114,7 +114,7 @@ export default function VolunteerPage() {
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
-        <Button asChild variant="outline" className="rounded-full border-white/20 text-white hover:bg-white/5">
+        <Button asChild variant="outline" className="rounded-full border-white/20 text-foreground hover:bg-white/5">
           <Link href="/careers">View Career Openings</Link>
         </Button>
       </div>

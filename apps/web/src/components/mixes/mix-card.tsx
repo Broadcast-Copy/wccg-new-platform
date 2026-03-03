@@ -64,7 +64,7 @@ export function MixCard({
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#7401df]/30 to-[#74ddc7]/20">
-            <Music className="h-16 w-16 text-white/30" />
+            <Music className="h-16 w-16 text-muted-foreground/70" />
           </div>
         )}
 
@@ -97,7 +97,7 @@ export function MixCard({
               className={
                 status === "PROCESSING"
                   ? "bg-yellow-500/90 text-black hover:bg-yellow-500"
-                  : "bg-gray-500/90 text-white hover:bg-gray-500"
+                  : "bg-gray-500/90 text-foreground hover:bg-gray-500"
               }
             >
               {status === "PROCESSING" ? "Processing" : "Hidden"}
@@ -107,7 +107,7 @@ export function MixCard({
 
         {/* Duration badge */}
         {duration !== undefined && (
-          <div className="absolute bottom-3 right-3 rounded-md bg-black/70 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
+          <div className="absolute bottom-3 right-3 rounded-md bg-black/70 px-2 py-0.5 text-xs font-medium text-foreground backdrop-blur-sm">
             {formatDuration(duration)}
           </div>
         )}
@@ -115,7 +115,7 @@ export function MixCard({
 
       {/* Card content */}
       <div className="space-y-2 p-4">
-        <h3 className="truncate text-base font-bold text-white">{title}</h3>
+        <h3 className="truncate text-base font-bold text-foreground">{title}</h3>
 
         <p className="truncate text-sm font-medium text-[#74ddc7]">
           {hostName}
@@ -132,7 +132,7 @@ export function MixCard({
           )}
 
           {playCount !== undefined && (
-            <div className="flex items-center gap-1.5 text-xs text-gray-400">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Headphones className="h-3.5 w-3.5" />
               <span>{playCount.toLocaleString()}</span>
             </div>

@@ -66,7 +66,7 @@ function DiscoverShowCard({ show }: { show: ShowData }) {
       className="group flex w-40 shrink-0 flex-col items-center gap-3 sm:w-44"
     >
       {/* Circular image */}
-      <div className="relative h-32 w-32 overflow-hidden rounded-full border-2 border-transparent bg-[#141420] transition-all group-hover:border-[#74ddc7] group-hover:shadow-lg group-hover:shadow-[#74ddc7]/20 sm:h-36 sm:w-36">
+      <div className="relative h-32 w-32 overflow-hidden rounded-full border-2 border-transparent bg-card transition-all group-hover:border-[#74ddc7] group-hover:shadow-lg group-hover:shadow-[#74ddc7]/20 sm:h-36 sm:w-36">
         {show.imageUrl || show.showImageUrl ? (
           <AppImage
             src={show.imageUrl || show.showImageUrl!}
@@ -85,10 +85,10 @@ function DiscoverShowCard({ show }: { show: ShowData }) {
 
       {/* Text */}
       <div className="text-center">
-        <p className="text-sm font-semibold leading-tight text-white transition-colors group-hover:text-[#74ddc7]">
+        <p className="text-sm font-semibold leading-tight text-foreground transition-colors group-hover:text-[#74ddc7]">
           {show.name}
         </p>
-        <p className="mt-0.5 text-xs text-white/40">{show.hostNames}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{show.hostNames}</p>
       </div>
     </Link>
   );
@@ -99,8 +99,8 @@ function DiscoverShowCard({ show }: { show: ShowData }) {
 function ShowRail({ shows }: { shows: ShowData[] }) {
   if (shows.length === 0) {
     return (
-      <div className="flex h-24 items-center justify-center rounded-lg border border-white/[0.06] bg-[#141420]">
-        <p className="text-sm text-white/30">
+      <div className="flex h-24 items-center justify-center rounded-lg border border-border bg-card">
+        <p className="text-sm text-muted-foreground/70">
           Shows coming soon. Stay tuned!
         </p>
       </div>
@@ -140,16 +140,16 @@ function DiscoverSection({
       <div className="space-y-1">
         <div className="flex items-center gap-2">
           {icon}
-          <h2 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
+          <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
             {title}
           </h2>
           {badge && (
-            <Badge className="bg-white/10 text-white/70 hover:bg-white/15 text-xs border-0">
+            <Badge className="bg-white/10 text-foreground/70 hover:bg-white/15 text-xs border-0">
               {badge}
             </Badge>
           )}
         </div>
-        <p className="max-w-2xl text-sm text-white/40">{description}</p>
+        <p className="max-w-2xl text-sm text-muted-foreground">{description}</p>
       </div>
       {children}
     </section>
@@ -194,10 +194,10 @@ export default function DiscoverPage() {
               <Radio className="mr-1 h-3 w-3" />
               WCCG 104.5 FM
             </Badge>
-            <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl">
+            <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl md:text-5xl">
               Discover What&apos;s On
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/50 sm:text-lg">
+            <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
               20+ shows, 6 live channels, community events, local services, and
               exclusive perks&mdash;all in one place.
             </p>
@@ -213,7 +213,7 @@ export default function DiscoverPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="rounded-full border-white/20 text-white hover:bg-white/5 hover:text-white px-6"
+                className="rounded-full border-white/20 text-foreground hover:bg-white/5 hover:text-foreground px-6"
                 asChild
               >
                 <Link href="/shows">
@@ -228,19 +228,19 @@ export default function DiscoverPage() {
 
       {/* ── Quick Links Grid ─────────────────────────────────────────── */}
       <section className="space-y-4">
-        <h2 className="text-xl font-bold text-white">Quick Links</h2>
+        <h2 className="text-xl font-bold text-foreground">Quick Links</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {quickLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="group relative overflow-hidden rounded-xl border border-white/[0.06] bg-[#141420] p-4 transition-all hover:border-white/[0.12] hover:-translate-y-0.5"
+              className="group relative overflow-hidden rounded-xl border border-border bg-card p-4 transition-all hover:border-input hover:-translate-y-0.5"
             >
               <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br ${link.color}`}>
                 <link.icon className="h-5 w-5 text-white" />
               </div>
-              <p className="text-sm font-semibold text-white group-hover:text-[#74ddc7] transition-colors">{link.label}</p>
-              <p className="text-xs text-white/30 mt-0.5">{link.desc}</p>
+              <p className="text-sm font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors">{link.label}</p>
+              <p className="text-xs text-muted-foreground/70 mt-0.5">{link.desc}</p>
             </Link>
           ))}
         </div>
@@ -280,14 +280,14 @@ export default function DiscoverPage() {
           ].map((item) => (
             <div
               key={item.label}
-              className="flex items-center gap-4 rounded-xl border border-white/[0.06] bg-[#141420] p-4 transition-all hover:border-white/[0.12]"
+              className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition-all hover:border-input"
             >
               <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${item.color}`}>
                 <item.icon className="h-6 w-6" />
               </div>
               <div>
-                <p className="font-semibold text-white text-sm">{item.label}</p>
-                <p className="text-xs text-white/40">{item.desc}</p>
+                <p className="font-semibold text-foreground text-sm">{item.label}</p>
+                <p className="text-xs text-muted-foreground">{item.desc}</p>
               </div>
             </div>
           ))}
@@ -302,30 +302,30 @@ export default function DiscoverPage() {
         badge="Go Blue Devils"
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="flex items-center gap-4 rounded-xl border border-white/[0.06] bg-[#141420] p-5 transition-all hover:border-white/[0.12]">
+          <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-5 transition-all hover:border-input">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#3b82f6]/10 text-[#3b82f6]">
               <Dribbble className="h-7 w-7" />
             </div>
             <div>
-              <p className="font-semibold text-white">Duke Basketball</p>
-              <p className="text-sm text-white/40">
+              <p className="font-semibold text-foreground">Duke Basketball</p>
+              <p className="text-sm text-muted-foreground">
                 Game previews, recaps, and Blue Devils basketball talk
               </p>
             </div>
-            <ChevronRight className="ml-auto h-5 w-5 text-white/20" />
+            <ChevronRight className="ml-auto h-5 w-5 text-foreground/20" />
           </div>
 
-          <div className="flex items-center gap-4 rounded-xl border border-white/[0.06] bg-[#141420] p-5 transition-all hover:border-white/[0.12]">
+          <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-5 transition-all hover:border-input">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#3b82f6]/10 text-[#3b82f6]">
               <ShieldCheck className="h-7 w-7" />
             </div>
             <div>
-              <p className="font-semibold text-white">Duke Football</p>
-              <p className="text-sm text-white/40">
+              <p className="font-semibold text-foreground">Duke Football</p>
+              <p className="text-sm text-muted-foreground">
                 Season updates, interviews, and in-depth game coverage
               </p>
             </div>
-            <ChevronRight className="ml-auto h-5 w-5 text-white/20" />
+            <ChevronRight className="ml-auto h-5 w-5 text-foreground/20" />
           </div>
         </div>
       </DiscoverSection>

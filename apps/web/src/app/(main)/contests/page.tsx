@@ -199,7 +199,7 @@ const entryMethodLabels: Record<EntryMethod, { label: string; icon: typeof Phone
 const statusConfig: Record<ContestStatus, { label: string; color: string; icon: typeof Flame }> = {
   active: { label: "Live Now", color: "bg-[#22c55e] text-white", icon: Flame },
   upcoming: { label: "Coming Soon", color: "bg-[#f59e0b] text-black", icon: Timer },
-  ended: { label: "Ended", color: "bg-white/10 text-white/50", icon: CheckCircle2 },
+  ended: { label: "Ended", color: "bg-white/10 text-muted-foreground", icon: CheckCircle2 },
 };
 
 // ─── Category filter chips ────────────────────────────────────────────
@@ -229,8 +229,8 @@ function ContestCard({ contest, featured }: { contest: Contest; featured?: boole
     <div
       className={`group relative overflow-hidden rounded-xl border transition-all hover:-translate-y-0.5 ${
         featured
-          ? "border-white/[0.12] bg-[#141420] col-span-full md:col-span-2"
-          : "border-white/[0.06] bg-[#141420]"
+          ? "border-input bg-card col-span-full md:col-span-2"
+          : "border-border bg-card"
       }`}
     >
       {/* Gradient header bar */}
@@ -244,7 +244,7 @@ function ContestCard({ contest, featured }: { contest: Contest; featured?: boole
             <div className="relative text-center space-y-2 px-4">
               <Trophy className="h-10 w-10 text-white mx-auto drop-shadow-lg" />
               <p className="text-white font-bold text-lg drop-shadow">{contest.prizeValue}</p>
-              <p className="text-white/70 text-xs">Prize Value</p>
+              <p className="text-foreground/70 text-xs">Prize Value</p>
             </div>
             {/* Status badge */}
             <div className="absolute top-3 right-3">
@@ -259,15 +259,15 @@ function ContestCard({ contest, featured }: { contest: Contest; featured?: boole
         {/* Right: Content */}
         <div className={`flex-1 space-y-3 ${featured ? "" : ""}`}>
           <div>
-            <h3 className="text-lg font-bold text-white group-hover:text-[#74ddc7] transition-colors leading-tight">
+            <h3 className="text-lg font-bold text-foreground group-hover:text-[#74ddc7] transition-colors leading-tight">
               {contest.title}
             </h3>
             {contest.sponsor && (
-              <p className="text-xs text-white/30 mt-1">Sponsored by {contest.sponsor}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">Sponsored by {contest.sponsor}</p>
             )}
           </div>
 
-          <p className="text-sm text-white/50 leading-relaxed line-clamp-2">
+          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
             {contest.description}
           </p>
 
@@ -285,7 +285,7 @@ function ContestCard({ contest, featured }: { contest: Contest; featured?: boole
               return (
                 <span
                   key={method}
-                  className="inline-flex items-center gap-1 rounded-full bg-white/5 border border-white/[0.06] px-2.5 py-1 text-xs text-white/50"
+                  className="inline-flex items-center gap-1 rounded-full bg-white/5 border border-border px-2.5 py-1 text-xs text-muted-foreground"
                 >
                   <Icon className="h-3 w-3" />
                   {m.label}
@@ -296,7 +296,7 @@ function ContestCard({ contest, featured }: { contest: Contest; featured?: boole
 
           {/* Stats row */}
           <div className="flex items-center justify-between pt-2">
-            <div className="flex items-center gap-4 text-xs text-white/30">
+            <div className="flex items-center gap-4 text-xs text-muted-foreground/70">
               {contest.status === "active" && (
                 <>
                   <span className="flex items-center gap-1">
@@ -336,7 +336,7 @@ function ContestCard({ contest, featured }: { contest: Contest; featured?: boole
               <Button
                 size="sm"
                 variant="outline"
-                className="rounded-full border-white/20 text-white hover:bg-white/5 text-xs px-4"
+                className="rounded-full border-white/20 text-foreground hover:bg-white/5 text-xs px-4"
               >
                 Remind Me
               </Button>
@@ -383,10 +383,10 @@ export default function ContestsPage() {
                 {activeCount} Active Contests
               </span>
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl">
+            <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl md:text-5xl">
               Contests &amp; <span className="text-[#74ddc7]">Giveaways</span>
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/50 sm:text-lg">
+            <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
               Win cash, concert tickets, exclusive merch, and more! Enter online,
               call in, or use the mY1045 app for your chance to win.
             </p>
@@ -401,7 +401,7 @@ export default function ContestsPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="rounded-full border-white/20 text-white hover:bg-white/5 px-6"
+                className="rounded-full border-white/20 text-foreground hover:bg-white/5 px-6"
                 asChild
               >
                 <Link href="/contest-rules">
@@ -416,7 +416,7 @@ export default function ContestsPage() {
 
       {/* ── How It Works ──────────────────────────────────────────────── */}
       <section className="space-y-4">
-        <h2 className="text-xl font-bold text-white">How It Works</h2>
+        <h2 className="text-xl font-bold text-foreground">How It Works</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { icon: Radio, title: "Listen", desc: "Tune into WCCG 104.5 FM for contest cues and code words", color: "from-[#74ddc7] to-[#0d9488]", step: "01" },
@@ -426,14 +426,14 @@ export default function ContestsPage() {
           ].map((step) => (
             <div
               key={step.step}
-              className="relative rounded-xl border border-white/[0.06] bg-[#141420] p-5 transition-all hover:border-white/[0.12]"
+              className="relative rounded-xl border border-border bg-card p-5 transition-all hover:border-input"
             >
-              <span className="absolute top-3 right-3 text-4xl font-black text-white/[0.03]">{step.step}</span>
+              <span className="absolute top-3 right-3 text-4xl font-black text-foreground/[0.03]">{step.step}</span>
               <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br ${step.color}`}>
                 <step.icon className="h-5 w-5 text-white" />
               </div>
-              <h3 className="font-semibold text-white">{step.title}</h3>
-              <p className="mt-1 text-sm text-white/40">{step.desc}</p>
+              <h3 className="font-semibold text-foreground">{step.title}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{step.desc}</p>
             </div>
           ))}
         </div>
@@ -444,7 +444,7 @@ export default function ContestsPage() {
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <Star className="h-5 w-5 text-[#f59e0b]" />
-            <h2 className="text-xl font-bold text-white">Featured Contests</h2>
+            <h2 className="text-xl font-bold text-foreground">Featured Contests</h2>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             {featuredContests.map((c) => (
@@ -457,8 +457,8 @@ export default function ContestsPage() {
       {/* ── All Contests ──────────────────────────────────────────────── */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">All Contests</h2>
-          <span className="text-sm text-white/30">{filteredContests.length} contests</span>
+          <h2 className="text-xl font-bold text-foreground">All Contests</h2>
+          <span className="text-sm text-muted-foreground/70">{filteredContests.length} contests</span>
         </div>
 
         {/* Filter chips */}
@@ -470,7 +470,7 @@ export default function ContestsPage() {
               className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
                 filter === cat.id
                   ? "bg-[#74ddc7] text-black"
-                  : "bg-white/5 text-white/50 hover:bg-white/10 border border-white/[0.06]"
+                  : "bg-white/5 text-muted-foreground hover:bg-foreground/10 border border-border"
               }`}
             >
               {cat.label}
@@ -486,8 +486,8 @@ export default function ContestsPage() {
         </div>
 
         {filteredContests.length === 0 && (
-          <div className="flex h-40 items-center justify-center rounded-xl border border-white/[0.06] bg-[#141420]">
-            <p className="text-sm text-white/30">No contests match this filter. Try another category!</p>
+          <div className="flex h-40 items-center justify-center rounded-xl border border-border bg-card">
+            <p className="text-sm text-muted-foreground/70">No contests match this filter. Try another category!</p>
           </div>
         )}
       </section>
@@ -496,21 +496,21 @@ export default function ContestsPage() {
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <Trophy className="h-5 w-5 text-[#f59e0b]" />
-          <h2 className="text-xl font-bold text-white">Recent Winners</h2>
+          <h2 className="text-xl font-bold text-foreground">Recent Winners</h2>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {PAST_WINNERS.map((winner, i) => (
             <div
               key={i}
-              className="flex items-center gap-4 rounded-xl border border-white/[0.06] bg-[#141420] p-4"
+              className="flex items-center gap-4 rounded-xl border border-border bg-card p-4"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f59e0b]/10">
                 <Crown className="h-5 w-5 text-[#f59e0b]" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-white truncate">{winner.name}</p>
+                <p className="text-sm font-semibold text-foreground truncate">{winner.name}</p>
                 <p className="text-xs text-[#74ddc7] truncate">{winner.prize}</p>
-                <p className="text-xs text-white/30">{winner.date} · {winner.city}, NC</p>
+                <p className="text-xs text-muted-foreground/70">{winner.date} · {winner.city}, NC</p>
               </div>
             </div>
           ))}
@@ -553,14 +553,14 @@ export default function ContestsPage() {
       </section>
 
       {/* ── Legal Footer ──────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-white/20 pb-4">
-        <Link href="/contest-rules" className="hover:text-white/40 transition-colors">Official Contest Rules</Link>
+      <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-foreground/20 pb-4">
+        <Link href="/contest-rules" className="hover:text-muted-foreground transition-colors">Official Contest Rules</Link>
         <span>·</span>
-        <Link href="/contest-guidelines" className="hover:text-white/40 transition-colors">Submission Guidelines</Link>
+        <Link href="/contest-guidelines" className="hover:text-muted-foreground transition-colors">Submission Guidelines</Link>
         <span>·</span>
-        <Link href="/terms" className="hover:text-white/40 transition-colors">Terms of Service</Link>
+        <Link href="/terms" className="hover:text-muted-foreground transition-colors">Terms of Service</Link>
         <span>·</span>
-        <Link href="/privacy" className="hover:text-white/40 transition-colors">Privacy Policy</Link>
+        <Link href="/privacy" className="hover:text-muted-foreground transition-colors">Privacy Policy</Link>
       </div>
     </div>
   );

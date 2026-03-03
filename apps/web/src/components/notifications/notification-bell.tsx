@@ -62,7 +62,7 @@ const NOTIFICATION_COLORS: Record<NotificationType, string> = {
   FOLLOW: "text-blue-400",
   LIKE: "text-pink-400",
   COMMENT: "text-amber-400",
-  SYSTEM: "text-white/60",
+  SYSTEM: "text-foreground/60",
   EVENT: "text-purple-400",
   POINTS: "text-[#74ddc7]",
 };
@@ -202,7 +202,7 @@ export function NotificationBell() {
         <Button
           variant="ghost"
           size="icon-sm"
-          className="relative text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
+          className="relative text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.06]"
           aria-label="Notifications"
         >
           <Bell className="h-4 w-4" />
@@ -217,11 +217,11 @@ export function NotificationBell() {
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="w-80 border-white/[0.06] bg-[#141420] p-0"
+        className="w-80 border-border bg-card p-0"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
-          <h3 className="text-sm font-semibold text-white">Notifications</h3>
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
           {unreadCount > 0 && (
             <button
               onClick={markAllAsRead}
@@ -242,10 +242,10 @@ export function NotificationBell() {
         <ScrollArea className="max-h-[360px]">
           {isLoadingNotifications ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-white/30" />
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/70" />
             </div>
           ) : notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-white/30">
+            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground/70">
               <Bell className="h-8 w-8 mb-2" />
               <p className="text-sm">No notifications yet</p>
             </div>
@@ -255,7 +255,7 @@ export function NotificationBell() {
                 const Icon =
                   NOTIFICATION_ICONS[notification.type] || Info;
                 const iconColor =
-                  NOTIFICATION_COLORS[notification.type] || "text-white/60";
+                  NOTIFICATION_COLORS[notification.type] || "text-foreground/60";
 
                 const content = (
                   <div
@@ -265,7 +265,7 @@ export function NotificationBell() {
                     onClick={() => markAsRead(notification)}
                   >
                     <div
-                      className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.06] ${iconColor}`}
+                      className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground/[0.06] ${iconColor}`}
                     >
                       <Icon className="h-4 w-4" />
                     </div>
@@ -273,13 +273,13 @@ export function NotificationBell() {
                       <p
                         className={`text-sm leading-snug ${
                           notification.isRead
-                            ? "text-white/50"
-                            : "text-white/90 font-medium"
+                            ? "text-muted-foreground"
+                            : "text-foreground/90 font-medium"
                         }`}
                       >
                         {notification.message}
                       </p>
-                      <p className="mt-0.5 text-xs text-white/30">
+                      <p className="mt-0.5 text-xs text-muted-foreground/70">
                         {timeAgo(notification.createdAt)}
                       </p>
                     </div>
@@ -317,7 +317,7 @@ export function NotificationBell() {
 
         {/* Footer */}
         {notifications.length > 0 && (
-          <div className="border-t border-white/[0.06] px-4 py-2.5">
+          <div className="border-t border-border px-4 py-2.5">
             <Link
               href="/my/notifications"
               onClick={() => setIsOpen(false)}

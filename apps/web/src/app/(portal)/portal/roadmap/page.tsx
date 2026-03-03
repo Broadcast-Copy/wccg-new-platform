@@ -102,7 +102,7 @@ const taskStatusConfig: Record<TaskStatus, { label: string; icon: LucideIcon; co
   active: { label: "Active", icon: Clock, color: "text-yellow-400", bgColor: "bg-yellow-500/10" },
   next: { label: "Up Next", icon: CalendarDays, color: "text-blue-400", bgColor: "bg-blue-500/10" },
   planned: { label: "Planned", icon: Circle, color: "text-purple-400", bgColor: "bg-purple-500/10" },
-  backlog: { label: "Backlog", icon: AlertCircle, color: "text-gray-500", bgColor: "bg-gray-500/10" },
+  backlog: { label: "Backlog", icon: AlertCircle, color: "text-muted-foreground", bgColor: "bg-gray-500/10" },
 };
 
 const effortConfig: Record<string, { label: string; color: string }> = {
@@ -420,7 +420,7 @@ function PhaseCard({ phase }: { phase: Phase }) {
       >
         {/* Phase number circle */}
         <div
-          className="flex size-12 shrink-0 items-center justify-center rounded-2xl text-lg font-bold text-white"
+          className="flex size-12 shrink-0 items-center justify-center rounded-2xl text-lg font-bold text-foreground"
           style={{ backgroundColor: `${phase.color}20` }}
         >
           <Icon className="size-6" style={{ color: phase.color }} />
@@ -434,13 +434,13 @@ function PhaseCard({ phase }: { phase: Phase }) {
             <div className={cn("size-2 rounded-full", psCfg.color)} />
             <span className="text-xs text-muted-foreground">{psCfg.label}</span>
           </div>
-          <h3 className="text-lg font-bold text-white">{phase.title}</h3>
+          <h3 className="text-lg font-bold text-foreground">{phase.title}</h3>
           <p className="text-sm text-muted-foreground">{phase.subtitle}</p>
         </div>
 
         {/* Progress */}
         <div className="hidden shrink-0 text-right sm:block">
-          <p className="text-sm font-medium text-white">
+          <p className="text-sm font-medium text-foreground">
             {doneTasks}/{totalTasks}
           </p>
           <div className="mt-1 h-2 w-24 overflow-hidden rounded-full bg-white/10">
@@ -478,7 +478,7 @@ function PhaseCard({ phase }: { phase: Phase }) {
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <TSIcon className={cn("size-4 shrink-0", tsCfg.color)} />
-                    <span className={cn("text-sm font-medium", task.status === "done" ? "text-muted-foreground line-through" : "text-white")}>
+                    <span className={cn("text-sm font-medium", task.status === "done" ? "text-muted-foreground line-through" : "text-foreground")}>
                       {task.title}
                     </span>
                     <Badge variant="outline" className={cn("text-[10px]", eCfg.color)}>
@@ -540,7 +540,7 @@ export default function PortalRoadmapPage() {
             <Rocket className="size-5 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
               Build <span className="text-[#74ddc7]">Roadmap</span>
             </h1>
             <p className="text-muted-foreground">
@@ -556,7 +556,7 @@ export default function PortalRoadmapPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Overall Progress</p>
-              <p className="text-2xl font-bold text-white">{pctComplete}%</p>
+              <p className="text-2xl font-bold text-foreground">{pctComplete}%</p>
             </div>
             <div className="grid grid-cols-5 gap-4 text-center">
               <div>
@@ -576,7 +576,7 @@ export default function PortalRoadmapPage() {
                 <p className="text-[10px] text-muted-foreground">Planned</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-gray-500">{backlogTasks}</p>
+                <p className="text-lg font-bold text-muted-foreground">{backlogTasks}</p>
                 <p className="text-[10px] text-muted-foreground">Backlog</p>
               </div>
             </div>

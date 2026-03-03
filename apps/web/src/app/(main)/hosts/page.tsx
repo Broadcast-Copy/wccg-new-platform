@@ -99,22 +99,22 @@ export default async function HostsPage() {
               <Users className="h-8 w-8 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">Hosts &amp; DJs</h1>
-              <p className="text-base text-gray-400 max-w-2xl">Meet the voices and personalities behind WCCG 104.5 FM — show hosts, gospel voices, and Mix Squad DJs.</p>
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-2">Hosts &amp; DJs</h1>
+              <p className="text-base text-muted-foreground max-w-2xl">Meet the voices and personalities behind WCCG 104.5 FM — show hosts, gospel voices, and Mix Squad DJs.</p>
             </div>
           </div>
           <div className="mt-8 grid grid-cols-3 gap-4">
             <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
               <div className="flex items-center gap-2"><Mic2 className="h-4 w-4 text-indigo-400" /><span className="text-sm font-medium text-gray-300">Show Hosts</span></div>
-              <p className="mt-1 text-2xl font-bold text-white">{mainHosts.length}</p>
+              <p className="mt-1 text-2xl font-bold text-foreground">{mainHosts.length}</p>
             </div>
             <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
               <div className="flex items-center gap-2"><Radio className="h-4 w-4 text-teal-400" /><span className="text-sm font-medium text-gray-300">Mix Squad</span></div>
-              <p className="mt-1 text-2xl font-bold text-white">{mixSquadIds.length}</p>
+              <p className="mt-1 text-2xl font-bold text-foreground">{mixSquadIds.length}</p>
             </div>
             <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
               <div className="flex items-center gap-2"><Users className="h-4 w-4 text-amber-400" /><span className="text-sm font-medium text-gray-300">Total</span></div>
-              <p className="mt-1 text-2xl font-bold text-white">{hosts.length}</p>
+              <p className="mt-1 text-2xl font-bold text-foreground">{hosts.length}</p>
             </div>
           </div>
         </div>

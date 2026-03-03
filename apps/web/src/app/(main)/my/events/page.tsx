@@ -86,9 +86,9 @@ function getStatusColor(status: string): string {
     case "CANCELLED":
       return "border-red-500/30 bg-red-500/10 text-red-400";
     case "COMPLETED":
-      return "border-gray-500/30 bg-gray-500/10 text-gray-400";
+      return "border-gray-500/30 bg-gray-500/10 text-muted-foreground";
     default:
-      return "border-gray-500/30 bg-gray-500/10 text-gray-400";
+      return "border-gray-500/30 bg-gray-500/10 text-muted-foreground";
   }
 }
 
@@ -103,7 +103,7 @@ function getRegistrationStatusColor(status: string): string {
     case "CHECKED_IN":
       return "border-blue-500/30 bg-blue-500/10 text-blue-400";
     default:
-      return "border-gray-500/30 bg-gray-500/10 text-gray-400";
+      return "border-gray-500/30 bg-gray-500/10 text-muted-foreground";
   }
 }
 

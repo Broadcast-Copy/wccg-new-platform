@@ -30,11 +30,11 @@ export default async function ChannelsPage() {
       <div>
         <div className="flex items-center gap-3 mb-1">
           <Radio className="h-6 w-6 text-[#74ddc7]" />
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
             Streaming
           </h1>
         </div>
-        <p className="text-sm text-white/40">
+        <p className="text-sm text-muted-foreground">
           Browse our channels, discover live shows, and start streaming.
         </p>
       </div>

@@ -125,25 +125,25 @@ export function StreamPlayerProvider({ children }: { children: ReactNode }) {
             }`}
           >
             {/* Header bar */}
-            <div className="flex items-center justify-between bg-[#1a1a2e] border border-white/[0.08] rounded-t-2xl px-4 py-2.5">
+            <div className="flex items-center justify-between bg-[#1a1a2e] border border-border rounded-t-2xl px-4 py-2.5">
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5">
                   <span className="relative flex h-2 w-2">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#dc2626] opacity-75" />
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-[#dc2626]" />
                   </span>
-                  <span className="text-xs font-bold uppercase tracking-widest text-white/70">
+                  <span className="text-xs font-bold uppercase tracking-widest text-foreground/70">
                     Live
                   </span>
                 </div>
-                <span className="text-sm font-semibold text-white">
+                <span className="text-sm font-semibold text-foreground">
                   WCCG 104.5 FM
                 </span>
               </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setIsMinimized(!isMinimized)}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-white/40 hover:text-white/70 hover:bg-white/[0.08] transition-colors"
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
                   aria-label={isMinimized ? "Expand player" : "Minimize player"}
                 >
                   {isMinimized ? (
@@ -154,7 +154,7 @@ export function StreamPlayerProvider({ children }: { children: ReactNode }) {
                 </button>
                 <button
                   onClick={close}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-white/40 hover:text-white/70 hover:bg-white/[0.08] transition-colors"
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
                   aria-label="Close player"
                 >
                   <X className="h-4 w-4" />

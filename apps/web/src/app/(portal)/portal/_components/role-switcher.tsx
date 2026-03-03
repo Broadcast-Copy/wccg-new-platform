@@ -27,7 +27,7 @@ export default function RoleSwitcher({ currentRole, onRoleChange }: RoleSwitcher
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="w-full justify-between gap-2 border border-white/10 bg-white/5 px-3 py-2 text-sm text-white hover:bg-white/10"
+          className="w-full justify-between gap-2 border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground hover:bg-foreground/10"
         >
           <span className="flex items-center gap-2">
             <span
@@ -61,7 +61,7 @@ export default function RoleSwitcher({ currentRole, onRoleChange }: RoleSwitcher
               >
                 <Icon className="size-3" style={{ color: role.accentColor }} />
               </span>
-              <span className={isActive ? "font-medium text-white" : "text-muted-foreground"}>
+              <span className={isActive ? "font-medium text-foreground" : "text-muted-foreground"}>
                 {role.label}
               </span>
               {isActive && (

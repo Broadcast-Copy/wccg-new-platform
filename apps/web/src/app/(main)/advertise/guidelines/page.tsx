@@ -36,45 +36,45 @@ export default function AdvertiserGuidelinesPage() {
               <FileCheck className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Advertiser Guidelines</h1>
-              <p className="text-white/50 mt-1">Technical specs and creative requirements</p>
+              <h1 className="text-3xl font-bold text-foreground">Advertiser Guidelines</h1>
+              <p className="text-muted-foreground mt-1">Technical specs and creative requirements</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Audio Specs */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
         <div className="flex items-center gap-2">
           <Volume2 className="h-5 w-5 text-[#74ddc7]" />
-          <h2 className="text-xl font-semibold text-white">Audio Spot Specifications</h2>
+          <h2 className="text-xl font-semibold text-foreground">Audio Spot Specifications</h2>
         </div>
         <div className="grid gap-2">
           {audioSpecs.map((spec) => (
             <div key={spec.label} className="flex justify-between items-center py-2 border-b border-white/[0.04]">
-              <span className="text-sm text-white/40">{spec.label}</span>
-              <span className="text-sm text-white font-medium">{spec.value}</span>
+              <span className="text-sm text-muted-foreground">{spec.label}</span>
+              <span className="text-sm text-foreground font-medium">{spec.value}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Digital Specs */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
-        <h2 className="text-xl font-semibold text-white">Digital Ad Specifications</h2>
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Digital Ad Specifications</h2>
         <div className="grid gap-2">
           {digitalSpecs.map((spec) => (
             <div key={spec.label} className="flex justify-between items-center py-2 border-b border-white/[0.04]">
-              <span className="text-sm text-white/40">{spec.label}</span>
-              <span className="text-sm text-white font-medium">{spec.value}</span>
+              <span className="text-sm text-muted-foreground">{spec.label}</span>
+              <span className="text-sm text-foreground font-medium">{spec.value}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Content Guidelines */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
-        <h2 className="text-xl font-semibold text-white">Content Guidelines</h2>
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Content Guidelines</h2>
         <ul className="space-y-2">
           {[
             "All ads must comply with FCC regulations and FTC advertising guidelines",
@@ -85,7 +85,7 @@ export default function AdvertiserGuidelinesPage() {
             "Live reads and DJ endorsements must be clearly identified as sponsored content",
             "All creative must be submitted at least 48 hours before scheduled airdate",
           ].map((item, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-white/50">
+            <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
               <CheckCircle2 className="h-4 w-4 text-[#74ddc7] mt-0.5 shrink-0" />
               {item}
             </li>
@@ -94,10 +94,10 @@ export default function AdvertiserGuidelinesPage() {
       </div>
 
       {/* Deadlines */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
         <div className="flex items-center gap-2">
           <Clock className="h-5 w-5 text-[#74ddc7]" />
-          <h2 className="text-xl font-semibold text-white">Submission Deadlines</h2>
+          <h2 className="text-xl font-semibold text-foreground">Submission Deadlines</h2>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           {[
@@ -107,8 +107,8 @@ export default function AdvertiserGuidelinesPage() {
             { type: "Event Sponsorship", deadline: "2 weeks before event" },
           ].map((item) => (
             <div key={item.type} className="rounded-lg border border-white/[0.04] bg-white/[0.02] p-4">
-              <h3 className="font-medium text-white text-sm">{item.type}</h3>
-              <p className="text-xs text-white/40 mt-0.5">{item.deadline}</p>
+              <h3 className="font-medium text-foreground text-sm">{item.type}</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">{item.deadline}</p>
             </div>
           ))}
         </div>
@@ -118,7 +118,7 @@ export default function AdvertiserGuidelinesPage() {
         <Button asChild className="rounded-full bg-[#74ddc7] text-[#0a0a0f] font-bold hover:bg-[#5fc4b0]">
           <Link href="/advertise/media-kit">View Media Kit</Link>
         </Button>
-        <Button asChild variant="outline" className="rounded-full border-white/20 text-white hover:bg-white/5">
+        <Button asChild variant="outline" className="rounded-full border-white/20 text-foreground hover:bg-white/5">
           <Link href="/advertise">Contact Advertising Team</Link>
         </Button>
       </div>

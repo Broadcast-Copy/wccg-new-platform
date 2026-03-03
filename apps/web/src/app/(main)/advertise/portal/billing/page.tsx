@@ -73,8 +73,8 @@ const INVOICE_STATUS_STYLES: Record<string, string> = {
   PAID: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   PENDING: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
   OVERDUE: "bg-red-500/10 text-red-400 border-red-500/20",
-  DRAFT: "bg-white/[0.06] text-white/40 border-white/[0.08]",
-  CANCELLED: "bg-white/[0.06] text-white/30 border-white/[0.06]",
+  DRAFT: "bg-foreground/[0.06] text-muted-foreground border-border",
+  CANCELLED: "bg-foreground/[0.06] text-muted-foreground/70 border-border",
 };
 
 const INVOICE_STATUS_ICONS: Record<string, React.ElementType> = {
@@ -145,13 +145,13 @@ function SpendChart({ campaigns }: { campaigns: Campaign[] }) {
   const maxSpend = Math.max(...monthlyData.map((d) => d.spend), 1);
 
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-[#141420] overflow-hidden">
-      <div className="px-5 py-4 border-b border-white/[0.06]">
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="px-5 py-4 border-b border-border">
         <div className="flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-white/40" />
-          <h2 className="font-semibold text-white">Monthly Spend</h2>
+          <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          <h2 className="font-semibold text-foreground">Monthly Spend</h2>
         </div>
-        <p className="text-xs text-white/40 mt-0.5">
+        <p className="text-xs text-muted-foreground mt-0.5">
           Estimated monthly spend based on campaign budgets
         </p>
       </div>
@@ -169,7 +169,7 @@ function SpendChart({ campaigns }: { campaigns: Campaign[] }) {
                       ? "bg-red-500"
                       : d.spend > 0
                         ? "bg-white/[0.12]"
-                        : "bg-white/[0.04]"
+                        : "bg-foreground/[0.04]"
                   }`}
                   style={{
                     height: `${Math.max((d.spend / maxSpend) * 100, 4)}%`,
@@ -177,7 +177,7 @@ function SpendChart({ campaigns }: { campaigns: Campaign[] }) {
                 />
               </div>
               <span
-                className={`text-[9px] ${d.isCurrent ? "text-white font-medium" : "text-white/30"}`}
+                className={`text-[9px] ${d.isCurrent ? "text-foreground font-medium" : "text-muted-foreground/70"}`}
               >
                 {d.month}
               </span>
@@ -271,17 +271,17 @@ export default function BillingPage() {
               <div className="flex items-center gap-2 mb-1">
                 <Link
                   href="/advertise/portal"
-                  className="text-white/40 hover:text-white text-sm transition-colors"
+                  className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                 >
                   Portal
                 </Link>
-                <span className="text-white/20">/</span>
-                <span className="text-white text-sm font-medium">Billing</span>
+                <span className="text-foreground/20">/</span>
+                <span className="text-foreground text-sm font-medium">Billing</span>
               </div>
-              <h1 className="text-3xl font-bold text-white">
+              <h1 className="text-3xl font-bold text-foreground">
                 Billing & Invoices
               </h1>
-              <p className="text-white/50 mt-1">
+              <p className="text-muted-foreground mt-1">
                 Manage your billing information and view invoices
               </p>
             </div>
@@ -292,8 +292,8 @@ export default function BillingPage() {
       {/* Loading */}
       {isLoading && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-white/40" />
-          <span className="ml-3 text-white/40 text-sm">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <span className="ml-3 text-muted-foreground text-sm">
             Loading billing...
           </span>
         </div>
@@ -301,8 +301,8 @@ export default function BillingPage() {
 
       {/* Auth required */}
       {!isLoading && !user && (
-        <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 text-center space-y-4">
-          <p className="text-white/50 text-sm">
+        <div className="rounded-xl border border-border bg-card p-6 sm:p-8 text-center space-y-4">
+          <p className="text-muted-foreground text-sm">
             Please{" "}
             <Link href="/login" className="text-[#74ddc7] hover:underline">
               sign in
@@ -356,10 +356,10 @@ export default function BillingPage() {
             ].map((stat) => (
               <div
                 key={stat.label}
-                className="rounded-xl border border-white/[0.06] bg-[#141420] p-5"
+                className="rounded-xl border border-border bg-card p-5"
               >
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs text-white/40 uppercase tracking-wider font-medium">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
                     {stat.label}
                   </span>
                   <div
@@ -368,7 +368,7 @@ export default function BillingPage() {
                     <stat.icon className={`h-4 w-4 ${stat.color}`} />
                   </div>
                 </div>
-                <p className="text-2xl font-bold text-white">{stat.value}</p>
+                <p className="text-2xl font-bold text-foreground">{stat.value}</p>
               </div>
             ))}
           </div>
@@ -376,50 +376,50 @@ export default function BillingPage() {
           {/* Account Info + Payment Method */}
           <div className="grid gap-4 lg:grid-cols-2">
             {/* Account Info Card */}
-            <div className="rounded-xl border border-white/[0.06] bg-[#141420] overflow-hidden">
-              <div className="px-5 py-4 border-b border-white/[0.06]">
-                <h2 className="font-semibold text-white">
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <div className="px-5 py-4 border-b border-border">
+                <h2 className="font-semibold text-foreground">
                   Account Information
                 </h2>
               </div>
               <div className="p-5 space-y-4">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/[0.04] shrink-0 mt-0.5">
-                    <Building2 className="h-4 w-4 text-white/40" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-foreground/[0.04] shrink-0 mt-0.5">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-xs text-white/40 mb-0.5">
+                    <p className="text-xs text-muted-foreground mb-0.5">
                       Company Name
                     </p>
-                    <p className="text-sm text-white font-medium">
+                    <p className="text-sm text-foreground font-medium">
                       {account.companyName}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/[0.04] shrink-0 mt-0.5">
-                    <Mail className="h-4 w-4 text-white/40" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-foreground/[0.04] shrink-0 mt-0.5">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-xs text-white/40 mb-0.5">
+                    <p className="text-xs text-muted-foreground mb-0.5">
                       Billing Email
                     </p>
-                    <p className="text-sm text-white font-medium">
+                    <p className="text-sm text-foreground font-medium">
                       {account.billingEmail}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/[0.04] shrink-0 mt-0.5">
-                    <MapPin className="h-4 w-4 text-white/40" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-foreground/[0.04] shrink-0 mt-0.5">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-xs text-white/40 mb-0.5">
+                    <p className="text-xs text-muted-foreground mb-0.5">
                       Billing Address
                     </p>
-                    <p className="text-sm text-white font-medium">
+                    <p className="text-sm text-foreground font-medium">
                       {account.billingAddress ? (
                         <>
                           {account.billingAddress}
@@ -428,7 +428,7 @@ export default function BillingPage() {
                           {account.billingZip}
                         </>
                       ) : (
-                        <span className="text-white/30">
+                        <span className="text-muted-foreground/70">
                           No address on file
                         </span>
                       )}
@@ -437,8 +437,8 @@ export default function BillingPage() {
                 </div>
 
                 {account.createdAt && (
-                  <div className="pt-2 border-t border-white/[0.06]">
-                    <p className="text-[11px] text-white/30">
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-[11px] text-muted-foreground/70">
                       Account created {formatDate(account.createdAt)}
                     </p>
                   </div>
@@ -447,19 +447,19 @@ export default function BillingPage() {
             </div>
 
             {/* Payment Method Card */}
-            <div className="rounded-xl border border-white/[0.06] bg-[#141420] overflow-hidden">
-              <div className="px-5 py-4 border-b border-white/[0.06]">
-                <h2 className="font-semibold text-white">Payment Method</h2>
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <div className="px-5 py-4 border-b border-border">
+                <h2 className="font-semibold text-foreground">Payment Method</h2>
               </div>
               <div className="p-5 flex flex-col items-center justify-center min-h-[200px] text-center space-y-3">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04]">
-                  <CreditCard className="h-7 w-7 text-white/20" />
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-foreground/[0.04]">
+                  <CreditCard className="h-7 w-7 text-foreground/20" />
                 </div>
                 <div>
-                  <p className="text-sm text-white/60 font-medium">
+                  <p className="text-sm text-foreground/60 font-medium">
                     Payment methods managed by WCCG
                   </p>
-                  <p className="text-xs text-white/30 mt-1 max-w-xs">
+                  <p className="text-xs text-muted-foreground/70 mt-1 max-w-xs">
                     Contact our advertising team to update your payment method or
                     set up auto-pay for your account.
                   </p>
@@ -468,7 +468,7 @@ export default function BillingPage() {
                   asChild
                   variant="outline"
                   size="sm"
-                  className="rounded-full border-white/[0.08] text-white/60 hover:bg-white/[0.04] mt-2"
+                  className="rounded-full border-border text-foreground/60 hover:bg-foreground/[0.04] mt-2"
                 >
                   <Link href="/contact">Contact Billing Support</Link>
                 </Button>
@@ -480,14 +480,14 @@ export default function BillingPage() {
           <SpendChart campaigns={campaigns} />
 
           {/* Invoice History */}
-          <div className="rounded-xl border border-white/[0.06] bg-[#141420] overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <div className="flex items-center gap-2">
-                <Receipt className="h-4 w-4 text-white/40" />
-                <h2 className="font-semibold text-white">Invoice History</h2>
+                <Receipt className="h-4 w-4 text-muted-foreground" />
+                <h2 className="font-semibold text-foreground">Invoice History</h2>
               </div>
               {invoices.length > 0 && (
-                <span className="text-xs text-white/40">
+                <span className="text-xs text-muted-foreground">
                   {invoices.length} invoice
                   {invoices.length !== 1 ? "s" : ""}
                 </span>
@@ -496,11 +496,11 @@ export default function BillingPage() {
 
             {invoices.length === 0 ? (
               <div className="px-5 py-12 text-center">
-                <Receipt className="h-10 w-10 text-white/20 mx-auto mb-3" />
-                <h3 className="text-base font-semibold text-white mb-1">
+                <Receipt className="h-10 w-10 text-foreground/20 mx-auto mb-3" />
+                <h3 className="text-base font-semibold text-foreground mb-1">
                   No invoices yet
                 </h3>
-                <p className="text-sm text-white/40 max-w-sm mx-auto">
+                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
                   Invoices will appear here once your campaigns start running.
                   WCCG generates invoices monthly based on your campaign
                   activity.
@@ -509,20 +509,20 @@ export default function BillingPage() {
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow className="border-white/[0.06] hover:bg-transparent">
-                    <TableHead className="text-white/40">Invoice</TableHead>
-                    <TableHead className="text-white/40">Amount</TableHead>
-                    <TableHead className="text-white/40">Status</TableHead>
-                    <TableHead className="text-white/40 hidden sm:table-cell">
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Invoice</TableHead>
+                    <TableHead className="text-muted-foreground">Amount</TableHead>
+                    <TableHead className="text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-muted-foreground hidden sm:table-cell">
                       Issued
                     </TableHead>
-                    <TableHead className="text-white/40 hidden sm:table-cell">
+                    <TableHead className="text-muted-foreground hidden sm:table-cell">
                       Due
                     </TableHead>
-                    <TableHead className="text-white/40 hidden md:table-cell">
+                    <TableHead className="text-muted-foreground hidden md:table-cell">
                       Paid
                     </TableHead>
-                    <TableHead className="text-white/40 w-16" />
+                    <TableHead className="text-muted-foreground w-16" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -532,33 +532,33 @@ export default function BillingPage() {
                     return (
                       <TableRow
                         key={invoice.id}
-                        className="border-white/[0.06] hover:bg-white/[0.02]"
+                        className="border-border hover:bg-white/[0.02]"
                       >
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <StatusIcon className="h-3.5 w-3.5 text-white/30" />
-                            <span className="text-white font-medium text-sm">
+                            <StatusIcon className="h-3.5 w-3.5 text-muted-foreground/70" />
+                            <span className="text-foreground font-medium text-sm">
                               {invoice.invoiceNumber}
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-white font-medium">
+                        <TableCell className="text-foreground font-medium">
                           {formatCurrency(invoice.amount)}
                         </TableCell>
                         <TableCell>
                           <Badge
-                            className={`text-[10px] border ${INVOICE_STATUS_STYLES[invoice.status] || "bg-white/[0.06] text-white/40 border-white/[0.08]"}`}
+                            className={`text-[10px] border ${INVOICE_STATUS_STYLES[invoice.status] || "bg-foreground/[0.06] text-muted-foreground border-border"}`}
                           >
                             {invoice.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-white/40 hidden sm:table-cell">
+                        <TableCell className="text-muted-foreground hidden sm:table-cell">
                           {formatDate(invoice.issuedDate)}
                         </TableCell>
-                        <TableCell className="text-white/40 hidden sm:table-cell">
+                        <TableCell className="text-muted-foreground hidden sm:table-cell">
                           {formatDate(invoice.dueDate)}
                         </TableCell>
-                        <TableCell className="text-white/40 hidden md:table-cell">
+                        <TableCell className="text-muted-foreground hidden md:table-cell">
                           {invoice.paidDate
                             ? formatDate(invoice.paidDate)
                             : "--"}
@@ -567,7 +567,7 @@ export default function BillingPage() {
                           <Button
                             variant="ghost"
                             size="icon-xs"
-                            className="text-white/30 hover:text-white"
+                            className="text-muted-foreground/70 hover:text-foreground"
                             title="Download invoice"
                           >
                             <Download className="h-3.5 w-3.5" />
@@ -584,8 +584,8 @@ export default function BillingPage() {
       )}
 
       {/* Footer */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 text-center">
-        <p className="text-white/50 text-sm">
+      <div className="rounded-xl border border-border bg-card p-6 text-center">
+        <p className="text-muted-foreground text-sm">
           Billing questions?{" "}
           <Link href="/contact" className="text-[#74ddc7] hover:underline">
             Contact our advertising team
@@ -599,7 +599,7 @@ export default function BillingPage() {
         <Button
           asChild
           variant="ghost"
-          className="text-white/40 hover:text-white"
+          className="text-muted-foreground hover:text-foreground"
         >
           <Link href="/advertise/portal">
             <ArrowLeft className="h-4 w-4 mr-1.5" />

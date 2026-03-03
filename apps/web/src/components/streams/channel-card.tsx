@@ -112,7 +112,7 @@ export function ChannelCard({
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
-                  <Radio className="h-7 w-7 text-white/80" />
+                  <Radio className="h-7 w-7 text-foreground/80" />
                 </div>
               )}
               {/* Live pulse overlay */}

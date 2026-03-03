@@ -55,16 +55,16 @@ export default function PodcastPage() {
               <Podcast className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Podcast & Launch</h1>
-              <p className="text-white/50 mt-1">Start your podcast with WCCG&apos;s platform and reach</p>
+              <h1 className="text-3xl font-bold text-foreground">Podcast & Launch</h1>
+              <p className="text-muted-foreground mt-1">Start your podcast with WCCG&apos;s platform and reach</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
-        <h2 className="text-xl font-semibold text-white">Launch Your Voice</h2>
-        <p className="text-white/50 leading-relaxed">
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Launch Your Voice</h2>
+        <p className="text-muted-foreground leading-relaxed">
           The WCCG Podcast Program gives local voices a platform to be heard. Whether you&apos;re launching your first show or
           looking for a better home for your existing podcast, we provide the hosting, distribution, and promotion you need to
           reach a wider audience.
@@ -73,29 +73,29 @@ export default function PodcastPage() {
 
       {/* Steps */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-white">How It Works</h2>
+        <h2 className="text-xl font-semibold text-foreground">How It Works</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((item) => (
-            <div key={item.step} className="rounded-xl border border-white/[0.06] bg-[#141420] p-5 space-y-3">
+            <div key={item.step} className="rounded-xl border border-border bg-card p-5 space-y-3">
               <div className="flex items-center gap-3">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#7401df] text-white text-sm font-bold">
                   {item.step}
                 </span>
-                <item.icon className="h-5 w-5 text-white/30" />
+                <item.icon className="h-5 w-5 text-muted-foreground/70" />
               </div>
-              <h3 className="font-semibold text-white">{item.title}</h3>
-              <p className="text-sm text-white/40 leading-relaxed">{item.description}</p>
+              <h3 className="font-semibold text-foreground">{item.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
             </div>
           ))}
         </div>
       </div>
 
       {/* What You Get */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
-        <h2 className="text-xl font-semibold text-white">What You Get</h2>
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">What You Get</h2>
         <div className="grid gap-2 sm:grid-cols-2">
           {features.map((f, i) => (
-            <div key={i} className="flex items-start gap-2 text-sm text-white/50">
+            <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
               <CheckCircle2 className="h-4 w-4 text-[#74ddc7] mt-0.5 shrink-0" />
               {f}
             </div>
@@ -104,9 +104,9 @@ export default function PodcastPage() {
       </div>
 
       {/* Content Guidelines */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
-        <h2 className="text-xl font-semibold text-white">Content Guidelines</h2>
-        <p className="text-white/50 text-sm leading-relaxed">
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Content Guidelines</h2>
+        <p className="text-muted-foreground text-sm leading-relaxed">
           Podcasts on the WCCG platform must align with our community values. Content should be original, engaging, and appropriate
           for a general audience. We welcome shows covering music, culture, community, sports, business, faith, lifestyle, and education.
           Explicit content must be clearly labeled. WCCG reserves the right to review and approve all content before publication.
@@ -120,7 +120,7 @@ export default function PodcastPage() {
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
-        <Button asChild variant="outline" className="rounded-full border-white/20 text-white hover:bg-white/5">
+        <Button asChild variant="outline" className="rounded-full border-white/20 text-foreground hover:bg-white/5">
           <Link href="/contact">Have Questions?</Link>
         </Button>
       </div>

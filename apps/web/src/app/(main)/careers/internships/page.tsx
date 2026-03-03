@@ -54,21 +54,21 @@ export default function InternshipsPage() {
               <GraduationCap className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Internship Program</h1>
-              <p className="text-white/50 mt-1">Launch your media career with hands-on experience</p>
+              <h1 className="text-3xl font-bold text-foreground">Internship Program</h1>
+              <p className="text-muted-foreground mt-1">Launch your media career with hands-on experience</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
-        <h2 className="text-xl font-semibold text-white">About the Program</h2>
-        <p className="text-white/50 leading-relaxed">
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">About the Program</h2>
+        <p className="text-muted-foreground leading-relaxed">
           The WCCG 104.5 FM Internship Program offers students and aspiring media professionals the opportunity
           to gain real-world experience in a professional broadcasting environment. Our interns work alongside
           experienced radio professionals and contribute to live programming, events, and digital content.
         </p>
-        <div className="flex flex-wrap gap-4 text-sm text-white/50">
+        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <Calendar className="h-4 w-4 text-[#74ddc7]" />
             Spring, Summer, and Fall sessions
@@ -82,23 +82,23 @@ export default function InternshipsPage() {
 
       {/* Departments */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-white">Available Departments</h2>
+        <h2 className="text-xl font-semibold text-foreground">Available Departments</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {departments.map((dept) => (
-            <div key={dept.title} className="rounded-xl border border-white/[0.06] bg-[#141420] p-5">
-              <h3 className="font-semibold text-white mb-2">{dept.title}</h3>
-              <p className="text-sm text-white/40 leading-relaxed">{dept.description}</p>
+            <div key={dept.title} className="rounded-xl border border-border bg-card p-5">
+              <h3 className="font-semibold text-foreground mb-2">{dept.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{dept.description}</p>
             </div>
           ))}
         </div>
       </div>
 
       {/* Requirements */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
-        <h2 className="text-xl font-semibold text-white">Requirements</h2>
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Requirements</h2>
         <ul className="space-y-2">
           {requirements.map((req, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-white/50">
+            <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
               <CheckCircle2 className="h-4 w-4 text-[#74ddc7] mt-0.5 shrink-0" />
               {req}
             </li>
@@ -113,7 +113,7 @@ export default function InternshipsPage() {
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
-        <Button asChild variant="outline" className="rounded-full border-white/20 text-white hover:bg-white/5">
+        <Button asChild variant="outline" className="rounded-full border-white/20 text-foreground hover:bg-white/5">
           <Link href="/contact">Contact Us</Link>
         </Button>
       </div>

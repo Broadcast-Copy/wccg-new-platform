@@ -46,22 +46,22 @@ export default async function RewardsPage() {
               <Gift className="h-8 w-8 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">Rewards Catalog</h1>
-              <p className="text-base text-gray-400 max-w-2xl">Redeem your mY1045 points for exclusive rewards, merchandise, concert tickets, and VIP experiences.</p>
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-2">Rewards Catalog</h1>
+              <p className="text-base text-muted-foreground max-w-2xl">Redeem your mY1045 points for exclusive rewards, merchandise, concert tickets, and VIP experiences.</p>
             </div>
           </div>
           <div className="mt-8 grid grid-cols-3 gap-4">
             <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
               <div className="flex items-center gap-2"><Star className="h-4 w-4 text-amber-400" /><span className="text-sm font-medium text-gray-300">Available</span></div>
-              <p className="mt-1 text-2xl font-bold text-white">{activeRewards.length}</p>
+              <p className="mt-1 text-2xl font-bold text-foreground">{activeRewards.length}</p>
             </div>
             <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
               <div className="flex items-center gap-2"><Trophy className="h-4 w-4 text-purple-400" /><span className="text-sm font-medium text-gray-300">Categories</span></div>
-              <p className="mt-1 text-2xl font-bold text-white">{categories.size || "—"}</p>
+              <p className="mt-1 text-2xl font-bold text-foreground">{categories.size || "—"}</p>
             </div>
             <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
               <div className="flex items-center gap-2"><Coins className="h-4 w-4 text-teal-400" /><span className="text-sm font-medium text-gray-300">Earn By</span></div>
-              <p className="mt-1 text-2xl font-bold text-white">Listening</p>
+              <p className="mt-1 text-2xl font-bold text-foreground">Listening</p>
             </div>
           </div>
         </div>

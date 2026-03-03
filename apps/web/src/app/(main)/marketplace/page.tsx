@@ -305,7 +305,7 @@ function StarRating({ rating, reviews }: { rating: number; reviews: number }) {
 /* ------------------------------------------------------------------ */
 
 function ProductIcon({ icon, className }: { icon: string; className?: string }) {
-  const base = className ?? "h-10 w-10 text-white/80";
+  const base = className ?? "h-10 w-10 text-foreground/80";
   switch (icon) {
     case "shirt":
     case "tank":
@@ -474,7 +474,7 @@ export default function MarketplacePage() {
               >
                 <ProductIcon
                   icon={product.icon}
-                  className="h-16 w-16 text-white/70 transition-transform group-hover:scale-110"
+                  className="h-16 w-16 text-foreground/70 transition-transform group-hover:scale-110"
                 />
 
                 {/* Badges */}

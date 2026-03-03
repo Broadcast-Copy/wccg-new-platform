@@ -62,16 +62,16 @@ export default function CreatorsPage() {
               <Mic className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Become a Creator</h1>
-              <p className="text-white/50 mt-1">Create, share, and grow with WCCG 104.5 FM</p>
+              <h1 className="text-3xl font-bold text-foreground">Become a Creator</h1>
+              <p className="text-muted-foreground mt-1">Create, share, and grow with WCCG 104.5 FM</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
-        <h2 className="text-xl font-semibold text-white">The WCCG Creator Program</h2>
-        <p className="text-white/50 leading-relaxed">
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">The WCCG Creator Program</h2>
+        <p className="text-muted-foreground leading-relaxed">
           WCCG 104.5 FM&apos;s Creator Program empowers local artists, podcasters, DJs, and content creators with the tools
           and platform to reach a wider audience. Whether you&apos;re a musician looking for airplay, a podcaster launching
           your first show, or a DJ wanting to share your mixes — we&apos;ve built a home for your content.
@@ -81,12 +81,12 @@ export default function CreatorsPage() {
       {/* Features */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {features.map((f) => (
-          <div key={f.title} className="rounded-xl border border-white/[0.06] bg-[#141420] p-5 transition-all hover:border-white/[0.12]">
+          <div key={f.title} className="rounded-xl border border-border bg-card p-5 transition-all hover:border-input">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#7401df]/10 mb-3">
               <f.icon className="h-5 w-5 text-[#7401df]" />
             </div>
-            <h3 className="font-semibold text-white mb-1">{f.title}</h3>
-            <p className="text-sm text-white/40 leading-relaxed">{f.description}</p>
+            <h3 className="font-semibold text-foreground mb-1">{f.title}</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
           </div>
         ))}
       </div>
@@ -100,27 +100,27 @@ export default function CreatorsPage() {
           <Link
             key={link.href}
             href={link.href}
-            className="group rounded-xl border border-white/[0.06] bg-[#141420] p-5 transition-all hover:border-white/[0.12] flex items-center justify-between"
+            className="group rounded-xl border border-border bg-card p-5 transition-all hover:border-input flex items-center justify-between"
           >
             <div>
-              <h3 className="font-semibold text-white group-hover:text-[#74ddc7] transition-colors">{link.label}</h3>
-              <p className="text-xs text-white/40 mt-0.5">{link.desc}</p>
+              <h3 className="font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors">{link.label}</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">{link.desc}</p>
             </div>
-            <ArrowRight className="h-4 w-4 text-white/20 group-hover:text-[#74ddc7] transition-colors" />
+            <ArrowRight className="h-4 w-4 text-foreground/20 group-hover:text-[#74ddc7] transition-colors" />
           </Link>
         ))}
       </div>
 
       {/* Application Form */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8">
-        <h2 className="text-xl font-semibold text-white mb-4">Apply to the Creator Program</h2>
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8">
+        <h2 className="text-xl font-semibold text-foreground mb-4">Apply to the Creator Program</h2>
         {submitted ? (
           <div className="text-center py-8">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#7401df]/10 mx-auto mb-3">
               <Mic className="h-7 w-7 text-[#7401df]" />
             </div>
-            <h3 className="text-lg font-semibold text-white">Application Submitted!</h3>
-            <p className="text-sm text-white/50 mt-2">
+            <h3 className="text-lg font-semibold text-foreground">Application Submitted!</h3>
+            <p className="text-sm text-muted-foreground mt-2">
               Our creator team will review your application and get back to you within 5 business days.
             </p>
           </div>
@@ -128,62 +128,62 @@ export default function CreatorsPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-sm text-white/60 mb-1">Name / Artist Name *</label>
+                <label className="block text-sm text-foreground/60 mb-1">Name / Artist Name *</label>
                 <input
                   type="text"
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder:text-white/20 focus:border-[#74ddc7] focus:outline-none"
+                  className="w-full rounded-lg border border-border bg-foreground/[0.04] px-4 py-2.5 text-sm text-foreground placeholder:text-foreground/20 focus:border-[#74ddc7] focus:outline-none"
                   placeholder="Your name or artist name"
                 />
               </div>
               <div>
-                <label className="block text-sm text-white/60 mb-1">Email *</label>
+                <label className="block text-sm text-foreground/60 mb-1">Email *</label>
                 <input
                   type="email"
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder:text-white/20 focus:border-[#74ddc7] focus:outline-none"
+                  className="w-full rounded-lg border border-border bg-foreground/[0.04] px-4 py-2.5 text-sm text-foreground placeholder:text-foreground/20 focus:border-[#74ddc7] focus:outline-none"
                   placeholder="you@email.com"
                 />
               </div>
               <div>
-                <label className="block text-sm text-white/60 mb-1">Creator Type *</label>
+                <label className="block text-sm text-foreground/60 mb-1">Creator Type *</label>
                 <select
                   required
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm text-white focus:border-[#74ddc7] focus:outline-none"
+                  className="w-full rounded-lg border border-border bg-foreground/[0.04] px-4 py-2.5 text-sm text-foreground focus:border-[#74ddc7] focus:outline-none"
                 >
-                  <option value="" className="bg-[#141420]">Select type</option>
-                  <option value="musician" className="bg-[#141420]">Musician / Artist</option>
-                  <option value="dj" className="bg-[#141420]">DJ</option>
-                  <option value="podcaster" className="bg-[#141420]">Podcaster</option>
-                  <option value="video" className="bg-[#141420]">Video Creator</option>
-                  <option value="writer" className="bg-[#141420]">Writer / Blogger</option>
-                  <option value="other" className="bg-[#141420]">Other</option>
+                  <option value="" className="bg-card">Select type</option>
+                  <option value="musician" className="bg-card">Musician / Artist</option>
+                  <option value="dj" className="bg-card">DJ</option>
+                  <option value="podcaster" className="bg-card">Podcaster</option>
+                  <option value="video" className="bg-card">Video Creator</option>
+                  <option value="writer" className="bg-card">Writer / Blogger</option>
+                  <option value="other" className="bg-card">Other</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm text-white/60 mb-1">Portfolio / Website</label>
+                <label className="block text-sm text-foreground/60 mb-1">Portfolio / Website</label>
                 <input
                   type="url"
                   value={formData.portfolio}
                   onChange={(e) => setFormData({ ...formData, portfolio: e.target.value })}
-                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder:text-white/20 focus:border-[#74ddc7] focus:outline-none"
+                  className="w-full rounded-lg border border-border bg-foreground/[0.04] px-4 py-2.5 text-sm text-foreground placeholder:text-foreground/20 focus:border-[#74ddc7] focus:outline-none"
                   placeholder="https://your-portfolio.com"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm text-white/60 mb-1">Tell us about your work</label>
+              <label className="block text-sm text-foreground/60 mb-1">Tell us about your work</label>
               <textarea
                 rows={4}
                 value={formData.message}
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                className="w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder:text-white/20 focus:border-[#74ddc7] focus:outline-none resize-none"
+                className="w-full rounded-lg border border-border bg-foreground/[0.04] px-4 py-2.5 text-sm text-foreground placeholder:text-foreground/20 focus:border-[#74ddc7] focus:outline-none resize-none"
                 placeholder="Describe your content, genre, audience, and what you'd like to do with WCCG..."
               />
             </div>

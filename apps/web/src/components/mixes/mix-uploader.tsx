@@ -162,8 +162,8 @@ export function MixUploader({ onSuccess, hostId }: MixUploaderProps) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-[#74ddc7]/30 bg-[#74ddc7]/5 p-10 text-center">
         <CheckCircle2 className="mb-4 h-12 w-12 text-[#74ddc7]" />
-        <h3 className="text-xl font-bold text-white">Upload Successful!</h3>
-        <p className="mt-2 text-sm text-gray-400">
+        <h3 className="text-xl font-bold text-foreground">Upload Successful!</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
           Your mix has been submitted and is being processed.
         </p>
         <div className="mt-6 flex gap-3">
@@ -179,7 +179,7 @@ export function MixUploader({ onSuccess, hostId }: MixUploaderProps) {
               setCoverImageUrl("");
               setProgress(0);
             }}
-            className="rounded-full border-white/20 text-white hover:bg-white/10"
+            className="rounded-full border-white/20 text-white hover:bg-foreground/10"
           >
             Upload Another
           </Button>
@@ -207,7 +207,7 @@ export function MixUploader({ onSuccess, hostId }: MixUploaderProps) {
             ? "border-[#74ddc7] bg-[#74ddc7]/10"
             : file
               ? "border-[#74ddc7]/40 bg-[#74ddc7]/5"
-              : "border-white/20 bg-white/5 hover:border-white/40 hover:bg-white/10"
+              : "border-white/20 bg-white/5 hover:border-white/40 hover:bg-foreground/10"
         }`}
       >
         <input
@@ -222,8 +222,8 @@ export function MixUploader({ onSuccess, hostId }: MixUploaderProps) {
           <div className="flex items-center justify-center gap-3">
             <FileAudio className="h-8 w-8 text-[#74ddc7]" />
             <div className="text-left">
-              <p className="text-sm font-medium text-white">{file.name}</p>
-              <p className="text-xs text-gray-400">
+              <p className="text-sm font-medium text-foreground">{file.name}</p>
+              <p className="text-xs text-muted-foreground">
                 {(file.size / (1024 * 1024)).toFixed(2)} MB
               </p>
             </div>
@@ -233,18 +233,18 @@ export function MixUploader({ onSuccess, hostId }: MixUploaderProps) {
                 e.stopPropagation();
                 removeFile();
               }}
-              className="ml-2 rounded-full p-1 text-gray-400 hover:bg-white/10 hover:text-white"
+              className="ml-2 rounded-full p-1 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
         ) : (
           <>
-            <CloudUpload className="mx-auto mb-3 h-10 w-10 text-gray-400" />
-            <p className="text-sm font-medium text-white">
+            <CloudUpload className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+            <p className="text-sm font-medium text-foreground">
               Drag & drop your mix here
             </p>
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-muted-foreground">
               or click to browse. Accepts .mp3, .wav, .m4a
             </p>
           </>
@@ -254,7 +254,7 @@ export function MixUploader({ onSuccess, hostId }: MixUploaderProps) {
       {/* Progress bar */}
       {uploading && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-gray-400">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Uploading...</span>
             <span>{Math.round(progress)}%</span>
           </div>
@@ -279,7 +279,7 @@ export function MixUploader({ onSuccess, hostId }: MixUploaderProps) {
           placeholder="e.g. Friday Night Vibes Vol. 3"
           required
           disabled={uploading}
-          className="border-white/15 bg-white/5 text-white placeholder:text-gray-500 focus:border-[#74ddc7]/50"
+          className="border-white/15 bg-white/5 text-foreground placeholder:text-muted-foreground focus:border-[#74ddc7]/50"
         />
       </div>
 
@@ -295,7 +295,7 @@ export function MixUploader({ onSuccess, hostId }: MixUploaderProps) {
           placeholder="Tell listeners what to expect from this mix..."
           rows={3}
           disabled={uploading}
-          className="border-white/15 bg-white/5 text-white placeholder:text-gray-500 focus:border-[#74ddc7]/50"
+          className="border-white/15 bg-white/5 text-foreground placeholder:text-muted-foreground focus:border-[#74ddc7]/50"
         />
       </div>
 
@@ -304,7 +304,7 @@ export function MixUploader({ onSuccess, hostId }: MixUploaderProps) {
         <div className="space-y-2">
           <Label className="text-gray-300">Genre</Label>
           <Select value={genre} onValueChange={setGenre} disabled={uploading}>
-            <SelectTrigger className="w-full border-white/15 bg-white/5 text-white">
+            <SelectTrigger className="w-full border-white/15 bg-white/5 text-foreground">
               <SelectValue placeholder="Select genre" />
             </SelectTrigger>
             <SelectContent>
@@ -327,9 +327,9 @@ export function MixUploader({ onSuccess, hostId }: MixUploaderProps) {
             onChange={(e) => setTags(e.target.value)}
             placeholder="hip hop, 2024, vibes"
             disabled={uploading}
-            className="border-white/15 bg-white/5 text-white placeholder:text-gray-500 focus:border-[#74ddc7]/50"
+            className="border-white/15 bg-white/5 text-foreground placeholder:text-muted-foreground focus:border-[#74ddc7]/50"
           />
-          <p className="text-xs text-gray-500">Separate with commas</p>
+          <p className="text-xs text-muted-foreground">Separate with commas</p>
         </div>
       </div>
 
@@ -344,7 +344,7 @@ export function MixUploader({ onSuccess, hostId }: MixUploaderProps) {
           onChange={(e) => setCoverImageUrl(e.target.value)}
           placeholder="https://example.com/cover.jpg"
           disabled={uploading}
-          className="border-white/15 bg-white/5 text-white placeholder:text-gray-500 focus:border-[#74ddc7]/50"
+          className="border-white/15 bg-white/5 text-foreground placeholder:text-muted-foreground focus:border-[#74ddc7]/50"
         />
       </div>
 

@@ -114,14 +114,14 @@ function RadioOption({
         className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
           checked
             ? "border-[#74ddc7] bg-[#74ddc7]"
-            : "border-white/30 group-hover:border-white/50"
+            : "border-white/30 group-hover:border-foreground/50"
         }`}
         onClick={() => onChange(value)}
       >
-        {checked && <div className="w-2 h-2 rounded-full bg-[#0a0a0f]" />}
+        {checked && <div className="w-2 h-2 rounded-full bg-background" />}
       </div>
       <span
-        className="text-sm text-white/70 group-hover:text-white/90"
+        className="text-sm text-foreground/70 group-hover:text-foreground/90"
         onClick={() => onChange(value)}
       >
         {label}
@@ -145,7 +145,7 @@ function CheckboxOption({
         className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
           checked
             ? "border-[#74ddc7] bg-[#74ddc7]"
-            : "border-white/30 group-hover:border-white/50"
+            : "border-white/30 group-hover:border-foreground/50"
         }`}
       >
         {checked && (
@@ -164,7 +164,7 @@ function CheckboxOption({
           </svg>
         )}
       </div>
-      <span className="text-sm text-white/70 group-hover:text-white/90">
+      <span className="text-sm text-foreground/70 group-hover:text-foreground/90">
         {label}
       </span>
     </label>
@@ -249,7 +249,7 @@ export default function VideoProductionPage() {
           <h1 className="text-3xl font-bold text-white mb-3">
             Request Submitted!
           </h1>
-          <p className="text-gray-400 max-w-md mx-auto mb-6">
+          <p className="text-white/60 max-w-md mx-auto mb-6">
             Thank you for your video production request. Our team will review
             your submission and contact you within 1-2 business days to discuss
             your project.
@@ -283,10 +283,10 @@ export default function VideoProductionPage() {
               <Video className="h-8 w-8 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-2">
                 Video Production
               </h1>
-              <p className="text-base text-gray-400 max-w-2xl">
+              <p className="text-base text-muted-foreground max-w-2xl">
                 Professional video production that brings your vision to life.
                 Your message deserves to be seen — let us help you turn it into
                 powerful visual storytelling.
@@ -297,11 +297,11 @@ export default function VideoProductionPage() {
       </div>
 
       {/* Pre-form info */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6">
-        <h2 className="text-lg font-semibold text-white mb-3">
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h2 className="text-lg font-semibold text-foreground mb-3">
           Before You Begin
         </h2>
-        <p className="text-sm text-white/50 mb-4">
+        <p className="text-sm text-muted-foreground mb-4">
           Please have the following ready before completing this form:
         </p>
         <ul className="space-y-2">
@@ -314,7 +314,7 @@ export default function VideoProductionPage() {
           ].map((item) => (
             <li
               key={item}
-              className="flex items-center gap-2 text-sm text-white/60"
+              className="flex items-center gap-2 text-sm text-foreground/60"
             >
               <CheckCircle2 className="h-3.5 w-3.5 text-[#74ddc7] shrink-0" />
               {item}
@@ -324,18 +324,18 @@ export default function VideoProductionPage() {
       </div>
 
       {/* Form */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] overflow-hidden">
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
         {/* Progress bar */}
-        <div className="border-b border-white/[0.06] p-4">
+        <div className="border-b border-border p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Step {step} of {TOTAL_STEPS}
             </span>
             <span className="text-xs font-bold text-[#74ddc7]">
               {progress}%
             </span>
           </div>
-          <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
+          <div className="h-2 bg-foreground/[0.06] rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-[#f59e0b] to-[#74ddc7] rounded-full transition-all duration-500"
               style={{ width: `${progress}%` }}
@@ -347,23 +347,23 @@ export default function VideoProductionPage() {
           {/* Step 1: Project Information */}
           {step === 1 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Project Information
               </h3>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Type of Video Requested
                 </Label>
                 <select
                   value={formData.videoType}
                   onChange={(e) => updateField("videoType", e.target.value)}
-                  className="mt-1 w-full rounded-md bg-white/[0.04] border border-white/[0.08] text-white/70 px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md bg-foreground/[0.04] border border-border text-foreground/70 px-3 py-2 text-sm"
                 >
-                  <option value="" className="bg-[#141420]">
+                  <option value="" className="bg-card">
                     Select video type...
                   </option>
                   {videoTypes.map((type) => (
-                    <option key={type} value={type} className="bg-[#141420]">
+                    <option key={type} value={type} className="bg-card">
                       {type}
                     </option>
                   ))}
@@ -375,23 +375,23 @@ export default function VideoProductionPage() {
                       updateField("videoTypeOther", e.target.value)
                     }
                     placeholder="Please specify..."
-                    className="mt-3 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-3 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 )}
               </div>
               <div>
-                <Label className="text-white/70">Project Description</Label>
+                <Label className="text-foreground/70">Project Description</Label>
                 <Textarea
                   value={formData.projectDescription}
                   onChange={(e) =>
                     updateField("projectDescription", e.target.value)
                   }
                   placeholder="Describe the purpose, concept, storyline, and overall vision."
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 min-h-[100px]"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60 min-h-[100px]"
                 />
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Intended Use of the Video
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -411,41 +411,41 @@ export default function VideoProductionPage() {
           {/* Step 2: Goals & Creative Direction */}
           {step === 2 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Goals &amp; Creative Direction
               </h3>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Main Goal of This Video
                 </Label>
                 <select
                   value={formData.mainGoal}
                   onChange={(e) => updateField("mainGoal", e.target.value)}
-                  className="mt-1 w-full rounded-md bg-white/[0.04] border border-white/[0.08] text-white/70 px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md bg-foreground/[0.04] border border-border text-foreground/70 px-3 py-2 text-sm"
                 >
-                  <option value="" className="bg-[#141420]">
+                  <option value="" className="bg-card">
                     Select main goal...
                   </option>
                   {mainGoals.map((goal) => (
-                    <option key={goal} value={goal} className="bg-[#141420]">
+                    <option key={goal} value={goal} className="bg-card">
                       {goal}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <Label className="text-white/70">Target Audience</Label>
+                <Label className="text-foreground/70">Target Audience</Label>
                 <Input
                   value={formData.targetAudience}
                   onChange={(e) =>
                     updateField("targetAudience", e.target.value)
                   }
                   placeholder="Describe your target audience..."
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                 />
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Preferred Tone or Style
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-3">
@@ -460,7 +460,7 @@ export default function VideoProductionPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Share Links to Videos That Inspire Your Project
                 </Label>
                 <div className="mt-2 space-y-2">
@@ -477,7 +477,7 @@ export default function VideoProductionPage() {
                         updateField(`referenceLink${i}`, e.target.value)
                       }
                       placeholder={`Reference URL ${i}`}
-                      className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                      className="bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                     />
                   ))}
                 </div>
@@ -488,11 +488,11 @@ export default function VideoProductionPage() {
           {/* Step 3: Script & Messaging */}
           {step === 3 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Script &amp; Messaging
               </h3>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Do you have a script prepared?
                 </Label>
                 <div className="flex flex-wrap gap-4">
@@ -514,29 +514,29 @@ export default function VideoProductionPage() {
               </div>
               {formData.hasScript === "Yes (upload below)" && (
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Upload Script or Outline
                   </Label>
-                  <div className="mt-2 rounded-lg border border-dashed border-white/[0.12] p-6 text-center cursor-pointer hover:border-white/[0.2] transition-colors">
-                    <p className="text-sm text-white/40">
+                  <div className="mt-2 rounded-lg border border-dashed border-input p-6 text-center cursor-pointer hover:border-foreground/20 transition-colors">
+                    <p className="text-sm text-muted-foreground">
                       Click or drag a file to upload
                     </p>
                   </div>
                 </div>
               )}
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Key Messages or Talking Points
                 </Label>
                 <Textarea
                   value={formData.keyMessages}
                   onChange={(e) => updateField("keyMessages", e.target.value)}
                   placeholder="What are the key messages you want to convey?"
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 min-h-[100px]"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60 min-h-[100px]"
                 />
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Will you need voiceover narration?
                 </Label>
                 <div className="flex gap-6">
@@ -558,11 +558,11 @@ export default function VideoProductionPage() {
           {/* Step 4: Talent & On-Screen Requirements */}
           {step === 4 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Talent &amp; On-Screen Requirements
               </h3>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Will you provide on-camera talent?
                 </Label>
                 <div className="flex flex-wrap gap-4">
@@ -583,7 +583,7 @@ export default function VideoProductionPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   How many people will appear on camera?
                 </Label>
                 <Input
@@ -594,11 +594,11 @@ export default function VideoProductionPage() {
                     updateField("peopleOnCamera", e.target.value)
                   }
                   placeholder="Number of people"
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 max-w-[200px]"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60 max-w-[200px]"
                 />
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Need coaching or script guidance for talent?
                 </Label>
                 <div className="flex gap-6">
@@ -615,7 +615,7 @@ export default function VideoProductionPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Will your video include interviews?
                 </Label>
                 <div className="flex gap-6">
@@ -637,11 +637,11 @@ export default function VideoProductionPage() {
           {/* Step 5: Production Details */}
           {step === 5 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Production Details
               </h3>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Require on-site filming?
                 </Label>
                 <div className="flex gap-6">
@@ -658,7 +658,7 @@ export default function VideoProductionPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Indoor or outdoor shots?
                 </Label>
                 <div className="flex flex-wrap gap-4">
@@ -675,7 +675,7 @@ export default function VideoProductionPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Require drone footage?
                 </Label>
                 <div className="flex gap-6">
@@ -693,28 +693,28 @@ export default function VideoProductionPage() {
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Preferred Filming Date
                   </Label>
                   <Input
                     type="date"
                     value={formData.filmingDate}
                     onChange={(e) => updateField("filmingDate", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">Backup Date</Label>
+                  <Label className="text-foreground/70">Backup Date</Label>
                   <Input
                     type="date"
                     value={formData.backupDate}
                     onChange={(e) => updateField("backupDate", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground"
                   />
                 </div>
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Estimated Duration of Filming
                 </Label>
                 <select
@@ -722,9 +722,9 @@ export default function VideoProductionPage() {
                   onChange={(e) =>
                     updateField("filmingDuration", e.target.value)
                   }
-                  className="mt-1 w-full rounded-md bg-white/[0.04] border border-white/[0.08] text-white/70 px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md bg-foreground/[0.04] border border-border text-foreground/70 px-3 py-2 text-sm"
                 >
-                  <option value="" className="bg-[#141420]">
+                  <option value="" className="bg-card">
                     Select duration...
                   </option>
                   {[
@@ -734,7 +734,7 @@ export default function VideoProductionPage() {
                     "Full day (8 hours)",
                     "Multi-day shoot",
                   ].map((opt) => (
-                    <option key={opt} value={opt} className="bg-[#141420]">
+                    <option key={opt} value={opt} className="bg-card">
                       {opt}
                     </option>
                   ))}
@@ -746,11 +746,11 @@ export default function VideoProductionPage() {
           {/* Step 6: Technical Needs */}
           {step === 6 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Technical Needs
               </h3>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Camera Requirements
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -767,7 +767,7 @@ export default function VideoProductionPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Editing Requirements
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -789,17 +789,17 @@ export default function VideoProductionPage() {
           {/* Step 7: Deliverables */}
           {step === 7 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Deliverables
               </h3>
               <div>
-                <Label className="text-white/70">Finished Video Length</Label>
+                <Label className="text-foreground/70">Finished Video Length</Label>
                 <select
                   value={formData.videoLength}
                   onChange={(e) => updateField("videoLength", e.target.value)}
-                  className="mt-1 w-full rounded-md bg-white/[0.04] border border-white/[0.08] text-white/70 px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md bg-foreground/[0.04] border border-border text-foreground/70 px-3 py-2 text-sm"
                 >
-                  <option value="" className="bg-[#141420]">
+                  <option value="" className="bg-card">
                     Select length...
                   </option>
                   {[
@@ -811,14 +811,14 @@ export default function VideoProductionPage() {
                     "10+ minutes",
                     "Multiple versions",
                   ].map((opt) => (
-                    <option key={opt} value={opt} className="bg-[#141420]">
+                    <option key={opt} value={opt} className="bg-card">
                       {opt}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Aspect Ratio
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -841,26 +841,26 @@ export default function VideoProductionPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   How many final videos needed?
                 </Label>
                 <select
                   value={formData.totalVideos}
                   onChange={(e) => updateField("totalVideos", e.target.value)}
-                  className="mt-1 w-full rounded-md bg-white/[0.04] border border-white/[0.08] text-white/70 px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md bg-foreground/[0.04] border border-border text-foreground/70 px-3 py-2 text-sm"
                 >
-                  <option value="" className="bg-[#141420]">
+                  <option value="" className="bg-card">
                     Select quantity...
                   </option>
                   {["1", "2-3", "4-6", "7-10", "More"].map((opt) => (
-                    <option key={opt} value={opt} className="bg-[#141420]">
+                    <option key={opt} value={opt} className="bg-card">
                       {opt}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Delivery Timeline
                 </Label>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -888,21 +888,21 @@ export default function VideoProductionPage() {
           {/* Step 8: Budget & Approval */}
           {step === 8 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Budget &amp; Approval
               </h3>
               <div>
-                <Label className="text-white/70">Estimated Budget ($)</Label>
+                <Label className="text-foreground/70">Estimated Budget ($)</Label>
                 <Input
                   type="text"
                   value={formData.budget}
                   onChange={(e) => updateField("budget", e.target.value)}
                   placeholder="e.g. $500 - $2,000"
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                 />
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Need formal quote before production?
                 </Label>
                 <div className="flex gap-6">
@@ -919,7 +919,7 @@ export default function VideoProductionPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-white/70">
+                <Label className="text-foreground/70">
                   Additional Notes or Special Requests
                 </Label>
                 <Textarea
@@ -928,7 +928,7 @@ export default function VideoProductionPage() {
                     updateField("additionalNotes", e.target.value)
                   }
                   placeholder="Any additional information..."
-                  className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 min-h-[100px]"
+                  className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60 min-h-[100px]"
                 />
               </div>
             </div>
@@ -937,57 +937,57 @@ export default function VideoProductionPage() {
           {/* Step 9: Contact Information */}
           {step === 9 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Contact Information
               </h3>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Your Name <span className="text-red-400">*</span>
                   </Label>
                   <Input
                     value={formData.name}
                     onChange={(e) => updateField("name", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Business / Organization
                   </Label>
                   <Input
                     value={formData.business}
                     onChange={(e) => updateField("business", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Email Address <span className="text-red-400">*</span>
                   </Label>
                   <Input
                     type="email"
                     value={formData.email}
                     onChange={(e) => updateField("email", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/70">
+                  <Label className="text-foreground/70">
                     Phone Number <span className="text-red-400">*</span>
                   </Label>
                   <Input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => updateField("phone", e.target.value)}
-                    className="mt-1 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25"
+                    className="mt-1 bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                   />
                 </div>
               </div>
               <div>
-                <Label className="text-white/70 mb-2 block">
+                <Label className="text-foreground/70 mb-2 block">
                   Preferred Method of Communication
                 </Label>
                 <div className="flex flex-wrap gap-4">
@@ -1007,12 +1007,12 @@ export default function VideoProductionPage() {
           )}
 
           {/* Navigation */}
-          <div className="flex items-center justify-between pt-4 border-t border-white/[0.06]">
+          <div className="flex items-center justify-between pt-4 border-t border-border">
             <Button
               variant="outline"
               onClick={() => setStep(Math.max(1, step - 1))}
               disabled={step === 1}
-              className="border-white/[0.12] text-white/70 hover:bg-white/[0.04] disabled:opacity-30"
+              className="border-input text-foreground/70 hover:bg-foreground/[0.04] disabled:opacity-30"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
@@ -1039,8 +1039,8 @@ export default function VideoProductionPage() {
       </div>
 
       {/* Info footer */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 text-center">
-        <p className="text-sm text-white/40">
+      <div className="rounded-xl border border-border bg-card p-6 text-center">
+        <p className="text-sm text-muted-foreground">
           Carson Communications Studio · 115 Gillespie Street, Fayetteville, NC
           28301
           <br />

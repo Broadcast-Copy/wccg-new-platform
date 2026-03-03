@@ -80,8 +80,8 @@ export default function StationControlPage() {
             <Shield className="h-7 w-7 text-[#dc2626]" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">Station Control</h1>
-            <p className="text-sm text-white/40">
+            <h1 className="text-2xl font-bold text-foreground">Station Control</h1>
+            <p className="text-sm text-muted-foreground">
               Admin dashboard for WCCG 104.5 FM
             </p>
           </div>
@@ -103,9 +103,9 @@ export default function StationControlPage() {
         ].map((stat) => (
           <div
             key={stat.label}
-            className="rounded-xl border border-white/[0.06] bg-[#141420] p-4"
+            className="rounded-xl border border-border bg-card p-4"
           >
-            <p className="text-xs text-white/40 uppercase tracking-wider font-medium">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
               {stat.label}
             </p>
             <p className={`mt-1 text-2xl font-bold ${stat.color}`}>
@@ -117,13 +117,13 @@ export default function StationControlPage() {
 
       {/* Admin Modules */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-white">Modules</h2>
+        <h2 className="text-lg font-semibold text-foreground">Modules</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {adminModules.map((mod) => (
             <Link
               key={mod.title}
               href={mod.href}
-              className="group relative overflow-hidden rounded-xl border border-white/[0.06] bg-[#141420] p-5 transition-all hover:border-white/[0.12] hover:shadow-lg hover:shadow-black/20"
+              className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:border-input hover:shadow-lg hover:shadow-black/20"
             >
               <div className="flex items-start gap-4">
                 <div
@@ -132,10 +132,10 @@ export default function StationControlPage() {
                   <mod.icon className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white group-hover:text-[#74ddc7] transition-colors">
+                  <h3 className="font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors">
                     {mod.title}
                   </h3>
-                  <p className="mt-1 text-sm text-white/40">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {mod.description}
                   </p>
                 </div>
@@ -153,10 +153,10 @@ export default function StationControlPage() {
         <div className="flex items-center gap-3">
           <Lock className="h-5 w-5 text-[#dc2626]" />
           <div>
-            <p className="text-sm font-semibold text-white">
+            <p className="text-sm font-semibold text-foreground">
               Full Admin Panel
             </p>
-            <p className="text-xs text-white/40">
+            <p className="text-xs text-muted-foreground">
               Access the complete admin interface at admin.wccg1045fm.com
             </p>
           </div>
@@ -179,8 +179,8 @@ export default function StationControlPage() {
       </div>
 
       {/* Logged in info */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-4 text-center">
-        <p className="text-xs text-white/25">
+      <div className="rounded-xl border border-border bg-card p-4 text-center">
+        <p className="text-xs text-muted-foreground/60">
           Logged in as {user?.email || "admin"} · Carson Communications / WCCG
           104.5 FM
         </p>

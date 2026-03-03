@@ -47,9 +47,44 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
-/* Dark-first: premium radio streaming platform aesthetic */
+/* Light mode (default :root) */
 :root {
   --radius: 0.625rem;
+  --background: #f8f9fc;
+  --foreground: #1a1a2e;
+  --card: #ffffff;
+  --card-foreground: #1a1a2e;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a2e;
+  --primary: #0d9488;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #1a1a2e;
+  --muted: #e2e8f0;
+  --muted-foreground: #64748b;
+  --accent: #7401df;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --border: rgba(0, 0, 0, 0.08);
+  --input: rgba(0, 0, 0, 0.12);
+  --ring: #0d9488;
+  --chart-1: #0d9488;
+  --chart-2: #7401df;
+  --chart-3: #f59e0b;
+  --chart-4: #ef4444;
+  --chart-5: #3b82f6;
+  --sidebar: #f1f5f9;
+  --sidebar-foreground: #1a1a2e;
+  --sidebar-primary: #0d9488;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e2e8f0;
+  --sidebar-accent-foreground: #1a1a2e;
+  --sidebar-border: rgba(0, 0, 0, 0.08);
+  --sidebar-ring: #0d9488;
+}
+
+/* Dark mode */
+.dark {
   --background: #0a0a0f;
   --foreground: #f0f0f5;
   --card: #141420;
@@ -104,11 +139,13 @@
   }
 }
 
-/* Dark scrollbar */
+/* Scrollbar — adapts to theme */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+.dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
+.dark ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
 
 /* Hide scrollbar for carousels */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -131,6 +168,12 @@
 
 /* Gradient text (Riverside-inspired metallic) */
 .gradient-text {
+  background: radial-gradient(ellipse at 30% 50%, #1a1a2e 0%, #64748b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.dark .gradient-text {
   background: radial-gradient(ellipse at 30% 50%, #ffffff 0%, #afafaf 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -139,6 +182,12 @@
 
 /* WCCG brand gradient text */
 .brand-gradient-text {
+  background: linear-gradient(135deg, #0d9488 0%, #7401df 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.dark .brand-gradient-text {
   background: linear-gradient(135deg, #74ddc7 0%, #7401df 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

@@ -93,7 +93,7 @@ const STATUS_STYLES: Record<string, string> = {
   PENDING_REVIEW: "bg-blue-500/10 text-blue-400 border-blue-500/20",
   ACTIVE: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   PAUSED: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-  COMPLETED: "bg-white/[0.06] text-white/40 border-white/[0.08]",
+  COMPLETED: "bg-foreground/[0.06] text-muted-foreground border-border",
   REJECTED: "bg-red-500/10 text-red-400 border-red-500/20",
 };
 
@@ -122,7 +122,7 @@ const CREATIVE_STATUS_STYLES: Record<string, string> = {
   PENDING: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
   APPROVED: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   REJECTED: "bg-red-500/10 text-red-400 border-red-500/20",
-  ARCHIVED: "bg-white/[0.06] text-white/40 border-white/[0.08]",
+  ARCHIVED: "bg-foreground/[0.06] text-muted-foreground border-border",
 };
 
 /* ---------- Helpers ---------- */
@@ -233,28 +233,28 @@ function CreateCampaignDialog({
           Create Campaign
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-[#1a1a2e] border-white/[0.06] text-white max-h-[90vh] overflow-y-auto sm:max-w-xl">
+      <DialogContent className="bg-[#1a1a2e] border-border text-foreground max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle className="text-white">Create New Campaign</DialogTitle>
-          <DialogDescription className="text-white/50">
+          <DialogTitle className="text-foreground">Create New Campaign</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
             Set up your advertising campaign details. You can edit these later.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           {/* Name */}
           <div className="space-y-1.5">
-            <Label className="text-white/60">Campaign Name *</Label>
+            <Label className="text-foreground/60">Campaign Name *</Label>
             <Input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="e.g. Summer Sale 2026"
-              className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/20"
+              className="bg-foreground/[0.04] border-border text-foreground placeholder:text-foreground/20"
             />
           </div>
 
           {/* Description */}
           <div className="space-y-1.5">
-            <Label className="text-white/60">Description</Label>
+            <Label className="text-foreground/60">Description</Label>
             <Textarea
               value={form.description}
               onChange={(e) =>
@@ -262,14 +262,14 @@ function CreateCampaignDialog({
               }
               placeholder="Brief description of this campaign..."
               rows={3}
-              className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/20 resize-none"
+              className="bg-foreground/[0.04] border-border text-foreground placeholder:text-foreground/20 resize-none"
             />
           </div>
 
           {/* Budget */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-white/60">Total Budget ($) *</Label>
+              <Label className="text-foreground/60">Total Budget ($) *</Label>
               <Input
                 type="number"
                 min={0}
@@ -279,11 +279,11 @@ function CreateCampaignDialog({
                   setForm({ ...form, budgetTotal: Number(e.target.value) })
                 }
                 placeholder="5000"
-                className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/20"
+                className="bg-foreground/[0.04] border-border text-foreground placeholder:text-foreground/20"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-white/60">Daily Budget ($)</Label>
+              <Label className="text-foreground/60">Daily Budget ($)</Label>
               <Input
                 type="number"
                 min={0}
@@ -293,7 +293,7 @@ function CreateCampaignDialog({
                   setForm({ ...form, budgetDaily: Number(e.target.value) })
                 }
                 placeholder="100"
-                className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/20"
+                className="bg-foreground/[0.04] border-border text-foreground placeholder:text-foreground/20"
               />
             </div>
           </div>
@@ -301,30 +301,30 @@ function CreateCampaignDialog({
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-white/60">Start Date *</Label>
+              <Label className="text-foreground/60">Start Date *</Label>
               <Input
                 type="date"
                 value={form.startDate}
                 onChange={(e) =>
                   setForm({ ...form, startDate: e.target.value })
                 }
-                className="bg-white/[0.04] border-white/[0.08] text-white [color-scheme:dark]"
+                className="bg-foreground/[0.04] border-border text-foreground [color-scheme:dark]"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-white/60">End Date *</Label>
+              <Label className="text-foreground/60">End Date *</Label>
               <Input
                 type="date"
                 value={form.endDate}
                 onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                className="bg-white/[0.04] border-white/[0.08] text-white [color-scheme:dark]"
+                className="bg-foreground/[0.04] border-border text-foreground [color-scheme:dark]"
               />
             </div>
           </div>
 
           {/* Target Geo */}
           <div className="space-y-1.5">
-            <Label className="text-white/60">Target Geography</Label>
+            <Label className="text-foreground/60">Target Geography</Label>
             <div className="flex flex-wrap gap-2">
               {GEO_OPTIONS.map((geo) => (
                 <button
@@ -334,7 +334,7 @@ function CreateCampaignDialog({
                   className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                     form.targetGeo.includes(geo)
                       ? "bg-red-500/20 border-red-500/40 text-red-300"
-                      : "bg-white/[0.04] border-white/[0.08] text-white/50 hover:border-white/[0.16]"
+                      : "bg-foreground/[0.04] border-border text-muted-foreground hover:border-white/[0.16]"
                   }`}
                 >
                   {geo}
@@ -345,7 +345,7 @@ function CreateCampaignDialog({
 
           {/* Dayparts */}
           <div className="space-y-1.5">
-            <Label className="text-white/60">Target Dayparts</Label>
+            <Label className="text-foreground/60">Target Dayparts</Label>
             <div className="flex flex-wrap gap-2">
               {DAYPART_OPTIONS.map((dp) => (
                 <button
@@ -355,7 +355,7 @@ function CreateCampaignDialog({
                   className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                     form.targetDayparts.includes(dp)
                       ? "bg-blue-500/20 border-blue-500/40 text-blue-300"
-                      : "bg-white/[0.04] border-white/[0.08] text-white/50 hover:border-white/[0.16]"
+                      : "bg-foreground/[0.04] border-border text-muted-foreground hover:border-white/[0.16]"
                   }`}
                 >
                   {dp}
@@ -369,7 +369,7 @@ function CreateCampaignDialog({
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
-              className="border-white/[0.08] text-white/60 hover:bg-white/[0.04]"
+              className="border-border text-foreground/60 hover:bg-foreground/[0.04]"
             >
               Cancel
             </Button>
@@ -442,38 +442,38 @@ function CampaignRow({
 
   return (
     <>
-      <TableRow className="border-white/[0.06] hover:bg-white/[0.02]">
+      <TableRow className="border-border hover:bg-white/[0.02]">
         <TableCell>
           <button
             onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-2 text-white font-medium hover:text-[#74ddc7] transition-colors"
+            className="flex items-center gap-2 text-foreground font-medium hover:text-[#74ddc7] transition-colors"
           >
             {expanded ? (
-              <ChevronUp className="h-3.5 w-3.5 text-white/30" />
+              <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/70" />
             ) : (
-              <ChevronDown className="h-3.5 w-3.5 text-white/30" />
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/70" />
             )}
             {campaign.name}
           </button>
         </TableCell>
         <TableCell>
           <Badge
-            className={`text-[10px] border ${STATUS_STYLES[campaign.status] || "bg-white/[0.06] text-white/40 border-white/[0.08]"}`}
+            className={`text-[10px] border ${STATUS_STYLES[campaign.status] || "bg-foreground/[0.06] text-muted-foreground border-border"}`}
           >
             {campaign.status.replace("_", " ")}
           </Badge>
         </TableCell>
-        <TableCell className="text-white/60">
+        <TableCell className="text-foreground/60">
           {formatCurrency(campaign.budgetTotal)}
         </TableCell>
-        <TableCell className="text-white/40 hidden md:table-cell">
+        <TableCell className="text-muted-foreground hidden md:table-cell">
           {formatCurrency(campaign.budgetDaily)}
-          <span className="text-white/20 ml-1">/day</span>
+          <span className="text-foreground/20 ml-1">/day</span>
         </TableCell>
-        <TableCell className="text-white/40 hidden sm:table-cell">
+        <TableCell className="text-muted-foreground hidden sm:table-cell">
           {formatDate(campaign.startDate)}
         </TableCell>
-        <TableCell className="text-white/40 hidden sm:table-cell">
+        <TableCell className="text-muted-foreground hidden sm:table-cell">
           {formatDate(campaign.endDate)}
         </TableCell>
         <TableCell>
@@ -484,7 +484,7 @@ function CampaignRow({
                 size="icon-xs"
                 disabled={actionLoading}
                 onClick={handleToggleStatus}
-                className="text-white/40 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
                 title={campaign.status === "ACTIVE" ? "Pause" : "Resume"}
               >
                 {actionLoading ? (
@@ -502,14 +502,14 @@ function CampaignRow({
 
       {/* Expanded Creatives */}
       {expanded && (
-        <TableRow className="border-white/[0.06] bg-white/[0.01]">
+        <TableRow className="border-border bg-white/[0.01]">
           <TableCell colSpan={7} className="p-0">
             <div className="px-8 py-4 space-y-3">
               {/* Campaign Details */}
               {campaign.description && (
-                <p className="text-sm text-white/50">{campaign.description}</p>
+                <p className="text-sm text-muted-foreground">{campaign.description}</p>
               )}
-              <div className="flex flex-wrap gap-4 text-xs text-white/40">
+              <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                 {campaign.targetGeo && campaign.targetGeo.length > 0 && (
                   <div className="flex items-center gap-1">
                     <MapPin className="h-3 w-3" />
@@ -526,19 +526,19 @@ function CampaignRow({
               </div>
 
               {/* Creatives List */}
-              <div className="border-t border-white/[0.06] pt-3">
-                <h4 className="text-xs font-medium text-white/60 uppercase tracking-wider mb-2">
+              <div className="border-t border-border pt-3">
+                <h4 className="text-xs font-medium text-foreground/60 uppercase tracking-wider mb-2">
                   Creatives
                 </h4>
                 {creativesLoading ? (
                   <div className="flex items-center gap-2 py-2">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-white/30" />
-                    <span className="text-xs text-white/30">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground/70" />
+                    <span className="text-xs text-muted-foreground/70">
                       Loading creatives...
                     </span>
                   </div>
                 ) : creatives.length === 0 ? (
-                  <p className="text-xs text-white/30 py-2">
+                  <p className="text-xs text-muted-foreground/70 py-2">
                     No creatives for this campaign.{" "}
                     <Link
                       href="/advertise/portal/creatives"
@@ -552,21 +552,21 @@ function CampaignRow({
                     {creatives.map((creative) => (
                       <div
                         key={creative.id}
-                        className="flex items-center gap-3 rounded-lg bg-white/[0.02] border border-white/[0.06] p-3"
+                        className="flex items-center gap-3 rounded-lg bg-white/[0.02] border border-border p-3"
                       >
-                        <div className="flex h-8 w-8 items-center justify-center rounded bg-white/[0.04] shrink-0">
-                          <ImageIcon className="h-4 w-4 text-white/30" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded bg-foreground/[0.04] shrink-0">
+                          <ImageIcon className="h-4 w-4 text-muted-foreground/70" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-white truncate">
+                          <p className="text-xs font-medium text-foreground truncate">
                             {creative.name}
                           </p>
-                          <p className="text-[10px] text-white/30">
+                          <p className="text-[10px] text-muted-foreground/70">
                             {creative.creativeType.replace("_", " ")}
                           </p>
                         </div>
                         <Badge
-                          className={`text-[9px] border ${CREATIVE_STATUS_STYLES[creative.status] || "bg-white/[0.06] text-white/40 border-white/[0.08]"}`}
+                          className={`text-[9px] border ${CREATIVE_STATUS_STYLES[creative.status] || "bg-foreground/[0.06] text-muted-foreground border-border"}`}
                         >
                           {creative.status}
                         </Badge>
@@ -659,17 +659,17 @@ export default function CampaignsPage() {
                 <div className="flex items-center gap-2 mb-1">
                   <Link
                     href="/advertise/portal"
-                    className="text-white/40 hover:text-white text-sm transition-colors"
+                    className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                   >
                     Portal
                   </Link>
-                  <span className="text-white/20">/</span>
-                  <span className="text-white text-sm font-medium">
+                  <span className="text-foreground/20">/</span>
+                  <span className="text-foreground text-sm font-medium">
                     Campaigns
                   </span>
                 </div>
-                <h1 className="text-3xl font-bold text-white">Campaigns</h1>
-                <p className="text-white/50 mt-1">
+                <h1 className="text-3xl font-bold text-foreground">Campaigns</h1>
+                <p className="text-muted-foreground mt-1">
                   Create and manage your advertising campaigns
                 </p>
               </div>
@@ -693,8 +693,8 @@ export default function CampaignsPage() {
       {/* Loading */}
       {isLoading && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-white/40" />
-          <span className="ml-3 text-white/40 text-sm">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <span className="ml-3 text-muted-foreground text-sm">
             Loading campaigns...
           </span>
         </div>
@@ -702,8 +702,8 @@ export default function CampaignsPage() {
 
       {/* Auth required */}
       {!isLoading && !user && (
-        <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 text-center space-y-4">
-          <p className="text-white/50 text-sm">
+        <div className="rounded-xl border border-border bg-card p-6 sm:p-8 text-center space-y-4">
+          <p className="text-muted-foreground text-sm">
             Please{" "}
             <Link href="/login" className="text-[#74ddc7] hover:underline">
               sign in
@@ -728,19 +728,19 @@ export default function CampaignsPage() {
             {Object.entries(statusCounts).map(([status, count]) => (
               <div
                 key={status}
-                className="flex items-center gap-2 rounded-full border border-white/[0.06] bg-[#141420] px-3 py-1.5"
+                className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5"
               >
                 <Badge
-                  className={`text-[10px] border ${STATUS_STYLES[status] || "bg-white/[0.06] text-white/40 border-white/[0.08]"}`}
+                  className={`text-[10px] border ${STATUS_STYLES[status] || "bg-foreground/[0.06] text-muted-foreground border-border"}`}
                 >
                   {status.replace("_", " ")}
                 </Badge>
-                <span className="text-xs text-white/50">{count}</span>
+                <span className="text-xs text-muted-foreground">{count}</span>
               </div>
             ))}
             {campaigns.length > 0 && (
-              <div className="flex items-center gap-2 rounded-full border border-white/[0.06] bg-[#141420] px-3 py-1.5">
-                <span className="text-xs text-white/50">
+              <div className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5">
+                <span className="text-xs text-muted-foreground">
                   {campaigns.length} total
                 </span>
               </div>
@@ -748,14 +748,14 @@ export default function CampaignsPage() {
           </div>
 
           {/* Campaigns Table */}
-          <div className="rounded-xl border border-white/[0.06] bg-[#141420] overflow-hidden">
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
             {campaigns.length === 0 ? (
               <div className="px-5 py-16 text-center">
-                <Megaphone className="h-10 w-10 text-white/20 mx-auto mb-3" />
-                <h3 className="text-lg font-semibold text-white mb-1">
+                <Megaphone className="h-10 w-10 text-foreground/20 mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-foreground mb-1">
                   No campaigns yet
                 </h3>
-                <p className="text-sm text-white/40 mb-4 max-w-sm mx-auto">
+                <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
                   Create your first advertising campaign to start reaching WCCG
                   listeners.
                 </p>
@@ -764,20 +764,20 @@ export default function CampaignsPage() {
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow className="border-white/[0.06] hover:bg-transparent">
-                    <TableHead className="text-white/40">Campaign</TableHead>
-                    <TableHead className="text-white/40">Status</TableHead>
-                    <TableHead className="text-white/40">Budget</TableHead>
-                    <TableHead className="text-white/40 hidden md:table-cell">
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Campaign</TableHead>
+                    <TableHead className="text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-muted-foreground">Budget</TableHead>
+                    <TableHead className="text-muted-foreground hidden md:table-cell">
                       Daily
                     </TableHead>
-                    <TableHead className="text-white/40 hidden sm:table-cell">
+                    <TableHead className="text-muted-foreground hidden sm:table-cell">
                       Start
                     </TableHead>
-                    <TableHead className="text-white/40 hidden sm:table-cell">
+                    <TableHead className="text-muted-foreground hidden sm:table-cell">
                       End
                     </TableHead>
-                    <TableHead className="text-white/40 w-16">
+                    <TableHead className="text-muted-foreground w-16">
                       Actions
                     </TableHead>
                   </TableRow>
@@ -802,7 +802,7 @@ export default function CampaignsPage() {
         <Button
           asChild
           variant="ghost"
-          className="text-white/40 hover:text-white"
+          className="text-muted-foreground hover:text-foreground"
         >
           <Link href="/advertise/portal">
             <ArrowLeft className="h-4 w-4 mr-1.5" />

@@ -43,7 +43,7 @@ export default function PortalOverviewPage() {
     <div className="space-y-8">
       {/* Welcome Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-white">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">
           Welcome back,{" "}
           <span style={{ color: config.accentColor }}>
             {config.mockUser.name}
@@ -76,7 +76,7 @@ export default function PortalOverviewPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold text-white">{stat.value}</p>
+                <p className="text-3xl font-bold text-foreground">{stat.value}</p>
               </CardContent>
             </Card>
           );
@@ -86,7 +86,7 @@ export default function PortalOverviewPage() {
       {/* Quick Actions */}
       <Card className="border-white/10 bg-[#12121a]">
         <CardHeader>
-          <CardTitle className="text-white">Quick Actions</CardTitle>
+          <CardTitle className="text-foreground">Quick Actions</CardTitle>
           <CardDescription>Jump to common tasks</CardDescription>
         </CardHeader>
         <CardContent>
@@ -119,7 +119,7 @@ export default function PortalOverviewPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-white">Recent Activity</CardTitle>
+              <CardTitle className="text-foreground">Recent Activity</CardTitle>
               <CardDescription>Latest updates and notifications</CardDescription>
             </div>
             <Badge
@@ -137,7 +137,7 @@ export default function PortalOverviewPage() {
               return (
                 <div
                   key={item.id}
-                  className="flex items-start gap-4 rounded-lg border border-white/5 bg-white/5 p-3 transition-colors hover:bg-white/10"
+                  className="flex items-start gap-4 rounded-lg border border-white/5 bg-white/5 p-3 transition-colors hover:bg-foreground/10"
                 >
                   <div
                     className="flex size-9 shrink-0 items-center justify-center rounded-lg"
@@ -146,7 +146,7 @@ export default function PortalOverviewPage() {
                     <Icon className={cn("size-4", item.color)} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-white">
+                    <p className="text-sm font-medium text-foreground">
                       {item.text}
                     </p>
                     <p className="text-xs text-muted-foreground">{item.time}</p>
@@ -171,7 +171,7 @@ export default function PortalOverviewPage() {
             })()}
           </div>
           <div className="flex-1">
-            <p className="font-medium text-white">
+            <p className="font-medium text-foreground">
               Viewing as {config.label}
             </p>
             <p className="text-sm text-muted-foreground">
@@ -182,7 +182,7 @@ export default function PortalOverviewPage() {
           <Button
             variant="outline"
             size="sm"
-            className="border-white/10 text-muted-foreground hover:text-white"
+            className="border-white/10 text-muted-foreground hover:text-foreground"
             asChild
           >
             <Link href="/portal">Change Role</Link>

@@ -187,7 +187,7 @@ export default function UserDashboardPage() {
         {/* Live status cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {/* Stream status */}
-          <Card className="border-white/[0.06]">
+          <Card className="border-border">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Stream Status
@@ -209,7 +209,7 @@ export default function UserDashboardPage() {
           </Card>
 
           {/* Active Listeners */}
-          <Card className="border-white/[0.06]">
+          <Card className="border-border">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Active Listeners
@@ -223,7 +223,7 @@ export default function UserDashboardPage() {
           </Card>
 
           {/* Today&apos;s Page Views */}
-          <Card className="border-white/[0.06]">
+          <Card className="border-border">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Page Views</CardTitle>
               <Eye className="h-4 w-4 text-blue-400" />
@@ -235,7 +235,7 @@ export default function UserDashboardPage() {
           </Card>
 
           {/* Registered Users */}
-          <Card className="border-white/[0.06]">
+          <Card className="border-border">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Total Users
@@ -254,7 +254,7 @@ export default function UserDashboardPage() {
         {/* Admin quick actions */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Link href="/my/admin/content">
-            <Card className="group border-white/[0.06] transition-all hover:border-[#7401df]/30 hover:bg-[#7401df]/5">
+            <Card className="group border-border transition-all hover:border-[#7401df]/30 hover:bg-[#7401df]/5">
               <CardContent className="flex items-center gap-3 pt-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#7401df]/10 group-hover:bg-[#7401df]/20 transition-colors">
                   <FileText className="h-5 w-5 text-[#7401df]" />
@@ -271,7 +271,7 @@ export default function UserDashboardPage() {
           </Link>
 
           <Link href="/my/admin/users">
-            <Card className="group border-white/[0.06] transition-all hover:border-[#74ddc7]/30 hover:bg-[#74ddc7]/5">
+            <Card className="group border-border transition-all hover:border-[#74ddc7]/30 hover:bg-[#74ddc7]/5">
               <CardContent className="flex items-center gap-3 pt-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#74ddc7]/10 group-hover:bg-[#74ddc7]/20 transition-colors">
                   <Users className="h-5 w-5 text-[#74ddc7]" />
@@ -288,7 +288,7 @@ export default function UserDashboardPage() {
           </Link>
 
           <Link href="/my/admin/analytics">
-            <Card className="group border-white/[0.06] transition-all hover:border-blue-400/30 hover:bg-blue-400/5">
+            <Card className="group border-border transition-all hover:border-blue-400/30 hover:bg-blue-400/5">
               <CardContent className="flex items-center gap-3 pt-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-400/10 group-hover:bg-blue-400/20 transition-colors">
                   <BarChart3 className="h-5 w-5 text-blue-400" />
@@ -305,7 +305,7 @@ export default function UserDashboardPage() {
           </Link>
 
           <Link href="/my/admin/broadcast">
-            <Card className="group border-white/[0.06] transition-all hover:border-[#dc2626]/30 hover:bg-[#dc2626]/5">
+            <Card className="group border-border transition-all hover:border-[#dc2626]/30 hover:bg-[#dc2626]/5">
               <CardContent className="flex items-center gap-3 pt-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#dc2626]/10 group-hover:bg-[#dc2626]/20 transition-colors">
                   <Radio className="h-5 w-5 text-[#dc2626]" />
@@ -322,7 +322,7 @@ export default function UserDashboardPage() {
           </Link>
 
           <Link href="/my/admin/announcements">
-            <Card className="group border-white/[0.06] transition-all hover:border-yellow-400/30 hover:bg-yellow-400/5">
+            <Card className="group border-border transition-all hover:border-yellow-400/30 hover:bg-yellow-400/5">
               <CardContent className="flex items-center gap-3 pt-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-400/10 group-hover:bg-yellow-400/20 transition-colors">
                   <Megaphone className="h-5 w-5 text-yellow-400" />
@@ -339,10 +339,10 @@ export default function UserDashboardPage() {
           </Link>
 
           <Link href="/my/admin/settings">
-            <Card className="group border-white/[0.06] transition-all hover:border-white/20 hover:bg-white/5">
+            <Card className="group border-border transition-all hover:border-white/20 hover:bg-white/5">
               <CardContent className="flex items-center gap-3 pt-6">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/[0.06] group-hover:bg-white/10 transition-colors">
-                  <Settings className="h-5 w-5 text-white/60" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-foreground/[0.06] group-hover:bg-foreground/10 transition-colors">
+                  <Settings className="h-5 w-5 text-foreground/60" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">Station Settings</p>
@@ -350,7 +350,7 @@ export default function UserDashboardPage() {
                     Branding, integrations, config
                   </p>
                 </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-white/60 transition-colors" />
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground/60 transition-colors" />
               </CardContent>
             </Card>
           </Link>
@@ -514,7 +514,7 @@ export default function UserDashboardPage() {
             { href: "/schedule", label: "Schedule", desc: "What\u2019s on today", icon: ListMusic, color: "#7401df" },
           ].map((item) => (
             <Link key={item.href} href={item.href}>
-              <Card className="group border-white/[0.06] transition-all hover:border-white/[0.12] hover:bg-white/[0.02]">
+              <Card className="group border-border transition-all hover:border-input hover:bg-white/[0.02]">
                 <CardContent className="flex items-center gap-3 p-4">
                   <div
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors"

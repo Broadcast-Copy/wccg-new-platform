@@ -117,7 +117,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
   // Don't render until client hydrated to avoid mismatch
   if (!mounted) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f]">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="size-8 animate-spin rounded-full border-2 border-white/20 border-t-[#74ddc7]" />
       </div>
     );
@@ -128,7 +128,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
   if (isSelectionPage || !role) {
     return (
       <DemoRoleContext.Provider value={{ role, setRole }}>
-        <div className="min-h-screen bg-[#0a0a0f]">{children}</div>
+        <div className="min-h-screen bg-background">{children}</div>
       </DemoRoleContext.Provider>
     );
   }
@@ -139,12 +139,12 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
 
   return (
     <DemoRoleContext.Provider value={{ role, setRole }}>
-      <div className="flex min-h-screen bg-[#0a0a0f]">
+      <div className="flex min-h-screen bg-background">
         {/* Desktop Sidebar */}
         <aside className="hidden w-64 shrink-0 border-r border-white/10 bg-[#0d0d14] md:block">
           <div className="flex h-16 items-center gap-2 border-b border-white/10 px-6">
             <RoleIcon className="size-5" style={{ color: config.accentColor }} />
-            <Link href="/portal/overview" className="text-lg font-bold text-white">
+            <Link href="/portal/overview" className="text-lg font-bold text-foreground">
               {config.shortLabel}{" "}
               <span style={{ color: config.accentColor }}>Portal</span>
             </Link>
@@ -195,7 +195,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
                 className="w-64 border-white/10 bg-[#0d0d14] p-0"
               >
                 <SheetHeader className="border-b border-white/10 px-6 py-4">
-                  <SheetTitle className="flex items-center gap-2 text-white">
+                  <SheetTitle className="flex items-center gap-2 text-foreground">
                     <RoleIcon
                       className="size-5"
                       style={{ color: config.accentColor }}
@@ -228,7 +228,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
                 className="size-5 md:hidden"
                 style={{ color: config.accentColor }}
               />
-              <h2 className="text-lg font-semibold text-white">
+              <h2 className="text-lg font-semibold text-foreground">
                 {config.shortLabel}{" "}
                 <span style={{ color: config.accentColor }}>Dashboard</span>
               </h2>
@@ -243,13 +243,13 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
             {/* Desktop: mini role indicator */}
             <div className="ml-auto hidden items-center gap-2 md:flex">
               <div
-                className="flex size-8 items-center justify-center rounded-full text-xs font-bold text-white"
+                className="flex size-8 items-center justify-center rounded-full text-xs font-bold text-foreground"
                 style={{ backgroundColor: config.accentColor }}
               >
                 {config.mockUser.initials}
               </div>
               <div className="text-right">
-                <p className="text-sm font-medium text-white">
+                <p className="text-sm font-medium text-foreground">
                   {config.mockUser.name}
                 </p>
                 <p className="text-[11px] text-muted-foreground">

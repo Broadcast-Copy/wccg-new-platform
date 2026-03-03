@@ -40,7 +40,7 @@ export function TeamProfile({ team }: { team: SportsTeam }) {
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Hero */}
       <div className={`relative bg-gradient-to-br ${team.gradient}`}>
         <div className="absolute inset-0 bg-black/40" />
@@ -48,7 +48,7 @@ export function TeamProfile({ team }: { team: SportsTeam }) {
           {/* Back link */}
           <Link
             href="/sports"
-            className="inline-flex items-center gap-1.5 text-xs text-white/50 hover:text-white/80 transition-colors mb-6"
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground/80 transition-colors mb-6"
           >
             <ArrowLeft className="h-3 w-3" />
             Sports
@@ -60,20 +60,20 @@ export function TeamProfile({ team }: { team: SportsTeam }) {
               className="flex-shrink-0 h-20 w-20 sm:h-28 sm:w-28 rounded-2xl flex items-center justify-center border-2 border-white/20"
               style={{ backgroundColor: team.primaryColor }}
             >
-              <Trophy className="h-10 w-10 sm:h-14 sm:w-14 text-white/80" />
+              <Trophy className="h-10 w-10 sm:h-14 sm:w-14 text-foreground/80" />
             </div>
 
             <div className="flex-1 min-w-0">
-              <span className="inline-block rounded-full bg-white/[0.15] px-3 py-1 text-xs font-semibold text-white/80 uppercase tracking-wider mb-2">
+              <span className="inline-block rounded-full bg-white/[0.15] px-3 py-1 text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-2">
                 {team.sport}
               </span>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-1">
                 {team.name}
               </h1>
-              <p className="text-sm sm:text-base text-white/60 mb-3">
+              <p className="text-sm sm:text-base text-foreground/60 mb-3">
                 {team.conference}
               </p>
-              <div className="flex flex-wrap items-center gap-4 text-xs text-white/40">
+              <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <MapPin className="h-3 w-3" />
                   {team.venue}, {team.location}
@@ -105,7 +105,7 @@ export function TeamProfile({ team }: { team: SportsTeam }) {
       {/* Content */}
       <div className="mx-auto max-w-5xl px-4 py-8">
         {/* Tabs */}
-        <div className="flex items-center gap-1 overflow-x-auto pb-4 mb-6 border-b border-white/[0.06]">
+        <div className="flex items-center gap-1 overflow-x-auto pb-4 mb-6 border-b border-border">
           {TABS.map((tab) => {
             const isActive = activeTab === tab.key;
             const Icon = tab.icon;
@@ -116,7 +116,7 @@ export function TeamProfile({ team }: { team: SportsTeam }) {
                 className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all whitespace-nowrap ${
                   isActive
                     ? "bg-[#74ddc7]/15 text-[#74ddc7]"
-                    : "text-white/40 hover:text-white/70 hover:bg-white/[0.04]"
+                    : "text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.04]"
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -145,9 +145,9 @@ function OverviewTab({ team }: { team: SportsTeam }) {
   return (
     <div className="space-y-6">
       {/* About */}
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6">
-        <h2 className="text-lg font-bold text-white mb-3">About</h2>
-        <p className="text-sm text-white/60 leading-relaxed">
+      <div className="rounded-2xl border border-border bg-white/[0.03] p-6">
+        <h2 className="text-lg font-bold text-foreground mb-3">About</h2>
+        <p className="text-sm text-foreground/60 leading-relaxed">
           {team.description}
         </p>
       </div>
@@ -157,30 +157,30 @@ function OverviewTab({ team }: { team: SportsTeam }) {
         {team.stats.slice(0, 6).map((stat) => (
           <div
             key={stat.label}
-            className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 text-center"
+            className="rounded-xl border border-border bg-white/[0.03] p-4 text-center"
           >
             <p className="text-2xl font-extrabold text-[#74ddc7]">
               {stat.value}
             </p>
-            <p className="text-xs text-white/40 mt-1">{stat.label}</p>
+            <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
           </div>
         ))}
       </div>
 
       {/* Head Coach */}
       {team.coaches[0] && (
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6">
-          <h2 className="text-lg font-bold text-white mb-3">Head Coach</h2>
+        <div className="rounded-2xl border border-border bg-white/[0.03] p-6">
+          <h2 className="text-lg font-bold text-foreground mb-3">Head Coach</h2>
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-xl bg-white/[0.06] flex items-center justify-center border border-white/[0.08]">
-              <User className="h-8 w-8 text-white/30" />
+            <div className="h-16 w-16 rounded-xl bg-foreground/[0.06] flex items-center justify-center border border-border">
+              <User className="h-8 w-8 text-muted-foreground/70" />
             </div>
             <div>
-              <p className="text-base font-bold text-white">
+              <p className="text-base font-bold text-foreground">
                 {team.coaches[0].name}
               </p>
-              <p className="text-sm text-white/50">{team.coaches[0].title}</p>
-              <p className="text-xs text-white/30">
+              <p className="text-sm text-muted-foreground">{team.coaches[0].title}</p>
+              <p className="text-xs text-muted-foreground/70">
                 Since {team.coaches[0].since}
               </p>
             </div>
@@ -199,14 +199,14 @@ function OverviewTab({ team }: { team: SportsTeam }) {
           <Youtube className="h-6 w-6 text-red-400" />
         </div>
         <div className="flex-1">
-          <p className="text-sm font-bold text-white">
+          <p className="text-sm font-bold text-foreground">
             {team.youtube.channelName}
           </p>
-          <p className="text-xs text-white/40">
+          <p className="text-xs text-muted-foreground">
             Watch highlights, interviews, and game recaps on YouTube
           </p>
         </div>
-        <ExternalLink className="h-4 w-4 text-white/30" />
+        <ExternalLink className="h-4 w-4 text-muted-foreground/70" />
       </a>
     </div>
   );
@@ -219,31 +219,31 @@ function OverviewTab({ team }: { team: SportsTeam }) {
 function RosterTab({ team }: { team: SportsTeam }) {
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-bold text-white">
+      <h2 className="text-lg font-bold text-foreground">
         Players ({team.players.length})
       </h2>
       <div className="grid gap-3 sm:grid-cols-2">
         {team.players.map((player) => (
           <div
             key={player.name}
-            className="flex items-center gap-4 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 hover:bg-white/[0.05] transition-colors"
+            className="flex items-center gap-4 rounded-xl border border-border bg-white/[0.03] p-4 hover:bg-white/[0.05] transition-colors"
           >
             {/* Number */}
             <div
-              className="flex-shrink-0 h-12 w-12 rounded-lg flex items-center justify-center font-extrabold text-lg text-white/80"
+              className="flex-shrink-0 h-12 w-12 rounded-lg flex items-center justify-center font-extrabold text-lg text-foreground/80"
               style={{ backgroundColor: `${team.primaryColor}40` }}
             >
-              <Hash className="h-3 w-3 text-white/40 mr-0.5" />
+              <Hash className="h-3 w-3 text-muted-foreground mr-0.5" />
               {player.number}
             </div>
 
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-white truncate">
+              <p className="text-sm font-bold text-foreground truncate">
                 {player.name}
               </p>
-              <div className="flex items-center gap-2 text-xs text-white/40">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>{player.position}</span>
-                <span className="text-white/20">&middot;</span>
+                <span className="text-foreground/20">&middot;</span>
                 <span className="flex items-center gap-1">
                   <GraduationCap className="h-3 w-3" />
                   {player.year}
@@ -253,7 +253,7 @@ function RosterTab({ team }: { team: SportsTeam }) {
           </div>
         ))}
       </div>
-      <p className="text-xs text-white/25 text-center pt-4">
+      <p className="text-xs text-muted-foreground/60 text-center pt-4">
         Roster may not reflect current season. Visit{" "}
         <a
           href={team.website}
@@ -276,20 +276,20 @@ function RosterTab({ team }: { team: SportsTeam }) {
 function CoachesTab({ team }: { team: SportsTeam }) {
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-bold text-white">Coaching Staff</h2>
+      <h2 className="text-lg font-bold text-foreground">Coaching Staff</h2>
       <div className="grid gap-3">
         {team.coaches.map((coach) => (
           <div
             key={coach.name}
-            className="flex items-center gap-4 rounded-xl border border-white/[0.08] bg-white/[0.03] p-5 hover:bg-white/[0.05] transition-colors"
+            className="flex items-center gap-4 rounded-xl border border-border bg-white/[0.03] p-5 hover:bg-white/[0.05] transition-colors"
           >
-            <div className="flex-shrink-0 h-14 w-14 rounded-xl bg-white/[0.06] flex items-center justify-center border border-white/[0.08]">
-              <User className="h-7 w-7 text-white/30" />
+            <div className="flex-shrink-0 h-14 w-14 rounded-xl bg-foreground/[0.06] flex items-center justify-center border border-border">
+              <User className="h-7 w-7 text-muted-foreground/70" />
             </div>
             <div>
-              <p className="text-base font-bold text-white">{coach.name}</p>
+              <p className="text-base font-bold text-foreground">{coach.name}</p>
               <p className="text-sm text-[#74ddc7]/70">{coach.title}</p>
-              <p className="text-xs text-white/30">Since {coach.since}</p>
+              <p className="text-xs text-muted-foreground/70">Since {coach.since}</p>
             </div>
           </div>
         ))}
@@ -305,17 +305,17 @@ function CoachesTab({ team }: { team: SportsTeam }) {
 function StatsTab({ team }: { team: SportsTeam }) {
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-bold text-white">Program Statistics</h2>
+      <h2 className="text-lg font-bold text-foreground">Program Statistics</h2>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {team.stats.map((stat) => (
           <div
             key={stat.label}
-            className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-5 text-center hover:bg-white/[0.05] transition-colors"
+            className="rounded-xl border border-border bg-white/[0.03] p-5 text-center hover:bg-white/[0.05] transition-colors"
           >
             <p className="text-3xl font-extrabold text-[#74ddc7]">
               {stat.value}
             </p>
-            <p className="text-sm text-white/40 mt-1">{stat.label}</p>
+            <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
           </div>
         ))}
       </div>
@@ -330,7 +330,7 @@ function StatsTab({ team }: { team: SportsTeam }) {
 function YoutubeTab({ team }: { team: SportsTeam }) {
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-bold text-white">YouTube Channel</h2>
+      <h2 className="text-lg font-bold text-foreground">YouTube Channel</h2>
 
       {/* Channel Card */}
       <a
@@ -344,14 +344,14 @@ function YoutubeTab({ team }: { team: SportsTeam }) {
             <Youtube className="h-8 w-8 text-red-400" />
           </div>
           <div>
-            <p className="text-lg font-bold text-white">
+            <p className="text-lg font-bold text-foreground">
               {team.youtube.channelName}
             </p>
-            <p className="text-sm text-white/40">YouTube Channel</p>
+            <p className="text-sm text-muted-foreground">YouTube Channel</p>
           </div>
-          <ExternalLink className="h-5 w-5 text-white/30 ml-auto" />
+          <ExternalLink className="h-5 w-5 text-muted-foreground/70 ml-auto" />
         </div>
-        <p className="text-sm text-white/50">
+        <p className="text-sm text-muted-foreground">
           Watch game highlights, player interviews, press conferences, and
           behind-the-scenes content from {team.fullName}.
         </p>
@@ -370,15 +370,15 @@ function YoutubeTab({ team }: { team: SportsTeam }) {
             href={`https://www.youtube.com/results?search_query=${encodeURIComponent(team.youtube.searchQuery + " " + label)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="group rounded-xl border border-white/[0.08] bg-white/[0.03] p-5 hover:bg-white/[0.05] transition-colors"
+            className="group rounded-xl border border-border bg-white/[0.03] p-5 hover:bg-white/[0.05] transition-colors"
           >
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-white/[0.06] flex items-center justify-center group-hover:bg-red-500/20 transition-colors">
-                <Play className="h-5 w-5 text-white/40 group-hover:text-red-400 transition-colors" />
+              <div className="h-10 w-10 rounded-lg bg-foreground/[0.06] flex items-center justify-center group-hover:bg-red-500/20 transition-colors">
+                <Play className="h-5 w-5 text-muted-foreground group-hover:text-red-400 transition-colors" />
               </div>
               <div>
-                <p className="text-sm font-bold text-white">{label}</p>
-                <p className="text-xs text-white/30">Search on YouTube</p>
+                <p className="text-sm font-bold text-foreground">{label}</p>
+                <p className="text-xs text-muted-foreground/70">Search on YouTube</p>
               </div>
             </div>
           </a>

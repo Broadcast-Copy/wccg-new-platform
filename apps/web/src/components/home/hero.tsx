@@ -69,7 +69,7 @@ export function Hero() {
 
       {/* Mobile: stacked layout */}
       <div className="md:hidden">
-        <div className="relative overflow-hidden rounded-2xl border border-white/[0.06]">
+        <div className="relative overflow-hidden rounded-2xl border border-border">
           {/* Sliding image */}
           <div className="relative aspect-[4/3]">
             {HERO_SHOWS.map((slide, index) => (
@@ -99,11 +99,11 @@ export function Hero() {
             {/* Show info overlay */}
             <div className="absolute bottom-0 left-0 right-0 z-30 px-5 pb-5">
               <Link href={`/shows/${currentSlide.id}`} className="group inline-block mb-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-0.5">Now Playing</p>
-                <h3 className="text-base font-black text-white group-hover:text-[#74ddc7] transition-colors">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-0.5">Now Playing</p>
+                <h3 className="text-base font-black text-foreground group-hover:text-[#74ddc7] transition-colors">
                   {currentSlide.name}
                 </h3>
-                <p className="text-xs text-white/60">{currentSlide.hostNames}</p>
+                <p className="text-xs text-foreground/60">{currentSlide.hostNames}</p>
               </Link>
 
               {/* Dots */}
@@ -125,11 +125,11 @@ export function Hero() {
           </div>
 
           {/* Content below image */}
-          <div className="bg-[#0e0e16] px-5 py-6 space-y-4">
-            <h1 className="text-2xl font-black leading-[1.1] text-white">
+          <div className="bg-sidebar px-5 py-6 space-y-4">
+            <h1 className="text-2xl font-black leading-[1.1] text-foreground">
               Hip Hop, Sports, Reactions And Podcasts.
             </h1>
-            <p className="text-sm text-white/50 leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Experience premium digital content wherever you are!
             </p>
             <div className="flex flex-wrap items-center gap-3">
@@ -145,7 +145,7 @@ export function Hero() {
               <Button
                 variant="outline"
                 size="default"
-                className="rounded-full border-white/20 text-white hover:border-white/40 hover:bg-white/5 px-5"
+                className="rounded-full border-white/20 text-foreground hover:border-white/40 hover:bg-white/5 px-5"
                 asChild
               >
                 <Link href="/discover">
@@ -157,13 +157,13 @@ export function Hero() {
           </div>
 
           {/* ── News Ticker (mobile) ── */}
-          <div className="border-t border-white/[0.06] flex items-center h-9 overflow-hidden">
-            <div className="flex-shrink-0 flex items-center gap-2 px-4 border-r border-white/[0.06] h-full bg-white/[0.06]">
+          <div className="border-t border-border flex items-center h-9 overflow-hidden">
+            <div className="flex-shrink-0 flex items-center gap-2 px-4 border-r border-border h-full bg-foreground/[0.06]">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
               </span>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-white/70 whitespace-nowrap">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-foreground/70 whitespace-nowrap">
                 Platform Updates
               </span>
             </div>
@@ -172,10 +172,10 @@ export function Hero() {
                 {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
                   <span
                     key={i}
-                    className="text-xs text-white/50 flex items-center gap-8"
+                    className="text-xs text-muted-foreground flex items-center gap-8"
                   >
                     {item}
-                    <span className="text-white/20">•</span>
+                    <span className="text-foreground/20">•</span>
                   </span>
                 ))}
               </div>
@@ -187,7 +187,7 @@ export function Hero() {
       {/* Desktop: two side-by-side rounded rectangles */}
       <div className="hidden md:grid md:grid-cols-2 gap-4">
         {/* ── LEFT CARD: Sliding image ── */}
-        <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] aspect-[4/3] lg:aspect-auto lg:min-h-[460px]">
+        <div className="relative overflow-hidden rounded-2xl border border-border aspect-[4/3] lg:aspect-auto lg:min-h-[460px]">
           {HERO_SHOWS.map((slide, index) => (
             <div
               key={slide.id}
@@ -218,11 +218,11 @@ export function Hero() {
           {/* Show info + dots */}
           <div className="absolute bottom-0 left-0 right-0 z-30 px-6 pb-5">
             <Link href={`/shows/${currentSlide.id}`} className="group inline-block mb-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-0.5">Now Playing</p>
-              <h3 className="text-lg font-black text-white drop-shadow-lg group-hover:text-[#74ddc7] transition-colors">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-0.5">Now Playing</p>
+              <h3 className="text-lg font-black text-foreground drop-shadow-lg group-hover:text-[#74ddc7] transition-colors">
                 {currentSlide.name}
               </h3>
-              <p className="text-sm text-white/60 drop-shadow-md">{currentSlide.hostNames}</p>
+              <p className="text-sm text-foreground/60 drop-shadow-md">{currentSlide.hostNames}</p>
             </Link>
             <div className="flex items-center gap-1.5">
               {HERO_SHOWS.map((_, index) => (
@@ -242,7 +242,7 @@ export function Hero() {
         </div>
 
         {/* ── RIGHT CARD: Content panel with curved top-left ── */}
-        <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0e0e16] flex flex-col">
+        <div className="relative overflow-hidden rounded-2xl border border-border bg-sidebar flex flex-col">
           {/* Convex curve overlay — top-left corner curves inward */}
           <div className="absolute top-0 left-0 w-[120px] h-full z-10 pointer-events-none">
             <svg
@@ -261,11 +261,11 @@ export function Hero() {
           {/* Content */}
           <div className="relative z-20 flex flex-col justify-center flex-1 px-10 py-12 lg:px-14">
             <div className="space-y-6">
-              <h1 className="text-3xl lg:text-4xl xl:text-5xl font-black leading-[1.1] text-white">
+              <h1 className="text-3xl lg:text-4xl xl:text-5xl font-black leading-[1.1] text-foreground">
                 Hip Hop, Sports, Reactions And Podcasts.
               </h1>
 
-              <p className="text-base lg:text-lg text-white/50 max-w-md leading-relaxed">
+              <p className="text-base lg:text-lg text-muted-foreground max-w-md leading-relaxed">
                 Experience premium digital content wherever you are!
               </p>
 
@@ -282,7 +282,7 @@ export function Hero() {
                 <Button
                   variant="outline"
                   size="lg"
-                  className="rounded-full border-white/20 text-white hover:border-white/40 hover:bg-white/5 px-6"
+                  className="rounded-full border-white/20 text-foreground hover:border-white/40 hover:bg-white/5 px-6"
                   asChild
                 >
                   <Link href="/discover">
@@ -295,14 +295,14 @@ export function Hero() {
           </div>
 
           {/* ── News Ticker (bottom of right card) ── */}
-          <div className="relative z-20 border-t border-white/[0.06] flex items-center h-9 overflow-hidden">
+          <div className="relative z-20 border-t border-border flex items-center h-9 overflow-hidden">
             {/* Label */}
-            <div className="flex-shrink-0 flex items-center gap-2 px-4 border-r border-white/[0.06] h-full bg-white/[0.06]">
+            <div className="flex-shrink-0 flex items-center gap-2 px-4 border-r border-border h-full bg-foreground/[0.06]">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
               </span>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-white/70 whitespace-nowrap">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-foreground/70 whitespace-nowrap">
                 Platform Updates
               </span>
             </div>
@@ -313,10 +313,10 @@ export function Hero() {
                 {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
                   <span
                     key={i}
-                    className="text-xs text-white/50 flex items-center gap-8"
+                    className="text-xs text-muted-foreground flex items-center gap-8"
                   >
                     {item}
-                    <span className="text-white/20">•</span>
+                    <span className="text-foreground/20">•</span>
                   </span>
                 ))}
               </div>

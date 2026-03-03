@@ -46,7 +46,7 @@ const CommunityMap = dynamic(() => import("./community-map"), {
     <div className="flex h-full items-center justify-center rounded-xl border bg-gray-50">
       <div className="text-center space-y-2">
         <MapPin className="mx-auto h-8 w-8 text-teal-500 animate-pulse" />
-        <p className="text-sm text-gray-400">Loading map…</p>
+        <p className="text-sm text-muted-foreground">Loading map…</p>
       </div>
     </div>
   ),
@@ -467,7 +467,7 @@ export default function CommunityServicesPage() {
             <Landmark className="h-4 w-4" />
             Serving {COUNTIES.length} Counties &middot; {listings.length}+ Services
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
             Community Services Directory
           </h1>
           <p className="mx-auto max-w-2xl text-slate-400 text-base sm:text-lg">
@@ -493,7 +493,7 @@ export default function CommunityServicesPage() {
             <MapPin className="h-5 w-5 text-teal-400" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Government Services</h2>
+            <h2 className="text-xl font-bold text-foreground">Government Services</h2>
             <p className="text-sm text-slate-400">Search police, fire, hospitals, utilities, agriculture &amp; more across {COUNTIES.length} counties</p>
           </div>
         </div>
@@ -504,12 +504,12 @@ export default function CommunityServicesPage() {
           <Input
             type="search"
             placeholder="Search by service, city, or county…"
-            className="pl-10 h-11 bg-slate-900/50 border-slate-800 text-white placeholder:text-slate-500"
+            className="pl-10 h-11 bg-slate-900/50 border-slate-800 text-foreground placeholder:text-slate-500"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white">
+            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-foreground">
               <X className="h-4 w-4" />
             </button>
           )}
@@ -524,7 +524,7 @@ export default function CommunityServicesPage() {
               className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all ${
                 activeCounty === "All"
                   ? "bg-sky-500/20 text-sky-400 border-sky-500/30"
-                  : "bg-slate-900/50 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-white"
+                  : "bg-slate-900/50 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-foreground"
               }`}
             >
               All Counties <span className="rounded-full bg-slate-800 px-1.5 py-0 text-[10px]">{countyCount["All"]}</span>
@@ -536,7 +536,7 @@ export default function CommunityServicesPage() {
                 className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all ${
                   activeCounty === county
                     ? "bg-sky-500/20 text-sky-400 border-sky-500/30"
-                    : "bg-slate-900/50 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-white"
+                    : "bg-slate-900/50 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-foreground"
                 }`}
               >
                 {county}
@@ -557,7 +557,7 @@ export default function CommunityServicesPage() {
               className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all ${
                 activeCategory === "All"
                   ? "bg-teal-500/20 text-teal-400 border-teal-500/30"
-                  : "bg-slate-900/50 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-white"
+                  : "bg-slate-900/50 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-foreground"
               }`}
             >
               All <span className="rounded-full bg-slate-800 px-1.5 py-0 text-[10px]">{categoryCount["All"]}</span>
@@ -569,7 +569,7 @@ export default function CommunityServicesPage() {
                 className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all ${
                   activeCategory === label
                     ? `${CATEGORY_COLORS[label].badge}`
-                    : "bg-slate-900/50 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-white"
+                    : "bg-slate-900/50 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-foreground"
                 }`}
               >
                 <Icon className="h-3 w-3" />
@@ -645,7 +645,7 @@ export default function CommunityServicesPage() {
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-500/10 border border-teal-500/20">
             <UserCheck className="h-7 w-7 text-teal-400" />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">Claim & Manage Your Listing</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">Claim & Manage Your Listing</h2>
           <p className="text-slate-400">
             Are you a government office, utility provider, or community service organization?
             Claim your listing to keep your contact information current and manage your public profile
@@ -655,7 +655,7 @@ export default function CommunityServicesPage() {
             <Button size="lg" className="bg-teal-600 hover:bg-teal-500 text-white" asChild>
               <Link href="/my/directory"><UserCheck className="mr-2 h-4 w-4" /> Claim Your Listing</Link>
             </Button>
-            <Button variant="outline" size="lg" className="border-slate-700 text-slate-300 hover:text-white" asChild>
+            <Button variant="outline" size="lg" className="border-slate-700 text-slate-300 hover:text-foreground" asChild>
               <Link href="/my/directory"><Plus className="mr-2 h-4 w-4" /> Add New Service</Link>
             </Button>
           </div>
@@ -674,7 +674,7 @@ export default function CommunityServicesPage() {
             <Building2 className="h-5 w-5 text-blue-400" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Counties We Serve</h2>
+            <h2 className="text-xl font-bold text-foreground">Counties We Serve</h2>
             <p className="text-sm text-slate-400">Government services coverage area in southeastern North Carolina</p>
           </div>
         </div>
@@ -687,7 +687,7 @@ export default function CommunityServicesPage() {
                 onClick={() => { setActiveCounty(county); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                 className="rounded-xl border border-slate-800 bg-slate-900/30 p-4 text-left transition-all hover:border-slate-700 hover:bg-slate-900/50"
               >
-                <h3 className="font-semibold text-white">{county} County</h3>
+                <h3 className="font-semibold text-foreground">{county} County</h3>
                 <p className="text-xs text-slate-500 mt-1">
                   {count} {count === 1 ? "service" : "services"} listed
                 </p>
@@ -704,7 +704,7 @@ export default function CommunityServicesPage() {
             <Swords className="h-6 w-6 text-orange-400" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-lg font-bold text-white">Fort Liberty (Fort Bragg)</h3>
+            <h3 className="text-lg font-bold text-foreground">Fort Liberty (Fort Bragg)</h3>
             <p className="text-sm text-slate-400">
               Home of the XVIII Airborne Corps and U.S. Army Special Operations Command.
               Our directory includes on-post services including military police,
@@ -760,7 +760,7 @@ function ServiceCard({
 
       <div className="flex-1 min-w-0 space-y-1">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-sm text-white truncate">{listing.name}</h3>
+          <h3 className="font-semibold text-sm text-foreground truncate">{listing.name}</h3>
           {listing.featured && (
             <Badge className="shrink-0 gap-1 bg-amber-500/20 text-amber-300 border-amber-500/30 text-[10px]">
               <Star className="h-2.5 w-2.5" /> Featured

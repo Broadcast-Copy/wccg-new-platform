@@ -121,10 +121,10 @@ function UpcomingEventsSection() {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-white">
+        <h2 className="text-xl font-bold text-foreground">
           Upcoming Events
         </h2>
-        <Button variant="ghost" size="sm" asChild className="text-white/40 hover:text-[#74ddc7]">
+        <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-[#74ddc7]">
           <Link href="/events">
             View All
             <ArrowRight className="ml-1 h-4 w-4" />
@@ -152,8 +152,8 @@ function UpcomingEventsSection() {
           ))}
         </div>
       ) : (
-        <div className="flex h-32 items-center justify-center rounded-xl border border-white/[0.06] bg-[#141420]">
-          <p className="text-sm text-white/30">
+        <div className="flex h-32 items-center justify-center rounded-xl border border-border bg-card">
+          <p className="text-sm text-muted-foreground/70">
             No upcoming events at the moment. Check back soon!
           </p>
         </div>
@@ -170,17 +170,17 @@ export default function HomePage() {
 
       {/* Platform Headline */}
       <section className="text-center py-4">
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground tracking-tight">
           One Platform. Endless Possibilities.
         </h1>
-        <p className="mt-3 max-w-2xl mx-auto text-sm sm:text-base text-white/50 leading-relaxed">
+        <p className="mt-3 max-w-2xl mx-auto text-sm sm:text-base text-muted-foreground leading-relaxed">
           Your hub for tickets, streaming, weather &amp; news updates, community discovery, podcast booking, dynamic advertising, and digital media services, all in one place.
         </p>
       </section>
 
       {/* Platform Features */}
       <section className="space-y-4">
-        <h2 className="text-xl font-bold text-white">
+        <h2 className="text-xl font-bold text-foreground">
           Explore the Platform
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -188,7 +188,7 @@ export default function HomePage() {
             <Link
               key={feature.href + feature.title}
               href={feature.href}
-              className="group relative overflow-hidden rounded-xl border border-white/[0.06] bg-[#141420] p-5 transition-all hover:border-white/[0.12] hover:shadow-lg hover:shadow-black/20"
+              className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:border-input hover:shadow-lg hover:shadow-black/20"
             >
               <div className="flex items-start gap-4">
                 <div
@@ -197,10 +197,10 @@ export default function HomePage() {
                   <feature.icon className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white group-hover:text-[#74ddc7] transition-colors">
+                  <h3 className="font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors">
                     {feature.title}
                   </h3>
-                  <p className="mt-1 text-sm text-white/40">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {feature.description}
                   </p>
                 </div>
@@ -221,7 +221,7 @@ export default function HomePage() {
       <section className="grid gap-4 lg:grid-cols-3">
         {/* Weather Widget */}
         <div className="lg:col-span-1">
-          <h2 className="text-xl font-bold text-white mb-4">Local Weather</h2>
+          <h2 className="text-xl font-bold text-foreground mb-4">Local Weather</h2>
           <WeatherWidget />
         </div>
 
@@ -229,7 +229,7 @@ export default function HomePage() {
         <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-white">Contests &amp; Giveaways</h2>
+              <h2 className="text-xl font-bold text-foreground">Contests &amp; Giveaways</h2>
               <div className="flex items-center gap-1.5 rounded-full bg-[#dc2626]/10 border border-[#dc2626]/20 px-2.5 py-0.5">
                 <span className="relative flex h-1.5 w-1.5">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#dc2626] opacity-75" />
@@ -238,7 +238,7 @@ export default function HomePage() {
                 <span className="text-[10px] font-bold uppercase tracking-widest text-[#dc2626]">Live</span>
               </div>
             </div>
-            <Button variant="ghost" size="sm" asChild className="text-white/40 hover:text-[#74ddc7]">
+            <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-[#74ddc7]">
               <Link href="/contests">
                 View All
                 <ArrowRight className="ml-1 h-4 w-4" />
@@ -249,7 +249,7 @@ export default function HomePage() {
             {/* Contest card 1 */}
             <Link
               href="/contests"
-              className="group rounded-xl border border-white/[0.06] bg-[#141420] overflow-hidden transition-all hover:border-white/[0.12] hover:-translate-y-0.5"
+              className="group rounded-xl border border-border bg-card overflow-hidden transition-all hover:border-input hover:-translate-y-0.5"
             >
               <div className="h-2 bg-gradient-to-r from-[#7401df] to-[#3b82f6]" />
               <div className="p-5 space-y-3">
@@ -258,13 +258,13 @@ export default function HomePage() {
                     <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" /></span>
                     Live
                   </span>
-                  <span className="text-xs text-white/30">Sweepstakes</span>
+                  <span className="text-xs text-muted-foreground/70">Sweepstakes</span>
                 </div>
-                <h3 className="font-bold text-white group-hover:text-[#74ddc7] transition-colors">mY1045 Cash Drop</h3>
-                <p className="text-sm text-white/40 line-clamp-2">Download the mY1045 app and check in daily for your chance to win $1,045 cash!</p>
+                <h3 className="font-bold text-foreground group-hover:text-[#74ddc7] transition-colors">mY1045 Cash Drop</h3>
+                <p className="text-sm text-muted-foreground line-clamp-2">Download the mY1045 app and check in daily for your chance to win $1,045 cash!</p>
                 <div className="flex items-center justify-between">
                   <span className="text-lg font-black text-[#74ddc7]">$1,045</span>
-                  <span className="text-xs text-white/30">15,320 entries</span>
+                  <span className="text-xs text-muted-foreground/70">15,320 entries</span>
                 </div>
               </div>
             </Link>
@@ -272,7 +272,7 @@ export default function HomePage() {
             {/* Contest card 2 */}
             <Link
               href="/contests"
-              className="group rounded-xl border border-white/[0.06] bg-[#141420] overflow-hidden transition-all hover:border-white/[0.12] hover:-translate-y-0.5"
+              className="group rounded-xl border border-border bg-card overflow-hidden transition-all hover:border-input hover:-translate-y-0.5"
             >
               <div className="h-2 bg-gradient-to-r from-[#ec4899] to-[#be185d]" />
               <div className="p-5 space-y-3">
@@ -281,13 +281,13 @@ export default function HomePage() {
                     <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" /></span>
                     Live
                   </span>
-                  <span className="text-xs text-white/30">Giveaway</span>
+                  <span className="text-xs text-muted-foreground/70">Giveaway</span>
                 </div>
-                <h3 className="font-bold text-white group-hover:text-[#74ddc7] transition-colors">Sneaker Sunday Giveaway</h3>
-                <p className="text-sm text-white/40 line-clamp-2">Text KICKS to 104-5 every Sunday for your chance to win limited edition sneakers!</p>
+                <h3 className="font-bold text-foreground group-hover:text-[#74ddc7] transition-colors">Sneaker Sunday Giveaway</h3>
+                <p className="text-sm text-muted-foreground line-clamp-2">Text KICKS to 104-5 every Sunday for your chance to win limited edition sneakers!</p>
                 <div className="flex items-center justify-between">
                   <span className="text-lg font-black text-[#74ddc7]">$250</span>
-                  <span className="text-xs text-white/30">4,210 entries</span>
+                  <span className="text-xs text-muted-foreground/70">4,210 entries</span>
                 </div>
               </div>
             </Link>
@@ -326,18 +326,18 @@ export default function HomePage() {
               type="email"
               placeholder="Enter your email..."
               required
-              className="flex-1 rounded-full bg-white px-5 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-white/40"
+              className="flex-1 rounded-full bg-white px-5 py-3 text-sm text-gray-900 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-white/40"
             />
             <Button
               type="submit"
               size="lg"
-              className="rounded-full bg-[#0a0a0f] text-white font-bold hover:bg-[#0a0a0f]/80 shadow-lg px-6 shrink-0"
+              className="rounded-full bg-background text-white font-bold hover:bg-background/80 shadow-lg px-6 shrink-0"
             >
               Subscribe
               <ArrowDownRight className="ml-1.5 h-4 w-4" />
             </Button>
           </form>
-          <p className="text-[11px] text-white/40">
+          <p className="text-[11px] text-white/50">
             No spam ever. Unsubscribe anytime.
           </p>
         </div>
@@ -372,7 +372,7 @@ export default function HomePage() {
               variant="outline"
               size="lg"
               asChild
-              className="rounded-full border-white/30 text-white hover:bg-white/10 px-6"
+              className="rounded-full border-white/30 text-white hover:bg-foreground/10 px-6"
             >
               <Link href="/channels">
                 Start Listening

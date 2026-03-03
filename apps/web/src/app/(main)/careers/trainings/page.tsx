@@ -62,16 +62,16 @@ export default function TrainingsPage() {
               <BookOpen className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Trainings & Guides</h1>
-              <p className="text-white/50 mt-1">Develop your broadcasting and media skills</p>
+              <h1 className="text-3xl font-bold text-foreground">Trainings & Guides</h1>
+              <p className="text-muted-foreground mt-1">Develop your broadcasting and media skills</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
-        <h2 className="text-xl font-semibold text-white">Professional Development</h2>
-        <p className="text-white/50 leading-relaxed">
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Professional Development</h2>
+        <p className="text-muted-foreground leading-relaxed">
           Whether you&apos;re an aspiring broadcaster, a current intern, or a media professional looking to sharpen your skills,
           WCCG 104.5 FM offers training programs designed to help you succeed in the radio and media industry.
           Our programs combine classroom learning with hands-on experience in a real broadcasting environment.
@@ -80,20 +80,20 @@ export default function TrainingsPage() {
 
       {/* Training Programs */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-white">Available Programs</h2>
+        <h2 className="text-xl font-semibold text-foreground">Available Programs</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {trainings.map((training) => (
-            <div key={training.title} className="rounded-xl border border-white/[0.06] bg-[#141420] p-5 space-y-3">
+            <div key={training.title} className="rounded-xl border border-border bg-card p-5 space-y-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
                 <training.icon className="h-5 w-5 text-blue-400" />
               </div>
-              <h3 className="font-semibold text-white">{training.title}</h3>
-              <p className="text-sm text-white/40 leading-relaxed">{training.description}</p>
+              <h3 className="font-semibold text-foreground">{training.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{training.description}</p>
               <div className="flex flex-wrap gap-2 pt-1">
-                <span className="text-[10px] font-medium text-white/60 bg-white/[0.06] rounded-full px-2.5 py-0.5">
+                <span className="text-[10px] font-medium text-foreground/60 bg-foreground/[0.06] rounded-full px-2.5 py-0.5">
                   {training.duration}
                 </span>
-                <span className="text-[10px] font-medium text-white/60 bg-white/[0.06] rounded-full px-2.5 py-0.5">
+                <span className="text-[10px] font-medium text-foreground/60 bg-foreground/[0.06] rounded-full px-2.5 py-0.5">
                   {training.format}
                 </span>
               </div>
@@ -103,8 +103,8 @@ export default function TrainingsPage() {
       </div>
 
       {/* How to Enroll */}
-      <div className="rounded-xl border border-white/[0.06] bg-[#141420] p-6 sm:p-8 space-y-4">
-        <h2 className="text-xl font-semibold text-white">How to Enroll</h2>
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">How to Enroll</h2>
         <div className="grid gap-3 sm:grid-cols-3">
           {[
             { step: "1", title: "Contact Us", desc: "Reach out to our team to discuss your interests and availability." },
@@ -115,8 +115,8 @@ export default function TrainingsPage() {
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#74ddc7]/10 text-[#74ddc7] text-sm font-bold mb-2">
                 {item.step}
               </span>
-              <h3 className="font-medium text-white text-sm">{item.title}</h3>
-              <p className="text-xs text-white/40 mt-0.5">{item.desc}</p>
+              <h3 className="font-medium text-foreground text-sm">{item.title}</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
             </div>
           ))}
         </div>
@@ -129,7 +129,7 @@ export default function TrainingsPage() {
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
-        <Button asChild variant="outline" className="rounded-full border-white/20 text-white hover:bg-white/5">
+        <Button asChild variant="outline" className="rounded-full border-white/20 text-foreground hover:bg-white/5">
           <Link href="/careers/internships">Internship Program</Link>
         </Button>
       </div>

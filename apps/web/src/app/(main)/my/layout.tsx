@@ -38,15 +38,15 @@ function SidebarContent({ pathname }: { pathname: string }) {
   return (
     <>
       {/* User info */}
-      <div className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#74ddc7]/30 to-[#7401df]/30 border border-white/[0.08]">
-          <User className="h-4 w-4 text-white/70" />
+      <div className="flex items-center gap-3 border-b border-border px-4 py-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#74ddc7]/30 to-[#7401df]/30 border border-border">
+          <User className="h-4 w-4 text-foreground/70" />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-white">
+          <p className="truncate text-sm font-semibold text-foreground">
             {user?.email?.split("@")[0] || "My Account"}
           </p>
-          <p className="truncate text-[11px] text-white/40">
+          <p className="truncate text-[11px] text-muted-foreground">
             {user?.email || ""}
           </p>
         </div>
@@ -64,13 +64,13 @@ function SidebarContent({ pathname }: { pathname: string }) {
               href={item.href}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all ${
                 isActive
-                  ? "bg-white/[0.08] text-[#74ddc7]"
-                  : "text-white/50 hover:bg-white/[0.04] hover:text-white/80"
+                  ? "bg-foreground/[0.08] text-[#74ddc7]"
+                  : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground/80"
               }`}
             >
               <item.icon
                 className={`h-4 w-4 shrink-0 ${
-                  isActive ? "text-[#74ddc7]" : "text-white/40"
+                  isActive ? "text-[#74ddc7]" : "text-muted-foreground"
                 }`}
               />
               {item.label}
@@ -79,7 +79,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
         })}
 
         {/* Admin divider + Station Control */}
-        <div className="my-2 border-t border-white/[0.06]" />
+        <div className="my-2 border-t border-border" />
         {(() => {
           const isAdminActive =
             pathname === "/my/admin" || pathname.startsWith("/my/admin/");
@@ -89,7 +89,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all ${
                 isAdminActive
                   ? "bg-[#dc2626]/10 text-[#dc2626]"
-                  : "text-white/50 hover:bg-[#dc2626]/5 hover:text-[#dc2626]/80"
+                  : "text-muted-foreground hover:bg-[#dc2626]/5 hover:text-[#dc2626]/80"
               }`}
             >
               <Shield
@@ -120,7 +120,7 @@ export default function MyDashboardLayout({
   return (
     <div className="flex min-h-0 -mx-4 sm:-mx-6 lg:-mx-8 -mt-8">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-[240px] shrink-0 flex-col border-r border-white/[0.06] bg-[#0e0e18]">
+      <aside className="hidden lg:flex w-[240px] shrink-0 flex-col border-r border-border bg-[#0e0e18]">
         <SidebarContent pathname={pathname} />
       </aside>
 
@@ -146,7 +146,7 @@ export default function MyDashboardLayout({
               className="fixed inset-0 z-40 bg-black/60"
               onClick={() => setMobileOpen(false)}
             />
-            <aside className="fixed left-0 top-14 bottom-14 z-50 w-[260px] overflow-y-auto bg-[#0e0e18] border-r border-white/[0.06] shadow-2xl">
+            <aside className="fixed left-0 top-14 bottom-14 z-50 w-[260px] overflow-y-auto bg-[#0e0e18] border-r border-border shadow-2xl">
               <div onClick={() => setMobileOpen(false)}>
                 <SidebarContent pathname={pathname} />
               </div>
