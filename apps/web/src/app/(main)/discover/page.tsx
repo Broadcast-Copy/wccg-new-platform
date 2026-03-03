@@ -227,10 +227,10 @@ export default function DiscoverPage() {
       </div>
 
       {/* ── Community Banner ─────────────────────────────────────────── */}
-      <section className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="flex flex-col md:flex-row items-stretch">
+      <section className="mx-auto max-w-3xl rounded-xl border border-border bg-card overflow-hidden">
+        <div className="flex flex-col sm:flex-row items-stretch">
           {/* Left: Community image */}
-          <div className="relative w-full md:w-[40%] min-h-[180px] md:min-h-[220px] overflow-hidden">
+          <div className="relative w-full sm:w-[45%] aspect-[4/3] overflow-hidden">
             <AppImage
               src="/images/discover-hero-1.png"
               alt="WCCG 104.5 FM Community"
@@ -240,16 +240,16 @@ export default function DiscoverPage() {
           </div>
 
           {/* Right: Text content */}
-          <div className="flex-1 px-6 py-6 md:px-10 md:py-8 flex flex-col justify-center space-y-3">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-foreground leading-tight">
+          <div className="flex-1 px-5 py-5 sm:px-7 sm:py-6 flex flex-col justify-center space-y-2">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-extrabold tracking-tight text-foreground leading-tight">
               WCCG 104.5 FM + Community<br />
               Always Free, Always Local!
             </h2>
-            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-lg">
+            <p className="text-xs text-muted-foreground leading-relaxed max-w-md">
               Your free access to nonstop hits, exclusive interviews, giveaways, and local
               event perks — all in one place.
             </p>
-            <p className="text-xs sm:text-sm font-bold text-foreground pt-1">
+            <p className="text-xs font-bold text-foreground">
               No Subscription. No Gimmicks.
             </p>
           </div>
