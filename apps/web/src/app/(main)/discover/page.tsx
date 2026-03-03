@@ -177,7 +177,7 @@ export default function DiscoverPage() {
   return (
     <div className="space-y-12">
       {/* ── Hero Banner ─────────────────────────────────────────────────── */}
-      <div className="relative -mx-4 -mt-8 overflow-hidden sm:-mx-6 md:-mx-8">
+      <div className="relative -mx-4 -mt-8 overflow-hidden rounded-b-2xl sm:-mx-6 md:-mx-8">
         <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0f] via-[#0d1b2a] to-[#1a0533]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#74ddc7]/10 via-transparent to-[#7401df]/10" />
 
