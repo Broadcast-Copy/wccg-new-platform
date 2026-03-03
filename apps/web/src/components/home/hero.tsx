@@ -243,19 +243,7 @@ export function Hero() {
 
         {/* ── RIGHT CARD: Content panel with curved top-left ── */}
         <div className="relative overflow-hidden rounded-2xl border border-border bg-sidebar flex flex-col">
-          {/* Convex curve overlay — top-left corner curves inward */}
-          <div className="absolute top-0 left-0 w-[120px] h-full z-10 pointer-events-none">
-            <svg
-              viewBox="0 0 120 500"
-              preserveAspectRatio="none"
-              className="h-full w-full"
-              fill="#0a0a0f"
-            >
-              <path d="M0,0 L120,0 C60,0 0,80 0,250 C0,420 60,500 120,500 L0,500 Z" />
-            </svg>
-          </div>
-
-          {/* Glow orb */}
+          {/* Subtle glow orb */}
           <div className="absolute -right-20 -top-20 h-[300px] w-[300px] rounded-full bg-[rgba(116,1,223,0.06)] blur-[100px]" />
 
           {/* Content */}
