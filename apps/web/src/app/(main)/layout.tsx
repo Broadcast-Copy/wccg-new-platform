@@ -169,20 +169,20 @@ function StreamingMegaMenu() {
                     {channel.label}
                   </span>
 
-                  {/* Color swatch + logo */}
-                  <div className="relative h-14 w-32 flex-shrink-0">
-                    {/* Color swatch on the left */}
-                    <div
-                      className="absolute left-0 top-1 bottom-1 w-10 rounded-lg"
-                      style={{ backgroundColor: channel.color }}
-                    />
-                    {/* Logo overlapping the swatch, extending right */}
+                  {/* Color swatch + tilted white card + logo */}
+                  <div
+                    className="relative h-16 w-36 flex-shrink-0 rounded-xl overflow-hidden"
+                    style={{ backgroundColor: channel.color }}
+                  >
+                    {/* Tilted white card */}
+                    <div className="absolute -top-[10%] -right-[5%] -bottom-[10%] left-[22%] bg-white rounded-xl -rotate-6" />
+                    {/* Logo on top */}
                     <Image
                       src={channel.logo}
                       alt={channel.label}
                       fill
-                      className="object-contain object-right"
-                      sizes="128px"
+                      className="relative z-10 object-contain p-2"
+                      sizes="144px"
                     />
                   </div>
                 </Link>
