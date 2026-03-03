@@ -192,6 +192,17 @@ function ChannelTile({ stream }: { stream: Stream }) {
               </Link>
             </div>
           )}
+
+          {/* Advertise link — bottom center of info section */}
+          <div className="flex justify-center pt-2">
+            <Link
+              href={`/advertise?channel=${stream.id}`}
+              className="inline-flex items-center gap-1 text-[11px] sm:text-xs text-muted-foreground/70 hover:text-[#74ddc7] transition-colors uppercase tracking-wider font-medium"
+            >
+              <Megaphone className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+              Advertise on this channel
+            </Link>
+          </div>
         </div>
 
         {/* ── Right: Status / Live Now ── */}
@@ -310,17 +321,6 @@ export function ChannelGuideGrid({ streams }: ChannelGuideGridProps) {
           {filteredStreams.map((stream) => (
             <ChannelTile key={stream.id} stream={stream} />
           ))}
-
-          {/* Centered advertise link below all tiles */}
-          <div className="flex justify-center pt-2 pb-4">
-            <Link
-              href="/advertise"
-              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground/70 hover:text-[#74ddc7] transition-colors uppercase tracking-wider font-medium"
-            >
-              <Megaphone className="h-3 w-3" />
-              Advertise on our channels
-            </Link>
-          </div>
         </div>
       ) : (
         <div className="flex flex-col h-48 items-center justify-center rounded-2xl border border-dashed border-border bg-foreground/[0.02]">
