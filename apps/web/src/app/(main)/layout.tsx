@@ -167,12 +167,9 @@ export default function MainLayout({
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      {/* Top spacer — 50px breathing room above header */}
-      <div className="h-[50px] bg-background" />
-
-      {/* Top Header — minimal, SiriusXM-inspired */}
+      {/* Top Header */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-xl">
-        <div className="container flex items-center pt-[25px] pb-[15px]">
+        <div className="container flex items-center pt-[10px] pb-[10px]">
           {/* Left: Logo */}
           <Link
             href="/"
