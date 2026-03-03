@@ -1,11 +1,12 @@
 import { ShowCard } from "@/components/shows/show-card";
-import { Mic2, Zap, Podcast } from "lucide-react";
+import { Mic2, Zap, Podcast, Radio } from "lucide-react";
 import { ALL_SHOWS, getDayPart, getShowById } from "@/data/shows";
 import { getHostsByShowId } from "@/data/hosts";
 
 export const metadata = {
   title: "Shows | WCCG 104.5 FM",
-  description: "Explore all shows and podcasts on WCCG 104.5 FM — live shows, mixshows, gospel, and more.",
+  description:
+    "Explore all shows and podcasts on WCCG 104.5 FM — live shows, mixshows, gospel, and more.",
 };
 
 interface ShowHost {
@@ -28,6 +29,8 @@ interface Show {
   days?: string;
   dayPart?: string;
   category?: "weekday" | "saturday" | "sunday" | "gospel" | "mixsquad";
+  streamId?: string;
+  isSyndicated?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -46,6 +49,8 @@ function getLocalShows(): Show[] {
       days: s.days,
       dayPart: getDayPart(s),
       category: s.category,
+      streamId: s.streamId,
+      isSyndicated: s.isSyndicated,
       hosts: hosts.map((h, i) => ({
         id: h.id,
         name: h.name,
@@ -61,11 +66,11 @@ function getLocalShows(): Show[] {
 
 async function getShows(): Promise<Show[]> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
     const res = await fetch(`${apiUrl}/shows`, { next: { revalidate: 300 } });
     if (!res.ok) return getLocalShows();
     const data = await res.json();
-    // If API returns data, enrich with local schedule info
     if (data.length > 0) {
       return data.map((show: Show) => {
         const localShow = getShowById(show.id);
@@ -73,8 +78,11 @@ async function getShows(): Promise<Show[]> {
           ...show,
           timeSlot: show.timeSlot ?? localShow?.timeSlot,
           days: show.days ?? localShow?.days,
-          dayPart: show.dayPart ?? (localShow ? getDayPart(localShow) : undefined),
+          dayPart:
+            show.dayPart ?? (localShow ? getDayPart(localShow) : undefined),
           category: show.category ?? localShow?.category,
+          streamId: show.streamId ?? localShow?.streamId,
+          isSyndicated: show.isSyndicated ?? localShow?.isSyndicated,
         };
       });
     }
@@ -94,7 +102,12 @@ export default async function ShowsPage() {
       {/* Hero */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-pink-950/50 to-gray-900 border border-border/30">
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{ backgroundImage: `radial-gradient(circle at 20% 50%, rgba(236,72,153,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 30%, rgba(139,92,246,0.2) 0%, transparent 50%)` }} />
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `radial-gradient(circle at 20% 50%, rgba(236,72,153,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 30%, rgba(139,92,246,0.2) 0%, transparent 50%)`,
+            }}
+          />
         </div>
         <div className="relative px-6 py-10 sm:px-10 sm:py-14">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
@@ -102,44 +115,92 @@ export default async function ShowsPage() {
               <Mic2 className="h-8 w-8 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-2">Show Directory</h1>
-              <p className="text-base text-muted-foreground max-w-2xl">Explore all shows on WCCG 104.5 FM — live morning shows, afternoon drives, late night sessions, gospel, mixshows, and podcasts.</p>
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-2">
+                Show Directory
+              </h1>
+              <p className="text-base text-muted-foreground max-w-2xl">
+                Explore all shows on WCCG 104.5 FM — live morning shows,
+                afternoon drives, late night sessions, gospel, mixshows, and
+                podcasts.
+              </p>
             </div>
           </div>
           <div className="mt-8 grid grid-cols-3 gap-4">
             <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
-              <div className="flex items-center gap-2"><Mic2 className="h-4 w-4 text-pink-400" /><span className="text-sm font-medium text-gray-300">Active Shows</span></div>
-              <p className="mt-1 text-2xl font-bold text-foreground">{activeShows.length}</p>
+              <div className="flex items-center gap-2">
+                <Mic2 className="h-4 w-4 text-pink-400" />
+                <span className="text-sm font-medium text-gray-300">
+                  Active Shows
+                </span>
+              </div>
+              <p className="mt-1 text-2xl font-bold text-foreground">
+                {activeShows.length}
+              </p>
             </div>
             <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
-              <div className="flex items-center gap-2"><Podcast className="h-4 w-4 text-purple-400" /><span className="text-sm font-medium text-gray-300">Total Shows</span></div>
-              <p className="mt-1 text-2xl font-bold text-foreground">{shows.length}</p>
+              <div className="flex items-center gap-2">
+                <Podcast className="h-4 w-4 text-purple-400" />
+                <span className="text-sm font-medium text-gray-300">
+                  Total Shows
+                </span>
+              </div>
+              <p className="mt-1 text-2xl font-bold text-foreground">
+                {shows.length}
+              </p>
             </div>
             <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
-              <div className="flex items-center gap-2"><Zap className="h-4 w-4 text-amber-400" /><span className="text-sm font-medium text-gray-300">On Air</span></div>
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-amber-400" />
+                <span className="text-sm font-medium text-gray-300">
+                  On Air
+                </span>
+              </div>
               <p className="mt-1 text-2xl font-bold text-foreground">24/7</p>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Streaming channels quick link */}
+      <div className="flex items-center gap-3 rounded-xl bg-foreground/[0.03] border border-border px-4 py-3">
+        <Radio className="h-4 w-4 text-primary/60 flex-shrink-0" />
+        <p className="text-sm text-muted-foreground">
+          All shows air on our streaming channels.{" "}
+          <a
+            href="/channels"
+            className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors font-medium"
+          >
+            Browse all channels
+          </a>
+        </p>
+      </div>
+
+      {/* Active Shows — wide tiles, stacked vertically */}
       {activeShows.length > 0 ? (
         <section className="space-y-4">
           <h2 className="text-xl font-semibold">Active Shows</h2>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="flex flex-col gap-4">
             {activeShows.map((show) => (
               <ShowCard
                 key={show.id}
                 showId={show.id}
                 title={show.name}
                 description={show.description}
-                hostName={show.hosts?.find((h) => h.isPrimary)?.name ?? show.hosts?.[0]?.name}
+                hostName={
+                  show.hosts?.find((h) => h.isPrimary)?.name ??
+                  show.hosts?.[0]?.name
+                }
                 imageUrl={show.imageUrl}
-                hosts={show.hosts?.map((h) => ({ name: h.name, avatarUrl: h.avatarUrl }))}
+                hosts={show.hosts?.map((h) => ({
+                  name: h.name,
+                  avatarUrl: h.avatarUrl,
+                }))}
                 timeSlot={show.timeSlot}
                 days={show.days}
                 dayPart={show.dayPart}
                 category={show.category}
+                streamId={show.streamId}
+                isSyndicated={show.isSyndicated}
               />
             ))}
           </div>
@@ -147,27 +208,40 @@ export default async function ShowsPage() {
       ) : (
         <div className="flex flex-col h-48 items-center justify-center rounded-2xl border border-dashed border-border/50 bg-muted/20">
           <Mic2 className="h-8 w-8 text-muted-foreground/40 mb-3" />
-          <p className="text-sm font-medium text-muted-foreground">Show listings will appear once the API is connected.</p>
+          <p className="text-sm font-medium text-muted-foreground">
+            Show listings will appear once the API is connected.
+          </p>
         </div>
       )}
 
+      {/* Past Shows */}
       {inactiveShows.length > 0 && (
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-muted-foreground">Past Shows</h2>
-          <div className="grid gap-5 opacity-60 sm:grid-cols-2 lg:grid-cols-3">
+          <h2 className="text-xl font-semibold text-muted-foreground">
+            Past Shows
+          </h2>
+          <div className="flex flex-col gap-4 opacity-60">
             {inactiveShows.map((show) => (
               <ShowCard
                 key={show.id}
                 showId={show.id}
                 title={show.name}
                 description={show.description}
-                hostName={show.hosts?.find((h) => h.isPrimary)?.name ?? show.hosts?.[0]?.name}
+                hostName={
+                  show.hosts?.find((h) => h.isPrimary)?.name ??
+                  show.hosts?.[0]?.name
+                }
                 imageUrl={show.imageUrl}
-                hosts={show.hosts?.map((h) => ({ name: h.name, avatarUrl: h.avatarUrl }))}
+                hosts={show.hosts?.map((h) => ({
+                  name: h.name,
+                  avatarUrl: h.avatarUrl,
+                }))}
                 timeSlot={show.timeSlot}
                 days={show.days}
                 dayPart={show.dayPart}
                 category={show.category}
+                streamId={show.streamId}
+                isSyndicated={show.isSyndicated}
               />
             ))}
           </div>

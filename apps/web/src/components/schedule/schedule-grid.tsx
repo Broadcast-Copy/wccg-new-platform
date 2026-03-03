@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AppImage as Image } from "@/components/ui/app-image";
+import { Badge } from "@/components/ui/badge";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 import Link from "next/link";
 import {
@@ -14,6 +15,10 @@ import {
   Newspaper,
   Sparkles,
   Church,
+  Info,
+  Lock,
+  Megaphone,
+  User,
 } from "lucide-react";
 import {
   WEEKDAY_SHOWS,
@@ -21,9 +26,56 @@ import {
   SUNDAY_SHOWS,
   GOSPEL_SHOWS,
   DAY_PART_THEMES,
+  getDayPart,
   type ShowData,
 } from "@/data/shows";
 import { PROGRAMMING_NOTES } from "@/data/schedule";
+
+// ---------------------------------------------------------------------------
+// Stream channel info
+// ---------------------------------------------------------------------------
+
+const STREAM_INFO: Record<string, { name: string; logo: string }> = {
+  stream_wccg: { name: "WCCG 104.5 FM", logo: "/images/logos/wccg-logo.png" },
+  stream_soul: { name: "Soul 104.5", logo: "/images/logos/soul-1045-logo.png" },
+  stream_hot: { name: "Hot 104.5", logo: "/images/logos/hot-1045-logo.png" },
+  stream_vibe: { name: "The Vibe", logo: "/images/logos/the-vibe-logo.png" },
+  stream_yard: {
+    name: "Yard Riddim",
+    logo: "/images/logos/yard-riddim-logo.png",
+  },
+  stream_mixsquad: {
+    name: "MixxSquadd Radio",
+    logo: "/images/logos/mix-squad-logo.png",
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Day part badge styles
+// ---------------------------------------------------------------------------
+
+function dayPartStyle(dayPart?: string): { bg: string; text: string } {
+  if (!dayPart)
+    return { bg: "bg-foreground/[0.06]", text: "text-muted-foreground" };
+  const d = dayPart.toLowerCase();
+  if (d.includes("morning"))
+    return { bg: "bg-amber-500/15", text: "text-amber-400" };
+  if (d.includes("midday"))
+    return { bg: "bg-[#74ddc7]/15", text: "text-[#74ddc7]" };
+  if (d.includes("afternoon"))
+    return { bg: "bg-orange-500/15", text: "text-orange-400" };
+  if (d.includes("evening"))
+    return { bg: "bg-[#7401df]/15", text: "text-[#7401df]" };
+  if (d.includes("overnight"))
+    return { bg: "bg-blue-500/15", text: "text-blue-400" };
+  if (d.includes("gospel"))
+    return { bg: "bg-yellow-500/15", text: "text-yellow-400" };
+  if (d.includes("mix"))
+    return { bg: "bg-pink-500/15", text: "text-pink-400" };
+  if (d.includes("weekend"))
+    return { bg: "bg-indigo-500/15", text: "text-indigo-400" };
+  return { bg: "bg-foreground/[0.06]", text: "text-muted-foreground" };
+}
 
 // ---------------------------------------------------------------------------
 // Day tabs
@@ -40,12 +92,27 @@ const DAY_TABS = [
 ] as const;
 
 // ---------------------------------------------------------------------------
-// Show Tile
+// Show Tile — wide format matching reference site
 // ---------------------------------------------------------------------------
 
 function ShowTile({ show }: { show: ShowData }) {
   const { open } = useStreamPlayer();
   const heroImage = show.showImageUrl || show.imageUrl;
+  const stream = STREAM_INFO[show.streamId];
+  const dpStyle = dayPartStyle(getDayPart(show));
+  const dayPart = getDayPart(show);
+
+  // Format schedule: "Weekdays: 6:00 AM – 10:00 AM, EST"
+  const scheduleLine = (() => {
+    const dayLabel =
+      show.days === "Monday - Friday"
+        ? "Weekdays"
+        : show.days === "Every Day"
+          ? "Daily"
+          : show.days;
+    const timePart = show.timeSlot.replace(" - ", " \u2013 ");
+    return `${dayLabel}: ${timePart}, EST`;
+  })();
 
   const handleTogglePlay = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -54,86 +121,139 @@ function ShowTile({ show }: { show: ShowData }) {
   };
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-border bg-white/[0.03] transition-all duration-300 hover:bg-white/[0.05] hover:border-input">
-      <div className="flex items-stretch">
-        {/* Left: Show Info */}
-        <div className="flex flex-1 items-center gap-4 sm:gap-5 p-4 sm:p-6">
-          {/* Show Image */}
-          <Link
-            href={`/shows/${show.slug}`}
-            className="relative flex-shrink-0 h-16 w-16 sm:h-[88px] sm:w-[88px] rounded-xl overflow-hidden bg-foreground/[0.06] border border-border hover:border-white/[0.15] transition-colors"
-          >
-            {heroImage ? (
-              <Image
-                src={heroImage}
-                alt={show.name}
-                fill
-                className="object-cover"
-                sizes="88px"
-              />
-            ) : (
-              <div
-                className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${show.gradient}`}
-              >
-                <Mic2 className="h-7 w-7 sm:h-8 sm:w-8 text-foreground/60" />
-              </div>
-            )}
+    <div className="group relative overflow-hidden rounded-2xl border border-border bg-card/60 transition-all duration-300 hover:bg-card hover:border-input hover:shadow-lg hover:shadow-primary/5">
+      <div className="flex flex-col sm:flex-row items-stretch">
+        {/* ── Left: Show Image ──────────────────────────────────── */}
+        <Link
+          href={`/shows/${show.slug}`}
+          className="relative flex-shrink-0 w-full sm:w-36 md:w-44 h-40 sm:h-auto overflow-hidden bg-muted"
+        >
+          {heroImage ? (
+            <Image
+              src={heroImage}
+              alt={show.name}
+              fill
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
+              sizes="(max-width: 640px) 100vw, 176px"
+            />
+          ) : (
+            <div
+              className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${show.gradient}`}
+            >
+              <Mic2 className="h-10 w-10 text-foreground/30" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent sm:hidden" />
+        </Link>
+
+        {/* ── Center: Details ───────────────────────────────────── */}
+        <div className="flex-1 min-w-0 p-4 sm:p-5 space-y-2">
+          {/* Title */}
+          <Link href={`/shows/${show.slug}`}>
+            <h3 className="text-base sm:text-lg md:text-xl font-bold text-foreground leading-tight group-hover:text-primary transition-colors line-clamp-2 uppercase tracking-wide">
+              {show.name}
+            </h3>
           </Link>
 
-          {/* Show Details */}
-          <div className="flex-1 min-w-0 space-y-1">
-            <Link href={`/shows/${show.slug}`}>
-              <h3 className="text-base sm:text-xl font-bold text-foreground group-hover:text-[#74ddc7] transition-colors">
-                {show.name}
-              </h3>
-            </Link>
+          {/* Host */}
+          <p className="text-xs sm:text-sm text-primary/70 font-medium truncate">
+            {show.hostNames}
+          </p>
 
-            {/* Host */}
-            <p className="text-xs sm:text-sm text-[#74ddc7]/70 font-medium truncate">
-              {show.hostNames}
+          {/* Schedule line */}
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+            <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0 text-primary/60" />
+            <span className="font-medium">{scheduleLine}</span>
+          </div>
+
+          {/* Tagline / description */}
+          {show.tagline && (
+            <p className="text-xs sm:text-sm text-muted-foreground/70 line-clamp-1">
+              {show.tagline}
             </p>
+          )}
 
-            {/* Time + Days */}
-            <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
-              <Clock className="h-3 w-3 flex-shrink-0" />
-              <span>
-                {show.timeSlot} &middot; {show.days}
-              </span>
-            </div>
-
-            {/* Tagline */}
-            {show.tagline && (
-              <p className="text-xs text-muted-foreground/70 line-clamp-1 hidden sm:block">
-                {show.tagline}
-              </p>
-            )}
-
-            {/* Links */}
-            <div className="flex items-center gap-4 pt-0.5">
-              <Link
-                href={`/shows/${show.slug}`}
-                className="text-[11px] sm:text-xs text-muted-foreground hover:text-foreground/70 transition-colors underline underline-offset-2"
+          {/* Badges */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {dayPart && (
+              <Badge
+                variant="outline"
+                className={`${dpStyle.bg} ${dpStyle.text} border-0 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5`}
               >
-                Show Details
-              </Link>
-              {show.isSyndicated && (
-                <span className="text-[10px] sm:text-[11px] uppercase tracking-wider font-semibold text-purple-400/60">
-                  Syndicated
-                </span>
-              )}
-            </div>
+                {dayPart}
+              </Badge>
+            )}
+            {show.isSyndicated && (
+              <Badge
+                variant="outline"
+                className="bg-purple-500/10 text-purple-400 border-0 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5"
+              >
+                Syndicated
+              </Badge>
+            )}
+          </div>
+
+          {/* Action links */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 pt-0.5">
+            <Link
+              href={`/shows/${show.slug}`}
+              className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Info className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+              <span className="underline underline-offset-2">Program Info</span>
+            </Link>
+            <Link
+              href="/rewards"
+              className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Lock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+              <span className="underline underline-offset-2 uppercase tracking-wider font-semibold">
+                Exclusive Content
+              </span>
+            </Link>
+            <Link
+              href={`/advertise?show=${show.id}`}
+              className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs text-muted-foreground/70 hover:text-primary transition-colors"
+            >
+              <Megaphone className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+              <span className="underline underline-offset-2 uppercase tracking-wider font-semibold">
+                Advertise
+              </span>
+            </Link>
           </div>
         </div>
 
-        {/* Right: Play */}
-        <div className="flex flex-col items-center justify-center gap-2 px-4 sm:px-8 py-4 border-l border-border bg-white/[0.02] min-w-[100px] sm:min-w-[140px]">
+        {/* ── Right: Stream + Play ─────────────────────────────── */}
+        <div className="flex sm:flex-col items-center justify-between sm:justify-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t sm:border-t-0 sm:border-l border-border bg-foreground/[0.02] sm:min-w-[120px] md:min-w-[140px]">
+          {/* Channel badge */}
+          {stream && (
+            <Link
+              href={`/channels/${show.streamId}`}
+              className="flex items-center gap-2 group/channel"
+            >
+              <div className="relative h-7 w-7 sm:h-8 sm:w-8 rounded-lg overflow-hidden bg-foreground/[0.06] border border-border">
+                <Image
+                  src={stream.logo}
+                  alt={stream.name}
+                  fill
+                  className="object-cover"
+                  sizes="32px"
+                />
+              </div>
+              <p className="text-[10px] sm:text-[11px] font-bold text-foreground/80 group-hover/channel:text-primary transition-colors hidden md:block leading-tight">
+                {stream.name}
+              </p>
+            </Link>
+          )}
+
+          {/* Play */}
           <button
             onClick={handleTogglePlay}
             className="relative group/play"
             aria-label="Listen Live"
           >
-            <div className="flex h-14 w-14 sm:h-20 sm:w-20 items-center justify-center rounded-xl transition-all bg-foreground/[0.06] text-muted-foreground hover:bg-[#74ddc7]/20 hover:text-[#74ddc7]">
-              <Play className="h-6 w-6 sm:h-7 sm:w-7 ml-0.5" />
+            <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-xl transition-all bg-foreground/[0.06] text-muted-foreground hover:bg-primary/20 hover:text-primary">
+              <Play className="h-5 w-5 sm:h-6 sm:w-6 ml-0.5" />
             </div>
           </button>
           <span className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
@@ -175,7 +295,8 @@ function DayPartThemes() {
         ))}
       </div>
       <p className="text-[10px] text-muted-foreground/60 mt-2 sm:hidden">
-        Mix Shows at 12pm / 5pm / 10pm weekdays &middot; 12pm / 6pm / 9pm weekends
+        Mix Shows at 12pm / 5pm / 10pm weekdays &middot; 12pm / 6pm / 9pm
+        weekends
       </p>
     </div>
   );
@@ -191,13 +312,15 @@ function ProgrammingNotes() {
       <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-400/20 px-3 py-2 flex-1">
         <Cloud className="h-3.5 w-3.5 text-sky-400 flex-shrink-0" />
         <p className="text-[11px] text-sky-300/80">
-          <span className="font-bold">ACCUWEATHER</span> — Weather forecast at :30 after each hour till 5pm
+          <span className="font-bold">ACCUWEATHER</span> — Weather forecast at
+          :30 after each hour till 5pm
         </p>
       </div>
       <div className="flex items-center gap-2 rounded-xl bg-red-500/10 border border-red-400/20 px-3 py-2 flex-1">
         <Newspaper className="h-3.5 w-3.5 text-red-400 flex-shrink-0" />
         <p className="text-[11px] text-red-300/80">
-          <span className="font-bold">ABC ONE NEWS</span> — Hourly &amp; Breaking News at :55 after each hour till 6pm
+          <span className="font-bold">ABC ONE NEWS</span> — Hourly &amp;
+          Breaking News at :55 after each hour till 6pm
         </p>
       </div>
     </div>
@@ -217,7 +340,8 @@ function GospelCaravanBanner() {
           The Sunday Gospel Caravan
         </p>
         <p className="text-[11px] text-amber-300/50">
-          6:00 AM &ndash; 3:00 PM &middot; Inspirational programming every Sunday morning
+          6:00 AM &ndash; 3:00 PM &middot; Inspirational programming every
+          Sunday morning
         </p>
       </div>
       <Sparkles className="h-4 w-4 text-amber-400/40 ml-auto hidden sm:block" />
@@ -240,7 +364,7 @@ export function ScheduleGrid() {
   return (
     <div className="space-y-6">
       {/* Station Header */}
-      <div className="flex items-center gap-3 rounded-xl bg-white/[0.03] border border-border px-4 py-3">
+      <div className="flex items-center gap-3 rounded-xl bg-foreground/[0.03] border border-border px-4 py-3">
         <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-foreground/[0.06]">
           <Image
             src="/images/logos/wccg-logo.png"
@@ -257,7 +381,7 @@ export function ScheduleGrid() {
           </p>
         </div>
         <div className="ml-auto flex items-center gap-1.5">
-          <Radio className="h-3.5 w-3.5 text-[#74ddc7]/60" />
+          <Radio className="h-3.5 w-3.5 text-primary/60" />
           <span className="text-[11px] text-muted-foreground/70 font-medium uppercase tracking-wider">
             Program Guide
           </span>
@@ -274,13 +398,13 @@ export function ScheduleGrid() {
               onClick={() => setActiveTab(tab.key)}
               className={`rounded-full px-5 py-2 text-sm font-medium transition-all ${
                 isActive
-                  ? "bg-[#74ddc7] text-[#0a0a0f] shadow-md shadow-[#74ddc7]/20"
-                  : "bg-foreground/[0.06] text-muted-foreground hover:bg-white/[0.1] hover:text-foreground/80"
+                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                  : "bg-foreground/[0.06] text-muted-foreground hover:bg-foreground/[0.1] hover:text-foreground/80"
               }`}
             >
               {tab.label}
               <span
-                className={`ml-1.5 text-xs ${isActive ? "text-[#0a0a0f]/60" : "text-muted-foreground/70"}`}
+                className={`ml-1.5 text-xs ${isActive ? "text-primary-foreground/60" : "text-muted-foreground/70"}`}
               >
                 {tab.shows.length}
               </span>
@@ -306,7 +430,7 @@ export function ScheduleGrid() {
       </div>
 
       {currentTab.shows.length === 0 && (
-        <div className="flex flex-col h-48 items-center justify-center rounded-2xl border border-dashed border-border bg-white/[0.02]">
+        <div className="flex flex-col h-48 items-center justify-center rounded-2xl border border-dashed border-border bg-foreground/[0.02]">
           <Mic2 className="h-8 w-8 text-foreground/20 mb-3" />
           <p className="text-sm font-medium text-muted-foreground">
             No shows scheduled for this day.
