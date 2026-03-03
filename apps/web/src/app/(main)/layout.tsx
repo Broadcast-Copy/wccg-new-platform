@@ -38,8 +38,6 @@ const streamingChannels = [
   { href: "/channels/stream_soul", label: "SOUL 104.5 FM", logo: "/images/logos/soul-1045-logo.png", color: "#a855f7" },
   { href: "/channels/stream_hot", label: "HOT 104.5 FM", logo: "/images/logos/hot-1045-logo.png", color: "#eab308" },
   { href: "/channels/stream_vibe", label: "104.5 THE VIBE", logo: "/images/logos/the-vibe-logo.png", color: "#3b82f6" },
-  { href: "/channels/stream_yard", label: "THE YARD", logo: "/images/logos/yard-riddim-logo.png", color: "#22c55e" },
-  { href: "/channels/stream_mixsquad", label: "MixxSquadd Radio", logo: "/images/logos/mix-squad-logo.png", color: "#f97316" },
 ];
 
 // Full nav links for mobile drawer (keep full navigation there)
