@@ -87,15 +87,15 @@ export function UserMenu() {
         {/* Role-based dashboard links */}
         {isAdmin && (
           <DropdownMenuItem asChild>
-            <Link href="/admin">
+            <Link href="/my/admin">
               <ShieldCheck className="mr-2 h-4 w-4" />
-              Admin Panel
+              Station Control
             </Link>
           </DropdownMenuItem>
         )}
         {isHost && (
           <DropdownMenuItem asChild>
-            <Link href="/dashboard">
+            <Link href="/my">
               <Mic className="mr-2 h-4 w-4" />
               Host Dashboard
             </Link>

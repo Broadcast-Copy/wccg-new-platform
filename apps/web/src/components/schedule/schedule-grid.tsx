@@ -4,14 +4,26 @@ import { useState } from "react";
 import { AppImage as Image } from "@/components/ui/app-image";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 import Link from "next/link";
-import { Play, Clock, Mic2, Radio } from "lucide-react";
+import {
+  Play,
+  Clock,
+  Mic2,
+  Radio,
+  Music,
+  Cloud,
+  Newspaper,
+  Sparkles,
+  Church,
+} from "lucide-react";
 import {
   WEEKDAY_SHOWS,
   SATURDAY_SHOWS,
   SUNDAY_SHOWS,
   GOSPEL_SHOWS,
+  DAY_PART_THEMES,
   type ShowData,
 } from "@/data/shows";
+import { PROGRAMMING_NOTES } from "@/data/schedule";
 
 // ---------------------------------------------------------------------------
 // Day tabs
@@ -134,6 +146,86 @@ function ShowTile({ show }: { show: ShowData }) {
 }
 
 // ---------------------------------------------------------------------------
+// Day Part Theme Banner
+// ---------------------------------------------------------------------------
+
+function DayPartThemes() {
+  return (
+    <div className="rounded-2xl border border-[#7401df]/30 bg-gradient-to-r from-[#7401df]/10 to-purple-900/10 p-4 sm:p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <Music className="h-4 w-4 text-[#7401df]" />
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+          Day Part &amp; Mix Show Themes
+        </h3>
+        <span className="text-[10px] text-white/30 ml-auto hidden sm:block">
+          Mix Shows at 12pm / 5pm / 10pm
+        </span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+        {DAY_PART_THEMES.map((theme) => (
+          <div
+            key={theme.dayIndex}
+            className="rounded-lg bg-white/[0.04] border border-white/[0.06] px-3 py-2.5"
+          >
+            <p className="text-xs font-bold text-[#74ddc7]">{theme.name}</p>
+            <p className="text-[11px] text-white/40 mt-0.5 line-clamp-2">
+              {theme.description}
+            </p>
+          </div>
+        ))}
+      </div>
+      <p className="text-[10px] text-white/25 mt-2 sm:hidden">
+        Mix Shows at 12pm / 5pm / 10pm weekdays &middot; 12pm / 6pm / 9pm weekends
+      </p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Programming Notes Banner
+// ---------------------------------------------------------------------------
+
+function ProgrammingNotes() {
+  return (
+    <div className="flex flex-col sm:flex-row gap-2">
+      <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-400/20 px-3 py-2 flex-1">
+        <Cloud className="h-3.5 w-3.5 text-sky-400 flex-shrink-0" />
+        <p className="text-[11px] text-sky-300/80">
+          <span className="font-bold">ACCUWEATHER</span> — Weather forecast at :30 after each hour till 5pm
+        </p>
+      </div>
+      <div className="flex items-center gap-2 rounded-xl bg-red-500/10 border border-red-400/20 px-3 py-2 flex-1">
+        <Newspaper className="h-3.5 w-3.5 text-red-400 flex-shrink-0" />
+        <p className="text-[11px] text-red-300/80">
+          <span className="font-bold">ABC ONE NEWS</span> — Hourly &amp; Breaking News at :55 after each hour till 6pm
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sunday Gospel Caravan Banner
+// ---------------------------------------------------------------------------
+
+function GospelCaravanBanner() {
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-amber-500/10 to-yellow-600/10 border border-amber-400/20 px-4 py-3">
+      <Church className="h-5 w-5 text-amber-400 flex-shrink-0" />
+      <div>
+        <p className="text-sm font-bold text-amber-300">
+          The Sunday Gospel Caravan
+        </p>
+        <p className="text-[11px] text-amber-300/50">
+          6:00 AM &ndash; 3:00 PM &middot; Inspirational programming every Sunday morning
+        </p>
+      </div>
+      <Sparkles className="h-4 w-4 text-amber-400/40 ml-auto hidden sm:block" />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Schedule Grid
 // ---------------------------------------------------------------------------
 
@@ -196,6 +288,15 @@ export function ScheduleGrid() {
           );
         })}
       </div>
+
+      {/* Programming Notes (weekday only) */}
+      {activeTab === "weekday" && <ProgrammingNotes />}
+
+      {/* Day Part Themes (weekday only) */}
+      {activeTab === "weekday" && <DayPartThemes />}
+
+      {/* Sunday Gospel Caravan Banner */}
+      {activeTab === "sunday" && <GospelCaravanBanner />}
 
       {/* Show Tiles — stacked vertically */}
       <div className="flex flex-col gap-4">

@@ -20,10 +20,7 @@ import {
   Gift,
   Trophy,
   ChevronDown,
-  HelpCircle,
 } from "lucide-react";
-
-import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 
 // Desktop nav: Home, Discover, [Streaming mega], Support
 const navLinks = [
@@ -34,10 +31,12 @@ const navLinks = [
 ];
 
 const streamingChannels = [
-  { href: "/channels", label: "WCCG 104.5 FM", description: "Hip Hop, Sports & Podcasts" },
-  { href: "/channels", label: "SOUL 104.5 FM", description: "Classic Soul & R&B" },
-  { href: "/channels", label: "HOT 104.5 FM", description: "Today's Hottest Hits" },
-  { href: "/channels", label: "104.5 THE VIBE", description: "Non-stop Vibes & Chill" },
+  { href: "/channels/stream_wccg", label: "WCCG 104.5 FM", description: "Hip Hop, Sports & Podcasts" },
+  { href: "/channels/stream_soul", label: "SOUL 104.5 FM", description: "Classic Soul & R&B" },
+  { href: "/channels/stream_hot", label: "HOT 104.5 FM", description: "Today's Hottest Hits" },
+  { href: "/channels/stream_vibe", label: "104.5 THE VIBE", description: "Non-stop Vibes & Chill" },
+  { href: "/channels/stream_yard", label: "THE YARD", description: "HBCU Culture & Music" },
+  { href: "/channels/stream_mixsquad", label: "MixxSquadd Radio", description: "24/7 DJ Mixes" },
 ];
 
 // Full nav links for mobile drawer (keep full navigation there)
@@ -98,16 +97,28 @@ function StreamingMegaMenu() {
   }, []);
 
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className={`inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all ${
+    <div ref={ref} className="relative inline-flex items-center">
+      {/* Label is a regular link — navigates to /channels */}
+      <Link
+        href="/channels"
+        className={`inline-flex items-center rounded-l-full pl-3.5 pr-1 py-1.5 text-[13px] font-medium transition-all ${
           isActive || open
             ? "bg-white/10 text-[#74ddc7]"
             : "text-white/50 hover:text-white/80 hover:bg-white/[0.04]"
         }`}
       >
         Streaming
+      </Link>
+      {/* Only the chevron arrow opens the mega menu dropdown */}
+      <button
+        onClick={() => setOpen(!open)}
+        className={`inline-flex items-center rounded-r-full pr-3 pl-0.5 py-1.5 transition-all ${
+          isActive || open
+            ? "bg-white/10 text-[#74ddc7]"
+            : "text-white/50 hover:text-white/80 hover:bg-white/[0.04]"
+        }`}
+        aria-label="Toggle streaming channels menu"
+      >
         <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
@@ -131,21 +142,17 @@ function StreamingMegaMenu() {
 }
 
 function ListenLiveButton() {
-  const { open, isOpen } = useStreamPlayer();
-
   return (
-    <button
-      onClick={open}
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold transition-all ${
-        isOpen
-          ? "bg-[#74ddc7] text-[#0a0a0f]"
-          : "bg-[#74ddc7]/10 text-[#74ddc7] border border-[#74ddc7]/20 hover:bg-[#74ddc7]/20"
-      }`}
+    <a
+      href="https://streamdb7web.securenetsystems.net/cirruscontent/WCCG"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold transition-all bg-[#74ddc7]/10 text-[#74ddc7] border border-[#74ddc7]/20 hover:bg-[#74ddc7]/20"
       aria-label="Listen live"
     >
       <Radio className="h-3.5 w-3.5" />
       <span className="hidden sm:inline">Listen Live</span>
-    </button>
+    </a>
   );
 }
 
@@ -342,6 +349,18 @@ export default function MainLayout({
                 {/* TikTok */}
                 <a href="https://tiktok.com/@wccg1045fm" target="_blank" rel="noopener noreferrer" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-white/30 hover:text-white/70 hover:bg-white/[0.1] transition-colors" aria-label="TikTok">
                   <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+                </a>
+                {/* LinkedIn */}
+                <a href="https://linkedin.com/company/wccg1045fm" target="_blank" rel="noopener noreferrer" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-white/30 hover:text-white/70 hover:bg-white/[0.1] transition-colors" aria-label="LinkedIn">
+                  <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                </a>
+                {/* Twitch */}
+                <a href="https://twitch.tv/wccg1045fm" target="_blank" rel="noopener noreferrer" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-white/30 hover:text-white/70 hover:bg-white/[0.1] transition-colors" aria-label="Twitch">
+                  <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+                </a>
+                {/* Discord */}
+                <a href="https://discord.gg/wccg1045fm" target="_blank" rel="noopener noreferrer" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-white/30 hover:text-white/70 hover:bg-white/[0.1] transition-colors" aria-label="Discord">
+                  <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg>
                 </a>
                 {/* Spotify */}
                 <a href="https://open.spotify.com" target="_blank" rel="noopener noreferrer" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-white/30 hover:text-white/70 hover:bg-white/[0.1] transition-colors" aria-label="Spotify">

@@ -421,50 +421,87 @@ export default function ShowDetailPage() {
           )}
         </TabsList>
 
-        {/* Podcasts Tab */}
+        {/* Podcasts Tab — shows podcast episodes + YouTube content from the talent */}
         <TabsContent value="podcasts">
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <PodcastPlayer episodes={show.episodes} showName={show.name} onPlay={handlePlay} isPlaying={isPlaying} currentStream={currentStream} />
-            </div>
-            <div className="space-y-4">
-              <Card>
-                <CardHeader><CardTitle className="text-base">Show Info</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Episodes</span>
-                    <span className="font-medium">{show.episodes.length}</span>
-                  </div>
-                  <Separator />
-                  {schedule && (
-                    <>
+          <div className="space-y-8">
+            {/* Podcast episodes (when available) */}
+            {show.episodes.length > 0 && (
+              <div className="grid gap-6 lg:grid-cols-3">
+                <div className="lg:col-span-2">
+                  <PodcastPlayer episodes={show.episodes} showName={show.name} onPlay={handlePlay} isPlaying={isPlaying} currentStream={currentStream} />
+                </div>
+                <div className="space-y-4">
+                  <Card>
+                    <CardHeader><CardTitle className="text-base">Show Info</CardTitle></CardHeader>
+                    <CardContent className="space-y-3">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Schedule</span>
-                        <span className="font-medium text-right text-xs">{schedule}</span>
+                        <span className="text-muted-foreground">Episodes</span>
+                        <span className="font-medium">{show.episodes.length}</span>
                       </div>
                       <Separator />
-                    </>
-                  )}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Status</span>
-                    <Badge variant={show.isActive ? "default" : "secondary"} className="text-xs">
-                      {show.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader><CardTitle className="text-base">Connect</CardTitle></CardHeader>
-                <CardContent className="space-y-2">
-                  <a href="mailto:programming@wccg1045fm.com" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    <Mail className="h-4 w-4" />programming@wccg1045fm.com
-                  </a>
-                  <Link href="/contact" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    <ExternalLink className="h-4 w-4" />Contact Us
-                  </Link>
-                </CardContent>
-              </Card>
-            </div>
+                      {schedule && (
+                        <>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Schedule</span>
+                            <span className="font-medium text-right text-xs">{schedule}</span>
+                          </div>
+                          <Separator />
+                        </>
+                      )}
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Status</span>
+                        <Badge variant={show.isActive ? "default" : "secondary"} className="text-xs">
+                          {show.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
+
+            {/* YouTube content — the talent's videos synced into the podcasts tab */}
+            <YouTubeFeed showId={show.id} showName={show.name} />
+
+            {/* Show info sidebar when no podcast episodes */}
+            {show.episodes.length === 0 && (
+              <div className="grid gap-6 lg:grid-cols-3">
+                <div className="lg:col-span-2" />
+                <div className="space-y-4">
+                  <Card>
+                    <CardHeader><CardTitle className="text-base">Show Info</CardTitle></CardHeader>
+                    <CardContent className="space-y-3">
+                      {schedule && (
+                        <>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Schedule</span>
+                            <span className="font-medium text-right text-xs">{schedule}</span>
+                          </div>
+                          <Separator />
+                        </>
+                      )}
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Status</span>
+                        <Badge variant={show.isActive ? "default" : "secondary"} className="text-xs">
+                          {show.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader><CardTitle className="text-base">Connect</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                      <a href="mailto:programming@wccg1045fm.com" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                        <Mail className="h-4 w-4" />programming@wccg1045fm.com
+                      </a>
+                      <Link href="/contact" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                        <ExternalLink className="h-4 w-4" />Contact Us
+                      </Link>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
           </div>
         </TabsContent>
 

@@ -1,6 +1,6 @@
 import { ShowCard } from "@/components/shows/show-card";
 import { Mic2, Zap, Podcast } from "lucide-react";
-import { ALL_SHOWS } from "@/data/shows";
+import { ALL_SHOWS, getDayPart, getShowById } from "@/data/shows";
 import { getHostsByShowId } from "@/data/hosts";
 
 export const metadata = {
@@ -24,6 +24,10 @@ interface Show {
   imageUrl?: string;
   isActive: boolean;
   hosts: ShowHost[];
+  timeSlot?: string;
+  days?: string;
+  dayPart?: string;
+  category?: "weekday" | "saturday" | "sunday" | "gospel" | "mixsquad";
   createdAt: string;
   updatedAt: string;
 }
@@ -38,6 +42,10 @@ function getLocalShows(): Show[] {
       description: s.description,
       imageUrl: s.showImageUrl || s.imageUrl || undefined,
       isActive: s.isActive,
+      timeSlot: s.timeSlot,
+      days: s.days,
+      dayPart: getDayPart(s),
+      category: s.category,
       hosts: hosts.map((h, i) => ({
         id: h.id,
         name: h.name,
@@ -57,7 +65,20 @@ async function getShows(): Promise<Show[]> {
     const res = await fetch(`${apiUrl}/shows`, { next: { revalidate: 300 } });
     if (!res.ok) return getLocalShows();
     const data = await res.json();
-    return data.length > 0 ? data : getLocalShows();
+    // If API returns data, enrich with local schedule info
+    if (data.length > 0) {
+      return data.map((show: Show) => {
+        const localShow = getShowById(show.id);
+        return {
+          ...show,
+          timeSlot: show.timeSlot ?? localShow?.timeSlot,
+          days: show.days ?? localShow?.days,
+          dayPart: show.dayPart ?? (localShow ? getDayPart(localShow) : undefined),
+          category: show.category ?? localShow?.category,
+        };
+      });
+    }
+    return getLocalShows();
   } catch {
     return getLocalShows();
   }
@@ -107,9 +128,19 @@ export default async function ShowsPage() {
           <h2 className="text-xl font-semibold">Active Shows</h2>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {activeShows.map((show) => (
-              <ShowCard key={show.id} showId={show.id} title={show.name} description={show.description}
-                hostName={show.hosts?.find((h) => h.isPrimary)?.name ?? show.hosts?.[0]?.name} imageUrl={show.imageUrl}
-                hosts={show.hosts?.map((h) => ({ name: h.name, avatarUrl: h.avatarUrl }))} />
+              <ShowCard
+                key={show.id}
+                showId={show.id}
+                title={show.name}
+                description={show.description}
+                hostName={show.hosts?.find((h) => h.isPrimary)?.name ?? show.hosts?.[0]?.name}
+                imageUrl={show.imageUrl}
+                hosts={show.hosts?.map((h) => ({ name: h.name, avatarUrl: h.avatarUrl }))}
+                timeSlot={show.timeSlot}
+                days={show.days}
+                dayPart={show.dayPart}
+                category={show.category}
+              />
             ))}
           </div>
         </section>
@@ -125,9 +156,19 @@ export default async function ShowsPage() {
           <h2 className="text-xl font-semibold text-muted-foreground">Past Shows</h2>
           <div className="grid gap-5 opacity-60 sm:grid-cols-2 lg:grid-cols-3">
             {inactiveShows.map((show) => (
-              <ShowCard key={show.id} showId={show.id} title={show.name} description={show.description}
-                hostName={show.hosts?.find((h) => h.isPrimary)?.name ?? show.hosts?.[0]?.name} imageUrl={show.imageUrl}
-                hosts={show.hosts?.map((h) => ({ name: h.name, avatarUrl: h.avatarUrl }))} />
+              <ShowCard
+                key={show.id}
+                showId={show.id}
+                title={show.name}
+                description={show.description}
+                hostName={show.hosts?.find((h) => h.isPrimary)?.name ?? show.hosts?.[0]?.name}
+                imageUrl={show.imageUrl}
+                hosts={show.hosts?.map((h) => ({ name: h.name, avatarUrl: h.avatarUrl }))}
+                timeSlot={show.timeSlot}
+                days={show.days}
+                dayPart={show.dayPart}
+                category={show.category}
+              />
             ))}
           </div>
         </section>

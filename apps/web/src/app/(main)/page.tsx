@@ -15,8 +15,11 @@ import {
   CalendarDays,
   Users2,
   ShoppingBag,
-  Gift,
-  Trophy,
+  CloudSun,
+  Clapperboard,
+  Megaphone,
+  Sparkles,
+  Music,
   Mail,
 } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
@@ -33,46 +36,76 @@ interface EventItem {
 
 const platformFeatures = [
   {
+    href: "/community",
+    icon: Users2,
+    title: "Community Directory",
+    description:
+      "Connects listeners with essential local services, housing, jobs, and support programs, all in one easy-to-access directory.",
+    color: "from-[#3b82f6] to-[#1d4ed8]",
+  },
+  {
+    href: "/weather",
+    icon: CloudSun,
+    title: "Realtime Weather Forecast",
+    description:
+      "Stay ahead with real-time weather forecasts helping you plan your day or event with confidence.",
+    color: "from-[#f59e0b] to-[#d97706]",
+  },
+  {
     href: "/channels",
     icon: Radio,
-    title: "6 Live Channels",
-    description: "Curated music, talk, and sports — streaming 24/7",
+    title: "Stream Guide",
+    description:
+      "Explore legacy streams and fresh new channels, find the perfect soundtrack anytime, anywhere.",
     color: "from-[#74ddc7] to-[#0d9488]",
+  },
+  {
+    href: "/studio",
+    icon: Clapperboard,
+    title: "Studio & Production Services",
+    description:
+      "Empowers creators with a full suite of studio production services that deliver professional quality from concept to completion.",
+    color: "from-[#7401df] to-[#4c1d95]",
   },
   {
     href: "/events",
     icon: CalendarDays,
-    title: "Events & Tickets",
-    description: "Local events, concerts, and community experiences",
-    color: "from-[#f59e0b] to-[#d97706]",
+    title: "Local Events & Tickets",
+    description:
+      "Discover local concerts, community gatherings, and exclusive events — get your tickets before they're gone.",
+    color: "from-[#ec4899] to-[#be185d]",
   },
   {
-    href: "/community",
-    icon: Users2,
-    title: "Community Directory",
-    description: "118+ local services across 9 NC counties",
-    color: "from-[#3b82f6] to-[#1d4ed8]",
-  },
-  {
-    href: "/contests",
-    icon: Trophy,
-    title: "Contests & Giveaways",
-    description: "Win cash, tickets, merch, and exclusive prizes",
+    href: "/advertise",
+    icon: Megaphone,
+    title: "Advertise & Promotions",
+    description:
+      "We drive brand visibility through dynamic advertising and promotions that connect businesses with their audience.",
     color: "from-[#dc2626] to-[#b91c1c]",
+  },
+  {
+    href: "/rewards",
+    icon: Sparkles,
+    title: "Join The mY1045 Network",
+    description:
+      "Earn rewards, join listener groups, and unlock exclusive perks with the mY1045 Network — where community all comes together.",
+    color: "from-[#8b5cf6] to-[#6d28d9]",
   },
   {
     href: "/marketplace",
     icon: ShoppingBag,
-    title: "Marketplace",
-    description: "WCCG merch and local vendor products",
-    color: "from-[#ec4899] to-[#be185d]",
+    title: "The Hub for Local Vendors & Deals",
+    description:
+      "Your Marketplace for Local Deals, Vendors, and Exclusive WCCG Perks, all in one place.",
+    color: "from-[#f472b6] to-[#be185d]",
   },
   {
-    href: "/rewards",
-    icon: Gift,
-    title: "mY1045 Perks",
-    description: "Earn points, unlock exclusive rewards",
-    color: "from-[#7401df] to-[#4c1d95]",
+    href: "/creators",
+    icon: Music,
+    title: "Made for Musicians. Built for Creators.",
+    description:
+      "Showcase your music, build your audience, and connect with fans and brands all in one powerful platform.",
+    color: "from-[#22c55e] to-[#15803d]",
   },
 ];
 

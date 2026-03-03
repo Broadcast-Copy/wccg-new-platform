@@ -22,7 +22,7 @@ export class PodcastsService {
 
     let query = this.db.from('podcast_series')
       .select('*')
-      .eq('status', 'active')
+      .eq('status', 'ACTIVE')
       .order('created_at', { ascending: false });
 
     if (filters.category) {
@@ -89,16 +89,24 @@ export class PodcastsService {
   async createSeries(userId: string, dto: Record<string, unknown>) {
     this.logger.debug('Creating podcast series');
 
+    // Generate a URL-friendly slug from the title
+    const slug = (dto.title as string)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+      + '-' + Date.now().toString(36);
+
     const { data: row, error } = await this.db.from('podcast_series')
       .insert({
         creator_id: userId,
         title: dto.title as string,
+        slug,
         description: (dto.description as string) ?? null,
         cover_image_url: (dto.coverImageUrl as string) ?? null,
         category: (dto.category as string) ?? null,
         language: (dto.language as string) ?? 'en',
-        explicit: (dto.explicit as boolean) ?? false,
-        status: 'active',
+        is_explicit: (dto.explicit as boolean) ?? false,
+        status: 'ACTIVE',
       })
       .select('*')
       .single();
@@ -138,8 +146,8 @@ export class PodcastsService {
     if (dto.coverImageUrl !== undefined) updates.cover_image_url = dto.coverImageUrl as string;
     if (dto.category !== undefined) updates.category = dto.category as string;
     if (dto.language !== undefined) updates.language = dto.language as string;
-    if (dto.explicit !== undefined) updates.explicit = dto.explicit as boolean;
-    if (dto.status !== undefined) updates.status = dto.status as string;
+    if (dto.explicit !== undefined) updates.is_explicit = dto.explicit as boolean;
+    if (dto.status !== undefined) updates.status = (dto.status as string).toUpperCase();
 
     const { error } = await this.db.from('podcast_series')
       .update(updates)
@@ -193,17 +201,23 @@ export class PodcastsService {
       }
     }
 
+    // Generate a URL-friendly slug from the title
+    const episodeSlug = (dto.title as string)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+      + '-' + Date.now().toString(36);
+
     const { data: row, error } = await this.db.from('podcast_episodes')
       .insert({
         series_id: seriesId,
         title: dto.title as string,
+        slug: episodeSlug,
         description: (dto.description as string) ?? null,
-        audio_url: dto.audioUrl as string,
+        audio_url: (dto.audioUrl as string) ?? null,
         episode_number: (dto.episodeNumber as number) ?? null,
-        duration: (dto.duration as number) ?? null,
-        explicit: (dto.explicit as boolean) ?? false,
-        status: 'published',
-        play_count: 0,
+        audio_duration: (dto.duration as number) ?? null,
+        status: 'PUBLISHED',
       })
       .select('*')
       .single();
@@ -259,9 +273,8 @@ export class PodcastsService {
     if (dto.description !== undefined) updates.description = dto.description as string;
     if (dto.audioUrl !== undefined) updates.audio_url = dto.audioUrl as string;
     if (dto.episodeNumber !== undefined) updates.episode_number = dto.episodeNumber as number;
-    if (dto.duration !== undefined) updates.duration = dto.duration as number;
-    if (dto.explicit !== undefined) updates.explicit = dto.explicit as boolean;
-    if (dto.status !== undefined) updates.status = dto.status as string;
+    if (dto.duration !== undefined) updates.audio_duration = dto.duration as number;
+    if (dto.status !== undefined) updates.status = (dto.status as string).toUpperCase();
 
     const { error } = await this.db.from('podcast_episodes')
       .update(updates)
@@ -329,12 +342,16 @@ export class PodcastsService {
       id: row.id,
       creatorId: row.creator_id,
       title: row.title,
+      slug: row.slug,
       description: row.description,
       coverImageUrl: row.cover_image_url,
       category: row.category,
       language: row.language,
-      explicit: row.explicit,
+      explicit: row.is_explicit,
       status: row.status,
+      subscriberCount: row.subscriber_count,
+      totalPlays: row.total_plays,
+      tags: row.tags,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -348,13 +365,19 @@ export class PodcastsService {
       id: row.id,
       seriesId: row.series_id,
       title: row.title,
+      slug: row.slug,
       description: row.description,
+      showNotes: row.show_notes,
       audioUrl: row.audio_url,
+      audioDuration: row.audio_duration,
+      audioFileSize: row.audio_file_size,
+      coverImageUrl: row.cover_image_url,
       episodeNumber: row.episode_number,
-      duration: row.duration,
-      explicit: row.explicit,
+      seasonNumber: row.season_number,
       playCount: row.play_count,
+      downloadCount: row.download_count,
       status: row.status,
+      publishedAt: row.published_at,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

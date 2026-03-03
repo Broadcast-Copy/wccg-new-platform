@@ -83,7 +83,7 @@ export function UpNextRail() {
                   showId={show.showId ?? show.show?.id ?? show.id}
                   title={show.title ?? show.show?.name ?? "Untitled"}
                   hostName={show.show?.hosts?.find((h) => h.isPrimary)?.name ?? show.show?.hosts?.[0]?.name}
-                  schedule={new Date(show.startTime).toLocaleTimeString(
+                  timeSlot={new Date(show.startTime).toLocaleTimeString(
                     "en-US",
                     {
                       hour: "numeric",

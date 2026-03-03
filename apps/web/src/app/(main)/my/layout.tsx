@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   User,
+  Shield,
 } from "lucide-react";
 
 const sidebarItems = [
@@ -28,7 +29,7 @@ const sidebarItems = [
   { href: "/my/events", label: "My Events", icon: CalendarDays },
   { href: "/my/directory", label: "My Directory", icon: Building2 },
   { href: "/my/podcasts", label: "My Podcasts", icon: Mic },
-  { href: "/dashboard/mixes", label: "My Mixes", icon: Music },
+  { href: "/mixes", label: "My Mixes", icon: Music },
 ];
 
 function SidebarContent({ pathname }: { pathname: string }) {
@@ -76,6 +77,33 @@ function SidebarContent({ pathname }: { pathname: string }) {
             </Link>
           );
         })}
+
+        {/* Admin divider + Station Control */}
+        <div className="my-2 border-t border-white/[0.06]" />
+        {(() => {
+          const isAdminActive =
+            pathname === "/my/admin" || pathname.startsWith("/my/admin/");
+          return (
+            <Link
+              href="/my/admin"
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all ${
+                isAdminActive
+                  ? "bg-[#dc2626]/10 text-[#dc2626]"
+                  : "text-white/50 hover:bg-[#dc2626]/5 hover:text-[#dc2626]/80"
+              }`}
+            >
+              <Shield
+                className={`h-4 w-4 shrink-0 ${
+                  isAdminActive ? "text-[#dc2626]" : "text-[#dc2626]/50"
+                }`}
+              />
+              Station Control
+              <span className="ml-auto rounded bg-[#dc2626]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#dc2626]">
+                Admin
+              </span>
+            </Link>
+          );
+        })()}
       </nav>
     </>
   );
