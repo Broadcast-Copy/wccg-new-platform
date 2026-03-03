@@ -99,11 +99,11 @@ export function Hero() {
             {/* Show info overlay */}
             <div className="absolute bottom-0 left-0 right-0 z-30 px-5 pb-5">
               <Link href={`/shows/${currentSlide.id}`} className="group inline-block mb-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-0.5">Now Playing</p>
-                <h3 className="text-base font-black text-foreground group-hover:text-[#74ddc7] transition-colors">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-0.5">Now Playing</p>
+                <h3 className="text-base font-black text-white group-hover:text-[#74ddc7] transition-colors">
                   {currentSlide.name}
                 </h3>
-                <p className="text-xs text-foreground/60">{currentSlide.hostNames}</p>
+                <p className="text-xs text-white/60">{currentSlide.hostNames}</p>
               </Link>
 
               {/* Dots */}
@@ -218,11 +218,11 @@ export function Hero() {
           {/* Show info + dots */}
           <div className="absolute bottom-0 left-0 right-0 z-30 px-6 pb-5">
             <Link href={`/shows/${currentSlide.id}`} className="group inline-block mb-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-0.5">Now Playing</p>
-              <h3 className="text-lg font-black text-foreground drop-shadow-lg group-hover:text-[#74ddc7] transition-colors">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-0.5">Now Playing</p>
+              <h3 className="text-lg font-black text-white drop-shadow-lg group-hover:text-[#74ddc7] transition-colors">
                 {currentSlide.name}
               </h3>
-              <p className="text-sm text-foreground/60 drop-shadow-md">{currentSlide.hostNames}</p>
+              <p className="text-sm text-white/60 drop-shadow-md">{currentSlide.hostNames}</p>
             </Link>
             <div className="flex items-center gap-1.5">
               {HERO_SHOWS.map((_, index) => (
