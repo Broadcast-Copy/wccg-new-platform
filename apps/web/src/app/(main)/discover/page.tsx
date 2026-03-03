@@ -257,6 +257,104 @@ export default function DiscoverPage() {
         </div>
       </section>
 
+      {/* ── Where Every Beat Belongs ──────────────────────────────────── */}
+      <section className="space-y-8 py-4">
+        {/* Heading */}
+        <div className="text-center space-y-3">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
+            Where Every Beat Belongs.
+          </h2>
+          <p className="mx-auto max-w-2xl text-sm sm:text-base text-muted-foreground leading-relaxed">
+            Legacy streams and fresh new sounds. Exclusive shows, real conversations,
+            nonstop laughs, and live coverage of Duke Football and Basketball.
+          </p>
+        </div>
+
+        {/* 2×2 Feature Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Card 1: Curated DJ Mixshows */}
+          <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
+                <AppImage src="/images/shows/crank-corleone.png" alt="DJ" fill className="object-cover" />
+              </div>
+              <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
+                <AppImage src="/images/shows/bootleg-kev-show.png" alt="DJ" fill className="object-cover" />
+              </div>
+              <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
+                <AppImage src="/images/hosts/incognito.png" alt="DJ" fill className="object-cover" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-lg sm:text-xl font-bold text-foreground">Curated DJ Mixshows</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Our curated mixshows bring together top DJs, exclusive blends, and genre-spanning sets that keep the energy moving.
+              </p>
+            </div>
+          </div>
+
+          {/* Card 2: Live Shows & Podcasts */}
+          <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
+                <AppImage src="/images/hosts/angela-yee.png" alt="Host" fill className="object-cover" />
+              </div>
+              <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
+                <AppImage src="/images/hosts/shorty-corleone.png" alt="Host" fill className="object-cover" />
+              </div>
+              <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
+                <AppImage src="/images/hosts/yung-joc.png" alt="Host" fill className="object-cover" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-lg sm:text-xl font-bold text-foreground">Live Shows &amp; Podcasts</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                From live shows to podcasts, listeners enjoy fresh voices, exclusive content, and on-demand experiences.
+              </p>
+            </div>
+          </div>
+
+          {/* Card 3: Diverse News & Weather */}
+          <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#00a651] text-white font-bold text-xs leading-tight text-center px-1">
+                <span>BN<br/>Network</span>
+              </div>
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#f47920]">
+                <CloudSun className="h-8 w-8 text-white" />
+              </div>
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#4566b0]">
+                <Newspaper className="h-8 w-8 text-white" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-lg sm:text-xl font-bold text-foreground">Diverse News &amp; Weather</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Delivering local updates, national headlines, and real-time weather alerts when you need them most.
+              </p>
+            </div>
+          </div>
+
+          {/* Card 4: Duke Sports */}
+          <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#003087]">
+                <Dribbble className="h-8 w-8 text-white" />
+              </div>
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#003087]">
+                <ShieldCheck className="h-8 w-8 text-white" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-lg sm:text-xl font-bold text-foreground">Duke Sports</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Duke Sports brings you the excitement of Blue Devil football and basketball all season long.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Quick Links Grid ─────────────────────────────────────────── */}
       <section className="space-y-4">
         <h2 className="text-xl font-bold text-foreground">Quick Links</h2>
