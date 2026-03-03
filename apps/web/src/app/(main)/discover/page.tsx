@@ -96,15 +96,13 @@ export default function DiscoverPage() {
       <section className="mx-auto max-w-3xl rounded-xl border border-border bg-card overflow-hidden">
         <div className="flex flex-col sm:flex-row items-stretch">
           {/* Left: Community image */}
-          <div className="relative w-full sm:w-[45%] aspect-[4/3] overflow-hidden p-2">
-            <div className="relative h-full w-full rounded-tl-lg rounded-br-lg overflow-hidden">
-              <AppImage
-                src="/images/discover-hero-1.png"
-                alt="WCCG 104.5 FM Community"
-                fill
-                className="object-cover"
-              />
-            </div>
+          <div className="relative w-full sm:w-[45%] aspect-[4/3] overflow-hidden">
+            <AppImage
+              src="/images/discover-hero-1.png"
+              alt="WCCG 104.5 FM Community"
+              fill
+              className="object-cover"
+            />
           </div>
 
           {/* Right: Text content */}
