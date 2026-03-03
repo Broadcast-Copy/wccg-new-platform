@@ -34,10 +34,10 @@ const navLinks = [
 ];
 
 const streamingChannels = [
-  { href: "/channels/stream_wccg", label: "WCCG 104.5 FM", logo: "/images/logos/wccg-logo.png", color: "#ef4444" },
-  { href: "/channels/stream_soul", label: "SOUL 104.5 FM", logo: "/images/logos/soul-1045-logo.png", color: "#a855f7" },
-  { href: "/channels/stream_hot", label: "HOT 104.5 FM", logo: "/images/logos/hot-1045-logo.png", color: "#eab308" },
-  { href: "/channels/stream_vibe", label: "104.5 THE VIBE", logo: "/images/logos/the-vibe-logo.png", color: "#3b82f6" },
+  { href: "/channels/stream_wccg", label: "WCCG 104.5 FM", badge: "/images/channels/wccg-badge.svg" },
+  { href: "/channels/stream_soul", label: "SOUL 104.5 FM", badge: "/images/channels/soul-badge.svg" },
+  { href: "/channels/stream_hot", label: "HOT 104.5 FM", badge: "/images/channels/hot-badge.svg" },
+  { href: "/channels/stream_vibe", label: "104.5 THE VIBE", badge: "/images/channels/vibe-badge.svg" },
 ];
 
 // Full nav links for mobile drawer (keep full navigation there)
@@ -167,24 +167,15 @@ function StreamingMegaMenu() {
                     {channel.label}
                   </span>
 
-                  {/* Color swatch + tilted white card + logo */}
-                  <div
-                    className="relative h-20 flex-1 rounded-xl overflow-hidden"
-                    style={{ backgroundColor: channel.color }}
-                  >
-                    {/* Tilted white card */}
-                    <div className="absolute -top-[15%] -right-[5%] -bottom-[15%] left-[20%] bg-white rounded-2xl -rotate-6" />
-                    {/* Logo on top — fills the white card area */}
-                    <div className="absolute inset-0 left-[18%] z-10 flex items-center justify-center">
-                      <Image
-                        src={channel.logo}
-                        alt={channel.label}
-                        width={200}
-                        height={80}
-                        className="object-contain max-h-[90%] w-auto"
-                        sizes="300px"
-                      />
-                    </div>
+                  {/* Pre-made badge image */}
+                  <div className="relative h-16 flex-1 rounded-xl overflow-hidden">
+                    <Image
+                      src={channel.badge}
+                      alt={channel.label}
+                      fill
+                      className="object-cover"
+                      sizes="400px"
+                    />
                   </div>
                 </Link>
               ))}
