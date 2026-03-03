@@ -22,6 +22,7 @@ import {
   Gift,
   Trophy,
   ChevronDown,
+  ArrowDownRight,
 } from "lucide-react";
 
 // Desktop nav: Home, Discover, [Streaming mega], Support
@@ -33,12 +34,12 @@ const navLinks = [
 ];
 
 const streamingChannels = [
-  { href: "/channels/stream_wccg", label: "WCCG 104.5 FM", description: "Hip Hop, Sports & Podcasts" },
-  { href: "/channels/stream_soul", label: "SOUL 104.5 FM", description: "Classic Soul & R&B" },
-  { href: "/channels/stream_hot", label: "HOT 104.5 FM", description: "Today's Hottest Hits" },
-  { href: "/channels/stream_vibe", label: "104.5 THE VIBE", description: "Non-stop Vibes & Chill" },
-  { href: "/channels/stream_yard", label: "THE YARD", description: "HBCU Culture & Music" },
-  { href: "/channels/stream_mixsquad", label: "MixxSquadd Radio", description: "24/7 DJ Mixes" },
+  { href: "/channels/stream_wccg", label: "WCCG 104.5 FM", logo: "/images/logos/wccg-logo.png", color: "#ef4444" },
+  { href: "/channels/stream_soul", label: "SOUL 104.5 FM", logo: "/images/logos/soul-1045-logo.png", color: "#a855f7" },
+  { href: "/channels/stream_hot", label: "HOT 104.5 FM", logo: "/images/logos/hot-1045-logo.png", color: "#eab308" },
+  { href: "/channels/stream_vibe", label: "104.5 THE VIBE", logo: "/images/logos/the-vibe-logo.png", color: "#3b82f6" },
+  { href: "/channels/stream_yard", label: "THE YARD", logo: "/images/logos/yard-riddim-logo.png", color: "#22c55e" },
+  { href: "/channels/stream_mixsquad", label: "MixxSquadd Radio", logo: "/images/logos/mix-squad-logo.png", color: "#f97316" },
 ];
 
 // Full nav links for mobile drawer (keep full navigation there)
@@ -125,18 +126,69 @@ function StreamingMegaMenu() {
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-2 w-72 rounded-xl border border-border bg-card p-2 shadow-2xl">
-          {streamingChannels.map((channel) => (
-            <Link
-              key={channel.label}
-              href={channel.href}
-              onClick={() => setOpen(false)}
-              className="flex flex-col gap-0.5 rounded-lg px-3 py-2.5 hover:bg-foreground/[0.06] transition-colors"
-            >
-              <span className="text-sm font-semibold text-foreground">{channel.label}</span>
-              <span className="text-xs text-muted-foreground">{channel.description}</span>
-            </Link>
-          ))}
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-[760px] rounded-2xl border border-border bg-card shadow-2xl overflow-hidden z-50">
+          <div className="flex">
+            {/* ── Left: Legacy Streaming info panel (always dark) ── */}
+            <div className="relative w-[260px] flex-shrink-0 bg-[#0a0e1a] p-8 flex flex-col justify-between overflow-hidden">
+              {/* Subtle background accent */}
+              <div className="absolute -right-10 -top-10 h-[200px] w-[200px] rounded-full bg-[rgba(116,221,199,0.04)] blur-[80px]" />
+              <div className="relative z-10">
+                <h3 className="text-xl font-black text-white leading-tight mb-3">
+                  Legacy Streaming
+                </h3>
+                <p className="text-[13px] text-white/40 leading-relaxed">
+                  These timeless streams carry the music, culture, and community
+                  that built our legacy—now available anytime, anywhere through
+                  our modern streaming platform.
+                </p>
+              </div>
+              <Link
+                href="/channels"
+                onClick={() => setOpen(false)}
+                className="relative z-10 inline-flex items-center gap-1.5 text-sm text-white/25 hover:text-white/50 transition-colors mt-6"
+              >
+                Browse All
+                <ArrowDownRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            {/* ── Right: Channel list with swatches + logos ── */}
+            <div className="flex-1 py-3 px-2">
+              {streamingChannels.map((channel) => (
+                <Link
+                  key={channel.label}
+                  href={channel.href}
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-4 rounded-xl px-4 py-3 hover:bg-foreground/[0.04] transition-colors group"
+                >
+                  {/* Arrow icon */}
+                  <ArrowDownRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-[#74ddc7] transition-colors flex-shrink-0" />
+
+                  {/* Channel name */}
+                  <span className="text-sm font-bold text-foreground flex-1">
+                    {channel.label}
+                  </span>
+
+                  {/* Color swatch + logo */}
+                  <div className="relative h-14 w-32 flex-shrink-0">
+                    {/* Color swatch on the left */}
+                    <div
+                      className="absolute left-0 top-1 bottom-1 w-10 rounded-lg"
+                      style={{ backgroundColor: channel.color }}
+                    />
+                    {/* Logo overlapping the swatch, extending right */}
+                    <Image
+                      src={channel.logo}
+                      alt={channel.label}
+                      fill
+                      className="object-contain object-right"
+                      sizes="128px"
+                    />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
