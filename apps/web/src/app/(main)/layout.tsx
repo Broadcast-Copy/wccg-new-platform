@@ -34,10 +34,10 @@ const navLinks = [
 ];
 
 const streamingChannels = [
-  { href: "/channels/stream_wccg", label: "WCCG 104.5 FM", badge: "/images/channels/wccg-badge.svg" },
-  { href: "/channels/stream_soul", label: "SOUL 104.5 FM", badge: "/images/channels/soul-badge.svg" },
-  { href: "/channels/stream_hot", label: "HOT 104.5 FM", badge: "/images/channels/hot-badge.svg" },
-  { href: "/channels/stream_vibe", label: "104.5 THE VIBE", badge: "/images/channels/vibe-badge.svg" },
+  { href: "/channels/stream_wccg", label: "WCCG 104.5 FM", badge: "/images/channels/wccg-badge.png" },
+  { href: "/channels/stream_soul", label: "SOUL 104.5 FM", badge: "/images/channels/soul-badge.png" },
+  { href: "/channels/stream_hot", label: "HOT 104.5 FM", badge: "/images/channels/hot-badge.png" },
+  { href: "/channels/stream_vibe", label: "104.5 THE VIBE", badge: "/images/channels/vibe-badge.png" },
 ];
 
 // Full nav links for mobile drawer (keep full navigation there)
