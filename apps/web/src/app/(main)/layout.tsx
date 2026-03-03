@@ -124,7 +124,7 @@ function StreamingMegaMenu() {
       </button>
 
       {open && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-[760px] rounded-2xl border border-border bg-card shadow-2xl overflow-hidden z-50">
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-[900px] rounded-2xl border border-border bg-card shadow-2xl overflow-hidden z-50">
           <div className="flex">
             {/* ── Left: Legacy Streaming info panel (always dark) ── */}
             <div className="relative w-[260px] flex-shrink-0 bg-[#0a0e1a] p-8 flex flex-col justify-between overflow-hidden">
@@ -169,18 +169,18 @@ function StreamingMegaMenu() {
 
                   {/* Color swatch + tilted white card + logo */}
                   <div
-                    className="relative h-16 w-36 flex-shrink-0 rounded-xl overflow-hidden"
+                    className="relative h-16 w-56 flex-shrink-0 rounded-xl overflow-hidden"
                     style={{ backgroundColor: channel.color }}
                   >
                     {/* Tilted white card */}
-                    <div className="absolute -top-[10%] -right-[5%] -bottom-[10%] left-[22%] bg-white rounded-xl -rotate-6" />
+                    <div className="absolute -top-[10%] -right-[5%] -bottom-[10%] left-[15%] bg-white rounded-xl -rotate-6" />
                     {/* Logo on top */}
                     <Image
                       src={channel.logo}
                       alt={channel.label}
                       fill
                       className="relative z-10 object-contain p-2"
-                      sizes="144px"
+                      sizes="224px"
                     />
                   </div>
                 </Link>
