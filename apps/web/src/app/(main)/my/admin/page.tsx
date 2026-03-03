@@ -123,7 +123,7 @@ export default function StationControlPage() {
             <Link
               key={mod.title}
               href={mod.href}
-              className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:border-input hover:shadow-lg hover:shadow-black/20"
+              className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:border-input hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20"
             >
               <div className="flex items-start gap-4">
                 <div

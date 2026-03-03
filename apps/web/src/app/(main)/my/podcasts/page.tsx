@@ -173,9 +173,9 @@ function getSeriesStatusStyle(status: PodcastSeries["status"]): string {
     case "ACTIVE":
       return "border-[#74ddc7]/30 bg-[#74ddc7]/10 text-[#74ddc7]";
     case "DRAFT":
-      return "border-yellow-500/30 bg-yellow-500/10 text-yellow-400";
+      return "border-yellow-500/30 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400";
     case "PAUSED":
-      return "border-orange-500/30 bg-orange-500/10 text-orange-400";
+      return "border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-400";
     case "ARCHIVED":
       return "border-gray-500/30 bg-gray-500/10 text-muted-foreground";
     default:
@@ -188,9 +188,9 @@ function getEpisodeStatusStyle(status: PodcastEpisode["status"]): string {
     case "PUBLISHED":
       return "border-[#74ddc7]/30 bg-[#74ddc7]/10 text-[#74ddc7]";
     case "DRAFT":
-      return "border-yellow-500/30 bg-yellow-500/10 text-yellow-400";
+      return "border-yellow-500/30 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400";
     case "SCHEDULED":
-      return "border-blue-500/30 bg-blue-500/10 text-blue-400";
+      return "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400";
     case "ARCHIVED":
       return "border-gray-500/30 bg-gray-500/10 text-muted-foreground";
     default:
@@ -775,7 +775,7 @@ export default function MyPodcastsPage() {
                       className={`flex flex-col items-center gap-1 rounded-lg border px-2 py-2.5 transition-all text-center ${
                         seriesForm.productionType === opt.key
                           ? `border-[${opt.color}] bg-[${opt.color}]/10 ring-1 ring-[${opt.color}]/30`
-                          : "border-border bg-white/[0.02] hover:border-white/[0.15]"
+                          : "border-border bg-foreground/[0.02] hover:border-foreground/[0.15]"
                       }`}
                       style={
                         seriesForm.productionType === opt.key
@@ -783,8 +783,8 @@ export default function MyPodcastsPage() {
                           : undefined
                       }
                     >
-                      <opt.icon className="h-5 w-5" style={{ color: seriesForm.productionType === opt.key ? opt.color : "rgba(255,255,255,0.4)" }} />
-                      <p className="text-[11px] font-semibold leading-tight" style={{ color: seriesForm.productionType === opt.key ? opt.color : "rgba(255,255,255,0.6)" }}>
+                      <opt.icon className={`h-5 w-5 ${seriesForm.productionType !== opt.key ? "text-muted-foreground" : ""}`} style={seriesForm.productionType === opt.key ? { color: opt.color } : undefined} />
+                      <p className={`text-[11px] font-semibold leading-tight ${seriesForm.productionType !== opt.key ? "text-foreground/60" : ""}`} style={seriesForm.productionType === opt.key ? { color: opt.color } : undefined}>
                         {opt.label}
                       </p>
                       <p className="text-[9px] text-muted-foreground/70 leading-tight">{opt.sub}</p>
@@ -794,7 +794,7 @@ export default function MyPodcastsPage() {
 
                 {/* Studio info box for video modes */}
                 {seriesForm.productionType !== "audio" && (
-                  <div className="mt-1.5 rounded-lg border border-border bg-white/[0.03] p-2.5">
+                  <div className="mt-1.5 rounded-lg border border-border bg-foreground/[0.03] p-2.5">
                     <div className="flex items-center gap-2 mb-1">
                       <Camera className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="text-[11px] font-semibold text-foreground/70">

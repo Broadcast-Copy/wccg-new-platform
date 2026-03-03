@@ -120,7 +120,7 @@ export default function MyDashboardLayout({
   return (
     <div className="flex min-h-0 -mx-4 sm:-mx-6 lg:-mx-8 -mt-8">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-[240px] shrink-0 flex-col border-r border-border bg-[#0e0e18]">
+      <aside className="hidden lg:flex w-[240px] shrink-0 flex-col border-r border-border bg-sidebar">
         <SidebarContent pathname={pathname} />
       </aside>
 
@@ -129,7 +129,7 @@ export default function MyDashboardLayout({
         {/* Toggle button */}
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="fixed bottom-20 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-[#74ddc7] text-[#0a0a0f] shadow-lg"
+          className="fixed bottom-20 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-[#74ddc7] text-background shadow-lg"
           aria-label="Toggle dashboard menu"
         >
           {mobileOpen ? (
@@ -146,7 +146,7 @@ export default function MyDashboardLayout({
               className="fixed inset-0 z-40 bg-black/60"
               onClick={() => setMobileOpen(false)}
             />
-            <aside className="fixed left-0 top-14 bottom-14 z-50 w-[260px] overflow-y-auto bg-[#0e0e18] border-r border-border shadow-2xl">
+            <aside className="fixed left-0 top-14 bottom-14 z-50 w-[260px] overflow-y-auto bg-sidebar border-r border-border shadow-2xl">
               <div onClick={() => setMobileOpen(false)}>
                 <SidebarContent pathname={pathname} />
               </div>

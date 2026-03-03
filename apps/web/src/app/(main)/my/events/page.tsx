@@ -82,9 +82,9 @@ function getStatusColor(status: string): string {
     case "PUBLISHED":
       return "border-[#74ddc7]/30 bg-[#74ddc7]/10 text-[#74ddc7]";
     case "DRAFT":
-      return "border-yellow-500/30 bg-yellow-500/10 text-yellow-400";
+      return "border-yellow-500/30 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400";
     case "CANCELLED":
-      return "border-red-500/30 bg-red-500/10 text-red-400";
+      return "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400";
     case "COMPLETED":
       return "border-gray-500/30 bg-gray-500/10 text-muted-foreground";
     default:
@@ -97,11 +97,11 @@ function getRegistrationStatusColor(status: string): string {
     case "CONFIRMED":
       return "border-[#74ddc7]/30 bg-[#74ddc7]/10 text-[#74ddc7]";
     case "PENDING":
-      return "border-yellow-500/30 bg-yellow-500/10 text-yellow-400";
+      return "border-yellow-500/30 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400";
     case "CANCELLED":
-      return "border-red-500/30 bg-red-500/10 text-red-400";
+      return "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400";
     case "CHECKED_IN":
-      return "border-blue-500/30 bg-blue-500/10 text-blue-400";
+      return "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400";
     default:
       return "border-gray-500/30 bg-gray-500/10 text-muted-foreground";
   }

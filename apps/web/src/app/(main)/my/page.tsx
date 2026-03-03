@@ -339,7 +339,7 @@ export default function UserDashboardPage() {
           </Link>
 
           <Link href="/my/admin/settings">
-            <Card className="group border-border transition-all hover:border-white/20 hover:bg-white/5">
+            <Card className="group border-border transition-all hover:border-foreground/20 hover:bg-foreground/5">
               <CardContent className="flex items-center gap-3 pt-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-foreground/[0.06] group-hover:bg-foreground/10 transition-colors">
                   <Settings className="h-5 w-5 text-foreground/60" />
@@ -464,8 +464,8 @@ export default function UserDashboardPage() {
                     <div
                       className={`flex h-8 w-8 items-center justify-center rounded-full ${
                         tx.amount > 0
-                          ? "bg-green-500/10 text-green-400"
-                          : "bg-red-500/10 text-red-400"
+                          ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                          : "bg-red-500/10 text-red-600 dark:text-red-400"
                       }`}
                     >
                       <Star className="h-4 w-4" />
@@ -483,8 +483,8 @@ export default function UserDashboardPage() {
                     variant="outline"
                     className={
                       tx.amount > 0
-                        ? "border-green-500/30 text-green-400"
-                        : "border-red-500/30 text-red-400"
+                        ? "border-green-500/30 text-green-600 dark:text-green-400"
+                        : "border-red-500/30 text-red-600 dark:text-red-400"
                     }
                   >
                     {tx.amount > 0 ? "+" : ""}
@@ -514,7 +514,7 @@ export default function UserDashboardPage() {
             { href: "/schedule", label: "Schedule", desc: "What\u2019s on today", icon: ListMusic, color: "#7401df" },
           ].map((item) => (
             <Link key={item.href} href={item.href}>
-              <Card className="group border-border transition-all hover:border-input hover:bg-white/[0.02]">
+              <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
                 <CardContent className="flex items-center gap-3 p-4">
                   <div
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors"

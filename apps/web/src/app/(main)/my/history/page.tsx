@@ -229,7 +229,7 @@ export default function ListeningHistoryPage() {
           <Button
             variant="outline"
             size="sm"
-            className="gap-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+            className="gap-1.5 text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 hover:bg-red-500/10"
             onClick={handleClearHistory}
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -391,7 +391,7 @@ export default function ListeningHistoryPage() {
             {historyEntries.length === 0 ? (
               <Button
                 size="sm"
-                className="gap-1.5 bg-[#74ddc7] text-[#0a0a0f] hover:bg-[#74ddc7]/80"
+                className="gap-1.5 bg-[#74ddc7] text-background hover:bg-[#74ddc7]/80"
                 onClick={openStreamPlayer}
               >
                 <Radio className="h-3.5 w-3.5" />

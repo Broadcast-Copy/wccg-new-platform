@@ -118,7 +118,7 @@ function getStatusColor(status: string): string {
     case "ACTIVE":
       return "border-[#74ddc7]/30 bg-[#74ddc7]/10 text-[#74ddc7]";
     case "PENDING":
-      return "border-yellow-500/30 bg-yellow-500/10 text-yellow-400";
+      return "border-yellow-500/30 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400";
     case "INACTIVE":
       return "border-gray-500/30 bg-gray-500/10 text-muted-foreground";
     default:
@@ -129,15 +129,15 @@ function getStatusColor(status: string): string {
 function getCategoryColor(category: string): string {
   switch (category) {
     case "Restaurants":
-      return "border-orange-500/30 bg-orange-500/10 text-orange-400";
+      return "border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-400";
     case "Entertainment":
       return "border-[#7401df]/30 bg-[#7401df]/10 text-[#7401df]";
     case "Churches":
-      return "border-blue-500/30 bg-blue-500/10 text-blue-400";
+      return "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400";
     case "Health & Wellness":
-      return "border-green-500/30 bg-green-500/10 text-green-400";
+      return "border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400";
     case "Education":
-      return "border-cyan-500/30 bg-cyan-500/10 text-cyan-400";
+      return "border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400";
     default:
       return "border-gray-500/30 bg-gray-500/10 text-muted-foreground";
   }
