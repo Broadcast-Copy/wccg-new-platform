@@ -254,7 +254,7 @@ export default function StudioPage() {
                 </Button>
               </div>
               <div
-                className={`absolute -inset-1 bg-gradient-to-br ${service.color} opacity-0 group-hover:opacity-[0.03] rounded-xl transition-opacity`}
+                className={`pointer-events-none absolute -inset-1 bg-gradient-to-br ${service.color} opacity-0 group-hover:opacity-[0.03] rounded-xl transition-opacity`}
               />
             </div>
           ))}
@@ -353,7 +353,7 @@ export default function StudioPage() {
               </div>
 
               <div
-                className={`absolute -inset-1 bg-gradient-to-br ${studio.color} opacity-0 group-hover:opacity-[0.03] rounded-xl transition-opacity`}
+                className={`pointer-events-none absolute -inset-1 bg-gradient-to-br ${studio.color} opacity-0 group-hover:opacity-[0.03] rounded-xl transition-opacity`}
               />
             </div>
           ))}
