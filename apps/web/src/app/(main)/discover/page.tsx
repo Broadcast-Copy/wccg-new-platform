@@ -226,6 +226,37 @@ export default function DiscoverPage() {
         </div>
       </div>
 
+      {/* ── Community Banner ─────────────────────────────────────────── */}
+      <section className="rounded-2xl border border-border bg-card overflow-hidden">
+        <div className="flex flex-col md:flex-row items-stretch">
+          {/* Left: Station image */}
+          <div className="relative w-full md:w-[45%] min-h-[220px] md:min-h-[280px] bg-gradient-to-br from-[#1a1a2e] to-[#0a0a0f] flex items-center justify-center overflow-hidden">
+            <AppImage
+              src="/images/logos/wccg-logo.png"
+              alt="WCCG 104.5 FM"
+              width={320}
+              height={240}
+              className="object-contain p-8"
+            />
+          </div>
+
+          {/* Right: Text content */}
+          <div className="flex-1 px-8 py-8 md:px-12 md:py-10 flex flex-col justify-center space-y-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-foreground leading-tight">
+              WCCG 104.5 FM + Community<br />
+              Always Free, Always Local!
+            </h2>
+            <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-lg">
+              Your free access to nonstop hits, exclusive interviews, giveaways, and local
+              event perks — all in one place.
+            </p>
+            <p className="text-sm sm:text-base font-bold text-foreground pt-2">
+              No Subscription. No Gimmicks.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ── Quick Links Grid ─────────────────────────────────────────── */}
       <section className="space-y-4">
         <h2 className="text-xl font-bold text-foreground">Quick Links</h2>
