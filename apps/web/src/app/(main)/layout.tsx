@@ -7,6 +7,7 @@ import { UserMenu } from "@/components/auth/user-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { MobileNav } from "@/components/navigation/mobile-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeLogo } from "@/components/theme-logo";
 import { AppImage as Image } from "@/components/ui/app-image";
 import {
   Compass,
@@ -177,14 +178,7 @@ export default function MainLayout({
             href="/"
             className="flex items-center gap-2.5 group shrink-0"
           >
-            <Image
-              src="/images/logos/1045fm-logo.png"
-              alt="WCCG 104.5 FM"
-              width={500}
-              height={324}
-              className="w-[120px] h-auto"
-              priority
-            />
+            <ThemeLogo width={120} priority />
           </Link>
 
           {/* Center: Nav links — Home, Discover, Streaming, Support */}
@@ -225,13 +219,7 @@ export default function MainLayout({
             {/* Brand */}
             <div className="space-y-3 sm:col-span-2 lg:col-span-2">
               <div className="flex items-center gap-2.5">
-                <Image
-                  src="/images/logos/1045fm-logo.png"
-                  alt="WCCG 104.5 FM"
-                  width={500}
-                  height={324}
-                  className="w-[140px] h-auto"
-                />
+                <ThemeLogo width={140} />
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
                 Hip Hop, Sports, Reactions and Podcasts. Serving Fayetteville
