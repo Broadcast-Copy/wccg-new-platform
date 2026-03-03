@@ -185,7 +185,7 @@ export function Hero() {
       </div>
 
       {/* Desktop: two side-by-side rounded rectangles */}
-      <div className="hidden md:grid md:grid-cols-2 gap-4">
+      <div className="hidden md:grid md:grid-cols-[1fr_2fr] gap-4">
         {/* ── LEFT CARD: Sliding image ── */}
         <div className="relative overflow-hidden rounded-2xl border border-border aspect-[4/3] lg:aspect-auto lg:min-h-[460px]">
           {HERO_SHOWS.map((slide, index) => (
