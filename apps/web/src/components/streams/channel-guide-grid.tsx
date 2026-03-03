@@ -182,27 +182,20 @@ function ChannelTile({ stream }: { stream: Stream }) {
           )}
 
           {/* Action links */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 pt-2">
-            {isLive && (
+          {isLive && (
+            <div className="pt-2">
               <Link
                 href={`/channels/${stream.id}`}
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
               >
                 Show Information & Schedules
               </Link>
-            )}
-            <Link
-              href={`/advertise?channel=${stream.id}`}
-              className="inline-flex items-center gap-1 text-[11px] sm:text-xs text-muted-foreground/70 hover:text-[#74ddc7] transition-colors uppercase tracking-wider font-medium"
-            >
-              <Megaphone className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-              Advertise on this channel
-            </Link>
-          </div>
+            </div>
+          )}
         </div>
 
         {/* ── Right: Status / Live Now ── */}
-        <div className="flex flex-col items-center justify-center gap-2 px-4 sm:px-8 py-4 border-l border-border bg-foreground/[0.02] min-w-[100px] sm:min-w-[160px]">
+        <div className="flex flex-col items-center justify-center gap-2 px-4 sm:px-8 py-4 border-l border-border bg-foreground/[0.02] min-w-[140px] sm:min-w-[220px]">
           {isLive ? (
             <>
               {showImage ? (
@@ -317,6 +310,17 @@ export function ChannelGuideGrid({ streams }: ChannelGuideGridProps) {
           {filteredStreams.map((stream) => (
             <ChannelTile key={stream.id} stream={stream} />
           ))}
+
+          {/* Centered advertise link below all tiles */}
+          <div className="flex justify-center pt-2 pb-4">
+            <Link
+              href="/advertise"
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground/70 hover:text-[#74ddc7] transition-colors uppercase tracking-wider font-medium"
+            >
+              <Megaphone className="h-3 w-3" />
+              Advertise on our channels
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col h-48 items-center justify-center rounded-2xl border border-dashed border-border bg-foreground/[0.02]">

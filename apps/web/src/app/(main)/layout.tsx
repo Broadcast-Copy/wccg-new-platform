@@ -157,19 +157,19 @@ function StreamingMegaMenu() {
                   key={channel.label}
                   href={channel.href}
                   onClick={() => setOpen(false)}
-                  className="flex items-center gap-4 rounded-xl px-4 py-3 hover:bg-foreground/[0.04] transition-colors group"
+                  className="flex items-center gap-2 rounded-xl px-4 py-3 hover:bg-foreground/[0.04] transition-colors group"
                 >
                   {/* Arrow icon */}
                   <ArrowDownRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-[#74ddc7] transition-colors flex-shrink-0" />
 
                   {/* Channel name */}
-                  <span className="text-sm font-bold text-foreground flex-1">
+                  <span className="text-sm font-bold text-foreground w-[160px] flex-shrink-0">
                     {channel.label}
                   </span>
 
                   {/* Color swatch + tilted white card + logo */}
                   <div
-                    className="relative h-16 w-56 flex-shrink-0 rounded-xl overflow-hidden"
+                    className="relative h-16 flex-1 rounded-xl overflow-hidden"
                     style={{ backgroundColor: channel.color }}
                   >
                     {/* Tilted white card */}
@@ -179,8 +179,8 @@ function StreamingMegaMenu() {
                       src={channel.logo}
                       alt={channel.label}
                       fill
-                      className="relative z-10 object-contain p-2"
-                      sizes="224px"
+                      className="relative z-10 object-contain p-1"
+                      sizes="400px"
                     />
                   </div>
                 </Link>
