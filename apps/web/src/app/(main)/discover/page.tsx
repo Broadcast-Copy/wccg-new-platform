@@ -1,160 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AppImage } from "@/components/ui/app-image";
 import {
-  Disc3,
-  Newspaper,
-  CloudSun,
-  Trophy,
-  Church,
   Megaphone,
   ArrowRight,
   Radio,
-  ChevronRight,
-  Headphones,
-  Podcast,
-  CloudRain,
-  Globe,
-  Dribbble,
-  ShieldCheck,
   Play,
   MapPin,
   Gift,
   CalendarDays,
   ShoppingBag,
   Mic,
-  Music,
+  Disc3,
+  CloudSun,
+  Newspaper,
+  Dribbble,
+  ShieldCheck,
 } from "lucide-react";
-import {
-  ALL_SHOWS,
-  WEEKDAY_SHOWS,
-  SATURDAY_SHOWS,
-  SUNDAY_SHOWS,
-  GOSPEL_SHOWS,
-  type ShowData,
-} from "@/data/shows";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
-
-// ─── Category helpers ──────────────────────────────────────────────────
-
-const MIXSQUAD_SHOWS = ALL_SHOWS.filter((s) => s.category === "mixsquad");
-const SPORTS_SHOWS: ShowData[] = []; // placeholder for future Duke sports shows
-const MAIN_SHOWS = [...WEEKDAY_SHOWS, ...SATURDAY_SHOWS, ...SUNDAY_SHOWS.filter((s) => s.category === "sunday")];
-
-// ─── Helper: initials from name ────────────────────────────────────────────
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .filter(Boolean)
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
-
-// ─── Show card (circular image + name) ─────────────────────────────────
-
-function DiscoverShowCard({ show }: { show: ShowData }) {
-  return (
-    <Link
-      href={`/shows/${show.id}`}
-      className="group flex w-40 shrink-0 flex-col items-center gap-3 sm:w-44"
-    >
-      {/* Circular image */}
-      <div className="relative h-32 w-32 overflow-hidden rounded-full border-2 border-transparent bg-card transition-all group-hover:border-[#74ddc7] group-hover:shadow-lg group-hover:shadow-[#74ddc7]/20 sm:h-36 sm:w-36">
-        {show.imageUrl || show.showImageUrl ? (
-          <AppImage
-            src={show.imageUrl || show.showImageUrl!}
-            alt={show.name}
-            fill
-            className="object-cover transition-transform group-hover:scale-105"
-          />
-        ) : (
-          <div className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${show.gradient}`}>
-            <span className="text-2xl font-bold text-white">
-              {getInitials(show.name)}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Text */}
-      <div className="text-center">
-        <p className="text-sm font-semibold leading-tight text-foreground transition-colors group-hover:text-[#74ddc7]">
-          {show.name}
-        </p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{show.hostNames}</p>
-      </div>
-    </Link>
-  );
-}
-
-// ─── Horizontal scrollable rail ────────────────────────────────────────
-
-function ShowRail({ shows }: { shows: ShowData[] }) {
-  if (shows.length === 0) {
-    return (
-      <div className="flex h-24 items-center justify-center rounded-lg border border-border bg-card">
-        <p className="text-sm text-muted-foreground/70">
-          Shows coming soon. Stay tuned!
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="-mx-6 px-6">
-      <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-        {shows.map((show) => (
-          <DiscoverShowCard key={show.id} show={show} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Section wrapper ───────────────────────────────────────────────────
-
-interface DiscoverSectionProps {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  badge?: string;
-  children: React.ReactNode;
-}
-
-function DiscoverSection({
-  icon,
-  title,
-  description,
-  badge,
-  children,
-}: DiscoverSectionProps) {
-  return (
-    <section className="space-y-5">
-      <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          {icon}
-          <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-            {title}
-          </h2>
-          {badge && (
-            <Badge className="bg-white/10 text-foreground/70 hover:bg-white/15 text-xs border-0">
-              {badge}
-            </Badge>
-          )}
-        </div>
-        <p className="max-w-2xl text-sm text-muted-foreground">{description}</p>
-      </div>
-      {children}
-    </section>
-  );
-}
 
 // ─── Quick Link Cards ─────────────────────────────────────────────────
 
@@ -376,101 +242,7 @@ export default function DiscoverPage() {
         </div>
       </section>
 
-      {/* ── 1. Curated DJ Mixshows ──────────────────────────────────────── */}
-      <DiscoverSection
-        icon={<Disc3 className="h-6 w-6 text-[#ec4899]" />}
-        title="Curated DJ Mixshows"
-        description="Our curated mixshows bring together top DJs, exclusive blends, and genre-spanning sets that keep the energy going around the clock."
-        badge="Mix Squad"
-      >
-        <ShowRail shows={MIXSQUAD_SHOWS} />
-      </DiscoverSection>
-
-      {/* ── 2. Live Shows & Podcasts ────────────────────────────────────── */}
-      <DiscoverSection
-        icon={<Podcast className="h-6 w-6 text-[#7401df]" />}
-        title="Live Shows &amp; Podcasts"
-        description="From live shows to podcasts, listeners enjoy fresh voices, exclusive content, and on-demand experiences from top personalities."
-      >
-        <ShowRail shows={MAIN_SHOWS} />
-      </DiscoverSection>
-
-      {/* ── 3. News & Weather ───────────────────────────────────────────── */}
-      <DiscoverSection
-        icon={<Newspaper className="h-6 w-6 text-[#3b82f6]" />}
-        title="News &amp; Weather"
-        description="Stay informed with local updates, national headlines, and real-time weather alerts for the Fayetteville area."
-      >
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { icon: Globe, label: "Local News", desc: "Fayetteville-area coverage", color: "text-[#3b82f6] bg-[#3b82f6]/10" },
-            { icon: Newspaper, label: "National Headlines", desc: "Top stories daily", color: "text-[#06b6d4] bg-[#06b6d4]/10" },
-            { icon: CloudSun, label: "Weather Forecast", desc: "7-day outlook", color: "text-[#f59e0b] bg-[#f59e0b]/10" },
-            { icon: CloudRain, label: "Weather Alerts", desc: "Severe weather updates", color: "text-[#ef4444] bg-[#ef4444]/10" },
-          ].map((item) => (
-            <div
-              key={item.label}
-              className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition-all hover:border-input"
-            >
-              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${item.color}`}>
-                <item.icon className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="font-semibold text-foreground text-sm">{item.label}</p>
-                <p className="text-xs text-muted-foreground">{item.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </DiscoverSection>
-
-      {/* ── 4. Duke Sports ──────────────────────────────────────────────── */}
-      <DiscoverSection
-        icon={<Trophy className="h-6 w-6 text-[#3b82f6]" />}
-        title="Duke Sports"
-        description="Comprehensive coverage of Duke Blue Devils football and basketball — scores, highlights, and post-game analysis."
-        badge="Go Blue Devils"
-      >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-5 transition-all hover:border-input">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#3b82f6]/10 text-[#3b82f6]">
-              <Dribbble className="h-7 w-7" />
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">Duke Basketball</p>
-              <p className="text-sm text-muted-foreground">
-                Game previews, recaps, and Blue Devils basketball talk
-              </p>
-            </div>
-            <ChevronRight className="ml-auto h-5 w-5 text-foreground/20" />
-          </div>
-
-          <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-5 transition-all hover:border-input">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#3b82f6]/10 text-[#3b82f6]">
-              <ShieldCheck className="h-7 w-7" />
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">Duke Football</p>
-              <p className="text-sm text-muted-foreground">
-                Season updates, interviews, and in-depth game coverage
-              </p>
-            </div>
-            <ChevronRight className="ml-auto h-5 w-5 text-foreground/20" />
-          </div>
-        </div>
-      </DiscoverSection>
-
-      {/* ── 5. Sunday Gospel Caravan ─────────────────────────────────────── */}
-      <DiscoverSection
-        icon={<Church className="h-6 w-6 text-[#f59e0b]" />}
-        title="Sunday Gospel Caravan"
-        description="Bringing uplifting music, inspiring messages, and a community of faith together every Sunday on WCCG 104.5 FM."
-        badge="Sundays"
-      >
-        <ShowRail shows={GOSPEL_SHOWS} />
-      </DiscoverSection>
-
-      {/* ── 6. Advertise With Us CTA ────────────────────────────────────── */}
+      {/* ── Advertise With Us CTA ────────────────────────────────────── */}
       <section>
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0d9488] to-[#7401df] p-8 md:p-12">
           {/* Decorative pattern */}
