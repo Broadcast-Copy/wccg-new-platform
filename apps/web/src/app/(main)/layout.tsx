@@ -172,7 +172,7 @@ export default function MainLayout({
 
       {/* Top Header — minimal, SiriusXM-inspired */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-xl">
-        <div className="container flex h-16 items-center">
+        <div className="container flex items-center pt-[25px] pb-[15px]">
           {/* Left: Logo */}
           <Link
             href="/"
