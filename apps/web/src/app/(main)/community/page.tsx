@@ -114,22 +114,22 @@ const CATEGORIES: { label: Category; icon: React.ElementType }[] = [
 ];
 
 const CATEGORY_COLORS: Record<Category, { badge: string; marker: string }> = {
-  "Police & Sheriff":       { badge: "bg-blue-500/20 text-blue-300 border-blue-500/30", marker: "#3b82f6" },
-  "Fire & EMS":             { badge: "bg-red-500/20 text-red-300 border-red-500/30", marker: "#ef4444" },
-  Hospitals:                { badge: "bg-rose-500/20 text-rose-300 border-rose-500/30", marker: "#f43f5e" },
-  "Health Services":        { badge: "bg-green-500/20 text-green-300 border-green-500/30", marker: "#22c55e" },
-  "Senior & Social Services": { badge: "bg-violet-500/20 text-violet-300 border-violet-500/30", marker: "#8b5cf6" },
-  Utilities:                { badge: "bg-amber-500/20 text-amber-300 border-amber-500/30", marker: "#f59e0b" },
-  "Waste Management":       { badge: "bg-stone-500/20 text-stone-300 border-stone-500/30", marker: "#78716c" },
-  Transportation:           { badge: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30", marker: "#10b981" },
-  "Government Offices":     { badge: "bg-sky-500/20 text-sky-300 border-sky-500/30", marker: "#0ea5e9" },
-  "Courts & Legal":         { badge: "bg-slate-500/20 text-slate-300 border-slate-500/30", marker: "#64748b" },
-  "Animal Services":        { badge: "bg-pink-500/20 text-pink-300 border-pink-500/30", marker: "#ec4899" },
-  Agriculture:              { badge: "bg-lime-500/20 text-lime-300 border-lime-500/30", marker: "#84cc16" },
-  "Libraries & Education":  { badge: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30", marker: "#6366f1" },
-  "Parks & Recreation":     { badge: "bg-teal-500/20 text-teal-300 border-teal-500/30", marker: "#14b8a6" },
-  Military:                 { badge: "bg-orange-500/20 text-orange-300 border-orange-500/30", marker: "#f97316" },
-  "Veteran Services":       { badge: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30", marker: "#06b6d4" },
+  "Police & Sheriff":       { badge: "bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/30", marker: "#3b82f6" },
+  "Fire & EMS":             { badge: "bg-red-500/15 text-red-600 dark:text-red-300 border-red-500/30", marker: "#ef4444" },
+  Hospitals:                { badge: "bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/30", marker: "#f43f5e" },
+  "Health Services":        { badge: "bg-green-500/15 text-green-600 dark:text-green-300 border-green-500/30", marker: "#22c55e" },
+  "Senior & Social Services": { badge: "bg-violet-500/15 text-violet-600 dark:text-violet-300 border-violet-500/30", marker: "#8b5cf6" },
+  Utilities:                { badge: "bg-amber-500/15 text-amber-600 dark:text-amber-500 dark:text-amber-300 border-amber-500/30", marker: "#f59e0b" },
+  "Waste Management":       { badge: "bg-stone-500/15 text-stone-600 dark:text-stone-300 border-stone-500/30", marker: "#78716c" },
+  Transportation:           { badge: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30", marker: "#10b981" },
+  "Government Offices":     { badge: "bg-sky-500/15 text-sky-600 dark:text-sky-300 border-sky-500/30", marker: "#0ea5e9" },
+  "Courts & Legal":         { badge: "bg-slate-500/15 text-slate-600 dark:text-slate-300 border-slate-500/30", marker: "#64748b" },
+  "Animal Services":        { badge: "bg-pink-500/15 text-pink-600 dark:text-pink-300 border-pink-500/30", marker: "#ec4899" },
+  Agriculture:              { badge: "bg-lime-500/15 text-lime-600 dark:text-lime-300 border-lime-500/30", marker: "#84cc16" },
+  "Libraries & Education":  { badge: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/30", marker: "#6366f1" },
+  "Parks & Recreation":     { badge: "bg-teal-500/15 text-teal-600 dark:text-teal-500 dark:text-teal-300 border-teal-500/30", marker: "#14b8a6" },
+  Military:                 { badge: "bg-orange-500/15 text-orange-600 dark:text-orange-500 dark:text-orange-300 border-orange-500/30", marker: "#f97316" },
+  "Veteran Services":       { badge: "bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border-cyan-500/30", marker: "#06b6d4" },
 };
 
 // ---------------------------------------------------------------------------
@@ -458,25 +458,25 @@ export default function CommunityServicesPage() {
       {/* ================================================================= */}
       {/* Hero                                                              */}
       {/* ================================================================= */}
-      <section className="relative overflow-hidden rounded-xl border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-6 py-10 sm:px-10 sm:py-14">
+      <section className="relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-background via-card to-background px-6 py-10 sm:px-10 sm:py-14">
         <div className="pointer-events-none absolute -right-32 -top-32 h-64 w-64 rounded-full bg-teal-500/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
 
         <div className="relative z-10 mx-auto max-w-4xl text-center space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full bg-teal-500/10 border border-teal-500/20 px-4 py-1.5 text-sm font-medium text-teal-400">
+          <div className="inline-flex items-center gap-2 rounded-full bg-teal-500/10 border border-teal-500/20 px-4 py-1.5 text-sm font-medium text-teal-600 dark:text-teal-400">
             <Landmark className="h-4 w-4" />
             Serving {COUNTIES.length} Counties &middot; {listings.length}+ Services
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
             Community Services Directory
           </h1>
-          <p className="mx-auto max-w-2xl text-slate-400 text-base sm:text-lg">
+          <p className="mx-auto max-w-2xl text-muted-foreground text-base sm:text-lg">
             Find government services, public safety, hospitals, utilities, agriculture,
             and more across Cumberland, Sampson, and the surrounding counties.
           </p>
           <div className="flex flex-wrap justify-center gap-2 pt-2">
             {["Police", "Fire", "Hospitals", "Utilities", "Agriculture", "Veterans", "Transit", "Animal Services"].map((tag) => (
-              <span key={tag} className="rounded-full bg-slate-800/80 border border-slate-700/50 px-3 py-1 text-xs text-slate-400">
+              <span key={tag} className="rounded-full bg-muted border border-border px-3 py-1 text-xs text-muted-foreground">
                 {tag}
               </span>
             ))}
@@ -490,26 +490,26 @@ export default function CommunityServicesPage() {
       <section className="space-y-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-500/10 border border-teal-500/20">
-            <MapPin className="h-5 w-5 text-teal-400" />
+            <MapPin className="h-5 w-5 text-teal-600 dark:text-teal-400" />
           </div>
           <div>
             <h2 className="text-xl font-bold text-foreground">Government Services</h2>
-            <p className="text-sm text-slate-400">Search police, fire, hospitals, utilities, agriculture &amp; more across {COUNTIES.length} counties</p>
+            <p className="text-sm text-muted-foreground">Search police, fire, hospitals, utilities, agriculture &amp; more across {COUNTIES.length} counties</p>
           </div>
         </div>
 
         {/* Search */}
         <div className="relative max-w-xl">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
             placeholder="Search by service, city, or county…"
-            className="pl-10 h-11 bg-slate-900/50 border-slate-800 text-foreground placeholder:text-slate-500"
+            className="pl-10 h-11 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-foreground">
+            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
               <X className="h-4 w-4" />
             </button>
           )}
@@ -517,17 +517,17 @@ export default function CommunityServicesPage() {
 
         {/* County filter */}
         <div className="space-y-2">
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">County</p>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">County</p>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setActiveCounty("All")}
               className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all ${
                 activeCounty === "All"
-                  ? "bg-sky-500/20 text-sky-400 border-sky-500/30"
-                  : "bg-slate-900/50 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-foreground"
+                  ? "bg-sky-500/20 text-sky-600 dark:text-sky-400 border-sky-500/30"
+                  : "bg-muted/50 text-muted-foreground border-border hover:border-input hover:text-foreground"
               }`}
             >
-              All Counties <span className="rounded-full bg-slate-800 px-1.5 py-0 text-[10px]">{countyCount["All"]}</span>
+              All Counties <span className="rounded-full bg-muted px-1.5 py-0 text-[10px]">{countyCount["All"]}</span>
             </button>
             {COUNTIES.map((county) => (
               <button
@@ -535,13 +535,13 @@ export default function CommunityServicesPage() {
                 onClick={() => setActiveCounty(county)}
                 className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all ${
                   activeCounty === county
-                    ? "bg-sky-500/20 text-sky-400 border-sky-500/30"
-                    : "bg-slate-900/50 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-foreground"
+                    ? "bg-sky-500/20 text-sky-600 dark:text-sky-400 border-sky-500/30"
+                    : "bg-muted/50 text-muted-foreground border-border hover:border-input hover:text-foreground"
                 }`}
               >
                 {county}
                 {countyCount[county] ? (
-                  <span className="rounded-full bg-slate-800 px-1.5 py-0 text-[10px]">{countyCount[county]}</span>
+                  <span className="rounded-full bg-muted px-1.5 py-0 text-[10px]">{countyCount[county]}</span>
                 ) : null}
               </button>
             ))}
@@ -550,17 +550,17 @@ export default function CommunityServicesPage() {
 
         {/* Categories */}
         <div className="space-y-2">
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Service Type</p>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Service Type</p>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setActiveCategory("All")}
               className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all ${
                 activeCategory === "All"
-                  ? "bg-teal-500/20 text-teal-400 border-teal-500/30"
-                  : "bg-slate-900/50 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-foreground"
+                  ? "bg-teal-500/20 text-teal-600 dark:text-teal-400 border-teal-500/30"
+                  : "bg-muted/50 text-muted-foreground border-border hover:border-input hover:text-foreground"
               }`}
             >
-              All <span className="rounded-full bg-slate-800 px-1.5 py-0 text-[10px]">{categoryCount["All"]}</span>
+              All <span className="rounded-full bg-muted px-1.5 py-0 text-[10px]">{categoryCount["All"]}</span>
             </button>
             {CATEGORIES.map(({ label, icon: Icon }) => (
               <button
@@ -569,27 +569,27 @@ export default function CommunityServicesPage() {
                 className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all ${
                   activeCategory === label
                     ? `${CATEGORY_COLORS[label].badge}`
-                    : "bg-slate-900/50 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-foreground"
+                    : "bg-muted/50 text-muted-foreground border-border hover:border-input hover:text-foreground"
                 }`}
               >
                 <Icon className="h-3 w-3" />
                 {label}
                 {categoryCount[label] ? (
-                  <span className="rounded-full bg-slate-800 px-1.5 py-0 text-[10px]">{categoryCount[label]}</span>
+                  <span className="rounded-full bg-muted px-1.5 py-0 text-[10px]">{categoryCount[label]}</span>
                 ) : null}
               </button>
             ))}
           </div>
         </div>
 
-        <p className="text-sm text-slate-500">
-          Showing <span className="font-medium text-slate-300">{filteredListings.length}</span>{" "}
+        <p className="text-sm text-muted-foreground">
+          Showing <span className="font-medium text-foreground">{filteredListings.length}</span>{" "}
           {filteredListings.length === 1 ? "service" : "services"}
           {activeCategory !== "All" && (
-            <> in <span className="font-medium text-slate-300">{activeCategory}</span></>
+            <> in <span className="font-medium text-foreground">{activeCategory}</span></>
           )}
           {activeCounty !== "All" && (
-            <> &middot; <span className="font-medium text-slate-300">{activeCounty} County</span></>
+            <> &middot; <span className="font-medium text-foreground">{activeCounty} County</span></>
           )}
         </p>
 
@@ -607,12 +607,12 @@ export default function CommunityServicesPage() {
                 />
               ))
             ) : (
-              <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-lg border border-slate-800 bg-slate-900/50">
-                <Search className="h-8 w-8 text-slate-600" />
-                <p className="text-sm text-slate-500">No services found.</p>
+              <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-lg border border-border bg-muted/50">
+                <Search className="h-8 w-8 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">No services found.</p>
                 <button
                   onClick={() => { setSearchQuery(""); setActiveCategory("All"); setActiveCounty("All"); }}
-                  className="text-xs text-teal-400 hover:text-teal-300"
+                  className="text-xs text-teal-600 dark:text-teal-400 hover:text-teal-500 dark:text-teal-300"
                 >
                   Clear filters
                 </button>
@@ -621,7 +621,7 @@ export default function CommunityServicesPage() {
           </div>
 
           {/* Map panel — RIGHT */}
-          <div className="h-[600px] rounded-xl overflow-hidden border border-slate-700/50 shadow-lg lg:order-2">
+          <div className="h-[600px] rounded-xl overflow-hidden border border-border shadow-lg lg:order-2">
             <CommunityMap
               businesses={filteredListings}
               selectedBusiness={selectedListing}
@@ -636,17 +636,17 @@ export default function CommunityServicesPage() {
       {/* ================================================================= */}
       {/* Claim Your Listing CTA                                            */}
       {/* ================================================================= */}
-      <section className="relative overflow-hidden rounded-xl border border-slate-800 bg-gradient-to-r from-teal-950/50 via-slate-900 to-blue-950/50 p-8 sm:p-12">
+      <section className="relative overflow-hidden rounded-xl border border-border bg-gradient-to-r from-teal-50 dark:from-teal-950/50 via-card to-blue-50 dark:to-blue-950/50 p-8 sm:p-12">
         <div className="pointer-events-none absolute inset-0 opacity-[0.03]" style={{
           backgroundImage: "radial-gradient(circle, currentColor 1px, transparent 1px)",
           backgroundSize: "24px 24px",
         }} />
         <div className="relative z-10 mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-500/10 border border-teal-500/20">
-            <UserCheck className="h-7 w-7 text-teal-400" />
+            <UserCheck className="h-7 w-7 text-teal-600 dark:text-teal-400" />
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-foreground">Claim & Manage Your Listing</h2>
-          <p className="text-slate-400">
+          <p className="text-muted-foreground">
             Are you a government office, utility provider, or community service organization?
             Claim your listing to keep your contact information current and manage your public profile
             through your WCCG dashboard.
@@ -655,11 +655,11 @@ export default function CommunityServicesPage() {
             <Button size="lg" className="bg-teal-600 hover:bg-teal-500 text-white" asChild>
               <Link href="/my/directory"><UserCheck className="mr-2 h-4 w-4" /> Claim Your Listing</Link>
             </Button>
-            <Button variant="outline" size="lg" className="border-slate-700 text-slate-300 hover:text-foreground" asChild>
+            <Button variant="outline" size="lg" className="border-border text-muted-foreground hover:text-foreground" asChild>
               <Link href="/my/directory"><Plus className="mr-2 h-4 w-4" /> Add New Service</Link>
             </Button>
           </div>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             Free for all government &amp; community services. Log in or create an account to get started.
           </p>
         </div>
@@ -671,11 +671,11 @@ export default function CommunityServicesPage() {
       <section className="space-y-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 border border-blue-500/20">
-            <Building2 className="h-5 w-5 text-blue-400" />
+            <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
             <h2 className="text-xl font-bold text-foreground">Counties We Serve</h2>
-            <p className="text-sm text-slate-400">Government services coverage area in southeastern North Carolina</p>
+            <p className="text-sm text-muted-foreground">Government services coverage area in southeastern North Carolina</p>
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -685,10 +685,10 @@ export default function CommunityServicesPage() {
               <button
                 key={county}
                 onClick={() => { setActiveCounty(county); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                className="rounded-xl border border-slate-800 bg-slate-900/30 p-4 text-left transition-all hover:border-slate-700 hover:bg-slate-900/50"
+                className="rounded-xl border border-border bg-muted/30 p-4 text-left transition-all hover:border-border hover:bg-muted/50"
               >
                 <h3 className="font-semibold text-foreground">{county} County</h3>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {count} {count === 1 ? "service" : "services"} listed
                 </p>
               </button>
@@ -698,21 +698,21 @@ export default function CommunityServicesPage() {
       </section>
 
       {/* Fort Liberty callout */}
-      <section className="rounded-xl border border-orange-500/20 bg-gradient-to-r from-orange-950/30 via-slate-900 to-slate-900 p-6 sm:p-8">
+      <section className="rounded-xl border border-orange-500/20 bg-gradient-to-r from-orange-50 dark:from-orange-950/30 via-card to-card p-6 sm:p-8">
         <div className="flex items-start gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 border border-orange-500/20">
-            <Swords className="h-6 w-6 text-orange-400" />
+            <Swords className="h-6 w-6 text-orange-600 dark:text-orange-400" />
           </div>
           <div className="space-y-2">
             <h3 className="text-lg font-bold text-foreground">Fort Liberty (Fort Bragg)</h3>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-muted-foreground">
               Home of the XVIII Airborne Corps and U.S. Army Special Operations Command.
               Our directory includes on-post services including military police,
               fire &amp; emergency services, and Womack Army Medical Center.
             </p>
             <button
               onClick={() => { setSearchQuery("Fort Liberty"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-              className="text-sm text-orange-400 hover:text-orange-300 font-medium"
+              className="text-sm text-orange-600 dark:text-orange-400 hover:text-orange-500 dark:text-orange-300 font-medium"
             >
               View Fort Liberty services →
             </button>
@@ -747,7 +747,7 @@ function ServiceCard({
       className={`flex gap-3 rounded-lg border p-3 cursor-pointer transition-all ${
         isSelected
           ? "border-teal-500/50 bg-teal-500/5 shadow-lg shadow-teal-500/5"
-          : "border-slate-800 bg-slate-900/30 hover:border-slate-700 hover:bg-slate-900/50"
+          : "border-border bg-muted/30 hover:border-border hover:bg-muted/50"
       }`}
     >
       {/* Icon */}
@@ -762,31 +762,31 @@ function ServiceCard({
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-semibold text-sm text-foreground truncate">{listing.name}</h3>
           {listing.featured && (
-            <Badge className="shrink-0 gap-1 bg-amber-500/20 text-amber-300 border-amber-500/30 text-[10px]">
+            <Badge className="shrink-0 gap-1 bg-amber-500/15 text-amber-600 dark:text-amber-500 dark:text-amber-300 border-amber-500/30 text-[10px]">
               <Star className="h-2.5 w-2.5" /> Featured
             </Badge>
           )}
         </div>
-        <p className="text-xs text-slate-500 line-clamp-1">{listing.description}</p>
-        <div className="flex items-center gap-3 text-[11px] text-slate-500">
+        <p className="text-xs text-muted-foreground line-clamp-1">{listing.description}</p>
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{listing.city}, {listing.county} Co.</span>
-          <a href={`tel:${listing.phone.replace(/\D/g, "")}`} className="flex items-center gap-1 hover:text-teal-400" onClick={(e) => e.stopPropagation()}>
+          <a href={`tel:${listing.phone.replace(/\D/g, "")}`} className="flex items-center gap-1 hover:text-teal-600 dark:text-teal-400" onClick={(e) => e.stopPropagation()}>
             <Phone className="h-3 w-3" />{listing.phone}
           </a>
         </div>
         <div className="flex gap-2 pt-0.5">
           {listing.website && (
-            <a href={listing.website} target="_blank" rel="noopener noreferrer" className="text-[11px] text-teal-400 hover:text-teal-300 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            <a href={listing.website} target="_blank" rel="noopener noreferrer" className="text-[11px] text-teal-600 dark:text-teal-400 hover:text-teal-500 dark:text-teal-300 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
               <Globe className="h-3 w-3" /> Website
             </a>
           )}
-          <a href={directionsUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-teal-400 hover:text-teal-300 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <a href={directionsUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-teal-600 dark:text-teal-400 hover:text-teal-500 dark:text-teal-300 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
             <Navigation className="h-3 w-3" /> Directions
           </a>
           {!listing.claimed && (
             <Link
               href={`/my/directory?claim=${listing.id}`}
-              className="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1 ml-auto"
+              className="text-[11px] text-amber-600 dark:text-amber-400 hover:text-amber-500 dark:text-amber-300 flex items-center gap-1 ml-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <UserCheck className="h-3 w-3" /> Claim
