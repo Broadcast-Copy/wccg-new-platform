@@ -15,16 +15,17 @@ import {
   Hash,
   Play,
   Pencil,
+  Trash2,
   Video,
   Radio,
   Camera,
+  MoreHorizontal,
+  Settings,
+  ExternalLink,
 } from "lucide-react";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -93,7 +94,7 @@ interface PodcastEpisode {
 
 type ProductionType = "audio" | "video-live" | "video-recorded";
 
-interface CreateSeriesForm {
+interface SeriesFormData {
   title: string;
   description: string;
   category: string;
@@ -101,15 +102,17 @@ interface CreateSeriesForm {
   coverImageUrl: string;
   tags: string;
   productionType: ProductionType;
+  status: PodcastSeries["status"];
 }
 
-interface CreateEpisodeForm {
+interface EpisodeFormData {
   title: string;
   description: string;
   showNotes: string;
   audioUrl: string;
   episodeNumber: string;
   seasonNumber: string;
+  status: PodcastEpisode["status"];
 }
 
 // ─── Constants ─────────────────────────────────────────────────────────
@@ -136,7 +139,7 @@ const PODCAST_CATEGORIES = [
   "TV & Film",
 ] as const;
 
-const INITIAL_SERIES_FORM: CreateSeriesForm = {
+const INITIAL_SERIES_FORM: SeriesFormData = {
   title: "",
   description: "",
   category: "",
@@ -144,16 +147,23 @@ const INITIAL_SERIES_FORM: CreateSeriesForm = {
   coverImageUrl: "",
   tags: "",
   productionType: "audio",
+  status: "DRAFT",
 };
 
-const INITIAL_EPISODE_FORM: CreateEpisodeForm = {
+const INITIAL_EPISODE_FORM: EpisodeFormData = {
   title: "",
   description: "",
   showNotes: "",
   audioUrl: "",
   episodeNumber: "",
   seasonNumber: "",
+  status: "DRAFT",
 };
+
+// ─── LocalStorage keys ────────────────────────────────────────────────
+
+const SERIES_KEY = "wccg_podcast_series";
+const EPISODES_KEY = "wccg_podcast_episodes";
 
 // ─── Helpers ───────────────────────────────────────────────────────────
 
@@ -199,6 +209,10 @@ function getEpisodeStatusStyle(status: PodcastEpisode["status"]): string {
   }
 }
 
+function genId(): string {
+  return crypto.randomUUID?.() ?? `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 // ─── Component ─────────────────────────────────────────────────────────
 
 export default function MyPodcastsPage() {
@@ -218,27 +232,33 @@ export default function MyPodcastsPage() {
     Record<string, boolean>
   >({});
 
-  // Create series dialog
-  const [showCreateSeriesDialog, setShowCreateSeriesDialog] = useState(false);
-  const [seriesForm, setSeriesForm] =
-    useState<CreateSeriesForm>(INITIAL_SERIES_FORM);
-  const [creatingSeries, setCreatingSeries] = useState(false);
+  // Series dialog (create & edit)
+  const [showSeriesDialog, setShowSeriesDialog] = useState(false);
+  const [editingSeriesId, setEditingSeriesId] = useState<string | null>(null);
+  const [seriesForm, setSeriesForm] = useState<SeriesFormData>(INITIAL_SERIES_FORM);
+  const [savingSeries, setSavingSeries] = useState(false);
 
-  // Create episode dialog
-  const [showCreateEpisodeDialog, setShowCreateEpisodeDialog] = useState(false);
-  const [episodeForm, setEpisodeForm] =
-    useState<CreateEpisodeForm>(INITIAL_EPISODE_FORM);
-  const [creatingEpisode, setCreatingEpisode] = useState(false);
+  // Episode dialog (create & edit)
+  const [showEpisodeDialog, setShowEpisodeDialog] = useState(false);
+  const [editingEpisodeId, setEditingEpisodeId] = useState<string | null>(null);
+  const [episodeForm, setEpisodeForm] = useState<EpisodeFormData>(INITIAL_EPISODE_FORM);
+  const [savingEpisode, setSavingEpisode] = useState(false);
   const [activeSeriesForEpisode, setActiveSeriesForEpisode] =
     useState<PodcastSeries | null>(null);
 
-  // ─── Local storage helpers for offline persistence ──────────────────
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: "series" | "episode";
+    id: string;
+    seriesId?: string;
+    title: string;
+  } | null>(null);
 
-  const LOCAL_KEY = "wccg_podcast_series";
+  // ─── Local storage helpers ───────────────────────────────────────────
 
   const loadLocalSeries = useCallback((): PodcastSeries[] => {
     try {
-      const raw = localStorage.getItem(LOCAL_KEY);
+      const raw = localStorage.getItem(SERIES_KEY);
       return raw ? JSON.parse(raw) : [];
     } catch {
       return [];
@@ -247,15 +267,32 @@ export default function MyPodcastsPage() {
 
   const saveLocalSeries = useCallback((data: PodcastSeries[]) => {
     try {
-      localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
-    } catch { /* quota exceeded — ignore */ }
+      localStorage.setItem(SERIES_KEY, JSON.stringify(data));
+    } catch { /* quota exceeded */ }
   }, []);
+
+  const loadLocalEpisodes = useCallback((): Record<string, PodcastEpisode[]> => {
+    try {
+      const raw = localStorage.getItem(EPISODES_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  }, []);
+
+  const saveLocalEpisodes = useCallback(
+    (data: Record<string, PodcastEpisode[]>) => {
+      try {
+        localStorage.setItem(EPISODES_KEY, JSON.stringify(data));
+      } catch { /* quota exceeded */ }
+    },
+    [],
+  );
 
   // ─── Fetch series ──────────────────────────────────────────────────
 
   const fetchSeries = useCallback(async () => {
     if (!user) {
-      // Still load local series even without auth
       const local = loadLocalSeries();
       setSeries(local);
       setLoadingSeries(false);
@@ -265,13 +302,11 @@ export default function MyPodcastsPage() {
     try {
       const data = await apiClient<PodcastSeries[]>("/podcasts/my");
       const apiSeries = Array.isArray(data) ? data : [];
-      // Merge with local series (dedup by id)
       const local = loadLocalSeries();
       const apiIds = new Set(apiSeries.map((s) => s.id));
       const merged = [...apiSeries, ...local.filter((l) => !apiIds.has(l.id))];
       setSeries(merged);
     } catch {
-      // API unavailable — load from local storage
       const local = loadLocalSeries();
       setSeries(local);
     } finally {
@@ -283,25 +318,45 @@ export default function MyPodcastsPage() {
     fetchSeries();
   }, [fetchSeries]);
 
+  // Load local episodes on mount
+  useEffect(() => {
+    const local = loadLocalEpisodes();
+    if (Object.keys(local).length > 0) {
+      setEpisodesBySeriesId(local);
+    }
+  }, [loadLocalEpisodes]);
+
   // ─── Fetch episodes for a series ──────────────────────────────────
 
-  const fetchEpisodes = useCallback(async (seriesId: string) => {
-    setLoadingEpisodes((prev) => ({ ...prev, [seriesId]: true }));
-    try {
-      const data = await apiClient<PodcastEpisode[]>(
-        `/podcasts/${seriesId}/episodes`,
-      );
-      setEpisodesBySeriesId((prev) => ({
-        ...prev,
-        [seriesId]: Array.isArray(data) ? data : [],
-      }));
-    } catch {
-      setEpisodesBySeriesId((prev) => ({ ...prev, [seriesId]: [] }));
-      toast.error("Failed to load episodes.");
-    } finally {
-      setLoadingEpisodes((prev) => ({ ...prev, [seriesId]: false }));
-    }
-  }, []);
+  const fetchEpisodes = useCallback(
+    async (seriesId: string) => {
+      setLoadingEpisodes((prev) => ({ ...prev, [seriesId]: true }));
+      try {
+        const data = await apiClient<PodcastEpisode[]>(
+          `/podcasts/${seriesId}/episodes`,
+        );
+        const apiEps = Array.isArray(data) ? data : [];
+        // Merge with local episodes
+        const localAll = loadLocalEpisodes();
+        const localEps = localAll[seriesId] || [];
+        const apiIds = new Set(apiEps.map((e) => e.id));
+        const merged = [...apiEps, ...localEps.filter((l) => !apiIds.has(l.id))];
+        setEpisodesBySeriesId((prev) => {
+          const updated = { ...prev, [seriesId]: merged };
+          saveLocalEpisodes(updated);
+          return updated;
+        });
+      } catch {
+        // API unavailable — use local
+        const localAll = loadLocalEpisodes();
+        const localEps = localAll[seriesId] || [];
+        setEpisodesBySeriesId((prev) => ({ ...prev, [seriesId]: localEps }));
+      } finally {
+        setLoadingEpisodes((prev) => ({ ...prev, [seriesId]: false }));
+      }
+    },
+    [loadLocalEpisodes, saveLocalEpisodes],
+  );
 
   // ─── Toggle expand ─────────────────────────────────────────────────
 
@@ -311,89 +366,157 @@ export default function MyPodcastsPage() {
       return;
     }
     setExpandedSeriesId(seriesId);
-    // Fetch episodes if not already loaded
     if (!episodesBySeriesId[seriesId]) {
       fetchEpisodes(seriesId);
     }
   }
 
-  // ─── Create series ─────────────────────────────────────────────────
+  // ─── Open create series dialog ─────────────────────────────────────
 
-  async function handleCreateSeries(e: React.FormEvent) {
+  function openCreateSeriesDialog() {
+    setEditingSeriesId(null);
+    setSeriesForm(INITIAL_SERIES_FORM);
+    setShowSeriesDialog(true);
+  }
+
+  // ─── Open edit series dialog ───────────────────────────────────────
+
+  function openEditSeriesDialog(s: PodcastSeries) {
+    setEditingSeriesId(s.id);
+    setSeriesForm({
+      title: s.title,
+      description: s.description || "",
+      category: s.category || "",
+      language: s.language || "en",
+      coverImageUrl: s.coverImageUrl || "",
+      tags: s.tags?.join(", ") || "",
+      productionType: "audio",
+      status: s.status,
+    });
+    setShowSeriesDialog(true);
+  }
+
+  // ─── Save series (create or update) ────────────────────────────────
+
+  async function handleSaveSeries(e: React.FormEvent) {
     e.preventDefault();
     if (!seriesForm.title.trim()) {
       toast.error("Title is required.");
       return;
     }
 
-    setCreatingSeries(true);
+    setSavingSeries(true);
+    const now = new Date().toISOString();
 
     const payload = {
       title: seriesForm.title.trim(),
-      description: seriesForm.description.trim() || undefined,
-      category: seriesForm.category || undefined,
+      description: seriesForm.description.trim() || null,
+      category: seriesForm.category || null,
       language: seriesForm.language || "en",
-      coverImageUrl: seriesForm.coverImageUrl.trim() || undefined,
+      coverImageUrl: seriesForm.coverImageUrl.trim() || null,
       tags: seriesForm.tags
-        ? seriesForm.tags
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean)
-        : undefined,
+        ? seriesForm.tags.split(",").map((t) => t.trim()).filter(Boolean)
+        : [],
+      status: seriesForm.status,
     };
 
-    let created: PodcastSeries | null = null;
+    if (editingSeriesId) {
+      // ── Update existing series ──
+      try {
+        await apiClient<PodcastSeries>(`/podcasts/${editingSeriesId}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+      } catch {
+        // API unavailable — update locally
+      }
 
-    try {
-      created = await apiClient<PodcastSeries>("/podcasts", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-    } catch {
-      // API unavailable — create a mock series locally
-      const now = new Date().toISOString();
-      created = {
-        id: crypto.randomUUID?.() ?? `local-${Date.now()}`,
-        title: payload.title,
-        description: payload.description ?? null,
-        category: payload.category ?? null,
-        language: payload.language ?? "en",
-        coverImageUrl: payload.coverImageUrl ?? null,
-        tags: payload.tags ?? [],
-        status: "DRAFT",
-        episodeCount: 0,
-        subscriberCount: 0,
-        createdAt: now,
-        updatedAt: now,
-      };
-    }
-
-    // Persist to state & localStorage so it survives navigation
-    if (created) {
       setSeries((prev) => {
-        const updated = [created!, ...prev];
+        const updated = prev.map((s) =>
+          s.id === editingSeriesId
+            ? { ...s, ...payload, updatedAt: now }
+            : s,
+        );
         saveLocalSeries(updated);
         return updated;
       });
+
+      toast.success("Series updated!");
+    } else {
+      // ── Create new series ──
+      let created: PodcastSeries | null = null;
+
+      try {
+        created = await apiClient<PodcastSeries>("/podcasts", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+      } catch {
+        created = {
+          id: genId(),
+          ...payload,
+          tags: payload.tags ?? [],
+          status: "DRAFT",
+          episodeCount: 0,
+          subscriberCount: 0,
+          createdAt: now,
+          updatedAt: now,
+        };
+      }
+
+      if (created) {
+        setSeries((prev) => {
+          const updated = [created!, ...prev];
+          saveLocalSeries(updated);
+          return updated;
+        });
+      }
+
+      toast.success("Podcast series created!");
+
+      // Navigate to studio for new creations
+      setSavingSeries(false);
+      setShowSeriesDialog(false);
+      setSeriesForm(INITIAL_SERIES_FORM);
+      router.push("/studio/podcast");
+      return;
     }
 
-    // Close dialog and navigate to studio
-    toast.success("Podcast series created!");
-    setShowCreateSeriesDialog(false);
+    setSavingSeries(false);
+    setShowSeriesDialog(false);
     setSeriesForm(INITIAL_SERIES_FORM);
-    setCreatingSeries(false);
-    router.push("/studio/podcast");
+    setEditingSeriesId(null);
   }
 
-  // ─── Create episode ────────────────────────────────────────────────
+  // ─── Open create episode dialog ────────────────────────────────────
 
   function openCreateEpisodeDialog(s: PodcastSeries) {
     setActiveSeriesForEpisode(s);
+    setEditingEpisodeId(null);
     setEpisodeForm(INITIAL_EPISODE_FORM);
-    setShowCreateEpisodeDialog(true);
+    setShowEpisodeDialog(true);
   }
 
-  async function handleCreateEpisode(e: React.FormEvent) {
+  // ─── Open edit episode dialog ──────────────────────────────────────
+
+  function openEditEpisodeDialog(s: PodcastSeries, ep: PodcastEpisode) {
+    setActiveSeriesForEpisode(s);
+    setEditingEpisodeId(ep.id);
+    setEpisodeForm({
+      title: ep.title,
+      description: ep.description || "",
+      showNotes: ep.showNotes || "",
+      audioUrl: ep.audioUrl || "",
+      episodeNumber: ep.episodeNumber?.toString() || "",
+      seasonNumber: ep.seasonNumber?.toString() || "",
+      status: ep.status,
+    });
+    setShowEpisodeDialog(true);
+  }
+
+  // ─── Save episode (create or update) ───────────────────────────────
+
+  async function handleSaveEpisode(e: React.FormEvent) {
     e.preventDefault();
     if (!activeSeriesForEpisode) return;
     if (!episodeForm.title.trim()) {
@@ -401,44 +524,163 @@ export default function MyPodcastsPage() {
       return;
     }
 
-    setCreatingEpisode(true);
-    try {
-      const payload = {
-        title: episodeForm.title.trim(),
-        description: episodeForm.description.trim() || undefined,
-        showNotes: episodeForm.showNotes.trim() || undefined,
-        audioUrl: episodeForm.audioUrl.trim() || undefined,
-        episodeNumber: episodeForm.episodeNumber
-          ? parseInt(episodeForm.episodeNumber, 10)
-          : undefined,
-        seasonNumber: episodeForm.seasonNumber
-          ? parseInt(episodeForm.seasonNumber, 10)
-          : undefined,
-      };
+    setSavingEpisode(true);
+    const now = new Date().toISOString();
+    const seriesId = activeSeriesForEpisode.id;
 
-      await apiClient<PodcastEpisode>(
-        `/podcasts/${activeSeriesForEpisode.id}/episodes`,
-        {
-          method: "POST",
-          body: JSON.stringify(payload),
-        },
-      );
+    const payload = {
+      title: episodeForm.title.trim(),
+      description: episodeForm.description.trim() || null,
+      showNotes: episodeForm.showNotes.trim() || null,
+      audioUrl: episodeForm.audioUrl.trim() || null,
+      episodeNumber: episodeForm.episodeNumber
+        ? parseInt(episodeForm.episodeNumber, 10)
+        : null,
+      seasonNumber: episodeForm.seasonNumber
+        ? parseInt(episodeForm.seasonNumber, 10)
+        : null,
+      status: episodeForm.status,
+    };
+
+    if (editingEpisodeId) {
+      // ── Update existing episode ──
+      try {
+        await apiClient<PodcastEpisode>(
+          `/podcasts/${seriesId}/episodes/${editingEpisodeId}`,
+          { method: "PATCH", body: JSON.stringify(payload) },
+        );
+      } catch {
+        // API unavailable — update locally
+      }
+
+      setEpisodesBySeriesId((prev) => {
+        const eps = (prev[seriesId] || []).map((ep) =>
+          ep.id === editingEpisodeId
+            ? { ...ep, ...payload, updatedAt: now }
+            : ep,
+        );
+        const updated = { ...prev, [seriesId]: eps };
+        saveLocalEpisodes(updated);
+        return updated;
+      });
+
+      toast.success("Episode updated!");
+    } else {
+      // ── Create new episode ──
+      let created: PodcastEpisode | null = null;
+
+      try {
+        created = await apiClient<PodcastEpisode>(
+          `/podcasts/${seriesId}/episodes`,
+          { method: "POST", body: JSON.stringify(payload) },
+        );
+      } catch {
+        created = {
+          id: genId(),
+          seriesId,
+          ...payload,
+          tags: [],
+          status: payload.status || "DRAFT",
+          publishedAt: null,
+          createdAt: now,
+          updatedAt: now,
+        };
+      }
+
+      if (created) {
+        setEpisodesBySeriesId((prev) => {
+          const existing = prev[seriesId] || [];
+          const eps = [created!, ...existing];
+          const updated = { ...prev, [seriesId]: eps };
+          saveLocalEpisodes(updated);
+          return updated;
+        });
+
+        // Update episode count on series
+        setSeries((prev) => {
+          const updated = prev.map((s) =>
+            s.id === seriesId
+              ? { ...s, episodeCount: s.episodeCount + 1, updatedAt: now }
+              : s,
+          );
+          saveLocalSeries(updated);
+          return updated;
+        });
+      }
 
       toast.success("Episode created!");
-      setShowCreateEpisodeDialog(false);
-      setEpisodeForm(INITIAL_EPISODE_FORM);
-      setActiveSeriesForEpisode(null);
-      // Refresh episodes for this series
-      fetchEpisodes(activeSeriesForEpisode.id);
-      // Refresh series to update episode counts
-      fetchSeries();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to create episode.",
-      );
-    } finally {
-      setCreatingEpisode(false);
     }
+
+    setSavingEpisode(false);
+    setShowEpisodeDialog(false);
+    setEpisodeForm(INITIAL_EPISODE_FORM);
+    setEditingEpisodeId(null);
+    setActiveSeriesForEpisode(null);
+  }
+
+  // ─── Delete handler ─────────────────────────────────────────────────
+
+  function handleConfirmDelete() {
+    if (!deleteTarget) return;
+
+    if (deleteTarget.type === "series") {
+      // Try API delete
+      apiClient(`/podcasts/${deleteTarget.id}`, { method: "DELETE" }).catch(
+        () => {},
+      );
+
+      setSeries((prev) => {
+        const updated = prev.filter((s) => s.id !== deleteTarget.id);
+        saveLocalSeries(updated);
+        return updated;
+      });
+
+      // Remove episodes for this series
+      setEpisodesBySeriesId((prev) => {
+        const updated = { ...prev };
+        delete updated[deleteTarget.id];
+        saveLocalEpisodes(updated);
+        return updated;
+      });
+
+      if (expandedSeriesId === deleteTarget.id) {
+        setExpandedSeriesId(null);
+      }
+
+      toast.success("Series deleted.");
+    } else {
+      // Delete episode
+      const sid = deleteTarget.seriesId!;
+
+      apiClient(
+        `/podcasts/${sid}/episodes/${deleteTarget.id}`,
+        { method: "DELETE" },
+      ).catch(() => {});
+
+      setEpisodesBySeriesId((prev) => {
+        const eps = (prev[sid] || []).filter(
+          (ep) => ep.id !== deleteTarget.id,
+        );
+        const updated = { ...prev, [sid]: eps };
+        saveLocalEpisodes(updated);
+        return updated;
+      });
+
+      // Update episode count
+      setSeries((prev) => {
+        const updated = prev.map((s) =>
+          s.id === sid
+            ? { ...s, episodeCount: Math.max(0, s.episodeCount - 1) }
+            : s,
+        );
+        saveLocalSeries(updated);
+        return updated;
+      });
+
+      toast.success("Episode deleted.");
+    }
+
+    setDeleteTarget(null);
   }
 
   // ─── Auth loading ──────────────────────────────────────────────────
@@ -454,9 +696,9 @@ export default function MyPodcastsPage() {
     );
   }
 
-  // ─── Not logged in ─────────────────────────────────────────────────
+  // ─── Not logged in — still show local data ──────────────────────────
 
-  if (!user) {
+  if (!user && series.length === 0) {
     return (
       <div className="space-y-6">
         <div>
@@ -473,6 +715,320 @@ export default function MyPodcastsPage() {
     );
   }
 
+  // ─── Series form fields (shared between create & edit) ─────────────
+
+  const seriesFormFields = (
+    <div className="mt-4 space-y-4">
+      {/* Title */}
+      <div className="space-y-1.5">
+        <Label htmlFor="series-title">
+          Title <span className="text-red-400">*</span>
+        </Label>
+        <Input
+          id="series-title"
+          placeholder="My Awesome Podcast"
+          value={seriesForm.title}
+          onChange={(e) =>
+            setSeriesForm((f) => ({ ...f, title: e.target.value }))
+          }
+          required
+        />
+      </div>
+
+      {/* Description */}
+      <div className="space-y-1.5">
+        <Label htmlFor="series-description">Description</Label>
+        <Textarea
+          id="series-description"
+          placeholder="What is this podcast about?"
+          value={seriesForm.description}
+          onChange={(e) =>
+            setSeriesForm((f) => ({ ...f, description: e.target.value }))
+          }
+          rows={2}
+        />
+      </div>
+
+      {/* Production Type — only on create */}
+      {!editingSeriesId && (
+        <div className="space-y-1.5">
+          <Label>Production Type</Label>
+          <div className="grid grid-cols-3 gap-1.5">
+            {(
+              [
+                { key: "audio" as const, label: "Audio", sub: "Podcast", icon: Mic, color: "#7401df" },
+                { key: "video-live" as const, label: "Live", sub: "Broadcast", icon: Radio, color: "#dc2626" },
+                { key: "video-recorded" as const, label: "Record", sub: "& Edit", icon: Video, color: "#74ddc7" },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setSeriesForm((f) => ({ ...f, productionType: opt.key }))}
+                className={`flex flex-col items-center gap-1 rounded-lg border px-2 py-2.5 transition-all text-center ${
+                  seriesForm.productionType === opt.key
+                    ? ""
+                    : "border-border bg-foreground/[0.02] hover:border-foreground/[0.15]"
+                }`}
+                style={
+                  seriesForm.productionType === opt.key
+                    ? { borderColor: opt.color, backgroundColor: `${opt.color}1a`, boxShadow: `0 0 0 1px ${opt.color}4d` }
+                    : undefined
+                }
+              >
+                <opt.icon
+                  className={`h-5 w-5 ${seriesForm.productionType !== opt.key ? "text-muted-foreground" : ""}`}
+                  style={seriesForm.productionType === opt.key ? { color: opt.color } : undefined}
+                />
+                <p
+                  className={`text-[11px] font-semibold leading-tight ${seriesForm.productionType !== opt.key ? "text-foreground/60" : ""}`}
+                  style={seriesForm.productionType === opt.key ? { color: opt.color } : undefined}
+                >
+                  {opt.label}
+                </p>
+                <p className="text-[9px] text-muted-foreground/70 leading-tight">{opt.sub}</p>
+              </button>
+            ))}
+          </div>
+
+          {seriesForm.productionType !== "audio" && (
+            <div className="mt-1.5 rounded-lg border border-border bg-foreground/[0.03] p-2.5">
+              <div className="flex items-center gap-2 mb-1">
+                <Camera className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-[11px] font-semibold text-foreground/70">
+                  {seriesForm.productionType === "video-live" ? "Live Video Studio" : "Video Recording Studio"}
+                </span>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                2-camera setup with multi-track audio.
+                {seriesForm.productionType === "video-live"
+                  ? " Stream live to listeners in real-time."
+                  : " Record, edit, then publish."}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Status — only on edit */}
+      {editingSeriesId && (
+        <div className="space-y-1.5">
+          <Label>Status</Label>
+          <Select
+            value={seriesForm.status}
+            onValueChange={(val) =>
+              setSeriesForm((f) => ({ ...f, status: val as PodcastSeries["status"] }))
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="DRAFT">Draft</SelectItem>
+              <SelectItem value="ACTIVE">Active</SelectItem>
+              <SelectItem value="PAUSED">Paused</SelectItem>
+              <SelectItem value="ARCHIVED">Archived</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Category and Language */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label>Category</Label>
+          <Select
+            value={seriesForm.category}
+            onValueChange={(val) =>
+              setSeriesForm((f) => ({ ...f, category: val }))
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select" />
+            </SelectTrigger>
+            <SelectContent>
+              {PODCAST_CATEGORIES.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Language</Label>
+          <Select
+            value={seriesForm.language}
+            onValueChange={(val) =>
+              setSeriesForm((f) => ({ ...f, language: val }))
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="es">Spanish</SelectItem>
+              <SelectItem value="fr">French</SelectItem>
+              <SelectItem value="de">German</SelectItem>
+              <SelectItem value="pt">Portuguese</SelectItem>
+              <SelectItem value="ja">Japanese</SelectItem>
+              <SelectItem value="ko">Korean</SelectItem>
+              <SelectItem value="zh">Chinese</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Cover Image URL */}
+      <div className="space-y-1.5">
+        <Label>
+          Cover Art{" "}
+          <span className="text-[10px] text-muted-foreground/70 font-normal">
+            (optional)
+          </span>
+        </Label>
+        <Input
+          type="url"
+          placeholder="https://example.com/cover.jpg"
+          value={seriesForm.coverImageUrl}
+          onChange={(e) =>
+            setSeriesForm((f) => ({ ...f, coverImageUrl: e.target.value }))
+          }
+        />
+      </div>
+
+      {/* Tags */}
+      <div className="space-y-1.5">
+        <Label>Tags</Label>
+        <Input
+          placeholder="music, interviews, culture"
+          value={seriesForm.tags}
+          onChange={(e) =>
+            setSeriesForm((f) => ({ ...f, tags: e.target.value }))
+          }
+        />
+      </div>
+    </div>
+  );
+
+  // ─── Episode form fields (shared between create & edit) ────────────
+
+  const episodeFormFields = (
+    <div className="mt-4 space-y-4">
+      {/* Title */}
+      <div className="space-y-2">
+        <Label htmlFor="episode-title">
+          Title <span className="text-red-400">*</span>
+        </Label>
+        <Input
+          id="episode-title"
+          placeholder="Episode title"
+          value={episodeForm.title}
+          onChange={(e) =>
+            setEpisodeForm((f) => ({ ...f, title: e.target.value }))
+          }
+          required
+        />
+      </div>
+
+      {/* Description */}
+      <div className="space-y-2">
+        <Label htmlFor="episode-description">Description</Label>
+        <Textarea
+          id="episode-description"
+          placeholder="Brief episode description"
+          value={episodeForm.description}
+          onChange={(e) =>
+            setEpisodeForm((f) => ({ ...f, description: e.target.value }))
+          }
+          rows={2}
+        />
+      </div>
+
+      {/* Show Notes */}
+      <div className="space-y-2">
+        <Label htmlFor="episode-shownotes">Show Notes</Label>
+        <Textarea
+          id="episode-shownotes"
+          placeholder="Detailed show notes, links, credits..."
+          value={episodeForm.showNotes}
+          onChange={(e) =>
+            setEpisodeForm((f) => ({ ...f, showNotes: e.target.value }))
+          }
+          rows={3}
+        />
+      </div>
+
+      {/* Audio URL */}
+      <div className="space-y-2">
+        <Label htmlFor="episode-audio">Audio URL</Label>
+        <Input
+          id="episode-audio"
+          type="url"
+          placeholder="https://example.com/episode.mp3"
+          value={episodeForm.audioUrl}
+          onChange={(e) =>
+            setEpisodeForm((f) => ({ ...f, audioUrl: e.target.value }))
+          }
+        />
+      </div>
+
+      {/* Episode / Season Number + Status */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="space-y-2">
+          <Label htmlFor="episode-number">Episode #</Label>
+          <Input
+            id="episode-number"
+            type="number"
+            min={1}
+            placeholder="1"
+            value={episodeForm.episodeNumber}
+            onChange={(e) =>
+              setEpisodeForm((f) => ({ ...f, episodeNumber: e.target.value }))
+            }
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="season-number">Season #</Label>
+          <Input
+            id="season-number"
+            type="number"
+            min={1}
+            placeholder="1"
+            value={episodeForm.seasonNumber}
+            onChange={(e) =>
+              setEpisodeForm((f) => ({ ...f, seasonNumber: e.target.value }))
+            }
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Status</Label>
+          <Select
+            value={episodeForm.status}
+            onValueChange={(val) =>
+              setEpisodeForm((f) => ({
+                ...f,
+                status: val as PodcastEpisode["status"],
+              }))
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="DRAFT">Draft</SelectItem>
+              <SelectItem value="SCHEDULED">Scheduled</SelectItem>
+              <SelectItem value="PUBLISHED">Published</SelectItem>
+              <SelectItem value="ARCHIVED">Archived</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
+  );
+
   // ─── Render ────────────────────────────────────────────────────────
 
   return (
@@ -487,10 +1043,7 @@ export default function MyPodcastsPage() {
         </div>
         <Button
           className="gap-2 bg-[#7401df] hover:bg-[#7401df]/90"
-          onClick={() => {
-            setSeriesForm(INITIAL_SERIES_FORM);
-            setShowCreateSeriesDialog(true);
-          }}
+          onClick={openCreateSeriesDialog}
         >
           <Plus className="h-4 w-4" />
           Create Series
@@ -521,10 +1074,7 @@ export default function MyPodcastsPage() {
             </div>
             <Button
               className="gap-2 bg-[#7401df] hover:bg-[#7401df]/90"
-              onClick={() => {
-                setSeriesForm(INITIAL_SERIES_FORM);
-                setShowCreateSeriesDialog(true);
-              }}
+              onClick={openCreateSeriesDialog}
             >
               <Plus className="h-4 w-4" />
               Create Your First Series
@@ -590,8 +1140,52 @@ export default function MyPodcastsPage() {
                         )}
                       </div>
 
-                      {/* Expand chevron */}
-                      <div className="shrink-0 pt-1">
+                      {/* Actions + Expand */}
+                      <div className="flex items-center gap-1 shrink-0 pt-1">
+                        {/* Edit button */}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          title="Edit series"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditSeriesDialog(s);
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        {/* Open Studio */}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          title="Open in Studio"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push("/studio/podcast");
+                          }}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Button>
+                        {/* Delete button */}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-muted-foreground hover:text-red-500"
+                          title="Delete series"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget({
+                              type: "series",
+                              id: s.id,
+                              title: s.title,
+                            });
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                        {/* Chevron */}
                         {isExpanded ? (
                           <ChevronDown className="h-5 w-5 text-muted-foreground" />
                         ) : (
@@ -610,9 +1204,7 @@ export default function MyPodcastsPage() {
                       <span className="flex items-center gap-1">
                         <Users className="h-3 w-3" />
                         {s.subscriberCount}{" "}
-                        {s.subscriberCount === 1
-                          ? "subscriber"
-                          : "subscribers"}
+                        {s.subscriberCount === 1 ? "subscriber" : "subscribers"}
                       </span>
                       {s.category && (
                         <span className="flex items-center gap-1">
@@ -692,7 +1284,7 @@ export default function MyPodcastsPage() {
                               <TableHead className="text-xs text-muted-foreground">
                                 Date
                               </TableHead>
-                              <TableHead className="w-[80px] text-xs text-muted-foreground">
+                              <TableHead className="w-[100px] text-xs text-muted-foreground">
                                 Actions
                               </TableHead>
                             </TableRow>
@@ -741,13 +1333,37 @@ export default function MyPodcastsPage() {
                                     : formatDate(ep.createdAt)}
                                 </TableCell>
                                 <TableCell>
-                                  <Button
-                                    size="icon-xs"
-                                    variant="ghost"
-                                    title="Edit episode"
-                                  >
-                                    <Pencil className="h-3 w-3" />
-                                  </Button>
+                                  <div className="flex items-center gap-0.5">
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7"
+                                      title="Edit episode"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openEditEpisodeDialog(s, ep);
+                                      }}
+                                    >
+                                      <Pencil className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7 text-muted-foreground hover:text-red-500"
+                                      title="Delete episode"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDeleteTarget({
+                                          type: "episode",
+                                          id: ep.id,
+                                          seriesId: s.id,
+                                          title: ep.title,
+                                        });
+                                      }}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -763,364 +1379,160 @@ export default function MyPodcastsPage() {
         </div>
       )}
 
-      {/* ─── Create Series Dialog ───────────────────────────────────── */}
+      {/* ─── Series Dialog (Create & Edit) ───────────────────────────── */}
       <Dialog
-        open={showCreateSeriesDialog}
-        onOpenChange={setShowCreateSeriesDialog}
+        open={showSeriesDialog}
+        onOpenChange={(open) => {
+          setShowSeriesDialog(open);
+          if (!open) {
+            setEditingSeriesId(null);
+            setSeriesForm(INITIAL_SERIES_FORM);
+          }
+        }}
       >
-        <DialogContent className="sm:max-w-lg">
-          <form onSubmit={handleCreateSeries}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <form onSubmit={handleSaveSeries}>
             <DialogHeader>
-              <DialogTitle>Create Podcast Series</DialogTitle>
+              <DialogTitle>
+                {editingSeriesId ? "Edit Podcast Series" : "Create Podcast Series"}
+              </DialogTitle>
               <DialogDescription>
-                Set up a new podcast series. Choose your production style
-                below.
+                {editingSeriesId
+                  ? "Update your podcast series details below."
+                  : "Set up a new podcast series. Choose your production style below."}
               </DialogDescription>
             </DialogHeader>
 
-            <div className="mt-4 space-y-4">
-              {/* Title */}
-              <div className="space-y-1.5">
-                <Label htmlFor="series-title">
-                  Title <span className="text-red-400">*</span>
-                </Label>
-                <Input
-                  id="series-title"
-                  placeholder="My Awesome Podcast"
-                  value={seriesForm.title}
-                  onChange={(e) =>
-                    setSeriesForm((f) => ({ ...f, title: e.target.value }))
-                  }
-                  required
-                />
-              </div>
-
-              {/* Description */}
-              <div className="space-y-1.5">
-                <Label htmlFor="series-description">Description</Label>
-                <Textarea
-                  id="series-description"
-                  placeholder="What is this podcast about?"
-                  value={seriesForm.description}
-                  onChange={(e) =>
-                    setSeriesForm((f) => ({
-                      ...f,
-                      description: e.target.value,
-                    }))
-                  }
-                  rows={2}
-                />
-              </div>
-
-              {/* ── Production Type Selector ──────────────────────────── */}
-              <div className="space-y-1.5">
-                <Label>Production Type</Label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {(
-                    [
-                      { key: "audio" as const, label: "Audio", sub: "Podcast", icon: Mic, color: "#7401df" },
-                      { key: "video-live" as const, label: "Live", sub: "Broadcast", icon: Radio, color: "#dc2626" },
-                      { key: "video-recorded" as const, label: "Record", sub: "& Edit", icon: Video, color: "#74ddc7" },
-                    ] as const
-                  ).map((opt) => (
-                    <button
-                      key={opt.key}
-                      type="button"
-                      onClick={() => setSeriesForm((f) => ({ ...f, productionType: opt.key }))}
-                      className={`flex flex-col items-center gap-1 rounded-lg border px-2 py-2.5 transition-all text-center ${
-                        seriesForm.productionType === opt.key
-                          ? `border-[${opt.color}] bg-[${opt.color}]/10 ring-1 ring-[${opt.color}]/30`
-                          : "border-border bg-foreground/[0.02] hover:border-foreground/[0.15]"
-                      }`}
-                      style={
-                        seriesForm.productionType === opt.key
-                          ? { borderColor: opt.color, backgroundColor: `${opt.color}1a`, boxShadow: `0 0 0 1px ${opt.color}4d` }
-                          : undefined
-                      }
-                    >
-                      <opt.icon className={`h-5 w-5 ${seriesForm.productionType !== opt.key ? "text-muted-foreground" : ""}`} style={seriesForm.productionType === opt.key ? { color: opt.color } : undefined} />
-                      <p className={`text-[11px] font-semibold leading-tight ${seriesForm.productionType !== opt.key ? "text-foreground/60" : ""}`} style={seriesForm.productionType === opt.key ? { color: opt.color } : undefined}>
-                        {opt.label}
-                      </p>
-                      <p className="text-[9px] text-muted-foreground/70 leading-tight">{opt.sub}</p>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Studio info box for video modes */}
-                {seriesForm.productionType !== "audio" && (
-                  <div className="mt-1.5 rounded-lg border border-border bg-foreground/[0.03] p-2.5">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Camera className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-[11px] font-semibold text-foreground/70">
-                        {seriesForm.productionType === "video-live" ? "Live Video Studio" : "Video Recording Studio"}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground leading-relaxed">
-                      2-camera setup with multi-track audio.
-                      {seriesForm.productionType === "video-live"
-                        ? " Stream live to listeners in real-time."
-                        : " Record, edit, then publish."}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Category and Language row */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="series-category">Category</Label>
-                  <Select
-                    value={seriesForm.category}
-                    onValueChange={(val) =>
-                      setSeriesForm((f) => ({ ...f, category: val }))
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PODCAST_CATEGORIES.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="series-language">Language</Label>
-                  <Select
-                    value={seriesForm.language}
-                    onValueChange={(val) =>
-                      setSeriesForm((f) => ({ ...f, language: val }))
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="es">Spanish</SelectItem>
-                      <SelectItem value="fr">French</SelectItem>
-                      <SelectItem value="de">German</SelectItem>
-                      <SelectItem value="pt">Portuguese</SelectItem>
-                      <SelectItem value="ja">Japanese</SelectItem>
-                      <SelectItem value="ko">Korean</SelectItem>
-                      <SelectItem value="zh">Chinese</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Cover Image URL — clearly optional */}
-              <div className="space-y-1.5">
-                <Label htmlFor="series-cover">
-                  Cover Art <span className="text-[10px] text-muted-foreground/70 font-normal">(optional)</span>
-                </Label>
-                <Input
-                  id="series-cover"
-                  type="url"
-                  placeholder="https://example.com/cover.jpg"
-                  value={seriesForm.coverImageUrl}
-                  onChange={(e) =>
-                    setSeriesForm((f) => ({
-                      ...f,
-                      coverImageUrl: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-
-              {/* Tags */}
-              <div className="space-y-1.5">
-                <Label htmlFor="series-tags">Tags</Label>
-                <Input
-                  id="series-tags"
-                  placeholder="music, interviews, culture"
-                  value={seriesForm.tags}
-                  onChange={(e) =>
-                    setSeriesForm((f) => ({ ...f, tags: e.target.value }))
-                  }
-                />
-              </div>
-            </div>
+            {seriesFormFields}
 
             <DialogFooter className="mt-6">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setShowCreateSeriesDialog(false)}
-                disabled={creatingSeries}
+                onClick={() => setShowSeriesDialog(false)}
+                disabled={savingSeries}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 className="gap-2 bg-[#7401df] hover:bg-[#7401df]/90"
-                disabled={creatingSeries}
+                disabled={savingSeries}
               >
-                {creatingSeries && (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                )}
-                {seriesForm.productionType === "audio"
-                  ? "Create Series"
-                  : seriesForm.productionType === "video-live"
-                    ? "Create & Go Live"
-                    : "Create & Open Studio"}
+                {savingSeries && <Loader2 className="h-4 w-4 animate-spin" />}
+                {editingSeriesId
+                  ? "Save Changes"
+                  : seriesForm.productionType === "audio"
+                    ? "Create Series"
+                    : seriesForm.productionType === "video-live"
+                      ? "Create & Go Live"
+                      : "Create & Open Studio"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* ─── Create Episode Dialog ──────────────────────────────────── */}
+      {/* ─── Episode Dialog (Create & Edit) ──────────────────────────── */}
       <Dialog
-        open={showCreateEpisodeDialog}
+        open={showEpisodeDialog}
         onOpenChange={(open) => {
-          setShowCreateEpisodeDialog(open);
-          if (!open) setActiveSeriesForEpisode(null);
+          setShowEpisodeDialog(open);
+          if (!open) {
+            setActiveSeriesForEpisode(null);
+            setEditingEpisodeId(null);
+            setEpisodeForm(INITIAL_EPISODE_FORM);
+          }
         }}
       >
-        <DialogContent className="sm:max-w-lg">
-          <form onSubmit={handleCreateEpisode}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <form onSubmit={handleSaveEpisode}>
             <DialogHeader>
-              <DialogTitle>Add Episode</DialogTitle>
+              <DialogTitle>
+                {editingEpisodeId ? "Edit Episode" : "Add Episode"}
+              </DialogTitle>
               <DialogDescription>
-                Add a new episode to{" "}
-                <span className="font-medium text-foreground">
-                  {activeSeriesForEpisode?.title}
-                </span>
+                {editingEpisodeId ? (
+                  <>
+                    Update episode details for{" "}
+                    <span className="font-medium text-foreground">
+                      {activeSeriesForEpisode?.title}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    Add a new episode to{" "}
+                    <span className="font-medium text-foreground">
+                      {activeSeriesForEpisode?.title}
+                    </span>
+                  </>
+                )}
               </DialogDescription>
             </DialogHeader>
 
-            <div className="mt-4 space-y-4">
-              {/* Title */}
-              <div className="space-y-2">
-                <Label htmlFor="episode-title">
-                  Title <span className="text-red-400">*</span>
-                </Label>
-                <Input
-                  id="episode-title"
-                  placeholder="Episode title"
-                  value={episodeForm.title}
-                  onChange={(e) =>
-                    setEpisodeForm((f) => ({ ...f, title: e.target.value }))
-                  }
-                  required
-                />
-              </div>
-
-              {/* Description */}
-              <div className="space-y-2">
-                <Label htmlFor="episode-description">Description</Label>
-                <Textarea
-                  id="episode-description"
-                  placeholder="Brief episode description"
-                  value={episodeForm.description}
-                  onChange={(e) =>
-                    setEpisodeForm((f) => ({
-                      ...f,
-                      description: e.target.value,
-                    }))
-                  }
-                  rows={2}
-                />
-              </div>
-
-              {/* Show Notes */}
-              <div className="space-y-2">
-                <Label htmlFor="episode-shownotes">Show Notes</Label>
-                <Textarea
-                  id="episode-shownotes"
-                  placeholder="Detailed show notes, links, credits..."
-                  value={episodeForm.showNotes}
-                  onChange={(e) =>
-                    setEpisodeForm((f) => ({
-                      ...f,
-                      showNotes: e.target.value,
-                    }))
-                  }
-                  rows={3}
-                />
-              </div>
-
-              {/* Audio URL */}
-              <div className="space-y-2">
-                <Label htmlFor="episode-audio">Audio URL</Label>
-                <Input
-                  id="episode-audio"
-                  type="url"
-                  placeholder="https://example.com/episode.mp3"
-                  value={episodeForm.audioUrl}
-                  onChange={(e) =>
-                    setEpisodeForm((f) => ({
-                      ...f,
-                      audioUrl: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-
-              {/* Episode and Season Number row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="episode-number">Episode Number</Label>
-                  <Input
-                    id="episode-number"
-                    type="number"
-                    min={1}
-                    placeholder="1"
-                    value={episodeForm.episodeNumber}
-                    onChange={(e) =>
-                      setEpisodeForm((f) => ({
-                        ...f,
-                        episodeNumber: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="season-number">Season Number</Label>
-                  <Input
-                    id="season-number"
-                    type="number"
-                    min={1}
-                    placeholder="1"
-                    value={episodeForm.seasonNumber}
-                    onChange={(e) =>
-                      setEpisodeForm((f) => ({
-                        ...f,
-                        seasonNumber: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-            </div>
+            {episodeFormFields}
 
             <DialogFooter className="mt-6">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setShowCreateEpisodeDialog(false)}
-                disabled={creatingEpisode}
+                onClick={() => setShowEpisodeDialog(false)}
+                disabled={savingEpisode}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 className="gap-2 bg-[#7401df] hover:bg-[#7401df]/90"
-                disabled={creatingEpisode}
+                disabled={savingEpisode}
               >
-                {creatingEpisode && (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                )}
-                Add Episode
+                {savingEpisode && <Loader2 className="h-4 w-4 animate-spin" />}
+                {editingEpisodeId ? "Save Changes" : "Add Episode"}
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Delete Confirmation Dialog ───────────────────────────────── */}
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              Delete {deleteTarget?.type === "series" ? "Series" : "Episode"}
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete{" "}
+              <span className="font-medium text-foreground">
+                {deleteTarget?.title}
+              </span>
+              ?{" "}
+              {deleteTarget?.type === "series"
+                ? "This will also remove all episodes in this series. "
+                : ""}
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+            >
+              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

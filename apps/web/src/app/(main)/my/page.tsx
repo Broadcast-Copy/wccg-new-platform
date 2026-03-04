@@ -554,7 +554,7 @@ export default function UserDashboardPage() {
           {/* ── Row 3: Mixes, Browse, Rewards, Schedule ── */}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { href: "/dashboard/mixes", label: "My Mixes", desc: "Upload DJ mixes", icon: Music, color: "#74ddc7" },
+              { href: "/mixes", label: "My Mixes", desc: "Upload DJ mixes", icon: Music, color: "#74ddc7" },
               { href: "/events", label: "Browse Events", desc: "Upcoming events", icon: Ticket, color: "#7401df" },
               { href: "/rewards", label: "Rewards Catalog", desc: "Redeem points", icon: Star, color: "#dc2626" },
               { href: "/schedule", label: "Schedule", desc: "What\u2019s on today", icon: ListMusic, color: "#7401df" },

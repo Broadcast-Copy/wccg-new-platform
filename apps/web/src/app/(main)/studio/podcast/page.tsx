@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -37,6 +37,16 @@ export default function PodcastStudioPage() {
   const [leftPanel, setLeftPanel] = useState<LeftPanel>("scenes");
   const [bottomPanel, setBottomPanel] = useState<BottomPanel>("timeline");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+
+  const handleRecordingChange = useCallback((recording: boolean) => {
+    setIsRecording(recording);
+  }, []);
+
+  const handleStreamingChange = useCallback((streaming: boolean) => {
+    setIsStreaming(streaming);
+  }, []);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -185,7 +195,14 @@ export default function PodcastStudioPage() {
             </div>
             {/* Panel Content */}
             <div className="flex-1 overflow-y-auto">
-              {leftPanel === "scenes" ? <OBSControls /> : <MediaBin />}
+              {leftPanel === "scenes" ? (
+                <OBSControls
+                  onRecordingChange={handleRecordingChange}
+                  onStreamingChange={handleStreamingChange}
+                />
+              ) : (
+                <MediaBin />
+              )}
             </div>
           </div>
         )}
@@ -194,7 +211,7 @@ export default function PodcastStudioPage() {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Preview Monitor */}
           <div className="flex-1 min-h-0 p-2 overflow-hidden">
-            <StudioPreview />
+            <StudioPreview isRecording={isRecording} isStreaming={isStreaming} />
           </div>
 
           {/* ── Bottom Panel: Timeline or Mixer ── */}
