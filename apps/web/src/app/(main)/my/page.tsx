@@ -502,36 +502,78 @@ export default function UserDashboardPage() {
           ═══════════════════════════════════════════════════════════════════ */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Quick Links</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { href: "/my/history", label: "Listening History", desc: "Track what you heard", icon: Clock, color: "#74ddc7" },
-            { href: "/my/podcasts", label: "My Podcasts", desc: "Create & manage", icon: Mic, color: "#7401df" },
-            { href: "/my/events", label: "My Events", desc: "Events & tickets", icon: CalendarDays, color: "#7401df" },
-            { href: "/my/directory", label: "My Directory", desc: "Business listings", icon: Building2, color: "#74ddc7" },
-            { href: "/dashboard/mixes", label: "My Mixes", desc: "Upload DJ mixes", icon: Music, color: "#74ddc7" },
-            { href: "/events", label: "Browse Events", desc: "Upcoming events", icon: Ticket, color: "#7401df" },
-            { href: "/rewards", label: "Rewards Catalog", desc: "Redeem points", icon: Star, color: "#dc2626" },
-            { href: "/schedule", label: "Schedule", desc: "What\u2019s on today", icon: ListMusic, color: "#7401df" },
-          ].map((item) => (
-            <Link key={item.href} href={item.href}>
-              <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
-                <CardContent className="flex items-center gap-3 p-4">
-                  <div
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors"
-                    style={{ backgroundColor: `${item.color}15` }}
-                  >
-                    <item.icon className="h-4 w-4" style={{ color: item.color }} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{item.label}</p>
-                    <p className="text-[11px] text-muted-foreground truncate">
-                      {item.desc}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+        <div className="space-y-4">
+          {/* ── Row 1: Listening History ── */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { href: "/my/history", label: "Listening History", desc: "Track what you heard", icon: Clock, color: "#74ddc7" },
+            ].map((item) => (
+              <Link key={item.href} href={item.href}>
+                <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors" style={{ backgroundColor: `${item.color}15` }}>
+                      <item.icon className="h-4 w-4" style={{ color: item.color }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{item.label}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{item.desc}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+
+          <div className="border-t border-border" />
+
+          {/* ── Row 2: Podcasts, Events, Directory ── */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { href: "/my/podcasts", label: "My Podcasts", desc: "Create & manage", icon: Mic, color: "#7401df" },
+              { href: "/my/events", label: "My Events", desc: "Events & tickets", icon: CalendarDays, color: "#7401df" },
+              { href: "/my/directory", label: "My Directory", desc: "Business listings", icon: Building2, color: "#74ddc7" },
+            ].map((item) => (
+              <Link key={item.href} href={item.href}>
+                <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors" style={{ backgroundColor: `${item.color}15` }}>
+                      <item.icon className="h-4 w-4" style={{ color: item.color }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{item.label}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{item.desc}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+
+          <div className="border-t border-border" />
+
+          {/* ── Row 3: Mixes, Browse, Rewards, Schedule ── */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { href: "/dashboard/mixes", label: "My Mixes", desc: "Upload DJ mixes", icon: Music, color: "#74ddc7" },
+              { href: "/events", label: "Browse Events", desc: "Upcoming events", icon: Ticket, color: "#7401df" },
+              { href: "/rewards", label: "Rewards Catalog", desc: "Redeem points", icon: Star, color: "#dc2626" },
+              { href: "/schedule", label: "Schedule", desc: "What\u2019s on today", icon: ListMusic, color: "#7401df" },
+            ].map((item) => (
+              <Link key={item.href} href={item.href}>
+                <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors" style={{ backgroundColor: `${item.color}15` }}>
+                      <item.icon className="h-4 w-4" style={{ color: item.color }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{item.label}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{item.desc}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
     </div>
