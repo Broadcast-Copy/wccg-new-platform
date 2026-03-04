@@ -467,7 +467,7 @@ export default function VideoEditorPage() {
   });
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] -mx-4 sm:-mx-6 lg:-mx-8 -mt-6 overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-10rem)] -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 overflow-hidden">
       {/* ================================================================= */}
       {/* Top Toolbar                                                       */}
       {/* ================================================================= */}
@@ -765,10 +765,10 @@ export default function VideoEditorPage() {
           <div className="flex-1 min-h-0 flex flex-col bg-black/40">
             {/* Video Preview Area — ALWAYS clickable for play/pause */}
             <div
-              className="flex-1 flex items-center justify-center relative cursor-pointer"
+              className="flex-1 flex items-center justify-center relative cursor-pointer overflow-hidden min-h-0"
               onClick={togglePlay}
             >
-              <div className="relative w-full max-w-3xl aspect-video bg-black/80 rounded-sm mx-4 flex items-center justify-center overflow-hidden">
+              <div className="relative w-full max-w-3xl max-h-full aspect-video bg-black/80 rounded-sm mx-4 flex items-center justify-center overflow-hidden">
                 {/* Video element ALWAYS in DOM so ref is available for file loading */}
                 {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                 <video
@@ -825,7 +825,7 @@ export default function VideoEditorPage() {
             </div>
 
             {/* Transport Controls */}
-            <div className="flex items-center justify-center gap-3 py-2 border-t border-border/50 bg-card/30 shrink-0">
+            <div className="flex items-center justify-center gap-3 py-2 border-t border-border/50 bg-card/80 backdrop-blur-sm shrink-0 z-10 relative">
               <div className="flex items-center gap-1">
                 <button
                   className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors active:scale-90"
@@ -920,7 +920,7 @@ export default function VideoEditorPage() {
           {showBottomPanel && (
             <div
               className="border-t border-border bg-card/50 shrink-0 flex flex-col"
-              style={{ height: "240px" }}
+              style={{ height: "200px" }}
             >
               {/* Timeline Toolbar */}
               <div className="flex items-center justify-between px-2 py-1 border-b border-border shrink-0">
