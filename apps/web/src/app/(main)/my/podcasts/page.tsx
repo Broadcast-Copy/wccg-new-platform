@@ -232,24 +232,52 @@ export default function MyPodcastsPage() {
   const [activeSeriesForEpisode, setActiveSeriesForEpisode] =
     useState<PodcastSeries | null>(null);
 
+  // ─── Local storage helpers for offline persistence ──────────────────
+
+  const LOCAL_KEY = "wccg_podcast_series";
+
+  const loadLocalSeries = useCallback((): PodcastSeries[] => {
+    try {
+      const raw = localStorage.getItem(LOCAL_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const saveLocalSeries = useCallback((data: PodcastSeries[]) => {
+    try {
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+    } catch { /* quota exceeded — ignore */ }
+  }, []);
+
   // ─── Fetch series ──────────────────────────────────────────────────
 
   const fetchSeries = useCallback(async () => {
     if (!user) {
+      // Still load local series even without auth
+      const local = loadLocalSeries();
+      setSeries(local);
       setLoadingSeries(false);
       return;
     }
     setLoadingSeries(true);
     try {
       const data = await apiClient<PodcastSeries[]>("/podcasts/my");
-      setSeries(Array.isArray(data) ? data : []);
+      const apiSeries = Array.isArray(data) ? data : [];
+      // Merge with local series (dedup by id)
+      const local = loadLocalSeries();
+      const apiIds = new Set(apiSeries.map((s) => s.id));
+      const merged = [...apiSeries, ...local.filter((l) => !apiIds.has(l.id))];
+      setSeries(merged);
     } catch {
-      setSeries([]);
-      toast.error("Failed to load your podcast series.");
+      // API unavailable — load from local storage
+      const local = loadLocalSeries();
+      setSeries(local);
     } finally {
       setLoadingSeries(false);
     }
-  }, [user]);
+  }, [user, loadLocalSeries]);
 
   useEffect(() => {
     fetchSeries();
@@ -314,21 +342,17 @@ export default function MyPodcastsPage() {
         : undefined,
     };
 
-    let newSeries: PodcastSeries | null = null;
+    let created: PodcastSeries | null = null;
 
     try {
-      newSeries = await apiClient<PodcastSeries>("/podcasts", {
+      created = await apiClient<PodcastSeries>("/podcasts", {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      // Add the API-returned series to state
-      if (newSeries) {
-        setSeries((prev) => [newSeries!, ...prev]);
-      }
     } catch {
-      // API unavailable — create a mock series locally so the UI stays functional
+      // API unavailable — create a mock series locally
       const now = new Date().toISOString();
-      const mockSeries: PodcastSeries = {
+      created = {
         id: crypto.randomUUID?.() ?? `local-${Date.now()}`,
         title: payload.title,
         description: payload.description ?? null,
@@ -342,10 +366,18 @@ export default function MyPodcastsPage() {
         createdAt: now,
         updatedAt: now,
       };
-      setSeries((prev) => [mockSeries, ...prev]);
     }
 
-    // Regardless of API success/failure, close dialog and navigate to studio
+    // Persist to state & localStorage so it survives navigation
+    if (created) {
+      setSeries((prev) => {
+        const updated = [created!, ...prev];
+        saveLocalSeries(updated);
+        return updated;
+      });
+    }
+
+    // Close dialog and navigate to studio
     toast.success("Podcast series created!");
     setShowCreateSeriesDialog(false);
     setSeriesForm(INITIAL_SERIES_FORM);
