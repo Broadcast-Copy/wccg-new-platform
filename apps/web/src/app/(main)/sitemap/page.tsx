@@ -1,4 +1,4 @@
-import { Map, Radio, CalendarDays, Users2, ShoppingBag, Gift, Headphones, Mic, Mail, Shield, FileText, Briefcase, Megaphone, Palette } from "lucide-react";
+import { Map, Radio, CalendarDays, Users2, ShoppingBag, Gift, Headphones, Mic, Mail, Shield, FileText, Briefcase, Megaphone, Palette, Clapperboard, Trophy, CloudSun, Music } from "lucide-react";
 import Link from "next/link";
 
 export const metadata = {
@@ -15,6 +15,7 @@ const sections = [
       { label: "Discover", href: "/discover" },
       { label: "Shows", href: "/shows" },
       { label: "Hosts & DJs", href: "/hosts" },
+      { label: "Mix Squad", href: "/mix-squad" },
       { label: "DJ Mixes", href: "/mixes" },
       { label: "Schedule", href: "/schedule" },
     ],
@@ -24,9 +25,34 @@ const sections = [
     icon: Users2,
     links: [
       { label: "Events & Tickets", href: "/events" },
+      { label: "Contests", href: "/contests" },
       { label: "Community Directory", href: "/community" },
       { label: "Marketplace", href: "/marketplace" },
       { label: "mY1045 Perks", href: "/rewards" },
+    ],
+  },
+  {
+    title: "Studio & Production",
+    icon: Clapperboard,
+    links: [
+      { label: "Studio Services", href: "/studio" },
+      { label: "OBS Studio / Podcast", href: "/studio/podcast" },
+      { label: "Video Editor", href: "/studio/video-editor" },
+      { label: "Audio Editor", href: "/studio/audio-editor" },
+      { label: "Book a Studio", href: "/studio/booking" },
+      { label: "Live & On-Site", href: "/studio/live-on-site" },
+      { label: "Video Production", href: "/studio/video-production" },
+      { label: "Social Content", href: "/studio/social-content" },
+      { label: "Voice Over", href: "/studio/voice-over" },
+    ],
+  },
+  {
+    title: "Sports",
+    icon: Trophy,
+    links: [
+      { label: "Sports Hub", href: "/sports" },
+      { label: "Duke Basketball", href: "/sports/duke-basketball" },
+      { label: "Duke Football", href: "/sports/duke-football" },
     ],
   },
   {
@@ -35,6 +61,7 @@ const sections = [
     links: [
       { label: "Contact Us", href: "/contact" },
       { label: "FAQ", href: "/faq" },
+      { label: "Weather", href: "/weather" },
       { label: "Innovation Center", href: "/innovation-center" },
     ],
   },
@@ -90,10 +117,15 @@ const sections = [
       { label: "Login", href: "/login" },
       { label: "Register", href: "/register" },
       { label: "My Dashboard", href: "/my" },
+      { label: "My Podcasts", href: "/my/podcasts" },
       { label: "My Events", href: "/my/events" },
       { label: "My Tickets", href: "/my/tickets" },
       { label: "My Favorites", href: "/my/favorites" },
       { label: "My Points", href: "/my/points" },
+      { label: "Listening History", href: "/my/history" },
+      { label: "Notifications", href: "/my/notifications" },
+      { label: "Business Directory", href: "/my/directory" },
+      { label: "Station Control", href: "/my/admin" },
     ],
   },
 ];

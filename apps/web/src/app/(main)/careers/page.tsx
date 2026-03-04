@@ -1,6 +1,6 @@
 "use client";
 
-import { Briefcase, MapPin, Clock, Users, ArrowRight, Heart } from "lucide-react";
+import { Briefcase, MapPin, Clock, ArrowRight, Heart } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -32,10 +32,20 @@ export default function CareersPage() {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setSubmitting(true);
+    setTimeout(() => {
+      setSubmitting(false);
+      setSubmitted(true);
+    }, 1000);
+  };
+
+  const handleReset = () => {
+    setFormData({ name: "", email: "", phone: "", position: "", message: "" });
+    setSubmitted(false);
   };
 
   return (
@@ -109,6 +119,12 @@ export default function CareersPage() {
             <p className="text-sm text-muted-foreground mt-2">
               Thank you for your interest. Our team will review your application and contact you if there&apos;s a match.
             </p>
+            <Button
+              onClick={handleReset}
+              className="mt-4 rounded-full bg-[#74ddc7] text-[#0a0a0f] font-bold hover:bg-[#5fc4b0] px-8"
+            >
+              Submit Another Application
+            </Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -174,8 +190,8 @@ export default function CareersPage() {
                 placeholder="Tell us about your experience, skills, and why you want to join WCCG..."
               />
             </div>
-            <Button type="submit" className="rounded-full bg-[#74ddc7] text-[#0a0a0f] font-bold hover:bg-[#5fc4b0] px-8">
-              Submit Application
+            <Button type="submit" disabled={submitting} className="rounded-full bg-[#74ddc7] text-[#0a0a0f] font-bold hover:bg-[#5fc4b0] px-8 disabled:opacity-60">
+              {submitting ? "Submitting..." : "Submit Application"}
             </Button>
           </form>
         )}

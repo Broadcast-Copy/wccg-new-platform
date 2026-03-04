@@ -162,6 +162,19 @@ function UpcomingEventsSection() {
 }
 
 export default function HomePage() {
+  const [subscribing, setSubscribing] = useState(false);
+  const [subscribed, setSubscribed] = useState(false);
+
+  function handleSubscribe(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSubscribing(true);
+    setTimeout(() => {
+      setSubscribing(false);
+      setSubscribed(true);
+      setTimeout(() => setSubscribed(false), 3000);
+    }, 1000);
+  }
+
   return (
     <div className="space-y-10">
       {/* Hero Ribbon */}
@@ -236,28 +249,36 @@ export default function HomePage() {
           <p className="text-white/70 text-sm md:text-base max-w-lg">
             Get exclusive contest alerts, event invites, new show announcements, and community updates delivered straight to your inbox.
           </p>
-          <form
-            className="flex w-full max-w-md gap-2 mt-1"
-            onSubmit={(e) => {
-              e.preventDefault();
-              // Email subscription will be handled by API when available
-            }}
-          >
-            <input
-              type="email"
-              placeholder="Enter your email..."
-              required
-              className="flex-1 rounded-full bg-white px-5 py-3 text-sm text-gray-900 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-white/40"
-            />
-            <Button
-              type="submit"
-              size="lg"
-              className="rounded-full bg-background text-white font-bold hover:bg-background/80 shadow-lg px-6 shrink-0"
+          {subscribed ? (
+            <div className="flex items-center gap-2 rounded-full bg-white/20 backdrop-blur-sm px-6 py-3 mt-1">
+              <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="text-sm font-semibold text-white">You&apos;re subscribed!</span>
+            </div>
+          ) : (
+            <form
+              className="flex w-full max-w-md gap-2 mt-1"
+              onSubmit={handleSubscribe}
             >
-              Subscribe
-              <ArrowDownRight className="ml-1.5 h-4 w-4" />
-            </Button>
-          </form>
+              <input
+                type="email"
+                placeholder="Enter your email..."
+                required
+                disabled={subscribing}
+                className="flex-1 rounded-full bg-white px-5 py-3 text-sm text-gray-900 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-white/40 disabled:opacity-60"
+              />
+              <Button
+                type="submit"
+                size="lg"
+                disabled={subscribing}
+                className="rounded-full bg-background text-white font-bold hover:bg-background/80 shadow-lg px-6 shrink-0"
+              >
+                {subscribing ? "Subscribing..." : "Subscribe"}
+                {!subscribing && <ArrowDownRight className="ml-1.5 h-4 w-4" />}
+              </Button>
+            </form>
+          )}
           <p className="text-[11px] text-white/50">
             No spam ever. Unsubscribe anytime.
           </p>

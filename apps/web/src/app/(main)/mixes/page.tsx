@@ -209,9 +209,13 @@ function FolderCard({
 function FileCard({
   file,
   viewMode,
+  onRename,
+  onDelete,
 }: {
   file: MixFile;
   viewMode: "grid" | "list";
+  onRename: (id: string, newName: string) => void;
+  onDelete: (id: string) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { open: openPlayer } = useStreamPlayer();
@@ -282,13 +286,36 @@ function FileCard({
             </button>
             {menuOpen && (
               <div className="absolute right-0 top-full mt-1 z-20 w-40 rounded-xl border border-border bg-card p-1.5 shadow-2xl">
-                <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-foreground/60 hover:bg-foreground/[0.06] hover:text-foreground transition-colors">
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    const newName = window.prompt("Rename file:", file.name);
+                    if (newName && newName.trim() && newName.trim() !== file.name) {
+                      onRename(file.id, newName.trim());
+                    }
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-foreground/60 hover:bg-foreground/[0.06] hover:text-foreground transition-colors"
+                >
                   <Pencil className="h-3.5 w-3.5" /> Rename
                 </button>
-                <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-foreground/60 hover:bg-foreground/[0.06] hover:text-foreground transition-colors">
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    window.prompt("Move to folder:", "");
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-foreground/60 hover:bg-foreground/[0.06] hover:text-foreground transition-colors"
+                >
                   <Move className="h-3.5 w-3.5" /> Move to...
                 </button>
-                <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors">
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    if (window.confirm(`Delete "${file.name}"?`)) {
+                      onDelete(file.id);
+                    }
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                >
                   <Trash2 className="h-3.5 w-3.5" /> Delete
                 </button>
               </div>
@@ -370,6 +397,8 @@ function UploadDropzone({
 }) {
   const [dragOver, setDragOver] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadComplete, setUploadComplete] = useState(false);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -455,9 +484,38 @@ function UploadDropzone({
               </button>
             </div>
           ))}
-          <Button className="w-full rounded-full bg-gradient-to-r from-[#7401df] to-[#74ddc7] text-white font-bold hover:opacity-90">
-            <Upload className="mr-2 h-4 w-4" />
-            Upload {files.length} File{files.length !== 1 ? "s" : ""}
+          <Button
+            disabled={uploading || uploadComplete}
+            onClick={() => {
+              setUploading(true);
+              setTimeout(() => {
+                setUploading(false);
+                setUploadComplete(true);
+                setTimeout(() => {
+                  setFiles([]);
+                  setUploadComplete(false);
+                  onClose();
+                }, 1000);
+              }, 1500);
+            }}
+            className="w-full rounded-full bg-gradient-to-r from-[#7401df] to-[#74ddc7] text-white font-bold hover:opacity-90"
+          >
+            {uploadComplete ? (
+              <>
+                <Check className="mr-2 h-4 w-4" />
+                Upload complete!
+              </>
+            ) : uploading ? (
+              <>
+                <CloudUpload className="mr-2 h-4 w-4 animate-pulse" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="mr-2 h-4 w-4" />
+                Upload {files.length} File{files.length !== 1 ? "s" : ""}
+              </>
+            )}
           </Button>
         </div>
       )}
@@ -754,6 +812,14 @@ export default function MixesPage() {
                   key={file.id}
                   file={file}
                   viewMode={viewMode}
+                  onRename={(id, newName) => {
+                    setFiles((prev) =>
+                      prev.map((f) => (f.id === id ? { ...f, name: newName } : f))
+                    );
+                  }}
+                  onDelete={(id) => {
+                    setFiles((prev) => prev.filter((f) => f.id !== id));
+                  }}
                 />
               ))}
             </div>

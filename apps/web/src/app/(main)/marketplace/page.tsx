@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -26,10 +29,6 @@ import {
   Dumbbell,
   Usb,
 } from "lucide-react";
-
-export const metadata = {
-  title: "Marketplace | WCCG 104.5 FM",
-};
 
 /* ------------------------------------------------------------------ */
 /* Mock Data                                                           */
@@ -357,6 +356,36 @@ function BenefitIcon({ icon }: { icon: string }) {
 /* ------------------------------------------------------------------ */
 
 export default function MarketplacePage() {
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [cartItems, setCartItems] = useState<Set<string>>(new Set());
+  const productsRef = useRef<HTMLElement>(null);
+
+  const filteredProducts = PRODUCTS.filter((product) => {
+    const matchesCategory =
+      selectedCategory === "all" || product.category === selectedCategory;
+    const matchesSearch = product.name
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  function toggleCart(productId: string) {
+    setCartItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(productId)) {
+        next.delete(productId);
+      } else {
+        next.add(productId);
+      }
+      return next;
+    });
+  }
+
+  function scrollToProducts() {
+    productsRef.current?.scrollIntoView({ behavior: "smooth" });
+  }
+
   return (
     <div className="space-y-10">
       {/* ---------------------------------------------------------- */}
@@ -384,6 +413,7 @@ export default function MarketplacePage() {
               size="lg"
               variant="secondary"
               className="gap-2 font-semibold"
+              onClick={scrollToProducts}
             >
               <ShoppingBag className="h-5 w-5" />
               Shop Now
@@ -392,6 +422,7 @@ export default function MarketplacePage() {
               size="lg"
               variant="outline"
               className="gap-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+              onClick={scrollToProducts}
             >
               <Zap className="h-5 w-5" />
               Shop with Points
@@ -433,28 +464,38 @@ export default function MarketplacePage() {
       {/* ---------------------------------------------------------- */}
       {/* Search + Filter + Products Grid                             */}
       {/* ---------------------------------------------------------- */}
-      <section className="space-y-6">
+      <section ref={productsRef} className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-2xl font-bold tracking-tight">
-            Featured Products
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold tracking-tight">
+              Featured Products
+            </h2>
+            {cartItems.size > 0 && (
+              <Badge className="gap-1 bg-primary text-primary-foreground">
+                <ShoppingCart className="h-3.5 w-3.5" />
+                {cartItems.size}
+              </Badge>
+            )}
+          </div>
           <div className="relative w-full max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search products..."
               className="pl-9"
-              readOnly
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </div>
 
         {/* Horizontal Filter Tabs */}
         <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map((cat, idx) => (
+          {CATEGORIES.map((cat) => (
             <button
               key={cat.slug}
+              onClick={() => setSelectedCategory(cat.slug)}
               className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
-                idx === 0
+                selectedCategory === cat.slug
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
               }`}
@@ -466,62 +507,78 @@ export default function MarketplacePage() {
 
         {/* Products Grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {PRODUCTS.map((product) => (
-            <Card key={product.id} className="group overflow-hidden py-0">
-              {/* Image placeholder with gradient */}
-              <div
-                className={`relative flex h-48 items-center justify-center bg-gradient-to-br ${product.gradient}`}
-              >
-                <ProductIcon
-                  icon={product.icon}
-                  className="h-16 w-16 text-foreground/70 transition-transform group-hover:scale-110"
-                />
+          {filteredProducts.length === 0 ? (
+            <div className="col-span-full py-12 text-center text-muted-foreground">
+              No products found. Try a different search or category.
+            </div>
+          ) : (
+            filteredProducts.map((product) => {
+              const inCart = cartItems.has(product.id);
+              return (
+                <Card key={product.id} className="group overflow-hidden py-0">
+                  {/* Image placeholder with gradient */}
+                  <div
+                    className={`relative flex h-48 items-center justify-center bg-gradient-to-br ${product.gradient}`}
+                  >
+                    <ProductIcon
+                      icon={product.icon}
+                      className="h-16 w-16 text-foreground/70 transition-transform group-hover:scale-110"
+                    />
 
-                {/* Badges */}
-                <div className="absolute left-3 top-3 flex flex-col gap-1.5">
-                  {product.badge && (
-                    <Badge variant="secondary" className="text-[10px]">
-                      {product.badge}
-                    </Badge>
-                  )}
-                  {product.pointsEligible && (
-                    <Badge className="gap-1 bg-amber-500 text-[10px] text-white hover:bg-amber-500">
-                      <Zap className="h-2.5 w-2.5" />
-                      Shop with Points
-                    </Badge>
-                  )}
-                </div>
-              </div>
+                    {/* Badges */}
+                    <div className="absolute left-3 top-3 flex flex-col gap-1.5">
+                      {product.badge && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          {product.badge}
+                        </Badge>
+                      )}
+                      {product.pointsEligible && (
+                        <Badge className="gap-1 bg-amber-500 text-[10px] text-white hover:bg-amber-500">
+                          <Zap className="h-2.5 w-2.5" />
+                          Shop with Points
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
 
-              {/* Content */}
-              <CardHeader className="pb-1 pt-4">
-                <CardTitle className="text-sm leading-snug">
-                  {product.name}
-                </CardTitle>
-              </CardHeader>
+                  {/* Content */}
+                  <CardHeader className="pb-1 pt-4">
+                    <CardTitle className="text-sm leading-snug">
+                      {product.name}
+                    </CardTitle>
+                  </CardHeader>
 
-              <CardContent className="space-y-2 pb-2">
-                <StarRating rating={product.rating} reviews={product.reviews} />
-                <div className="flex items-baseline gap-2">
-                  <span className="text-lg font-bold">
-                    ${product.price.toFixed(2)}
-                  </span>
-                  {product.pointsEligible && (
-                    <span className="text-xs text-muted-foreground">
-                      or {Math.round(product.price * 100)} pts
-                    </span>
-                  )}
-                </div>
-              </CardContent>
+                  <CardContent className="space-y-2 pb-2">
+                    <StarRating
+                      rating={product.rating}
+                      reviews={product.reviews}
+                    />
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-lg font-bold">
+                        ${product.price.toFixed(2)}
+                      </span>
+                      {product.pointsEligible && (
+                        <span className="text-xs text-muted-foreground">
+                          or {Math.round(product.price * 100)} pts
+                        </span>
+                      )}
+                    </div>
+                  </CardContent>
 
-              <CardFooter className="pb-4 pt-0">
-                <Button className="w-full gap-2" size="sm">
-                  <ShoppingCart className="h-4 w-4" />
-                  Add to Cart
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+                  <CardFooter className="pb-4 pt-0">
+                    <Button
+                      className={`w-full gap-2 ${inCart ? "bg-emerald-600 hover:bg-emerald-700" : ""}`}
+                      size="sm"
+                      onClick={() => toggleCart(product.id)}
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                      {inCart ? "Added!" : "Add to Cart"}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            })
+          )}
         </div>
       </section>
 

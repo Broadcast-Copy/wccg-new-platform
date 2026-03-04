@@ -48,10 +48,20 @@ export default function AdvertisePage() {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setSubmitting(true);
+    setTimeout(() => {
+      setSubmitting(false);
+      setSubmitted(true);
+    }, 1000);
+  };
+
+  const handleReset = () => {
+    setFormData({ businessName: "", contactName: "", email: "", phone: "", budget: "", message: "" });
+    setSubmitted(false);
   };
 
   return (
@@ -119,6 +129,12 @@ export default function AdvertisePage() {
             <p className="text-sm text-muted-foreground mt-2">
               Our advertising team will reach out to you within 1-2 business days.
             </p>
+            <Button
+              onClick={handleReset}
+              className="mt-4 rounded-full bg-[#dc2626] text-white font-bold hover:bg-[#b91c1c] px-8"
+            >
+              Submit Another Inquiry
+            </Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -193,8 +209,8 @@ export default function AdvertisePage() {
                 placeholder="What are you looking to promote? What audience are you trying to reach?"
               />
             </div>
-            <Button type="submit" className="rounded-full bg-[#dc2626] text-white font-bold hover:bg-[#b91c1c] px-8">
-              Submit Inquiry
+            <Button type="submit" disabled={submitting} className="rounded-full bg-[#dc2626] text-white font-bold hover:bg-[#b91c1c] px-8 disabled:opacity-60">
+              {submitting ? "Submitting..." : "Submit Inquiry"}
             </Button>
           </form>
         )}

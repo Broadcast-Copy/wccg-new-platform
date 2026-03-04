@@ -253,7 +253,7 @@ export default function UserDashboardPage() {
 
         {/* Admin quick actions */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Link href="/my/admin/content">
+          <Link href="/my/admin">
             <Card className="group border-border transition-all hover:border-[#7401df]/30 hover:bg-[#7401df]/5">
               <CardContent className="flex items-center gap-3 pt-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#7401df]/10 group-hover:bg-[#7401df]/20 transition-colors">
@@ -270,7 +270,7 @@ export default function UserDashboardPage() {
             </Card>
           </Link>
 
-          <Link href="/my/admin/users">
+          <Link href="/my/admin">
             <Card className="group border-border transition-all hover:border-[#74ddc7]/30 hover:bg-[#74ddc7]/5">
               <CardContent className="flex items-center gap-3 pt-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#74ddc7]/10 group-hover:bg-[#74ddc7]/20 transition-colors">
@@ -287,7 +287,7 @@ export default function UserDashboardPage() {
             </Card>
           </Link>
 
-          <Link href="/my/admin/analytics">
+          <Link href="/my/admin">
             <Card className="group border-border transition-all hover:border-blue-400/30 hover:bg-blue-400/5">
               <CardContent className="flex items-center gap-3 pt-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-400/10 group-hover:bg-blue-400/20 transition-colors">
@@ -304,7 +304,7 @@ export default function UserDashboardPage() {
             </Card>
           </Link>
 
-          <Link href="/my/admin/broadcast">
+          <Link href="/my/admin">
             <Card className="group border-border transition-all hover:border-[#dc2626]/30 hover:bg-[#dc2626]/5">
               <CardContent className="flex items-center gap-3 pt-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#dc2626]/10 group-hover:bg-[#dc2626]/20 transition-colors">
@@ -321,7 +321,7 @@ export default function UserDashboardPage() {
             </Card>
           </Link>
 
-          <Link href="/my/admin/announcements">
+          <Link href="/my/admin">
             <Card className="group border-border transition-all hover:border-yellow-400/30 hover:bg-yellow-400/5">
               <CardContent className="flex items-center gap-3 pt-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-400/10 group-hover:bg-yellow-400/20 transition-colors">
@@ -338,7 +338,7 @@ export default function UserDashboardPage() {
             </Card>
           </Link>
 
-          <Link href="/my/admin/settings">
+          <Link href="/my/admin">
             <Card className="group border-border transition-all hover:border-foreground/20 hover:bg-foreground/5">
               <CardContent className="flex items-center gap-3 pt-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-foreground/[0.06] group-hover:bg-foreground/10 transition-colors">

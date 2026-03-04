@@ -47,10 +47,20 @@ export default function CreatorsPage() {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setSubmitting(true);
+    setTimeout(() => {
+      setSubmitting(false);
+      setSubmitted(true);
+    }, 1000);
+  };
+
+  const handleReset = () => {
+    setFormData({ name: "", email: "", type: "", portfolio: "", message: "" });
+    setSubmitted(false);
   };
 
   return (
@@ -123,6 +133,12 @@ export default function CreatorsPage() {
             <p className="text-sm text-muted-foreground mt-2">
               Our creator team will review your application and get back to you within 5 business days.
             </p>
+            <Button
+              onClick={handleReset}
+              className="mt-4 rounded-full bg-[#7401df] text-white font-bold hover:bg-[#5c00b3] px-8"
+            >
+              Submit Another Application
+            </Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -187,8 +203,8 @@ export default function CreatorsPage() {
                 placeholder="Describe your content, genre, audience, and what you'd like to do with WCCG..."
               />
             </div>
-            <Button type="submit" className="rounded-full bg-[#7401df] text-white font-bold hover:bg-[#5c00b3] px-8">
-              Submit Application
+            <Button type="submit" disabled={submitting} className="rounded-full bg-[#7401df] text-white font-bold hover:bg-[#5c00b3] px-8 disabled:opacity-60">
+              {submitting ? "Submitting..." : "Submit Application"}
             </Button>
           </form>
         )}

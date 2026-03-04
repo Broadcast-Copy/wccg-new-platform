@@ -193,15 +193,29 @@ export default function ContactPage() {
 
           {/* Success State */}
           {formState.submitted ? (
-            <Card>
+            <Card className="border-green-500/30 bg-green-500/5">
               <CardContent className="py-12 text-center space-y-4">
-                <CheckCircle className="h-12 w-12 mx-auto text-green-500" />
-                <h3 className="text-xl font-semibold">Message Sent!</h3>
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
+                  <CheckCircle className="h-8 w-8 text-green-500" />
+                </div>
+                <h3 className="text-xl font-semibold">
+                  {activeForm === "general" && "Message Sent!"}
+                  {activeForm === "music" && "Music Submitted!"}
+                  {activeForm === "advertiser" && "Inquiry Received!"}
+                  {activeForm === "creator" && "Request Submitted!"}
+                </h3>
                 <p className="text-muted-foreground max-w-md mx-auto">
-                  Thank you for reaching out. Our team will review your message
-                  and get back to you within 1-2 business days.
+                  {activeForm === "general" &&
+                    "Thank you for reaching out. Our team will review your message and get back to you within 1\u20132 business days."}
+                  {activeForm === "music" &&
+                    "Your music submission is in our queue! Our programming team will listen and follow up if it\u2019s a fit for WCCG 104.5 FM."}
+                  {activeForm === "advertiser" &&
+                    "Thanks for your interest in advertising with us! A member of our sales team will contact you to schedule a free consultation."}
+                  {activeForm === "creator" &&
+                    "We\u2019ve received your creator services request. Our production team will reach out to discuss your project details."}
                 </p>
-                <Button onClick={resetForm} variant="outline">
+                <Button onClick={resetForm} variant="outline" className="gap-2">
+                  <Send className="h-4 w-4" />
                   Send Another Message
                 </Button>
               </CardContent>

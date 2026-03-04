@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AppImage } from "@/components/ui/app-image";
 import {
   Trophy,
   Gift,
@@ -13,21 +12,19 @@ import {
   Star,
   ArrowRight,
   Ticket,
-  Music,
   Radio,
   PartyPopper,
   Sparkles,
   CalendarDays,
   MapPin,
   Phone,
-  ChevronRight,
-  Filter,
   Flame,
   CheckCircle2,
   Timer,
   Zap,
   Crown,
   Heart,
+  Check,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────
@@ -216,7 +213,21 @@ const CATEGORIES = [
 
 // ─── Contest Card Component ───────────────────────────────────────────
 
-function ContestCard({ contest, featured }: { contest: Contest; featured?: boolean }) {
+function ContestCard({
+  contest,
+  featured,
+  entered,
+  reminded,
+  onEnter,
+  onRemind,
+}: {
+  contest: Contest;
+  featured?: boolean;
+  entered?: boolean;
+  reminded?: boolean;
+  onEnter?: () => void;
+  onRemind?: () => void;
+}) {
   const status = statusConfig[contest.status];
   const StatusIcon = status.icon;
   const daysLeft = contest.status === "active"
@@ -326,19 +337,46 @@ function ContestCard({ contest, featured }: { contest: Contest; featured?: boole
             {contest.status === "active" && (
               <Button
                 size="sm"
-                className="rounded-full bg-[#dc2626] text-white font-bold hover:bg-[#b91c1c] text-xs px-4"
+                disabled={entered}
+                onClick={onEnter}
+                className={`rounded-full font-bold text-xs px-4 ${
+                  entered
+                    ? "bg-[#22c55e] text-white hover:bg-[#22c55e] cursor-default"
+                    : "bg-[#dc2626] text-white hover:bg-[#b91c1c]"
+                }`}
               >
-                Enter Now
-                <ArrowRight className="ml-1.5 h-3 w-3" />
+                {entered ? (
+                  <>
+                    <Check className="mr-1.5 h-3 w-3" />
+                    Entered!
+                  </>
+                ) : (
+                  <>
+                    Enter Now
+                    <ArrowRight className="ml-1.5 h-3 w-3" />
+                  </>
+                )}
               </Button>
             )}
             {contest.status === "upcoming" && (
               <Button
                 size="sm"
                 variant="outline"
-                className="rounded-full border-white/20 text-foreground hover:bg-white/5 text-xs px-4"
+                onClick={onRemind}
+                className={`rounded-full text-xs px-4 ${
+                  reminded
+                    ? "border-[#22c55e]/30 text-[#22c55e] hover:bg-[#22c55e]/5"
+                    : "border-white/20 text-foreground hover:bg-white/5"
+                }`}
               >
-                Remind Me
+                {reminded ? (
+                  <>
+                    <Check className="mr-1.5 h-3 w-3" />
+                    Reminder Set
+                  </>
+                ) : (
+                  "Remind Me"
+                )}
               </Button>
             )}
           </div>
@@ -352,6 +390,16 @@ function ContestCard({ contest, featured }: { contest: Contest; featured?: boole
 
 export default function ContestsPage() {
   const [filter, setFilter] = useState("all");
+  const [enteredIds, setEnteredIds] = useState<Set<string>>(new Set());
+  const [remindedIds, setRemindedIds] = useState<Set<string>>(new Set());
+
+  const handleEnter = (id: string) => {
+    setEnteredIds((prev) => new Set(prev).add(id));
+  };
+
+  const handleRemind = (id: string) => {
+    setRemindedIds((prev) => new Set(prev).add(id));
+  };
 
   const filteredContests = CONTESTS.filter((c) => {
     if (filter === "all") return true;
@@ -394,9 +442,12 @@ export default function ContestsPage() {
               <Button
                 size="lg"
                 className="rounded-full bg-[#dc2626] text-white font-bold hover:bg-[#b91c1c] px-6"
+                asChild
               >
-                <Ticket className="mr-2 h-4 w-4" />
-                Enter Active Contests
+                <a href="#all-contests">
+                  <Ticket className="mr-2 h-4 w-4" />
+                  Enter Active Contests
+                </a>
               </Button>
               <Button
                 variant="outline"
@@ -448,14 +499,22 @@ export default function ContestsPage() {
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             {featuredContests.map((c) => (
-              <ContestCard key={c.id} contest={c} featured />
+              <ContestCard
+                key={c.id}
+                contest={c}
+                featured
+                entered={enteredIds.has(c.id)}
+                reminded={remindedIds.has(c.id)}
+                onEnter={() => handleEnter(c.id)}
+                onRemind={() => handleRemind(c.id)}
+              />
             ))}
           </div>
         </section>
       )}
 
       {/* ── All Contests ──────────────────────────────────────────────── */}
-      <section className="space-y-4">
+      <section id="all-contests" className="space-y-4 scroll-mt-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-foreground">All Contests</h2>
           <span className="text-sm text-muted-foreground/70">{filteredContests.length} contests</span>
@@ -481,7 +540,14 @@ export default function ContestsPage() {
         {/* Contest grid */}
         <div className="grid gap-4 md:grid-cols-2">
           {filteredContests.map((c) => (
-            <ContestCard key={c.id} contest={c} />
+            <ContestCard
+              key={c.id}
+              contest={c}
+              entered={enteredIds.has(c.id)}
+              reminded={remindedIds.has(c.id)}
+              onEnter={() => handleEnter(c.id)}
+              onRemind={() => handleRemind(c.id)}
+            />
           ))}
         </div>
 
