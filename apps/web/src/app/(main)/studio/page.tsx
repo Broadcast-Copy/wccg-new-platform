@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { StudioProjects } from "@/components/studio/studio-projects";
 
 const services = [
   {
@@ -214,6 +215,9 @@ export default function StudioPage() {
           </div>
         </div>
       </div>
+
+      {/* My Studio Projects */}
+      <StudioProjects />
 
       {/* Full-Service Media Solutions */}
       <section className="space-y-5">
