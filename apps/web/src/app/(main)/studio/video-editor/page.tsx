@@ -17,6 +17,7 @@ import {
   SkipBack,
   SkipForward,
   Volume2,
+  VolumeX,
   PanelLeftClose,
   PanelLeftOpen,
   PanelRightClose,
@@ -30,6 +31,7 @@ import {
   ZoomIn,
   ZoomOut,
   ChevronDown,
+  Check,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -62,6 +64,12 @@ interface TimelineClip {
   color: string;
 }
 
+interface Marker {
+  id: string;
+  position: number; // percentage
+  label: string;
+}
+
 // ---------------------------------------------------------------------------
 // Mock Data
 // ---------------------------------------------------------------------------
@@ -91,7 +99,7 @@ const MOCK_EFFECTS: EffectItem[] = [
   { id: "e11", name: "Noise Reduction", category: "Audio" },
 ];
 
-const MOCK_TIMELINE_CLIPS: TimelineClip[] = [
+const INITIAL_TIMELINE_CLIPS: TimelineClip[] = [
   { id: "tc1", name: "Intro_Animation", track: "V2", start: 0, width: 8, color: "bg-blue-500/60" },
   { id: "tc2", name: "Interview_Main", track: "V1", start: 8, width: 55, color: "bg-[#7401df]/50" },
   { id: "tc3", name: "B-Roll_Studio", track: "V2", start: 20, width: 15, color: "bg-[#74ddc7]/50" },
@@ -102,6 +110,13 @@ const MOCK_TIMELINE_CLIPS: TimelineClip[] = [
 ];
 
 const TRACKS = ["V2", "V1", "A1", "A2"];
+
+const TRACK_COLORS: Record<string, string> = {
+  V2: "bg-[#74ddc7]/50",
+  V1: "bg-[#7401df]/50",
+  A1: "bg-pink-500/40",
+  A2: "bg-yellow-500/40",
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -144,22 +159,53 @@ export default function VideoEditorPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoUrlRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const simTimeRef = useRef(0); // Tracks simulated time in ref to avoid stale closures
+  const simTimeRef = useRef(0);
   const [hasVideo, setHasVideo] = useState(false);
   const [importedMedia, setImportedMedia] = useState<MediaItem[]>(MOCK_MEDIA);
 
   // Timeline
   const [timelineZoom, setTimelineZoom] = useState(100);
-  const [playheadPosition, setPlayheadPosition] = useState(28); // percentage
+  const [playheadPosition, setPlayheadPosition] = useState(28);
   const [selectedClipId, setSelectedClipId] = useState<string | null>("tc2");
+  const [timelineClips, setTimelineClips] = useState<TimelineClip[]>(INITIAL_TIMELINE_CLIPS);
+  const [markers, setMarkers] = useState<Marker[]>([]);
 
-  // Effects category expansion
+  // Effects category expansion & applied effects
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(["Transitions", "Color", "Text Overlays", "Audio"])
   );
+  const [appliedEffects, setAppliedEffects] = useState<Set<string>>(new Set());
 
-  // Drag state (visual only)
+  // Drag state
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [activeMediaId, setActiveMediaId] = useState<string | null>(null);
+
+  // Clip properties (editable)
+  const [clipPosX, setClipPosX] = useState(960);
+  const [clipPosY, setClipPosY] = useState(540);
+  const [clipScale, setClipScale] = useState(100);
+  const [clipRotation, setClipRotation] = useState(0);
+  const [clipOpacity, setClipOpacity] = useState(100);
+  const [clipVolume, setClipVolume] = useState(75);
+  const [playbackRate, setPlaybackRate] = useState(1.0);
+
+  // Text tab state
+  const [textFont, setTextFont] = useState("Inter");
+  const [textSize, setTextSize] = useState(48);
+  const [textWeight, setTextWeight] = useState("Bold");
+  const [textColor, setTextColor] = useState("#FFFFFF");
+  const [textAlign, setTextAlign] = useState("Center");
+  const [textBgEnabled, setTextBgEnabled] = useState(false);
+
+  // Status message (toast feedback)
+  const [statusMsg, setStatusMsg] = useState("Ready");
+  const statusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showStatus = useCallback((msg: string) => {
+    setStatusMsg(msg);
+    if (statusTimer.current) clearTimeout(statusTimer.current);
+    statusTimer.current = setTimeout(() => setStatusMsg("Ready"), 3000);
+  }, []);
 
   // Load a video/audio file
   const loadMediaFile = useCallback((file: File) => {
@@ -177,11 +223,10 @@ export default function VideoEditorPage() {
           setCurrentTime(0);
           setHasVideo(true);
           setPlayheadPosition(0);
-          console.log("[VideoEditor] Loaded:", file.name, "duration:", dur);
+          showStatus(`Loaded: ${file.name} (${Math.floor(dur)}s)`);
         };
       }
 
-      // Add to media list
       const isVideo = file.type.startsWith("video/");
       const isAudio = file.type.startsWith("audio/");
       const isImage = file.type.startsWith("image/");
@@ -196,8 +241,9 @@ export default function VideoEditorPage() {
       setImportedMedia((prev) => [...prev, newItem]);
     } catch (err) {
       console.error("[VideoEditor] Failed to load file:", err);
+      showStatus("Error loading file");
     }
-  }, []);
+  }, [showStatus]);
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -212,18 +258,15 @@ export default function VideoEditorPage() {
   useEffect(() => {
     if (!isPlaying) return;
 
-    // If a real video is loaded, sync to it
     if (hasVideo && videoRef.current) {
       videoRef.current.currentTime = currentTime;
       videoRef.current.play().catch(() => {});
     } else {
-      // Init simulation ref from current state
       simTimeRef.current = currentTime;
     }
 
     const interval = setInterval(() => {
       if (hasVideo && videoRef.current && !videoRef.current.paused) {
-        // Real video playback sync
         const t = videoRef.current.currentTime;
         setCurrentTime(t);
         setPlayheadPosition((t / totalDuration) * 100);
@@ -233,13 +276,13 @@ export default function VideoEditorPage() {
           setPlayheadPosition(0);
         }
       } else {
-        // Simulated playback — use ref to track time, call setters separately
         simTimeRef.current += 0.05;
         if (simTimeRef.current >= totalDuration) {
           simTimeRef.current = 0;
           setIsPlaying(false);
           setCurrentTime(0);
           setPlayheadPosition(0);
+          showStatus("Playback complete");
         } else {
           setCurrentTime(simTimeRef.current);
           setPlayheadPosition((simTimeRef.current / totalDuration) * 100);
@@ -261,6 +304,17 @@ export default function VideoEditorPage() {
     };
   }, []);
 
+  const togglePlay = useCallback(() => {
+    if (isPlaying) {
+      if (videoRef.current && !videoRef.current.paused) videoRef.current.pause();
+      setIsPlaying(false);
+      showStatus("Paused");
+    } else {
+      setIsPlaying(true);
+      showStatus("Playing");
+    }
+  }, [isPlaying, showStatus]);
+
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
@@ -280,7 +334,101 @@ export default function VideoEditorPage() {
     });
   }, []);
 
-  const selectedClip = MOCK_TIMELINE_CLIPS.find((c) => c.id === selectedClipId);
+  // Timeline actions
+  const addMarker = useCallback(() => {
+    const m: Marker = {
+      id: `mk-${Date.now()}`,
+      position: playheadPosition,
+      label: `M${markers.length + 1}`,
+    };
+    setMarkers((prev) => [...prev, m]);
+    showStatus(`Marker added at ${formatTimecode(currentTime)}`);
+  }, [playheadPosition, markers.length, currentTime, showStatus]);
+
+  const splitClip = useCallback(() => {
+    if (!selectedClipId) {
+      showStatus("No clip selected");
+      return;
+    }
+    const clip = timelineClips.find((c) => c.id === selectedClipId);
+    if (!clip) return;
+
+    const splitAt = playheadPosition;
+    if (splitAt <= clip.start || splitAt >= clip.start + clip.width) {
+      showStatus("Playhead must be over the selected clip to split");
+      return;
+    }
+
+    const leftWidth = splitAt - clip.start;
+    const rightWidth = clip.width - leftWidth;
+    const leftClip = { ...clip, width: leftWidth };
+    const rightClip: TimelineClip = {
+      id: `${clip.id}-split-${Date.now()}`,
+      name: `${clip.name}_R`,
+      track: clip.track,
+      start: splitAt,
+      width: rightWidth,
+      color: clip.color,
+    };
+
+    setTimelineClips((prev) =>
+      prev.map((c) => (c.id === clip.id ? leftClip : c)).concat(rightClip)
+    );
+    showStatus(`Split "${clip.name}" at ${formatTimecode(currentTime)}`);
+  }, [selectedClipId, playheadPosition, timelineClips, currentTime, showStatus]);
+
+  const deleteClip = useCallback(() => {
+    if (!selectedClipId) {
+      showStatus("No clip selected");
+      return;
+    }
+    const clip = timelineClips.find((c) => c.id === selectedClipId);
+    if (!clip) return;
+    setTimelineClips((prev) => prev.filter((c) => c.id !== selectedClipId));
+    setSelectedClipId(null);
+    showStatus(`Deleted "${clip.name}"`);
+  }, [selectedClipId, timelineClips, showStatus]);
+
+  // Add media item to timeline
+  const addToTimeline = useCallback(
+    (item: MediaItem) => {
+      const track = item.type === "audio" ? "A1" : "V1";
+      const existingOnTrack = timelineClips.filter((c) => c.track === track);
+      const maxEnd = existingOnTrack.reduce((m, c) => Math.max(m, c.start + c.width), 0);
+      const newClip: TimelineClip = {
+        id: `tc-${Date.now()}`,
+        name: item.name.replace(/\.\w+$/, ""),
+        track,
+        start: Math.min(maxEnd + 1, 90),
+        width: 10,
+        color: TRACK_COLORS[track] || "bg-gray-500/40",
+      };
+      setTimelineClips((prev) => [...prev, newClip]);
+      setSelectedClipId(newClip.id);
+      showStatus(`Added "${item.name}" to ${track}`);
+    },
+    [timelineClips, showStatus]
+  );
+
+  // Toggle effect
+  const toggleEffect = useCallback(
+    (effectId: string, effectName: string) => {
+      setAppliedEffects((prev) => {
+        const next = new Set(prev);
+        if (next.has(effectId)) {
+          next.delete(effectId);
+          showStatus(`Removed: ${effectName}`);
+        } else {
+          next.add(effectId);
+          showStatus(`Applied: ${effectName}`);
+        }
+        return next;
+      });
+    },
+    [showStatus]
+  );
+
+  const selectedClip = timelineClips.find((c) => c.id === selectedClipId);
 
   // Group effects by category
   const effectsByCategory = MOCK_EFFECTS.reduce<Record<string, EffectItem[]>>((acc, e) => {
@@ -329,7 +477,7 @@ export default function VideoEditorPage() {
         {/* Center: Layout Controls */}
         <div className="hidden md:flex items-center gap-1">
           <button
-            onClick={() => setShowLeftPanel(!showLeftPanel)}
+            onClick={() => { setShowLeftPanel(!showLeftPanel); showStatus(showLeftPanel ? "Left panel hidden" : "Left panel shown"); }}
             className={`p-1.5 rounded-md text-xs transition-colors ${
               showLeftPanel
                 ? "text-foreground bg-foreground/[0.08]"
@@ -344,7 +492,7 @@ export default function VideoEditorPage() {
             )}
           </button>
           <button
-            onClick={() => setShowRightPanel(!showRightPanel)}
+            onClick={() => { setShowRightPanel(!showRightPanel); showStatus(showRightPanel ? "Right panel hidden" : "Right panel shown"); }}
             className={`p-1.5 rounded-md text-xs transition-colors ${
               showRightPanel
                 ? "text-foreground bg-foreground/[0.08]"
@@ -359,7 +507,7 @@ export default function VideoEditorPage() {
             )}
           </button>
           <button
-            onClick={() => setShowBottomPanel(!showBottomPanel)}
+            onClick={() => { setShowBottomPanel(!showBottomPanel); showStatus(showBottomPanel ? "Timeline hidden" : "Timeline shown"); }}
             className={`p-1.5 rounded-md text-xs transition-colors ${
               showBottomPanel
                 ? "text-foreground bg-foreground/[0.08]"
@@ -378,12 +526,14 @@ export default function VideoEditorPage() {
         {/* Right: Actions */}
         <div className="flex items-center gap-1">
           <button
+            onClick={() => showStatus("Settings panel coming soon")}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
             title="Settings"
           >
             <Settings className="h-3.5 w-3.5" />
           </button>
           <button
+            onClick={() => showStatus("Keyboard shortcuts: Space = Play/Pause, S = Split, Del = Delete")}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
             title="Help"
           >
@@ -479,12 +629,21 @@ export default function VideoEditorPage() {
                     </button>
                   </div>
 
-                  {/* Media Items */}
+                  {/* Media Items — clickable to add to timeline */}
                   <div className="space-y-1">
                     {importedMedia.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center gap-2 p-1.5 rounded-md hover:bg-foreground/[0.04] cursor-grab transition-colors group"
+                        className={`flex items-center gap-2 p-1.5 rounded-md cursor-pointer transition-colors group ${
+                          activeMediaId === item.id
+                            ? "bg-[#74ddc7]/10 ring-1 ring-[#74ddc7]/40"
+                            : "hover:bg-foreground/[0.04]"
+                        }`}
+                        onClick={() => {
+                          setActiveMediaId(item.id);
+                          showStatus(`Selected: ${item.name} — double-click to add to timeline`);
+                        }}
+                        onDoubleClick={() => addToTimeline(item)}
                         draggable
                       >
                         <div
@@ -504,7 +663,25 @@ export default function VideoEditorPage() {
                             </p>
                           )}
                         </div>
-                        <button className="opacity-0 group-hover:opacity-100 p-0.5 text-muted-foreground hover:text-red-400 transition-all">
+                        <button
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded text-[#74ddc7] hover:bg-[#74ddc7]/10 transition-all"
+                          title="Add to timeline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addToTimeline(item);
+                          }}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                        <button
+                          className="opacity-0 group-hover:opacity-100 p-0.5 text-muted-foreground hover:text-red-400 transition-all"
+                          title="Remove"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setImportedMedia((prev) => prev.filter((m) => m.id !== item.id));
+                            showStatus(`Removed: ${item.name}`);
+                          }}
+                        >
                           <Trash2 className="h-3 w-3" />
                         </button>
                       </div>
@@ -534,9 +711,18 @@ export default function VideoEditorPage() {
                           {effects.map((effect) => (
                             <div
                               key={effect.id}
-                              className="flex items-center gap-2 px-2 py-1 rounded text-[11px] text-foreground/80 hover:bg-foreground/[0.04] cursor-pointer transition-colors"
+                              onClick={() => toggleEffect(effect.id, effect.name)}
+                              className={`flex items-center gap-2 px-2 py-1 rounded text-[11px] cursor-pointer transition-colors ${
+                                appliedEffects.has(effect.id)
+                                  ? "bg-[#74ddc7]/15 text-[#74ddc7]"
+                                  : "text-foreground/80 hover:bg-foreground/[0.04]"
+                              }`}
                             >
-                              <Layers className="h-3 w-3 text-muted-foreground shrink-0" />
+                              {appliedEffects.has(effect.id) ? (
+                                <Check className="h-3 w-3 text-[#74ddc7] shrink-0" />
+                              ) : (
+                                <Layers className="h-3 w-3 text-muted-foreground shrink-0" />
+                              )}
                               {effect.name}
                             </div>
                           ))}
@@ -556,8 +742,11 @@ export default function VideoEditorPage() {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Preview Monitor */}
           <div className="flex-1 min-h-0 flex flex-col bg-black/40">
-            {/* Video Preview Area */}
-            <div className="flex-1 flex items-center justify-center relative">
+            {/* Video Preview Area — ALWAYS clickable for play/pause */}
+            <div
+              className="flex-1 flex items-center justify-center relative cursor-pointer"
+              onClick={togglePlay}
+            >
               <div className="relative w-full max-w-3xl aspect-video bg-black/80 rounded-sm mx-4 flex items-center justify-center overflow-hidden">
                 {hasVideo ? (
                   /* eslint-disable-next-line jsx-a11y/media-has-caption */
@@ -565,16 +754,27 @@ export default function VideoEditorPage() {
                     ref={videoRef}
                     className="absolute inset-0 w-full h-full object-contain"
                     playsInline
-                    onClick={() => setIsPlaying(!isPlaying)}
                   />
                 ) : (
                   <>
                     <div className="absolute inset-0 bg-gradient-to-br from-[#7401df]/20 via-black/60 to-[#74ddc7]/10" />
                     <div className="relative text-center">
-                      <Film className="h-10 w-10 text-foreground/20 mx-auto mb-2" />
-                      <p className="text-xs text-foreground/30">Import a video to preview</p>
+                      {/* Big play/pause button overlay */}
+                      <div className="h-16 w-16 rounded-full bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
+                        {isPlaying ? (
+                          <Pause className="h-8 w-8 text-white/80" />
+                        ) : (
+                          <Play className="h-8 w-8 text-white/80 ml-1" />
+                        )}
+                      </div>
+                      <p className="text-xs text-foreground/30">
+                        {isPlaying ? "Playing — click to pause" : "Click to play • Import a video for preview"}
+                      </p>
                       <button
-                        onClick={() => fileInputRef.current?.click()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          fileInputRef.current?.click();
+                        }}
                         className="mt-2 text-xs text-[#74ddc7] hover:underline"
                       >
                         Browse Files
@@ -588,6 +788,14 @@ export default function VideoEditorPage() {
                   {formatTimecode(currentTime)}
                 </div>
 
+                {/* Playing indicator */}
+                {isPlaying && (
+                  <div className="absolute top-2 left-2 bg-red-500/80 px-2 py-0.5 rounded text-[10px] font-mono text-white flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                    PLAYING
+                  </div>
+                )}
+
                 {/* Safe area guides */}
                 <div className="absolute inset-[5%] border border-foreground/[0.06] rounded-sm pointer-events-none" />
               </div>
@@ -597,28 +805,27 @@ export default function VideoEditorPage() {
             <div className="flex items-center justify-center gap-3 py-2 border-t border-border/50 bg-card/30 shrink-0">
               <div className="flex items-center gap-1">
                 <button
-                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors active:scale-90"
                   title="Previous frame"
                   onClick={() => {
                     const t = Math.max(0, currentTime - 1 / 30);
                     setCurrentTime(t);
+                    simTimeRef.current = t;
                     if (videoRef.current) videoRef.current.currentTime = t;
                     setPlayheadPosition((t / totalDuration) * 100);
+                    showStatus(`Frame: ${formatTimecode(t)}`);
                   }}
                 >
                   <SkipBack className="h-3.5 w-3.5" />
                 </button>
                 <button
-                  className="p-2 rounded-lg bg-foreground/[0.08] text-foreground hover:bg-foreground/[0.12] transition-colors"
+                  className={`p-2 rounded-lg transition-colors active:scale-95 ${
+                    isPlaying
+                      ? "bg-[#74ddc7]/20 text-[#74ddc7] hover:bg-[#74ddc7]/30"
+                      : "bg-foreground/[0.08] text-foreground hover:bg-foreground/[0.12]"
+                  }`}
                   title={isPlaying ? "Pause" : "Play"}
-                  onClick={() => {
-                    if (isPlaying) {
-                      if (videoRef.current && !videoRef.current.paused) videoRef.current.pause();
-                      setIsPlaying(false);
-                    } else {
-                      setIsPlaying(true);
-                    }
-                  }}
+                  onClick={togglePlay}
                 >
                   {isPlaying ? (
                     <Pause className="h-4 w-4" />
@@ -627,13 +834,15 @@ export default function VideoEditorPage() {
                   )}
                 </button>
                 <button
-                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors active:scale-90"
                   title="Next frame"
                   onClick={() => {
                     const t = Math.min(totalDuration, currentTime + 1 / 30);
                     setCurrentTime(t);
+                    simTimeRef.current = t;
                     if (videoRef.current) videoRef.current.currentTime = t;
                     setPlayheadPosition((t / totalDuration) * 100);
+                    showStatus(`Frame: ${formatTimecode(t)}`);
                   }}
                 >
                   <SkipForward className="h-3.5 w-3.5" />
@@ -658,11 +867,12 @@ export default function VideoEditorPage() {
                     const newVol = volume > 0 ? 0 : 75;
                     setVolume(newVol);
                     if (videoRef.current) videoRef.current.volume = newVol / 100;
+                    showStatus(newVol === 0 ? "Muted" : `Volume: ${newVol}%`);
                   }}
                   className="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
                   title={volume === 0 ? "Unmute" : "Mute"}
                 >
-                  <Volume2 className="h-3 w-3" />
+                  {volume === 0 ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
                 </button>
                 <input
                   type="range"
@@ -693,28 +903,36 @@ export default function VideoEditorPage() {
               <div className="flex items-center justify-between px-2 py-1 border-b border-border shrink-0">
                 <div className="flex items-center gap-1">
                   <button
-                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
+                    className="p-1 rounded text-muted-foreground hover:text-[#74ddc7] hover:bg-[#74ddc7]/10 transition-colors active:scale-90"
                     title="Add marker"
+                    onClick={addMarker}
                   >
                     <Plus className="h-3 w-3" />
                   </button>
                   <button
-                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
-                    title="Split clip"
+                    className="p-1 rounded text-muted-foreground hover:text-[#74ddc7] hover:bg-[#74ddc7]/10 transition-colors active:scale-90"
+                    title="Split clip at playhead"
+                    onClick={splitClip}
                   >
                     <Scissors className="h-3 w-3" />
                   </button>
                   <button
-                    className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-foreground/[0.04] transition-colors"
-                    title="Delete selected"
+                    className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors active:scale-90"
+                    title="Delete selected clip"
+                    onClick={deleteClip}
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>
+                  {selectedClip && (
+                    <span className="text-[10px] text-muted-foreground ml-2 bg-foreground/[0.04] px-1.5 py-0.5 rounded">
+                      {selectedClip.name}
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-1.5">
                   <button
-                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
+                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors active:scale-90"
                     title="Zoom out"
                     onClick={() =>
                       setTimelineZoom(Math.max(25, timelineZoom - 25))
@@ -726,7 +944,7 @@ export default function VideoEditorPage() {
                     {timelineZoom}%
                   </span>
                   <button
-                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
+                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors active:scale-90"
                     title="Zoom in"
                     onClick={() =>
                       setTimelineZoom(Math.min(400, timelineZoom + 25))
@@ -771,6 +989,7 @@ export default function VideoEditorPage() {
                     setPlayheadPosition(Math.max(0, Math.min(100, pct)));
                     const t = (pct / 100) * totalDuration;
                     setCurrentTime(t);
+                    simTimeRef.current = t;
                     if (videoRef.current) videoRef.current.currentTime = t;
                   }}
                 >
@@ -788,12 +1007,26 @@ export default function VideoEditorPage() {
                         <div className="w-px h-1.5 bg-border" />
                       </div>
                     ))}
+                    {/* Markers on ruler */}
+                    {markers.map((m) => (
+                      <div
+                        key={m.id}
+                        className="absolute bottom-0 flex flex-col items-center z-10"
+                        style={{ left: `${m.position}%` }}
+                        title={`${m.label} — ${formatTimecode((m.position / 100) * totalDuration)}`}
+                      >
+                        <span className="text-[8px] text-amber-400 font-bold mb-0.5">
+                          {m.label}
+                        </span>
+                        <div className="w-1.5 h-2 bg-amber-400 rounded-t" />
+                      </div>
+                    ))}
                   </div>
 
                   {/* Track Lanes */}
                   <div className="flex flex-col flex-1 relative" style={{ height: "calc(100% - 20px)" }}>
                     {TRACKS.map((track) => {
-                      const trackClips = MOCK_TIMELINE_CLIPS.filter(
+                      const trackClips = timelineClips.filter(
                         (c) => c.track === track
                       );
                       return (
@@ -808,7 +1041,7 @@ export default function VideoEditorPage() {
                                 clip.color
                               } ${
                                 selectedClipId === clip.id
-                                  ? "ring-1 ring-[#74ddc7] ring-offset-1 ring-offset-transparent"
+                                  ? "ring-1 ring-[#74ddc7] ring-offset-1 ring-offset-transparent brightness-125"
                                   : "hover:brightness-125"
                               }`}
                               style={{
@@ -818,6 +1051,7 @@ export default function VideoEditorPage() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedClipId(clip.id);
+                                showStatus(`Selected: ${clip.name}`);
                               }}
                             >
                               <span className="absolute inset-x-1 top-0.5 text-[9px] text-foreground/70 truncate">
@@ -834,7 +1068,7 @@ export default function VideoEditorPage() {
                       className="absolute top-0 bottom-0 w-px bg-red-500 z-10 pointer-events-none"
                       style={{ left: `${playheadPosition}%` }}
                     >
-                      <div className="absolute -top-[20px] left-1/2 -translate-x-1/2 w-2.5 h-3 bg-red-500 clip-path-triangle" style={{
+                      <div className="absolute -top-[20px] left-1/2 -translate-x-1/2 w-2.5 h-3 bg-red-500" style={{
                         clipPath: "polygon(0 0, 100% 0, 50% 100%)",
                       }} />
                     </div>
@@ -891,73 +1125,103 @@ export default function VideoEditorPage() {
                       </p>
                     </div>
 
-                    {/* Transform */}
+                    {/* Transform — EDITABLE */}
                     <div>
                       <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
                         Transform
                       </h4>
                       <div className="space-y-1.5">
-                        {[
-                          { label: "Position X", value: "960" },
-                          { label: "Position Y", value: "540" },
-                          { label: "Scale", value: "100%" },
-                          { label: "Rotation", value: "0.0" },
-                        ].map((prop) => (
-                          <div
-                            key={prop.label}
-                            className="flex items-center justify-between"
-                          >
-                            <span className="text-[11px] text-muted-foreground">
-                              {prop.label}
-                            </span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-muted-foreground">Position X</span>
+                          <input
+                            type="number"
+                            value={clipPosX}
+                            onChange={(e) => { setClipPosX(Number(e.target.value)); showStatus(`Position X: ${e.target.value}`); }}
+                            className="w-16 text-right text-[11px] bg-foreground/[0.04] border border-border rounded px-1.5 py-0.5 text-foreground tabular-nums focus:border-[#74ddc7] focus:outline-none transition-colors"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-muted-foreground">Position Y</span>
+                          <input
+                            type="number"
+                            value={clipPosY}
+                            onChange={(e) => { setClipPosY(Number(e.target.value)); showStatus(`Position Y: ${e.target.value}`); }}
+                            className="w-16 text-right text-[11px] bg-foreground/[0.04] border border-border rounded px-1.5 py-0.5 text-foreground tabular-nums focus:border-[#74ddc7] focus:outline-none transition-colors"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-muted-foreground">Scale</span>
+                          <div className="flex items-center gap-1">
                             <input
-                              type="text"
-                              value={prop.value}
-                              readOnly
-                              className="w-16 text-right text-[11px] bg-foreground/[0.04] border border-border rounded px-1.5 py-0.5 text-foreground tabular-nums"
+                              type="range"
+                              min={10}
+                              max={200}
+                              value={clipScale}
+                              onChange={(e) => setClipScale(Number(e.target.value))}
+                              className="w-12 h-1 accent-[#74ddc7] cursor-pointer"
                             />
+                            <span className="w-10 text-right text-[11px] text-foreground tabular-nums">{clipScale}%</span>
                           </div>
-                        ))}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-muted-foreground">Rotation</span>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="range"
+                              min={-180}
+                              max={180}
+                              value={clipRotation}
+                              onChange={(e) => setClipRotation(Number(e.target.value))}
+                              className="w-12 h-1 accent-[#7401df] cursor-pointer"
+                            />
+                            <span className="w-10 text-right text-[11px] text-foreground tabular-nums">{clipRotation.toFixed(1)}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Opacity */}
+                    {/* Opacity — REAL slider */}
                     <div>
                       <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
                         Opacity
                       </h4>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 bg-foreground/[0.08] rounded-full relative">
-                          <div className="h-full w-full bg-[#74ddc7] rounded-full" />
-                          <div className="absolute right-0 top-1/2 -translate-y-1/2 h-3 w-3 rounded-full bg-[#74ddc7] border-2 border-card" />
-                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          value={clipOpacity}
+                          onChange={(e) => setClipOpacity(Number(e.target.value))}
+                          className="flex-1 h-1.5 accent-[#74ddc7] cursor-pointer"
+                        />
                         <span className="text-[11px] text-muted-foreground tabular-nums w-8 text-right">
-                          100%
+                          {clipOpacity}%
                         </span>
                       </div>
                     </div>
 
-                    {/* Volume (for audio/video tracks) */}
+                    {/* Volume — REAL slider */}
                     <div>
                       <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
                         Volume
                       </h4>
                       <div className="flex items-center gap-2">
                         <Volume2 className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <div className="flex-1 h-1.5 bg-foreground/[0.08] rounded-full relative">
-                          <div className="h-full w-3/4 bg-[#7401df] rounded-full" />
-                          <div
-                            className="absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full bg-[#7401df] border-2 border-card"
-                            style={{ left: "75%" }}
-                          />
-                        </div>
-                        <span className="text-[11px] text-muted-foreground tabular-nums w-8 text-right">
-                          -6 dB
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          value={clipVolume}
+                          onChange={(e) => setClipVolume(Number(e.target.value))}
+                          className="flex-1 h-1.5 accent-[#7401df] cursor-pointer"
+                        />
+                        <span className="text-[11px] text-muted-foreground tabular-nums w-10 text-right">
+                          {clipVolume > 0 ? `-${Math.round((1 - clipVolume / 100) * 48)}` : "-∞"} dB
                         </span>
                       </div>
                     </div>
 
-                    {/* Speed */}
+                    {/* Speed — EDITABLE */}
                     <div>
                       <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
                         Speed
@@ -966,12 +1230,24 @@ export default function VideoEditorPage() {
                         <span className="text-[11px] text-muted-foreground">
                           Playback Rate
                         </span>
-                        <input
-                          type="text"
-                          value="1.0x"
-                          readOnly
-                          className="w-12 text-right text-[11px] bg-foreground/[0.04] border border-border rounded px-1.5 py-0.5 text-foreground tabular-nums"
-                        />
+                        <select
+                          value={playbackRate}
+                          onChange={(e) => {
+                            const rate = Number(e.target.value);
+                            setPlaybackRate(rate);
+                            if (videoRef.current) videoRef.current.playbackRate = rate;
+                            showStatus(`Speed: ${rate}x`);
+                          }}
+                          className="w-16 text-right text-[11px] bg-foreground/[0.04] border border-border rounded px-1.5 py-0.5 text-foreground tabular-nums focus:border-[#74ddc7] focus:outline-none appearance-none cursor-pointer"
+                        >
+                          <option value={0.25}>0.25x</option>
+                          <option value={0.5}>0.5x</option>
+                          <option value={0.75}>0.75x</option>
+                          <option value={1.0}>1.0x</option>
+                          <option value={1.25}>1.25x</option>
+                          <option value={1.5}>1.5x</option>
+                          <option value={2.0}>2.0x</option>
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -984,10 +1260,13 @@ export default function VideoEditorPage() {
                   </div>
                 )
               ) : (
-                /* Text Tab */
+                /* Text Tab — FULLY INTERACTIVE */
                 <div className="space-y-4">
                   {/* Add Text */}
-                  <button className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-md border border-dashed border-border text-xs text-muted-foreground hover:text-foreground hover:border-muted-foreground/40 transition-colors">
+                  <button
+                    onClick={() => showStatus("Text layer added (visual only in beta)")}
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-md border border-dashed border-border text-xs text-muted-foreground hover:text-[#74ddc7] hover:border-[#74ddc7]/40 transition-colors active:scale-[0.98]"
+                  >
                     <Plus className="h-3 w-3" />
                     Add Text Layer
                   </button>
@@ -999,21 +1278,31 @@ export default function VideoEditorPage() {
                     </h4>
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-1.5">
-                        <select className="flex-1 text-[11px] bg-foreground/[0.04] border border-border rounded px-1.5 py-1 text-foreground appearance-none">
+                        <select
+                          value={textFont}
+                          onChange={(e) => { setTextFont(e.target.value); showStatus(`Font: ${e.target.value}`); }}
+                          className="flex-1 text-[11px] bg-foreground/[0.04] border border-border rounded px-1.5 py-1 text-foreground appearance-none cursor-pointer focus:border-[#74ddc7] focus:outline-none"
+                        >
                           <option>Inter</option>
                           <option>Roboto</option>
                           <option>Montserrat</option>
                           <option>Open Sans</option>
                         </select>
                         <input
-                          type="text"
-                          value="48"
-                          readOnly
-                          className="w-10 text-center text-[11px] bg-foreground/[0.04] border border-border rounded px-1 py-1 text-foreground tabular-nums"
+                          type="number"
+                          value={textSize}
+                          onChange={(e) => setTextSize(Number(e.target.value))}
+                          min={8}
+                          max={200}
+                          className="w-12 text-center text-[11px] bg-foreground/[0.04] border border-border rounded px-1 py-1 text-foreground tabular-nums focus:border-[#74ddc7] focus:outline-none"
                         />
                       </div>
                       <div className="flex items-center gap-1">
-                        <select className="flex-1 text-[11px] bg-foreground/[0.04] border border-border rounded px-1.5 py-1 text-foreground appearance-none">
+                        <select
+                          value={textWeight}
+                          onChange={(e) => { setTextWeight(e.target.value); showStatus(`Weight: ${e.target.value}`); }}
+                          className="flex-1 text-[11px] bg-foreground/[0.04] border border-border rounded px-1.5 py-1 text-foreground appearance-none cursor-pointer focus:border-[#74ddc7] focus:outline-none"
+                        >
                           <option>Bold</option>
                           <option>Regular</option>
                           <option>Light</option>
@@ -1029,12 +1318,15 @@ export default function VideoEditorPage() {
                       Color
                     </h4>
                     <div className="flex items-center gap-2">
-                      <div className="h-6 w-6 rounded border border-border bg-white" />
+                      <div
+                        className="h-6 w-6 rounded border border-border"
+                        style={{ backgroundColor: textColor }}
+                      />
                       <input
                         type="text"
-                        value="#FFFFFF"
-                        readOnly
-                        className="flex-1 text-[11px] bg-foreground/[0.04] border border-border rounded px-1.5 py-1 text-foreground font-mono"
+                        value={textColor}
+                        onChange={(e) => setTextColor(e.target.value)}
+                        className="flex-1 text-[11px] bg-foreground/[0.04] border border-border rounded px-1.5 py-1 text-foreground font-mono focus:border-[#74ddc7] focus:outline-none"
                       />
                     </div>
                     <div className="flex gap-1 mt-1.5">
@@ -1042,7 +1334,12 @@ export default function VideoEditorPage() {
                         (color) => (
                           <button
                             key={color}
-                            className="h-5 w-5 rounded border border-border hover:ring-1 hover:ring-[#74ddc7] transition-all"
+                            onClick={() => { setTextColor(color); showStatus(`Color: ${color}`); }}
+                            className={`h-5 w-5 rounded border transition-all ${
+                              textColor === color
+                                ? "border-[#74ddc7] ring-1 ring-[#74ddc7] scale-110"
+                                : "border-border hover:ring-1 hover:ring-[#74ddc7]"
+                            }`}
                             style={{ backgroundColor: color }}
                           />
                         )
@@ -1059,9 +1356,10 @@ export default function VideoEditorPage() {
                       {["Left", "Center", "Right"].map((align) => (
                         <button
                           key={align}
+                          onClick={() => { setTextAlign(align); showStatus(`Align: ${align}`); }}
                           className={`flex-1 px-2 py-1 rounded text-[10px] transition-colors ${
-                            align === "Center"
-                              ? "bg-foreground/[0.08] text-foreground"
+                            textAlign === align
+                              ? "bg-[#74ddc7]/20 text-[#74ddc7] font-medium"
                               : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04]"
                           }`}
                         >
@@ -1071,7 +1369,7 @@ export default function VideoEditorPage() {
                     </div>
                   </div>
 
-                  {/* Background */}
+                  {/* Background Toggle */}
                   <div>
                     <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
                       Background
@@ -1080,9 +1378,21 @@ export default function VideoEditorPage() {
                       <span className="text-[11px] text-muted-foreground">
                         Enable Background
                       </span>
-                      <div className="h-4 w-7 rounded-full bg-foreground/[0.08] relative cursor-pointer">
-                        <div className="absolute top-0.5 left-0.5 h-3 w-3 rounded-full bg-muted-foreground transition-transform" />
-                      </div>
+                      <button
+                        onClick={() => {
+                          setTextBgEnabled(!textBgEnabled);
+                          showStatus(textBgEnabled ? "Text background off" : "Text background on");
+                        }}
+                        className={`h-5 w-9 rounded-full relative transition-colors ${
+                          textBgEnabled ? "bg-[#74ddc7]" : "bg-foreground/[0.12]"
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                            textBgEnabled ? "translate-x-4" : "translate-x-0.5"
+                          }`}
+                        />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1093,13 +1403,13 @@ export default function VideoEditorPage() {
       </div>
 
       {/* ================================================================= */}
-      {/* Status Bar                                                        */}
+      {/* Status Bar — DYNAMIC                                              */}
       {/* ================================================================= */}
       <div className="flex items-center justify-between px-3 py-1 border-t border-border bg-card/80 text-[10px] text-muted-foreground shrink-0">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-            Ready
+            <span className={`h-1.5 w-1.5 rounded-full ${isPlaying ? "bg-red-500 animate-pulse" : "bg-green-500"}`} />
+            {statusMsg}
           </span>
           <span>1920 x 1080</span>
           <span>30 fps</span>
@@ -1109,7 +1419,8 @@ export default function VideoEditorPage() {
           <span>
             Duration: {Math.floor(totalDuration / 60)}:{String(Math.floor(totalDuration % 60)).padStart(2, "0")}
           </span>
-          <span>Export: MP4</span>
+          <span>{timelineClips.length} clips</span>
+          <span>{appliedEffects.size > 0 ? `${appliedEffects.size} effects` : "No effects"}</span>
           <span className="text-muted-foreground/60">v1.0.0-beta</span>
         </div>
       </div>
