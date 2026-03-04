@@ -78,7 +78,7 @@ const GENRE_OPTIONS = [
 const STATUS_STYLES: Record<DashboardMix["status"], string> = {
   PUBLISHED: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   PROCESSING: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  HIDDEN: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+  HIDDEN: "bg-muted/50 text-muted-foreground border-border",
 };
 
 const STATUS_LABELS: Record<DashboardMix["status"], string> = {
@@ -471,11 +471,11 @@ export default function MyMixesPage() {
   if (!user) {
     return (
       <div className="mx-auto max-w-xl px-4 py-24 text-center">
-        <div className="mx-auto mb-6 flex size-20 items-center justify-center rounded-full bg-zinc-800 ring-1 ring-zinc-700">
-          <Music className="size-10 text-zinc-500" />
+        <div className="mx-auto mb-6 flex size-20 items-center justify-center rounded-full bg-card ring-1 ring-border">
+          <Music className="size-10 text-muted-foreground" />
         </div>
-        <h1 className="mb-3 text-2xl font-bold text-white">Sign In Required</h1>
-        <p className="mb-8 text-zinc-400">
+        <h1 className="mb-3 text-2xl font-bold text-foreground">Sign In Required</h1>
+        <p className="mb-8 text-muted-foreground">
           You need to be signed in to manage your DJ mixes.
         </p>
         <Link href="/sign-in">
@@ -499,8 +499,8 @@ export default function MyMixesPage() {
       <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         {/* Left: Title & action */}
         <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight text-white">My DJ Mixes</h1>
-          <p className="mt-1 text-zinc-400">Manage the mixes on your public profile</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">My DJ Mixes</h1>
+          <p className="mt-1 text-muted-foreground">Manage the mixes on your public profile</p>
           <div className="mt-4">
             <Button
               className="bg-[#74ddc7] text-black hover:bg-[#74ddc7]/80"
@@ -513,25 +513,25 @@ export default function MyMixesPage() {
         </div>
 
         {/* Right: Profile card */}
-        <Card className="w-full border-zinc-800 bg-zinc-900/50 lg:w-80">
+        <Card className="w-full border-border bg-card lg:w-80">
           <CardContent className="flex items-center gap-4 py-4">
             {/* Avatar */}
             <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#74ddc7] to-[#7401df]">
-              <span className="text-lg font-bold text-white">
+              <span className="text-lg font-bold text-foreground">
                 {djName.charAt(0).toUpperCase()}
               </span>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-white">{djName}</p>
+              <p className="truncate text-sm font-semibold text-foreground">{djName}</p>
               <Link
                 href="/mix-squad"
                 className="inline-flex items-center gap-1 text-xs text-[#74ddc7] hover:underline"
               >
                 View Public Profile <ExternalLink className="size-3" />
               </Link>
-              <div className="mt-1 flex gap-3 text-xs text-zinc-400">
-                <span><strong className="text-white">{mixes.length}</strong> mixes</span>
-                <span><strong className="text-white">{totalPlays.toLocaleString()}</strong> plays</span>
+              <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
+                <span><strong className="text-foreground">{mixes.length}</strong> mixes</span>
+                <span><strong className="text-foreground">{totalPlays.toLocaleString()}</strong> plays</span>
               </div>
             </div>
           </CardContent>
@@ -542,36 +542,36 @@ export default function MyMixesPage() {
       {/* Stats Bar                                                         */}
       {/* ----------------------------------------------------------------- */}
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card className="border-zinc-800 bg-zinc-900/50">
+        <Card className="border-border bg-card">
           <CardContent className="flex items-center gap-3 py-4">
             <div className="flex size-10 items-center justify-center rounded-lg bg-[#74ddc7]/10">
               <Disc3 className="size-5 text-[#74ddc7]" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-white">{mixes.length}</p>
-              <p className="text-xs text-zinc-400">Total Mixes</p>
+              <p className="text-2xl font-bold text-foreground">{mixes.length}</p>
+              <p className="text-xs text-muted-foreground">Total Mixes</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-zinc-800 bg-zinc-900/50">
+        <Card className="border-border bg-card">
           <CardContent className="flex items-center gap-3 py-4">
             <div className="flex size-10 items-center justify-center rounded-lg bg-[#7401df]/10">
               <BarChart3 className="size-5 text-[#7401df]" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-white">{totalPlays.toLocaleString()}</p>
-              <p className="text-xs text-zinc-400">Total Plays</p>
+              <p className="text-2xl font-bold text-foreground">{totalPlays.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">Total Plays</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-zinc-800 bg-zinc-900/50">
+        <Card className="border-border bg-card">
           <CardContent className="flex items-center gap-3 py-4">
             <div className="flex size-10 items-center justify-center rounded-lg bg-amber-500/10">
               <HardDrive className="size-5 text-amber-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-white">{formatFileSize(totalStorage)}</p>
-              <p className="text-xs text-zinc-400">Storage Used</p>
+              <p className="text-2xl font-bold text-foreground">{formatFileSize(totalStorage)}</p>
+              <p className="text-xs text-muted-foreground">Storage Used</p>
             </div>
           </CardContent>
         </Card>
@@ -581,9 +581,9 @@ export default function MyMixesPage() {
       {/* Upload Section (toggleable)                                       */}
       {/* ----------------------------------------------------------------- */}
       {showUpload && (
-        <Card className="mb-8 border-zinc-800 bg-zinc-900/50">
+        <Card className="mb-8 border-border bg-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
+            <CardTitle className="flex items-center gap-2 text-foreground">
               <Upload className="size-5 text-[#74ddc7]" />
               Upload New Mix
             </CardTitle>
@@ -591,7 +591,7 @@ export default function MyMixesPage() {
           <CardContent className="space-y-6">
             {/* Audio Drop Zone */}
             <div
-              className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-zinc-700 bg-zinc-800/40 py-10 transition-colors hover:border-[#74ddc7]/50"
+              className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-input bg-background/40 py-10 transition-colors hover:border-[#74ddc7]/50"
               onDrop={handleAudioDrop}
               onDragOver={preventDefault}
               onClick={() => {
@@ -615,11 +615,11 @@ export default function MyMixesPage() {
                 </div>
               ) : (
                 <>
-                  <FileAudio className="mb-2 size-10 text-zinc-500" />
-                  <p className="text-sm text-zinc-400">
+                  <FileAudio className="mb-2 size-10 text-muted-foreground/70" />
+                  <p className="text-sm text-muted-foreground">
                     Drag & drop audio file or <span className="text-[#74ddc7]">browse</span>
                   </p>
-                  <p className="mt-1 text-xs text-zinc-500">.mp3, .wav, .m4a</p>
+                  <p className="mt-1 text-xs text-muted-foreground/70">.mp3, .wav, .m4a</p>
                 </>
               )}
             </div>
@@ -627,22 +627,22 @@ export default function MyMixesPage() {
             {/* Title & Genre */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+                <label className="mb-1.5 block text-sm font-medium text-foreground/70">
                   Title <span className="text-red-400">*</span>
                 </label>
                 <Input
                   placeholder="Mix title"
                   value={uploadTitle}
                   onChange={(e) => setUploadTitle(e.target.value)}
-                  className="border-zinc-700 bg-zinc-800 text-white placeholder:text-zinc-500"
+                  className="border-input bg-background text-foreground placeholder:text-muted-foreground/70"
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-300">Genre</label>
+                <label className="mb-1.5 block text-sm font-medium text-foreground/70">Genre</label>
                 <select
                   value={uploadGenre}
                   onChange={(e) => setUploadGenre(e.target.value)}
-                  className="h-9 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 text-sm text-white outline-none focus:border-[#74ddc7] focus:ring-1 focus:ring-[#74ddc7]"
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-[#74ddc7] focus:ring-1 focus:ring-[#74ddc7]"
                 >
                   {GENRE_OPTIONS.map((g) => (
                     <option key={g} value={g}>
@@ -655,26 +655,26 @@ export default function MyMixesPage() {
 
             {/* Description */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-zinc-300">Description</label>
+              <label className="mb-1.5 block text-sm font-medium text-foreground/70">Description</label>
               <textarea
                 rows={3}
                 placeholder="Describe your mix..."
                 value={uploadDescription}
                 onChange={(e) => setUploadDescription(e.target.value)}
-                className="w-full resize-none rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-[#74ddc7] focus:ring-1 focus:ring-[#74ddc7]"
+                className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/70 outline-none focus:border-[#74ddc7] focus:ring-1 focus:ring-[#74ddc7]"
               />
             </div>
 
             {/* Tags */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-zinc-300">
-                Tags <span className="text-xs text-zinc-500">(comma separated)</span>
+              <label className="mb-1.5 block text-sm font-medium text-foreground/70">
+                Tags <span className="text-xs text-muted-foreground/70">(comma separated)</span>
               </label>
               <Input
                 placeholder="e.g. friday, vibes, live"
                 value={uploadTags}
                 onChange={(e) => setUploadTags(e.target.value)}
-                className="border-zinc-700 bg-zinc-800 text-white placeholder:text-zinc-500"
+                className="border-input bg-background text-foreground placeholder:text-muted-foreground/70"
               />
             </div>
 
@@ -682,17 +682,17 @@ export default function MyMixesPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               {/* Cover Art URL */}
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+                <label className="mb-1.5 block text-sm font-medium text-foreground/70">
                   Cover Art URL
                 </label>
                 <Input
                   placeholder="https://example.com/cover.jpg"
                   value={uploadCoverUrl}
                   onChange={(e) => setUploadCoverUrl(e.target.value)}
-                  className="border-zinc-700 bg-zinc-800 text-white placeholder:text-zinc-500"
+                  className="border-input bg-background text-foreground placeholder:text-muted-foreground/70"
                 />
                 {uploadCoverUrl && (
-                  <div className="mt-2 overflow-hidden rounded-md border border-zinc-700">
+                  <div className="mt-2 overflow-hidden rounded-md border border-input">
                     <img
                       src={uploadCoverUrl}
                       alt="Cover preview"
@@ -707,11 +707,11 @@ export default function MyMixesPage() {
 
               {/* Cover Art Upload */}
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+                <label className="mb-1.5 block text-sm font-medium text-foreground/70">
                   Cover Art Upload
                 </label>
                 <div
-                  className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-zinc-700 bg-zinc-800/40 py-6 transition-colors hover:border-[#74ddc7]/50"
+                  className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-input bg-background/40 py-6 transition-colors hover:border-[#74ddc7]/50"
                   onDrop={handleCoverDrop}
                   onDragOver={preventDefault}
                   onClick={() => {
@@ -740,25 +740,25 @@ export default function MyMixesPage() {
                     />
                   ) : (
                     <>
-                      <ImageIcon className="mb-1 size-8 text-zinc-500" />
-                      <p className="text-xs text-zinc-400">
+                      <ImageIcon className="mb-1 size-8 text-muted-foreground/70" />
+                      <p className="text-xs text-muted-foreground">
                         Drop image or <span className="text-[#74ddc7]">browse</span>
                       </p>
-                      <p className="mt-0.5 text-[10px] text-zinc-500">.jpg, .png, .webp</p>
+                      <p className="mt-0.5 text-[10px] text-muted-foreground/70">.jpg, .png, .webp</p>
                     </>
                   )}
                 </div>
                 {uploadCoverFileName && (
-                  <p className="mt-1 truncate text-xs text-zinc-400">{uploadCoverFileName}</p>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">{uploadCoverFileName}</p>
                 )}
               </div>
             </div>
 
             {/* Submit */}
-            <div className="flex justify-end gap-3 border-t border-zinc-800 pt-4">
+            <div className="flex justify-end gap-3 border-t border-border pt-4">
               <Button
                 variant="ghost"
-                className="text-zinc-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground/80"
                 onClick={() => setShowUpload(false)}
               >
                 Cancel
@@ -791,12 +791,12 @@ export default function MyMixesPage() {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Search */}
         <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/70" />
           <Input
             placeholder="Search mixes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="border-zinc-700 bg-zinc-800 pl-9 text-white placeholder:text-zinc-500"
+            className="border-input bg-background pl-9 text-foreground placeholder:text-muted-foreground/70"
           />
         </div>
 
@@ -806,29 +806,29 @@ export default function MyMixesPage() {
             <select
               value={sortKey}
               onChange={(e) => setSortKey(e.target.value as SortKey)}
-              className="h-9 appearance-none rounded-md border border-zinc-700 bg-zinc-800 pl-3 pr-8 text-sm text-white outline-none focus:border-[#74ddc7]"
+              className="h-9 appearance-none rounded-md border border-input bg-background pl-3 pr-8 text-sm text-foreground outline-none focus:border-[#74ddc7]"
             >
               <option value="newest">Newest</option>
               <option value="most-played">Most Played</option>
               <option value="name">Name</option>
             </select>
-            <ArrowUpDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-zinc-400" />
+            <ArrowUpDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           </div>
 
           {/* View toggle */}
-          <div className="flex overflow-hidden rounded-md border border-zinc-700">
+          <div className="flex overflow-hidden rounded-md border border-input">
             <button
               onClick={() => setViewMode("grid")}
               className={`flex size-9 items-center justify-center transition-colors ${
-                viewMode === "grid" ? "bg-[#74ddc7]/10 text-[#74ddc7]" : "bg-zinc-800 text-zinc-400 hover:text-white"
+                viewMode === "grid" ? "bg-[#74ddc7]/10 text-[#74ddc7]" : "bg-background text-muted-foreground hover:text-foreground/80"
               }`}
             >
               <LayoutGrid className="size-4" />
             </button>
             <button
               onClick={() => setViewMode("list")}
-              className={`flex size-9 items-center justify-center border-l border-zinc-700 transition-colors ${
-                viewMode === "list" ? "bg-[#74ddc7]/10 text-[#74ddc7]" : "bg-zinc-800 text-zinc-400 hover:text-white"
+              className={`flex size-9 items-center justify-center border-l border-input transition-colors ${
+                viewMode === "list" ? "bg-[#74ddc7]/10 text-[#74ddc7]" : "bg-background text-muted-foreground hover:text-foreground/80"
               }`}
             >
               <List className="size-4" />
@@ -842,13 +842,13 @@ export default function MyMixesPage() {
       {/* ----------------------------------------------------------------- */}
       {filteredMixes.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-zinc-800 ring-1 ring-zinc-700">
-            <Music className="size-8 text-zinc-500" />
+          <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-background ring-1 ring-border">
+            <Music className="size-8 text-muted-foreground/70" />
           </div>
-          <h3 className="mb-1 text-lg font-semibold text-white">
+          <h3 className="mb-1 text-lg font-semibold text-foreground">
             {searchQuery ? "No mixes found" : "No mixes yet"}
           </h3>
-          <p className="mb-6 text-sm text-zinc-400">
+          <p className="mb-6 text-sm text-muted-foreground">
             {searchQuery
               ? "Try a different search term."
               : "Upload your first mix to get started."}
@@ -873,7 +873,7 @@ export default function MyMixesPage() {
           {filteredMixes.map((mix) => (
             <Card
               key={mix.id}
-              className="group overflow-hidden border-zinc-800 bg-zinc-900/50 transition-colors hover:border-zinc-700"
+              className="group overflow-hidden border-border bg-card transition-colors hover:border-input"
             >
               {/* Cover art */}
               <div className="relative aspect-[16/9] w-full overflow-hidden">
@@ -887,7 +887,7 @@ export default function MyMixesPage() {
                   <div
                     className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${gradientFor(mix.id)}`}
                   >
-                    <Music className="size-12 text-white/40" />
+                    <Music className="size-12 text-foreground/40" />
                   </div>
                 )}
                 {/* Status badge overlay */}
@@ -897,7 +897,7 @@ export default function MyMixesPage() {
                   </Badge>
                 </div>
                 {/* Duration overlay */}
-                <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-foreground">
                   <Clock className="size-3" />
                   {formatDuration(mix.duration)}
                 </div>
@@ -910,20 +910,20 @@ export default function MyMixesPage() {
                     <Input
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
-                      className="border-zinc-700 bg-zinc-800 text-white"
+                      className="border-input bg-background text-foreground"
                       placeholder="Title"
                     />
                     <textarea
                       value={editDescription}
                       onChange={(e) => setEditDescription(e.target.value)}
                       rows={2}
-                      className="w-full resize-none rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white outline-none focus:border-[#74ddc7]"
+                      className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-[#74ddc7]"
                       placeholder="Description"
                     />
                     <select
                       value={editGenre}
                       onChange={(e) => setEditGenre(e.target.value)}
-                      className="h-9 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 text-sm text-white outline-none"
+                      className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none"
                     >
                       {GENRE_OPTIONS.map((g) => (
                         <option key={g} value={g}>{g}</option>
@@ -932,7 +932,7 @@ export default function MyMixesPage() {
                     <Input
                       value={editCoverUrl}
                       onChange={(e) => setEditCoverUrl(e.target.value)}
-                      className="border-zinc-700 bg-zinc-800 text-white"
+                      className="border-input bg-background text-foreground"
                       placeholder="Cover art URL (optional)"
                     />
                     <div className="flex gap-2">
@@ -946,7 +946,7 @@ export default function MyMixesPage() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="text-zinc-400"
+                        className="text-muted-foreground"
                         onClick={() => setEditingId(null)}
                       >
                         <X className="size-3.5" /> Cancel
@@ -956,9 +956,9 @@ export default function MyMixesPage() {
                 ) : (
                   <>
                     <div>
-                      <h3 className="truncate font-semibold text-white">{mix.title}</h3>
+                      <h3 className="truncate font-semibold text-foreground">{mix.title}</h3>
                       {mix.description && (
-                        <p className="mt-0.5 line-clamp-2 text-xs text-zinc-400">
+                        <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                           {mix.description}
                         </p>
                       )}
@@ -968,19 +968,19 @@ export default function MyMixesPage() {
                       <Badge className="border border-[#7401df]/30 bg-[#7401df]/10 text-[#c084fc] text-[10px]">
                         {mix.genre}
                       </Badge>
-                      <span className="flex items-center gap-1 text-xs text-zinc-400">
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Play className="size-3" />
                         {mix.playCount.toLocaleString()}
                       </span>
-                      <span className="text-xs text-zinc-500">{formatDate(mix.createdAt)}</span>
+                      <span className="text-xs text-muted-foreground/70">{formatDate(mix.createdAt)}</span>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-1 border-t border-zinc-800 pt-2">
+                    <div className="flex items-center gap-1 border-t border-border pt-2">
                       <Button
                         size="icon-xs"
                         variant="ghost"
-                        className="text-zinc-400 hover:text-[#74ddc7]"
+                        className="text-muted-foreground hover:text-[#74ddc7]"
                         onClick={() => startEditing(mix)}
                         title="Edit"
                       >
@@ -989,7 +989,7 @@ export default function MyMixesPage() {
                       <Button
                         size="icon-xs"
                         variant="ghost"
-                        className="text-zinc-400 hover:text-[#74ddc7]"
+                        className="text-muted-foreground hover:text-[#74ddc7]"
                         onClick={() => handleToggleStatus(mix.id)}
                         title={mix.status === "PUBLISHED" ? "Hide" : "Publish"}
                       >
@@ -1014,7 +1014,7 @@ export default function MyMixesPage() {
                           <Button
                             size="icon-xs"
                             variant="ghost"
-                            className="text-zinc-400"
+                            className="text-muted-foreground"
                             onClick={() => setDeleteConfirmId(null)}
                           >
                             <X className="size-3.5" />
@@ -1024,7 +1024,7 @@ export default function MyMixesPage() {
                         <Button
                           size="icon-xs"
                           variant="ghost"
-                          className="text-zinc-400 hover:text-red-400"
+                          className="text-muted-foreground hover:text-red-400"
                           onClick={() => setDeleteConfirmId(mix.id)}
                           title="Delete"
                         >
@@ -1044,9 +1044,9 @@ export default function MyMixesPage() {
       {/* List View                                                         */}
       {/* ----------------------------------------------------------------- */}
       {filteredMixes.length > 0 && viewMode === "list" && (
-        <div className="overflow-hidden rounded-lg border border-zinc-800">
+        <div className="overflow-hidden rounded-lg border border-border">
           {/* Header row */}
-          <div className="hidden border-b border-zinc-800 bg-zinc-900/70 px-4 py-2 text-xs font-medium uppercase tracking-wider text-zinc-500 sm:grid sm:grid-cols-[1fr_100px_80px_80px_100px_120px]">
+          <div className="hidden border-b border-border bg-card px-4 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground/70 sm:grid sm:grid-cols-[1fr_100px_80px_80px_100px_120px]">
             <span>Mix</span>
             <span>Genre</span>
             <span>Duration</span>
@@ -1058,8 +1058,8 @@ export default function MyMixesPage() {
           {filteredMixes.map((mix, i) => (
             <div
               key={mix.id}
-              className={`group px-4 py-3 transition-colors hover:bg-zinc-800/50 ${
-                i !== filteredMixes.length - 1 ? "border-b border-zinc-800/50" : ""
+              className={`group px-4 py-3 transition-colors hover:bg-background/50 ${
+                i !== filteredMixes.length - 1 ? "border-b border-border/50" : ""
               }`}
             >
               {editingId === mix.id ? (
@@ -1069,13 +1069,13 @@ export default function MyMixesPage() {
                     <Input
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
-                      className="border-zinc-700 bg-zinc-800 text-white"
+                      className="border-input bg-background text-foreground"
                       placeholder="Title"
                     />
                     <select
                       value={editGenre}
                       onChange={(e) => setEditGenre(e.target.value)}
-                      className="h-9 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 text-sm text-white outline-none"
+                      className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none"
                     >
                       {GENRE_OPTIONS.map((g) => (
                         <option key={g} value={g}>{g}</option>
@@ -1086,13 +1086,13 @@ export default function MyMixesPage() {
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     rows={2}
-                    className="w-full resize-none rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white outline-none"
+                    className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none"
                     placeholder="Description"
                   />
                   <Input
                     value={editCoverUrl}
                     onChange={(e) => setEditCoverUrl(e.target.value)}
-                    className="border-zinc-700 bg-zinc-800 text-white"
+                    className="border-input bg-background text-foreground"
                     placeholder="Cover art URL (optional)"
                   />
                   <div className="flex gap-2">
@@ -1106,7 +1106,7 @@ export default function MyMixesPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-zinc-400"
+                      className="text-muted-foreground"
                       onClick={() => setEditingId(null)}
                     >
                       <X className="size-3.5" /> Cancel
@@ -1129,13 +1129,13 @@ export default function MyMixesPage() {
                         <div
                           className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${gradientFor(mix.id)}`}
                         >
-                          <Music className="size-4 text-white/50" />
+                          <Music className="size-4 text-foreground/50" />
                         </div>
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-white">{mix.title}</p>
-                      <p className="truncate text-xs text-zinc-500">{formatDate(mix.createdAt)}</p>
+                      <p className="truncate text-sm font-medium text-foreground">{mix.title}</p>
+                      <p className="truncate text-xs text-muted-foreground/70">{formatDate(mix.createdAt)}</p>
                     </div>
                   </div>
 
@@ -1145,10 +1145,10 @@ export default function MyMixesPage() {
                   </Badge>
 
                   {/* Duration */}
-                  <span className="text-sm text-zinc-400">{formatDuration(mix.duration)}</span>
+                  <span className="text-sm text-muted-foreground">{formatDuration(mix.duration)}</span>
 
                   {/* Plays */}
-                  <span className="text-sm text-zinc-400">{mix.playCount.toLocaleString()}</span>
+                  <span className="text-sm text-muted-foreground">{mix.playCount.toLocaleString()}</span>
 
                   {/* Status */}
                   <Badge className={`w-fit border text-[10px] ${STATUS_STYLES[mix.status]}`}>
@@ -1160,7 +1160,7 @@ export default function MyMixesPage() {
                     <Button
                       size="icon-xs"
                       variant="ghost"
-                      className="text-zinc-400 hover:text-[#74ddc7]"
+                      className="text-muted-foreground hover:text-[#74ddc7]"
                       onClick={() => startEditing(mix)}
                       title="Edit"
                     >
@@ -1169,7 +1169,7 @@ export default function MyMixesPage() {
                     <Button
                       size="icon-xs"
                       variant="ghost"
-                      className="text-zinc-400 hover:text-[#74ddc7]"
+                      className="text-muted-foreground hover:text-[#74ddc7]"
                       onClick={() => handleToggleStatus(mix.id)}
                       title={mix.status === "PUBLISHED" ? "Hide" : "Publish"}
                     >
@@ -1193,7 +1193,7 @@ export default function MyMixesPage() {
                         <Button
                           size="icon-xs"
                           variant="ghost"
-                          className="text-zinc-400"
+                          className="text-muted-foreground"
                           onClick={() => setDeleteConfirmId(null)}
                         >
                           <X className="size-3.5" />
@@ -1203,7 +1203,7 @@ export default function MyMixesPage() {
                       <Button
                         size="icon-xs"
                         variant="ghost"
-                        className="text-zinc-400 hover:text-red-400"
+                        className="text-muted-foreground hover:text-red-400"
                         onClick={() => setDeleteConfirmId(mix.id)}
                         title="Delete"
                       >

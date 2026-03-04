@@ -9,12 +9,59 @@ interface NowPlayingData {
   streamName: string;
 }
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
-const POLL_INTERVAL_MS = 20_000; // 20 seconds
+// Cirrus / SecureNet now-playing XML feed — polled directly from the client.
+const CIRRUS_XML_URL =
+  process.env.NEXT_PUBLIC_CIRRUS_METADATA_URL ||
+  "https://streamdb7web.securenetsystems.net/player_status_update/WCCG.xml";
+
+const POLL_INTERVAL_MS = 15_000; // 15 seconds
 
 /**
- * Hook that polls the API for "now playing" stream metadata.
+ * Parse the Cirrus XML feed and extract now-playing metadata.
+ *
+ * Expected shape (simplified):
+ * ```xml
+ * <playlist>
+ *   <title>Song Title</title>
+ *   <artist>Artist Name</artist>
+ *   <album>Album Name</album>
+ *   <cover>https://…/cover.jpg</cover>
+ *   ...
+ * </playlist>
+ * ```
+ */
+function parseCirrusXml(xmlText: string): NowPlayingData | null {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlText, "text/xml");
+
+    // Check for parse errors
+    const parseError = doc.querySelector("parsererror");
+    if (parseError) return null;
+
+    const getText = (tag: string): string =>
+      doc.querySelector(tag)?.textContent?.trim() || "";
+
+    const title = getText("title");
+    const artist = getText("artist");
+    const cover = getText("cover");
+
+    // Only return data if we have at least a title or artist
+    if (!title && !artist) return null;
+
+    return {
+      title,
+      artist,
+      albumArt: cover || null,
+      streamName: "WCCG 104.5 FM",
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Hook that polls the Cirrus XML feed for "now playing" stream metadata.
  * Only polls while `enabled` is true (i.e., stream is playing).
  */
 export function useNowPlaying(enabled: boolean) {
@@ -34,12 +81,19 @@ export function useNowPlaying(enabled: boolean) {
     async function fetchNowPlaying() {
       try {
         setIsLoading(true);
-        const response = await fetch(`${API_URL}/stream/now-playing`, {
-          signal: AbortSignal.timeout(5000),
+        // Add cache-busting param to avoid stale data
+        const cacheBuster = `_cb=${Date.now()}`;
+        const separator = CIRRUS_XML_URL.includes("?") ? "&" : "?";
+        const response = await fetch(`${CIRRUS_XML_URL}${separator}${cacheBuster}`, {
+          signal: AbortSignal.timeout(8000),
+          // No credentials needed — the XML feed is public
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const json = await response.json();
-        setData(json);
+        const xmlText = await response.text();
+        const parsed = parseCirrusXml(xmlText);
+        if (parsed) {
+          setData(parsed);
+        }
       } catch {
         // Silently fail — keep last known data
       } finally {
