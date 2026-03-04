@@ -34,11 +34,12 @@ const sidebarItems = [
   { href: "/my/points", label: "Points & Rewards", icon: Star },
   { href: "/my/favorites", label: "Favorites", icon: Heart },
   { href: "/my/tickets", label: "My Tickets", icon: Ticket },
-  { href: "/my/history", label: "Listening History", icon: Clock },
+  { href: "/my/history", label: "Listening History", icon: Clock, dividerAfter: true },
   { href: "/my/events", label: "My Events", icon: CalendarDays },
   { href: "/my/directory", label: "My Directory", icon: Building2 },
+  { href: "/my/studio", label: "My Studio", icon: Clapperboard },
   { href: "/my/podcasts", label: "My Podcasts", icon: Mic },
-  { href: "/mixes", label: "My Mixes", icon: Music },
+  { href: "/my/mixes", label: "My Mixes", icon: Music },
 ];
 
 function SidebarContent({ pathname }: { pathname: string }) {
@@ -77,22 +78,26 @@ function SidebarContent({ pathname }: { pathname: string }) {
             ? pathname === item.href
             : pathname === item.href || pathname.startsWith(item.href + "/");
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all ${
-                isActive
-                  ? "bg-foreground/[0.08] text-[#74ddc7]"
-                  : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground/80"
-              }`}
-            >
-              <item.icon
-                className={`h-4 w-4 shrink-0 ${
-                  isActive ? "text-[#74ddc7]" : "text-muted-foreground"
+            <div key={item.href}>
+              <Link
+                href={item.href}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all ${
+                  isActive
+                    ? "bg-foreground/[0.08] text-[#74ddc7]"
+                    : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground/80"
                 }`}
-              />
-              {item.label}
-            </Link>
+              >
+                <item.icon
+                  className={`h-4 w-4 shrink-0 ${
+                    isActive ? "text-[#74ddc7]" : "text-muted-foreground"
+                  }`}
+                />
+                {item.label}
+              </Link>
+              {"dividerAfter" in item && item.dividerAfter && (
+                <div className="my-2 border-t border-border" />
+              )}
+            </div>
           );
         })}
 

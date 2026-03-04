@@ -10,43 +10,39 @@ import {
   HelpCircle,
   Keyboard,
   Layout,
-  PanelLeftClose,
-  PanelLeftOpen,
   PanelBottomClose,
   PanelBottomOpen,
-  Radio,
   Mic,
+  FolderOpen,
+  X,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { StudioPreview } from "@/components/studio/studio-preview";
-import { OBSControls } from "@/components/studio/obs-controls";
+import {
+  useOBSState,
+  ScenesSources,
+  RecordingControls,
+} from "@/components/studio/obs-controls";
 import { StudioTimeline } from "@/components/studio/timeline";
 import { AudioMixer } from "@/components/studio/audio-mixer";
 import { MediaBin } from "@/components/studio/media-bin";
 
 // ---------------------------------------------------------------------------
-// Layout Panel Tabs
+// Bottom‑panel tab type
 // ---------------------------------------------------------------------------
 
-type LeftPanel = "media" | "scenes";
 type BottomPanel = "timeline" | "mixer";
 
 export default function PodcastStudioPage() {
-  const [showLeftPanel, setShowLeftPanel] = useState(true);
   const [showBottomPanel, setShowBottomPanel] = useState(true);
-  const [leftPanel, setLeftPanel] = useState<LeftPanel>("scenes");
   const [bottomPanel, setBottomPanel] = useState<BottomPanel>("timeline");
+  const [showMediaOverlay, setShowMediaOverlay] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isStreaming, setIsStreaming] = useState(false);
 
-  const handleRecordingChange = useCallback((recording: boolean) => {
-    setIsRecording(recording);
-  }, []);
-
-  const handleStreamingChange = useCallback((streaming: boolean) => {
-    setIsStreaming(streaming);
-  }, []);
+  // Shared OBS state drives both Sources (left) and Controls (right)
+  const obsState = useOBSState({
+    onRecordingChange: useCallback(() => {}, []),
+    onStreamingChange: useCallback(() => {}, []),
+  });
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -59,7 +55,7 @@ export default function PodcastStudioPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] -mx-4 sm:-mx-6 lg:-mx-8 -mt-6 overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] -mx-4 sm:-mx-6 lg:-mx-8 -mt-6 overflow-hidden">
       {/* ================================================================= */}
       {/* Top Toolbar                                                       */}
       {/* ================================================================= */}
@@ -90,21 +86,6 @@ export default function PodcastStudioPage() {
         {/* Center: Layout Controls */}
         <div className="hidden md:flex items-center gap-1">
           <button
-            onClick={() => setShowLeftPanel(!showLeftPanel)}
-            className={`p-1.5 rounded-md text-xs transition-colors ${
-              showLeftPanel
-                ? "text-foreground bg-foreground/[0.08]"
-                : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04]"
-            }`}
-            title="Toggle left panel"
-          >
-            {showLeftPanel ? (
-              <PanelLeftClose className="h-3.5 w-3.5" />
-            ) : (
-              <PanelLeftOpen className="h-3.5 w-3.5" />
-            )}
-          </button>
-          <button
             onClick={() => setShowBottomPanel(!showBottomPanel)}
             className={`p-1.5 rounded-md text-xs transition-colors ${
               showBottomPanel
@@ -118,6 +99,17 @@ export default function PodcastStudioPage() {
             ) : (
               <PanelBottomOpen className="h-3.5 w-3.5" />
             )}
+          </button>
+          <button
+            onClick={() => setShowMediaOverlay(!showMediaOverlay)}
+            className={`p-1.5 rounded-md text-xs transition-colors ${
+              showMediaOverlay
+                ? "text-foreground bg-foreground/[0.08]"
+                : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04]"
+            }`}
+            title="Media Library"
+          >
+            <FolderOpen className="h-3.5 w-3.5" />
           </button>
           <div className="h-4 w-px bg-border mx-1" />
           <button
@@ -164,60 +156,28 @@ export default function PodcastStudioPage() {
       </div>
 
       {/* ================================================================= */}
-      {/* Main Content Area                                                 */}
+      {/* Main Content                                                      */}
       {/* ================================================================= */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* ── Left Panel: Scenes/Controls or Media Bin ── */}
-        {showLeftPanel && (
-          <div className="w-72 xl:w-80 border-r border-border bg-card/50 flex flex-col shrink-0 overflow-hidden">
-            {/* Panel Tabs */}
-            <div className="flex border-b border-border shrink-0">
-              <button
-                onClick={() => setLeftPanel("scenes")}
-                className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
-                  leftPanel === "scenes"
-                    ? "text-foreground border-b-2 border-[#74ddc7] bg-foreground/[0.04]"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Scenes & Controls
-              </button>
-              <button
-                onClick={() => setLeftPanel("media")}
-                className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
-                  leftPanel === "media"
-                    ? "text-foreground border-b-2 border-[#74ddc7] bg-foreground/[0.04]"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Media
-              </button>
-            </div>
-            {/* Panel Content */}
-            <div className="flex-1 overflow-y-auto">
-              {leftPanel === "scenes" ? (
-                <OBSControls
-                  onRecordingChange={handleRecordingChange}
-                  onStreamingChange={handleStreamingChange}
-                />
-              ) : (
-                <MediaBin />
-              )}
-            </div>
-          </div>
-        )}
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {/* ── Preview Monitor (takes all remaining vertical space) ── */}
+        <div className="flex-1 min-h-[180px] p-2 overflow-hidden">
+          <StudioPreview
+            isRecording={obsState.isRecording}
+            isStreaming={obsState.isStreaming}
+          />
+        </div>
 
-        {/* ── Center: Preview + Controls ── */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          {/* Preview Monitor */}
-          <div className="flex-1 min-h-0 p-2 overflow-hidden">
-            <StudioPreview isRecording={isRecording} isStreaming={isStreaming} />
-          </div>
+        {/* ── Bottom Section: Sources | Timeline/Mixer | Controls ── */}
+        {showBottomPanel && (
+          <div className="flex border-t border-border bg-card/50 shrink-0 h-[300px] min-h-[240px] overflow-hidden">
+            {/* ─── LEFT: Scenes & Sources ─── */}
+            <div className="w-56 xl:w-64 border-r border-border flex flex-col shrink-0 overflow-hidden">
+              <ScenesSources state={obsState} className="flex-1" />
+            </div>
 
-          {/* ── Bottom Panel: Timeline or Mixer ── */}
-          {showBottomPanel && (
-            <div className="border-t border-border bg-card/50 shrink-0" style={{ height: bottomPanel === "timeline" ? "280px" : "260px" }}>
-              {/* Panel Tabs */}
+            {/* ─── CENTER: Timeline / Audio Mixer ─── */}
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+              {/* Tabs */}
               <div className="flex border-b border-border shrink-0">
                 <button
                   onClick={() => setBottomPanel("timeline")}
@@ -240,8 +200,9 @@ export default function PodcastStudioPage() {
                   Audio Mixer
                 </button>
               </div>
-              {/* Panel Content */}
-              <div className="h-[calc(100%-29px)] overflow-hidden">
+
+              {/* Content */}
+              <div className="flex-1 overflow-hidden">
                 {bottomPanel === "timeline" ? (
                   <StudioTimeline />
                 ) : (
@@ -249,8 +210,13 @@ export default function PodcastStudioPage() {
                 )}
               </div>
             </div>
-          )}
-        </div>
+
+            {/* ─── RIGHT: Recording Controls ─── */}
+            <div className="w-48 xl:w-56 border-l border-border flex flex-col shrink-0 overflow-hidden">
+              <RecordingControls state={obsState} className="flex-1" />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ================================================================= */}
@@ -266,12 +232,41 @@ export default function PodcastStudioPage() {
           <span>H.264 / AAC</span>
         </div>
         <div className="flex items-center gap-3">
-          <span>CPU: 12%</span>
+          <span>CPU: {obsState.stats.cpu}%</span>
           <span>RAM: 1.2 GB</span>
           <span>Disk: 45.2 GB free</span>
           <span className="text-muted-foreground/60">v1.0.0-beta</span>
         </div>
       </div>
+
+      {/* ================================================================= */}
+      {/* Media Library Overlay                                             */}
+      {/* ================================================================= */}
+      {showMediaOverlay && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/50"
+            onClick={() => setShowMediaOverlay(false)}
+          />
+          <div className="fixed inset-x-4 bottom-20 top-20 z-50 flex flex-col rounded-xl border border-border bg-card shadow-2xl overflow-hidden sm:inset-x-12 lg:inset-x-24">
+            <div className="flex items-center justify-between border-b border-border px-4 py-2 shrink-0">
+              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <FolderOpen className="h-4 w-4 text-[#74ddc7]" />
+                Media Library
+              </h2>
+              <button
+                onClick={() => setShowMediaOverlay(false)}
+                className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <MediaBin />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

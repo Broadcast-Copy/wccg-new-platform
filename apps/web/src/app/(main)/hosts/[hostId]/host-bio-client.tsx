@@ -6,10 +6,10 @@ import Link from "next/link";
 import { apiClient } from "@/lib/api-client";
 import { getHostById, type HostData } from "@/data/hosts";
 import { getShowById } from "@/data/shows";
+import { getHostMixes } from "@/data/mixes";
 import { YouTubeGrid } from "@/components/youtube/youtube-grid";
-import { MixCard } from "@/components/mixes/mix-card";
+import { DJMixPlayer } from "@/components/mixes/dj-mix-player";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -90,17 +90,6 @@ interface Host {
   updatedAt: string;
 }
 
-interface Mix {
-  id: string;
-  title: string;
-  hostName: string;
-  genre: string;
-  duration: number;
-  playCount: number;
-  coverImageUrl?: string;
-  audioUrl?: string;
-}
-
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
 function getInitials(name: string): string {
@@ -170,7 +159,6 @@ export default function HostBioPage() {
   const hostId = params.hostId;
 
   const [host, setHost] = useState<Host | null>(null);
-  const [mixes, setMixes] = useState<Mix[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -232,21 +220,8 @@ export default function HostBioPage() {
     };
   }, [hostId, hostData]);
 
-  // Fetch mixes for this host
-  useEffect(() => {
-    if (!hostId) return;
-    let cancelled = false;
-    async function fetchMixes() {
-      try {
-        const data = await apiClient<Mix[]>(`/mixes?hostId=${hostId}`);
-        if (!cancelled) setMixes(data);
-      } catch {
-        // Mixes API not ready yet - that's fine
-      }
-    }
-    fetchMixes();
-    return () => { cancelled = true; };
-  }, [hostId]);
+  // Get mixes from local mock data (API fallback)
+  const hostMixes = hostId ? getHostMixes(hostId) : [];
 
   // ─── Loading state ─────────────────────────────────────────────────────
 
@@ -440,37 +415,15 @@ export default function HostBioPage() {
       )}
 
       {/* DJ Mixes Section */}
-      {mixes.length > 0 && (
+      {hostMixes.length > 0 && (
         <>
           <Separator />
           <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-xl font-semibold">
-                <Disc3 className="h-5 w-5 text-primary" />
-                Latest Mixes
-              </h2>
-              <Link href={`/mixes?host=${hostId}`}>
-                <Button variant="ghost" size="sm" className="text-[#74ddc7]">
-                  View All
-                  <ExternalLink className="ml-1 h-3 w-3" />
-                </Button>
-              </Link>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {mixes.slice(0, 6).map((mix) => (
-                <MixCard
-                  key={mix.id}
-                  id={mix.id}
-                  title={mix.title}
-                  hostName={mix.hostName}
-                  genre={mix.genre}
-                  duration={mix.duration}
-                  playCount={mix.playCount}
-                  coverImageUrl={mix.coverImageUrl}
-                  audioUrl={mix.audioUrl}
-                />
-              ))}
-            </div>
+            <h2 className="flex items-center gap-2 text-xl font-semibold">
+              <Disc3 className="h-5 w-5 text-primary" />
+              Mixes
+            </h2>
+            <DJMixPlayer mixes={hostMixes} djName={host.name} />
           </section>
         </>
       )}

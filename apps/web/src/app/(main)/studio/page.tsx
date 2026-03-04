@@ -19,8 +19,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { StudioProjects } from "@/components/studio/studio-projects";
-
 const services = [
   {
     icon: Mic,
@@ -251,9 +249,6 @@ export default function StudioPage() {
           </div>
         </div>
       </div>
-
-      {/* My Studio Projects */}
-      <StudioProjects />
 
       {/* Creator Tools */}
       <section className="space-y-5">
