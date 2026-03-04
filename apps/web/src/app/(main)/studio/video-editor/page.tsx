@@ -137,6 +137,9 @@ export default function VideoEditorPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [totalDuration, setTotalDuration] = useState(220);
 
+  // Volume
+  const [volume, setVolume] = useState(75);
+
   // Real video state
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoUrlRef = useRef<string | null>(null);
@@ -204,14 +207,19 @@ export default function VideoEditorPage() {
     [loadMediaFile]
   );
 
-  // Sync video playback
+  // Sync video playback (with simulation fallback when no video loaded)
   useEffect(() => {
-    if (!isPlaying || !hasVideo || !videoRef.current) return;
-    videoRef.current.currentTime = currentTime;
-    videoRef.current.play().catch(() => {});
+    if (!isPlaying) return;
+
+    // If a real video is loaded, sync to it
+    if (hasVideo && videoRef.current) {
+      videoRef.current.currentTime = currentTime;
+      videoRef.current.play().catch(() => {});
+    }
 
     const interval = setInterval(() => {
-      if (videoRef.current && !videoRef.current.paused) {
+      if (hasVideo && videoRef.current && !videoRef.current.paused) {
+        // Real video playback sync
         const t = videoRef.current.currentTime;
         setCurrentTime(t);
         setPlayheadPosition((t / totalDuration) * 100);
@@ -220,6 +228,18 @@ export default function VideoEditorPage() {
           setCurrentTime(0);
           setPlayheadPosition(0);
         }
+      } else {
+        // Simulated playback — playhead scrubs across the timeline
+        setCurrentTime((prev) => {
+          const next = prev + 0.05;
+          if (next >= totalDuration) {
+            setIsPlaying(false);
+            setPlayheadPosition(0);
+            return 0;
+          }
+          setPlayheadPosition((next / totalDuration) * 100);
+          return next;
+        });
       }
     }, 50);
 
@@ -228,7 +248,7 @@ export default function VideoEditorPage() {
       if (videoRef.current && !videoRef.current.paused) videoRef.current.pause();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, hasVideo]);
+  }, [isPlaying, hasVideo, totalDuration]);
 
   // Cleanup
   useEffect(() => {
@@ -629,10 +649,30 @@ export default function VideoEditorPage() {
 
               {/* Volume */}
               <div className="flex items-center gap-1.5">
-                <Volume2 className="h-3 w-3 text-muted-foreground" />
-                <div className="w-16 h-1 bg-foreground/[0.08] rounded-full relative">
-                  <div className="h-full w-3/4 bg-[#74ddc7] rounded-full" />
-                </div>
+                <button
+                  onClick={() => {
+                    const newVol = volume > 0 ? 0 : 75;
+                    setVolume(newVol);
+                    if (videoRef.current) videoRef.current.volume = newVol / 100;
+                  }}
+                  className="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                  title={volume === 0 ? "Unmute" : "Mute"}
+                >
+                  <Volume2 className="h-3 w-3" />
+                </button>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={volume}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setVolume(v);
+                    if (videoRef.current) videoRef.current.volume = v / 100;
+                  }}
+                  className="w-16 h-1 accent-[#74ddc7] cursor-pointer"
+                  title={`Volume: ${volume}%`}
+                />
               </div>
             </div>
           </div>
