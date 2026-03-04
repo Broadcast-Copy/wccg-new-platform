@@ -5,7 +5,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +18,6 @@ import {
   X,
   Circle,
   Trash2,
-  RotateCcw,
   Volume2,
   ChevronDown,
 } from "lucide-react";
@@ -67,6 +65,38 @@ function formatTimer(seconds: number): string {
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
+/** Pick the best supported mime type for MediaRecorder */
+function getSupportedMimeType(): string {
+  const candidates = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/mp4",
+    "audio/ogg;codecs=opus",
+    "audio/ogg",
+  ];
+  for (const mime of candidates) {
+    try {
+      if (MediaRecorder.isTypeSupported(mime)) return mime;
+    } catch {
+      // isTypeSupported may throw in some browsers
+    }
+  }
+  // Let the browser choose its default
+  return "";
+}
+
+/** Check if the browser supports recording APIs */
+function checkBrowserSupport(): string | null {
+  if (typeof window === "undefined") return "Recording requires a browser environment.";
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    return "Your browser does not support microphone access. Please use Chrome, Firefox, or Edge.";
+  }
+  if (typeof MediaRecorder === "undefined") {
+    return "Your browser does not support MediaRecorder. Please use Chrome, Firefox, or Edge.";
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -82,6 +112,9 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
   const animFrameRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const recordedUrlRef = useRef<string>("");
+  const mimeTypeRef = useRef<string>("");
+  const mountedRef = useRef(true);
 
   // ---- state ----
   const [recordingState, setRecordingState] = useState<RecordingState>("idle");
@@ -94,43 +127,106 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
   const [previewTime, setPreviewTime] = useState(0);
   const [micError, setMicError] = useState<string>("");
+  const [browserError] = useState<string | null>(() => checkBrowserSupport());
 
   // save form
   const [saveTitle, setSaveTitle] = useState("");
   const [saveGenre, setSaveGenre] = useState("Hip Hop");
   const [saveDescription, setSaveDescription] = useState("");
 
+  // ---- stop & cleanup helpers (ref-stored to avoid stale closures) ----
+  const stopEverythingRef = useRef<() => void>(() => {});
+
+  const pauseTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  // Keep the ref updated every render so it always closes over latest state
+  stopEverythingRef.current = () => {
+    pauseTimer();
+    cancelAnimationFrame(animFrameRef.current);
+    animFrameRef.current = 0;
+
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      try { recorder.stop(); } catch (err) { console.error("[MixRecorder] Error stopping recorder:", err); }
+    }
+    mediaRecorderRef.current = null;
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => { try { t.stop(); } catch {} });
+      streamRef.current = null;
+    }
+
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+    analyserRef.current = null;
+
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current = null;
+    }
+  };
+
   // ---- enumerate audio devices ----
   useEffect(() => {
+    if (browserError) return;
+
+    let cancelled = false;
+
     async function loadDevices() {
       try {
-        // Request permission first so labels are available
+        // Request permission first so device labels are available
         const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         tempStream.getTracks().forEach((t) => t.stop());
 
+        if (cancelled) return;
+
         const devices = await navigator.mediaDevices.enumerateDevices();
         const audioInputs = devices.filter((d) => d.kind === "audioinput");
+
+        if (cancelled) return;
+
         setAudioDevices(audioInputs);
-        if (audioInputs.length > 0 && !selectedDeviceId) {
-          setSelectedDeviceId(audioInputs[0].deviceId);
+        if (audioInputs.length > 0) {
+          setSelectedDeviceId((prev) => prev || audioInputs[0].deviceId);
         }
         setMicError("");
-      } catch {
-        setMicError("Microphone access denied. Please allow microphone permissions.");
+      } catch (err) {
+        console.error("[MixRecorder] Microphone access error:", err);
+        if (!cancelled) {
+          setMicError("Microphone access denied. Please allow microphone permissions and reload.");
+        }
       }
     }
+
     loadDevices();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+    return () => { cancelled = true; };
+  }, [browserError]);
 
   // ---- cleanup on unmount ----
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
-      stopEverything();
-      if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+      mountedRef.current = false;
+      stopEverythingRef.current();
+      if (recordedUrlRef.current) {
+        URL.revokeObjectURL(recordedUrlRef.current);
+        recordedUrlRef.current = "";
+      }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keep recordedUrlRef in sync
+  useEffect(() => {
+    recordedUrlRef.current = recordedUrl;
+  }, [recordedUrl]);
 
   // ---- visualizer animation ----
   const drawVisualizer = useCallback(() => {
@@ -152,7 +248,7 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
     const barCount = 48;
     const barWidth = (width / barCount) * 0.7;
     const gap = (width / barCount) * 0.3;
-    const step = Math.floor(bufferLength / barCount);
+    const step = Math.max(1, Math.floor(bufferLength / barCount));
 
     for (let i = 0; i < barCount; i++) {
       const value = dataArray[i * step] / 255;
@@ -181,9 +277,9 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
       );
     }
 
-    // Update level state for the VU meter
-    const slice = Math.floor(bufferLength / 32);
-    const newLevels = [];
+    // Update level state for the VU meter (throttled — only 32 values)
+    const slice = Math.max(1, Math.floor(bufferLength / 32));
+    const newLevels: number[] = [];
     for (let i = 0; i < 32; i++) {
       newLevels.push(dataArray[i * slice] / 255);
     }
@@ -200,43 +296,19 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
     }, 1000);
   }, []);
 
-  const pauseTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  }, []);
-
-  // ---- stop & cleanup helpers ----
-  function stopEverything() {
-    pauseTimer();
-    cancelAnimationFrame(animFrameRef.current);
-
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
-    }
-
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-
-    if (audioContextRef.current) {
-      audioContextRef.current.close().catch(() => {});
-      audioContextRef.current = null;
-    }
-
-    if (previewAudioRef.current) {
-      previewAudioRef.current.pause();
-      previewAudioRef.current = null;
-    }
-  }
-
   // ---- start recording ----
   const startRecording = useCallback(async () => {
     try {
       setMicError("");
       chunksRef.current = [];
+
+      // Clean up any previous recording state
+      if (recordedUrlRef.current) {
+        URL.revokeObjectURL(recordedUrlRef.current);
+        recordedUrlRef.current = "";
+      }
+      setRecordedBlob(null);
+      setRecordedUrl("");
 
       const constraints: MediaStreamConstraints = {
         audio: selectedDeviceId
@@ -244,12 +316,22 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
           : true,
       };
 
+      console.log("[MixRecorder] Requesting microphone access...", constraints);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
+      console.log("[MixRecorder] Got media stream, tracks:", stream.getAudioTracks().length);
 
       // Set up AudioContext + Analyser for visualization
-      const audioCtx = new AudioContext();
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const audioCtx = new AudioCtx();
       audioContextRef.current = audioCtx;
+
+      // Resume context (required after user gesture in many browsers)
+      if (audioCtx.state === "suspended") {
+        await audioCtx.resume();
+        console.log("[MixRecorder] AudioContext resumed");
+      }
+
       const source = audioCtx.createMediaStreamSource(stream);
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 256;
@@ -257,42 +339,86 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
       source.connect(analyser);
       analyserRef.current = analyser;
 
-      // Set up MediaRecorder
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : "audio/webm";
+      // Set up MediaRecorder with best supported mime type
+      const mimeType = getSupportedMimeType();
+      mimeTypeRef.current = mimeType;
+      console.log("[MixRecorder] Using MIME type:", mimeType || "(browser default)");
 
-      const recorder = new MediaRecorder(stream, { mimeType });
+      const recorderOptions: MediaRecorderOptions = {};
+      if (mimeType) {
+        recorderOptions.mimeType = mimeType;
+      }
+
+      const recorder = new MediaRecorder(stream, recorderOptions);
       mediaRecorderRef.current = recorder;
 
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
+      recorder.ondataavailable = (e: BlobEvent) => {
+        if (e.data && e.data.size > 0) {
           chunksRef.current.push(e.data);
+          console.log("[MixRecorder] Chunk received, size:", e.data.size, "total chunks:", chunksRef.current.length);
         }
       };
 
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType });
+        console.log("[MixRecorder] Recorder stopped, total chunks:", chunksRef.current.length);
+        if (chunksRef.current.length === 0) {
+          console.warn("[MixRecorder] No audio data captured!");
+          if (mountedRef.current) {
+            setMicError("No audio data was captured. Please check your microphone input.");
+            setRecordingState("idle");
+          }
+          return;
+        }
+
+        const finalMime = mimeTypeRef.current || "audio/webm";
+        const blob = new Blob(chunksRef.current, { type: finalMime });
         const url = URL.createObjectURL(blob);
-        setRecordedBlob(blob);
-        setRecordedUrl(url);
+        console.log("[MixRecorder] Created blob:", blob.size, "bytes, type:", blob.type);
+
+        if (mountedRef.current) {
+          setRecordedBlob(blob);
+          setRecordedUrl(url);
+          recordedUrlRef.current = url;
+        } else {
+          URL.revokeObjectURL(url);
+        }
       };
 
-      // Record in 1-second chunks for more reliable data capture
+      recorder.onerror = (event) => {
+        console.error("[MixRecorder] MediaRecorder error:", event);
+        if (mountedRef.current) {
+          setMicError("Recording error occurred. Please try again.");
+          setRecordingState("idle");
+        }
+      };
+
+      // Start recording — use timeslice of 1000ms for regular data chunks
       recorder.start(1000);
+      console.log("[MixRecorder] Recording started, state:", recorder.state);
+
       setRecordingState("recording");
       setElapsedSeconds(0);
       startTimer();
       drawVisualizer();
-    } catch {
-      setMicError("Could not access microphone. Check permissions and try again.");
+    } catch (err) {
+      console.error("[MixRecorder] startRecording error:", err);
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("NotAllowedError") || message.includes("Permission")) {
+        setMicError("Microphone permission denied. Please allow access and try again.");
+      } else if (message.includes("NotFoundError") || message.includes("Requested device not found")) {
+        setMicError("Selected microphone not found. Please choose a different input device.");
+      } else {
+        setMicError(`Could not start recording: ${message}`);
+      }
     }
   }, [selectedDeviceId, startTimer, drawVisualizer]);
 
   // ---- pause recording ----
   const pauseRecording = useCallback(() => {
-    if (mediaRecorderRef.current?.state === "recording") {
-      mediaRecorderRef.current.pause();
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state === "recording") {
+      recorder.pause();
+      console.log("[MixRecorder] Recording paused");
       setRecordingState("paused");
       pauseTimer();
       cancelAnimationFrame(animFrameRef.current);
@@ -301,8 +427,10 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
 
   // ---- resume recording ----
   const resumeRecording = useCallback(() => {
-    if (mediaRecorderRef.current?.state === "paused") {
-      mediaRecorderRef.current.resume();
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state === "paused") {
+      recorder.resume();
+      console.log("[MixRecorder] Recording resumed");
       setRecordingState("recording");
       startTimer();
       drawVisualizer();
@@ -311,15 +439,19 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
 
   // ---- stop recording ----
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      // Request any remaining data before stopping
+      try { recorder.requestData(); } catch {}
+      recorder.stop();
+      console.log("[MixRecorder] Recorder.stop() called");
     }
 
     pauseTimer();
     cancelAnimationFrame(animFrameRef.current);
 
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current.getTracks().forEach((t) => { try { t.stop(); } catch {} });
       streamRef.current = null;
     }
 
@@ -327,6 +459,7 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
       audioContextRef.current.close().catch(() => {});
       audioContextRef.current = null;
     }
+    analyserRef.current = null;
 
     setRecordingState("stopped");
     setLevels(new Array(32).fill(0));
@@ -334,7 +467,10 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
 
   // ---- discard recording ----
   const discardRecording = useCallback(() => {
-    if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+    if (recordedUrl) {
+      URL.revokeObjectURL(recordedUrl);
+      recordedUrlRef.current = "";
+    }
     setRecordedBlob(null);
     setRecordedUrl("");
     setRecordingState("idle");
@@ -362,26 +498,32 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
     }
 
     if (!previewAudioRef.current) {
-      previewAudioRef.current = new Audio(recordedUrl);
-      previewAudioRef.current.onended = () => {
+      const audio = new Audio(recordedUrl);
+      audio.onended = () => {
         setIsPreviewPlaying(false);
         setPreviewTime(0);
       };
-      previewAudioRef.current.ontimeupdate = () => {
-        setPreviewTime(previewAudioRef.current?.currentTime || 0);
+      audio.ontimeupdate = () => {
+        setPreviewTime(audio.currentTime || 0);
       };
+      previewAudioRef.current = audio;
     }
 
-    previewAudioRef.current.play().catch(console.error);
+    previewAudioRef.current.play().catch((err) => {
+      console.error("[MixRecorder] Preview playback error:", err);
+    });
     setIsPreviewPlaying(true);
   }, [recordedUrl, isPreviewPlaying]);
 
   // ---- download recording ----
   const downloadRecording = useCallback(() => {
-    if (!recordedBlob) return;
+    if (!recordedBlob || !recordedUrl) return;
+    const ext = mimeTypeRef.current.includes("mp4") ? "m4a"
+      : mimeTypeRef.current.includes("ogg") ? "ogg"
+      : "webm";
     const a = document.createElement("a");
     a.href = recordedUrl;
-    a.download = `${saveTitle || "recording"}.webm`;
+    a.download = `${saveTitle || "recording"}.${ext}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -404,11 +546,13 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
 
   // ---- close handler ----
   const handleClose = useCallback(() => {
-    stopEverything();
-    if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+    stopEverythingRef.current();
+    if (recordedUrlRef.current) {
+      URL.revokeObjectURL(recordedUrlRef.current);
+      recordedUrlRef.current = "";
+    }
     onClose();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onClose, recordedUrl]);
+  }, [onClose]);
 
   // ===========================================================================
   // Render
@@ -450,6 +594,13 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
 
         {/* Body */}
         <div className="px-6 py-5 space-y-5">
+          {/* Browser support error */}
+          {browserError && (
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+              {browserError}
+            </div>
+          )}
+
           {/* Mic error */}
           {micError && (
             <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
@@ -458,7 +609,7 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
           )}
 
           {/* Audio input selector */}
-          {!isStopped && (
+          {!isStopped && !browserError && (
             <div className="flex items-center gap-3">
               <Volume2 className="h-4 w-4 shrink-0 text-muted-foreground" />
               <div className="relative flex-1">
@@ -510,13 +661,13 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
                 <span className={`font-mono text-lg font-bold ${
                   isRecording ? "text-red-400" : isPaused ? "text-amber-400" : "text-foreground"
                 }`}>
-                  {formatTimer(isStopped ? elapsedSeconds : elapsedSeconds)}
+                  {formatTimer(elapsedSeconds)}
                 </span>
               </div>
             </div>
 
             {/* Recording state label */}
-            {isIdle && (
+            {isIdle && !browserError && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
                   <Mic className="mx-auto mb-2 h-10 w-10 text-muted-foreground/30" />
@@ -552,7 +703,7 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
           )}
 
           {/* Transport controls */}
-          {!isStopped && (
+          {!isStopped && !browserError && (
             <div className="flex items-center justify-center gap-4">
               {isIdle ? (
                 <Button
@@ -707,8 +858,9 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
                 Paused
               </>
             )}
-            {isIdle && "Ready to record"}
+            {isIdle && !browserError && "Ready to record"}
             {isStopped && "Recording complete"}
+            {browserError && "Recording unavailable"}
           </div>
 
           <div className="flex gap-2">
