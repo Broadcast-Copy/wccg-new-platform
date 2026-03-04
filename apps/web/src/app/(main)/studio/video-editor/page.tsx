@@ -210,27 +210,35 @@ export default function VideoEditorPage() {
   // Load a video/audio file
   const loadMediaFile = useCallback((file: File) => {
     try {
-      if (videoUrlRef.current) URL.revokeObjectURL(videoUrlRef.current);
-      const url = URL.createObjectURL(file);
-      videoUrlRef.current = url;
+      const isVideo = file.type.startsWith("video/");
+      const isAudio = file.type.startsWith("audio/");
+      const isImage = file.type.startsWith("image/");
+      const type: "video" | "audio" | "image" = isVideo ? "video" : isAudio ? "audio" : isImage ? "image" : "video";
 
-      if (videoRef.current) {
+      // For video/audio, load into the player
+      if ((isVideo || isAudio) && videoRef.current) {
+        if (videoUrlRef.current) URL.revokeObjectURL(videoUrlRef.current);
+        const url = URL.createObjectURL(file);
+        videoUrlRef.current = url;
+
         videoRef.current.src = url;
         videoRef.current.load();
         videoRef.current.onloadedmetadata = () => {
           const dur = videoRef.current?.duration || 0;
           setTotalDuration(dur);
           setCurrentTime(0);
-          setHasVideo(true);
           setPlayheadPosition(0);
+          if (isVideo) setHasVideo(true);
           showStatus(`Loaded: ${file.name} (${Math.floor(dur)}s)`);
         };
+        videoRef.current.onerror = () => {
+          showStatus(`Error: Could not load ${file.name}`);
+        };
+      } else if (isImage) {
+        showStatus(`Imported image: ${file.name}`);
       }
 
-      const isVideo = file.type.startsWith("video/");
-      const isAudio = file.type.startsWith("audio/");
-      const isImage = file.type.startsWith("image/");
-      const type: "video" | "audio" | "image" = isVideo ? "video" : isAudio ? "audio" : isImage ? "image" : "video";
+      // Add to media bin
       const newItem: MediaItem = {
         id: `imported-${Date.now()}`,
         name: file.name,
@@ -239,6 +247,19 @@ export default function VideoEditorPage() {
         thumbnail: type === "video" ? "bg-[#74ddc7]/30" : type === "audio" ? "bg-pink-500/30" : "bg-emerald-500/30",
       };
       setImportedMedia((prev) => [...prev, newItem]);
+
+      // Also add a clip to the timeline
+      const track = isAudio ? "A1" : "V1";
+      const newClip: TimelineClip = {
+        id: `tc-${Date.now()}`,
+        name: file.name.replace(/\.\w+$/, ""),
+        track,
+        start: 0,
+        width: 30,
+        color: TRACK_COLORS[track] || "bg-gray-500/40",
+      };
+      setTimelineClips((prev) => [...prev, newClip]);
+      setSelectedClipId(newClip.id);
     } catch (err) {
       console.error("[VideoEditor] Failed to load file:", err);
       showStatus("Error loading file");
@@ -748,14 +769,16 @@ export default function VideoEditorPage() {
               onClick={togglePlay}
             >
               <div className="relative w-full max-w-3xl aspect-video bg-black/80 rounded-sm mx-4 flex items-center justify-center overflow-hidden">
-                {hasVideo ? (
-                  /* eslint-disable-next-line jsx-a11y/media-has-caption */
-                  <video
-                    ref={videoRef}
-                    className="absolute inset-0 w-full h-full object-contain"
-                    playsInline
-                  />
-                ) : (
+                {/* Video element ALWAYS in DOM so ref is available for file loading */}
+                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                <video
+                  ref={videoRef}
+                  className={`absolute inset-0 w-full h-full object-contain ${hasVideo ? "z-[1]" : "hidden"}`}
+                  playsInline
+                />
+
+                {/* Placeholder overlay — shown when no video loaded */}
+                {!hasVideo && (
                   <>
                     <div className="absolute inset-0 bg-gradient-to-br from-[#7401df]/20 via-black/60 to-[#74ddc7]/10" />
                     <div className="relative text-center">
