@@ -136,31 +136,31 @@ function ChannelTile({ stream }: { stream: Stream }) {
     >
       <div className="flex items-stretch">
         {/* ── Left: Logo ── */}
-        <div className="flex items-center p-4 sm:p-6">
+        <div className="flex items-center p-3 sm:p-4">
           <Link
             href={`/channels/${stream.id}`}
-            className="relative flex-shrink-0 h-24 w-24 sm:h-32 sm:w-32 lg:h-40 lg:w-40 rounded-xl overflow-hidden bg-foreground/[0.03] border border-border"
+            className="relative flex-shrink-0 h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24 rounded-lg overflow-hidden bg-foreground/[0.03] border border-border"
           >
             {logo ? (
               <Image
                 src={logo}
                 alt={stream.name}
                 fill
-                className="object-contain p-3"
-                sizes="160px"
+                className="object-cover"
+                sizes="96px"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center">
-                <Radio className="h-10 w-10 text-muted-foreground" />
+                <Radio className="h-8 w-8 text-muted-foreground" />
               </div>
             )}
           </Link>
         </div>
 
         {/* ── Center: Info ── */}
-        <div className="flex-1 min-w-0 py-4 sm:py-6 pr-4 space-y-1.5 sm:space-y-2">
+        <div className="flex-1 min-w-0 py-3 sm:py-4 pr-3 space-y-1 sm:space-y-1.5">
           <Link href={`/channels/${stream.id}`}>
-            <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground group-hover:text-[#74ddc7] transition-colors">
+            <h3 className="text-base sm:text-lg lg:text-xl font-bold text-foreground group-hover:text-[#74ddc7] transition-colors">
               {stream.name}
             </h3>
           </Link>
@@ -206,54 +206,54 @@ function ChannelTile({ stream }: { stream: Stream }) {
         </div>
 
         {/* ── Right: Status / Live Now ── */}
-        <div className="flex flex-col items-center justify-center gap-2 px-4 sm:px-8 py-4 border-l border-border bg-foreground/[0.02] min-w-[140px] sm:min-w-[220px]">
+        <div className="flex flex-col items-center justify-center gap-1.5 px-3 sm:px-6 py-3 border-l border-border bg-foreground/[0.02] min-w-[100px] sm:min-w-[160px]">
           {isLive ? (
             <>
               {showImage ? (
                 <button
                   onClick={handleTogglePlay}
-                  className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-xl overflow-hidden border border-border hover:border-[#74ddc7]/50 transition-colors"
+                  className="relative h-14 w-14 sm:h-18 sm:w-18 rounded-lg overflow-hidden border border-border hover:border-[#74ddc7]/50 transition-colors"
                 >
                   <Image
                     src={showImage}
                     alt="Current Show"
                     fill
                     className="object-cover"
-                    sizes="96px"
+                    sizes="72px"
                   />
                 </button>
               ) : (
                 <button
                   onClick={handleTogglePlay}
-                  className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-xl bg-foreground/[0.06] hover:bg-[#74ddc7]/20 transition-colors"
+                  className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-lg bg-foreground/[0.06] hover:bg-[#74ddc7]/20 transition-colors"
                 >
-                  <Radio className="h-7 w-7 text-muted-foreground" />
+                  <Radio className="h-5 w-5 text-muted-foreground" />
                 </button>
               )}
-              <span className="text-[11px] sm:text-xs font-semibold text-foreground uppercase tracking-wider">
+              <span className="text-[10px] sm:text-[11px] font-semibold text-foreground uppercase tracking-wider">
                 Live Now
               </span>
             </>
           ) : channelStatus.status === "unlocked" ? (
             <>
-              <Unlock className="h-6 w-6 text-muted-foreground" />
-              <span className="text-xs sm:text-sm font-semibold text-foreground">
+              <Unlock className="h-5 w-5 text-muted-foreground" />
+              <span className="text-[11px] sm:text-xs font-semibold text-foreground">
                 Unlocked
               </span>
               {channelStatus.comingSoon && (
-                <span className="text-xs text-[#74ddc7] font-medium">
+                <span className="text-[10px] sm:text-[11px] text-[#74ddc7] font-medium">
                   {channelStatus.comingSoon}
                 </span>
               )}
             </>
           ) : (
             <>
-              <Lock className="h-6 w-6 text-muted-foreground" />
-              <span className="text-xs sm:text-sm font-semibold text-foreground">
+              <Lock className="h-5 w-5 text-muted-foreground" />
+              <span className="text-[11px] sm:text-xs font-semibold text-foreground">
                 Locked
               </span>
               {channelStatus.comingSoon && (
-                <span className="text-xs text-[#74ddc7] font-medium">
+                <span className="text-[10px] sm:text-[11px] text-[#74ddc7] font-medium">
                   {channelStatus.comingSoon}
                 </span>
               )}
