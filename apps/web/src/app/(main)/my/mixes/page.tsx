@@ -34,7 +34,9 @@ import {
   ChevronDown,
   Loader2,
   Disc3,
+  Mic,
 } from "lucide-react";
+import { MixRecorder, type RecordingResult } from "@/components/mixes/mix-recorder";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -251,6 +253,7 @@ export default function MyMixesPage() {
   // ---- state ----
   const [mixes, setMixes] = useState<DashboardMix[]>([]);
   const [showUpload, setShowUpload] = useState(false);
+  const [showRecorder, setShowRecorder] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [sortKey, setSortKey] = useState<SortKey>("newest");
   const [searchQuery, setSearchQuery] = useState("");
@@ -456,6 +459,31 @@ export default function MyMixesPage() {
 
   const preventDefault = useCallback((e: React.DragEvent) => e.preventDefault(), []);
 
+  // ---- save recording from studio ----
+  const handleRecordingSave = useCallback(
+    (result: RecordingResult) => {
+      const newMix: DashboardMix = {
+        id: generateId(),
+        title: result.title,
+        genre: result.genre,
+        description: result.description,
+        duration: result.duration,
+        playCount: 0,
+        status: "PROCESSING",
+        createdAt: new Date().toISOString(),
+        fileSize: result.blob.size,
+        // Use the blob URL so the mix is playable this session
+        coverImageUrl: undefined,
+      };
+
+      const updated = [newMix, ...mixes];
+      persistMixes(updated);
+      setShowRecorder(false);
+      toast.success("Recording saved to your mixes!");
+    },
+    [mixes, persistMixes],
+  );
+
   // ===========================================================================
   // Render: Auth Guard
   // ===========================================================================
@@ -501,13 +529,21 @@ export default function MyMixesPage() {
         <div className="flex-1">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">My DJ Mixes</h1>
           <p className="mt-1 text-muted-foreground">Manage the mixes on your public profile</p>
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap gap-2">
             <Button
               className="bg-[#74ddc7] text-black hover:bg-[#74ddc7]/80"
               onClick={() => setShowUpload(!showUpload)}
             >
               {showUpload ? <X className="size-4" /> : <Plus className="size-4" />}
               {showUpload ? "Cancel Upload" : "Upload New Mix"}
+            </Button>
+            <Button
+              variant="outline"
+              className="border-[#dc2626]/30 text-[#dc2626] hover:bg-[#dc2626]/10 hover:text-[#dc2626]"
+              onClick={() => setShowRecorder(true)}
+            >
+              <Mic className="size-4" />
+              Record Mix
             </Button>
           </div>
         </div>
@@ -1216,6 +1252,14 @@ export default function MyMixesPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Recording Studio Modal */}
+      {showRecorder && (
+        <MixRecorder
+          onSave={handleRecordingSave}
+          onClose={() => setShowRecorder(false)}
+        />
       )}
     </div>
   );
