@@ -133,10 +133,11 @@ const CATEGORY_COLORS: Record<Category, { badge: string; marker: string }> = {
 };
 
 // ---------------------------------------------------------------------------
-// Counties & areas covered
+// Counties & areas covered (Fort Liberty is a military installation, not a county)
 // ---------------------------------------------------------------------------
 
 const COUNTIES = ["Cumberland", "Sampson", "Bladen", "Hoke", "Lee", "Scotland", "Moore", "Robeson", "Harnett"] as const;
+const AREAS = [...COUNTIES, "Fort Liberty"] as const;
 
 // ---------------------------------------------------------------------------
 // Government Services Directory Data
@@ -196,6 +197,36 @@ const SERVICE_LISTINGS: ServiceListing[] = [
   { id: "c28", name: "Fort Liberty Military Police", category: "Military", address: "Reilly Rd, Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 396-0391", description: "On-post law enforcement and security. Non-emergency dispatch for Fort Liberty installation.", lat: 35.1400, lng: -79.0050 },
   { id: "c29", name: "Womack Army Medical Center", category: "Military", address: "2817 Reilly Rd, Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 907-6000", description: "Military hospital providing medical care for active duty, retirees, and dependents at Fort Liberty.", website: "https://womack.tricare.mil", featured: true, lat: 35.1390, lng: -79.0030 },
   { id: "c30", name: "Fort Liberty Fire & Emergency Services", category: "Military", address: "Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 396-0011", description: "On-post fire protection, emergency medical services, and hazmat response for Fort Liberty.", lat: 35.1420, lng: -79.0080 },
+
+  // ── Fort Liberty — DEERS, Housing, SRP & Installation Services ─────────
+  { id: "fl01", name: "DEERS / ID Card Center (RAPIDS)", category: "Military", address: "2843 Desert Storm Dr, Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 396-5227", description: "Defense Enrollment Eligibility Reporting System — CAC cards, military IDs, dependent enrollment, and TRICARE eligibility updates.", website: "https://home.army.mil/liberty/about/dir-human-resources/military-personnel-division/id-cards-deers", featured: true, lat: 35.1395, lng: -79.0045 },
+  { id: "fl02", name: "Fort Liberty Visitor Center & Access Control", category: "Military", address: "All American Expy, Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 396-5401", description: "Installation access for visitors — day passes, vehicle registration, and base access requirements.", lat: 35.1380, lng: -78.9950 },
+  { id: "fl03", name: "Fort Liberty Housing Office (DPW)", category: "Government Offices", address: "Building 3-1333, Gruber Rd, Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 396-1680", description: "On-post housing assignments, privatized housing (Corvias), barracks management, and housing referral for off-post rentals.", website: "https://www.fortlibertyhousing.com", lat: 35.1410, lng: -79.0020 },
+  { id: "fl04", name: "Soldier Readiness Processing (SRP) Center", category: "Military", address: "Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 396-0011", description: "One-stop processing for deployments and PCS moves — medical, dental, legal, finance, and personnel readiness.", lat: 35.1425, lng: -79.0070 },
+  { id: "fl05", name: "Central Issue Facility (CIF)", category: "Military", address: "Gruber Rd, Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 396-8604", description: "Organizational equipment issue and turn-in — body armor, tactical gear, field equipment for inprocessing and outprocessing soldiers.", lat: 35.1430, lng: -79.0055 },
+
+  // ── Fort Liberty — Health & Dental ─────────────────────────────────────
+  { id: "fl06", name: "Womack Army Medical Center — Pharmacy", category: "Health Services", address: "2817 Reilly Rd, Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 907-6795", description: "On-post pharmacy services for active duty, retirees, and dependents. Prescription refills and over-the-counter medications.", website: "https://womack.tricare.mil/Health-Services/Pharmacy", lat: 35.1388, lng: -79.0028 },
+  { id: "fl07", name: "Womack — Behavioral Health (SUDCC)", category: "Health Services", address: "2817 Reilly Rd, Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 907-8046", description: "Behavioral health and substance use disorder clinical care. Counseling, therapy, crisis intervention, and substance abuse treatment.", lat: 35.1392, lng: -79.0032 },
+  { id: "fl08", name: "Fort Liberty Dental Clinics", category: "Health Services", address: "Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 907-6100", description: "Military dental clinics providing dental readiness exams, cleanings, fillings, and specialty dental care for active duty soldiers.", lat: 35.1385, lng: -79.0040 },
+
+  // ── Fort Liberty — Support Services (ACS, Finance, Legal, Education) ───
+  { id: "fl09", name: "Army Community Service (ACS)", category: "Government Offices", address: "2601 Gruber Rd, Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 396-8681", description: "Relocation assistance, financial readiness, family advocacy, employment programs, and exceptional family member program (EFMP).", website: "https://home.army.mil/liberty/about/dir-family-morale-welfare-recreation/army-community-service", featured: true, lat: 35.1415, lng: -79.0010 },
+  { id: "fl10", name: "Finance Office (DFAS)", category: "Government Offices", address: "Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 396-5238", description: "Defense Finance and Accounting — military pay, travel vouchers, in/out-processing pay actions, and LES inquiries.", lat: 35.1405, lng: -79.0060 },
+  { id: "fl11", name: "Transportation Office (PCS / Household Goods)", category: "Government Offices", address: "Building C-1327, Gruber Rd, Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 396-2598", description: "PCS move coordination — household goods shipping, vehicle transport, temporary storage, and personally procured moves (PPM/DITY).", lat: 35.1402, lng: -79.0025 },
+  { id: "fl12", name: "Legal Assistance Office (JAG)", category: "Courts & Legal", address: "Building E-2218, Ardennes St, Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 396-0396", description: "Free legal assistance for soldiers and families — wills, powers of attorney, tax preparation, landlord-tenant issues, and consumer law.", website: "https://home.army.mil/liberty/about/dir-staff-judge-advocate/legal-assistance", featured: true, lat: 35.1398, lng: -79.0042 },
+  { id: "fl13", name: "Education Center", category: "Libraries & Education", address: "Building D-1701, Gruber Rd, Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 396-1722", description: "Tuition assistance, college enrollment, GI Bill counseling, CLEP/DSST testing, credentialing programs, and degree completion.", website: "https://home.army.mil/liberty/about/dir-human-resources/education-center", featured: true, lat: 35.1412, lng: -79.0015 },
+  { id: "fl14", name: "Soldier For Life — Transition Assistance (SFL-TAP)", category: "Veteran Services", address: "Building H-1122, Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 396-4663", description: "Career transition services — resume workshops, job fairs, VA benefits briefings, skills translation, and career counseling for separating soldiers.", website: "https://home.army.mil/liberty/about/dir-human-resources/sfl-tap", featured: true, lat: 35.1408, lng: -79.0050 },
+  { id: "fl15", name: "Chaplain / Religious Support Office", category: "Government Offices", address: "Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 396-9010", description: "Chaplain services — worship services, marriage and family counseling, spiritual fitness, and crisis support for soldiers and families of all faiths.", lat: 35.1418, lng: -79.0035 },
+
+  // ── Fort Liberty — MWR, Commissary, PX ─────────────────────────────────
+  { id: "fl16", name: "MWR (Morale, Welfare & Recreation)", category: "Parks & Recreation", address: "Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 396-4445", description: "Gyms, fitness centers, pools, bowling center, outdoor recreation, auto craft shop, arts & crafts, and community events.", website: "https://liberty.armymwr.com", featured: true, lat: 35.1435, lng: -79.0060 },
+  { id: "fl17", name: "Fort Liberty Commissary (DeCA)", category: "Government Offices", address: "6890 Gruber Rd, Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 907-2222", description: "Military grocery store — tax-free groceries, household supplies, and fresh produce for active duty, retirees, and dependents.", website: "https://www.commissaries.com/shopping/store-locations/fort-liberty", featured: true, lat: 35.1440, lng: -79.0045 },
+  { id: "fl18", name: "Main Exchange (PX / AAFES)", category: "Government Offices", address: "Gruber Rd, Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 436-1884", description: "Army & Air Force Exchange Service — tax-free shopping for electronics, clothing, auto care, food court, barber, and optical.", website: "https://www.shopmyexchange.com", lat: 35.1432, lng: -79.0040 },
+
+  // ── Fort Liberty — Library & Warrior Transition ─────────────────────────
+  { id: "fl19", name: "Fort Liberty Library (Throckmorton)", category: "Libraries & Education", address: "Building C-7321, Gruber Rd, Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 396-4649", description: "On-post library with free internet, children's programs, reading rooms, digital resources, and study spaces for soldiers and families.", lat: 35.1422, lng: -79.0030 },
+  { id: "fl20", name: "Warrior Transition Battalion", category: "Veteran Services", address: "Fort Liberty, NC 28310", city: "Fort Liberty", county: "Cumberland", phone: "(910) 907-7927", description: "Comprehensive care and support for wounded, ill, and injured soldiers during recovery and transition back to duty or civilian life.", lat: 35.1395, lng: -79.0038 },
 
   // ════════════════════════════════════════════════════════════════════════════
   // SAMPSON COUNTY — Clinton, Roseboro, Newton Grove, Garland
@@ -355,7 +386,7 @@ const MAP_CENTER: [number, number] = [35.0527, -78.9236];
 export default function CommunityServicesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<Category | "All">("All");
-  const [activeCounty, setActiveCounty] = useState<string>("All");
+  const [activeArea, setActiveArea] = useState<string>("All");
   const [selectedListing, setSelectedListing] = useState<ServiceListing | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -408,10 +439,17 @@ export default function CommunityServicesPage() {
     return () => { cancelled = true; };
   }, []);
 
+  // Helper: does a listing match the selected area?
+  const matchesArea = useCallback((l: ServiceListing, area: string) => {
+    if (area === "All") return true;
+    if (area === "Fort Liberty") return l.city === "Fort Liberty";
+    return l.county === area;
+  }, []);
+
   const filteredListings = useMemo(() => {
     return listings.filter((l) => {
       const matchesCategory = activeCategory === "All" || l.category === activeCategory;
-      const matchesCounty = activeCounty === "All" || l.county === activeCounty;
+      const matchesAreaFilter = matchesArea(l, activeArea);
       const matchesSearch =
         searchQuery.trim() === "" ||
         l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -420,24 +458,26 @@ export default function CommunityServicesPage() {
         l.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
         l.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
         l.county.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesCounty && matchesSearch;
+      return matchesCategory && matchesAreaFilter && matchesSearch;
     });
-  }, [searchQuery, activeCategory, activeCounty, listings]);
+  }, [searchQuery, activeCategory, activeArea, listings, matchesArea]);
 
   const categoryCount = useMemo(() => {
-    const base = listings.filter((l) => activeCounty === "All" || l.county === activeCounty);
+    const base = listings.filter((l) => matchesArea(l, activeArea));
     const counts: Record<string, number> = { All: base.length };
     for (const l of base) {
       counts[l.category] = (counts[l.category] || 0) + 1;
     }
     return counts;
-  }, [activeCounty, listings]);
+  }, [activeArea, listings, matchesArea]);
 
-  const countyCount = useMemo(() => {
+  const areaCount = useMemo(() => {
     const counts: Record<string, number> = { All: listings.length };
-    for (const l of listings) {
-      counts[l.county] = (counts[l.county] || 0) + 1;
+    for (const county of COUNTIES) {
+      counts[county] = listings.filter((l) => l.county === county).length;
     }
+    // Fort Liberty = filter by city
+    counts["Fort Liberty"] = listings.filter((l) => l.city === "Fort Liberty").length;
     return counts;
   }, [listings]);
 
@@ -465,7 +505,7 @@ export default function CommunityServicesPage() {
         <div className="relative z-10 mx-auto max-w-4xl text-center space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full bg-teal-500/10 border border-teal-500/20 px-4 py-1.5 text-sm font-medium text-teal-600 dark:text-teal-400">
             <Landmark className="h-4 w-4" />
-            Serving {COUNTIES.length} Counties &middot; {listings.length}+ Services
+            Serving {COUNTIES.length} Counties + Fort Liberty &middot; {listings.length}+ Services
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
             Community Services Directory
@@ -515,70 +555,53 @@ export default function CommunityServicesPage() {
           )}
         </div>
 
-        {/* County filter */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">County</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setActiveCounty("All")}
-              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all ${
-                activeCounty === "All"
-                  ? "bg-sky-500/20 text-sky-600 dark:text-sky-400 border-sky-500/30"
-                  : "bg-muted/50 text-muted-foreground border-border hover:border-input hover:text-foreground"
-              }`}
+        {/* Filter Dropdowns */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Area dropdown */}
+          <div className="space-y-1.5 flex-1 max-w-xs">
+            <label htmlFor="area-filter" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              County / Area
+            </label>
+            <select
+              id="area-filter"
+              value={activeArea}
+              onChange={(e) => setActiveArea(e.target.value)}
+              className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500/50 transition-colors appearance-none cursor-pointer"
+              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center" }}
             >
-              All Counties <span className="rounded-full bg-muted px-1.5 py-0 text-[10px]">{countyCount["All"]}</span>
-            </button>
-            {COUNTIES.map((county) => (
-              <button
-                key={county}
-                onClick={() => setActiveCounty(county)}
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all ${
-                  activeCounty === county
-                    ? "bg-sky-500/20 text-sky-600 dark:text-sky-400 border-sky-500/30"
-                    : "bg-muted/50 text-muted-foreground border-border hover:border-input hover:text-foreground"
-                }`}
-              >
-                {county}
-                {countyCount[county] ? (
-                  <span className="rounded-full bg-muted px-1.5 py-0 text-[10px]">{countyCount[county]}</span>
-                ) : null}
-              </button>
-            ))}
+              <option value="All">All Areas ({areaCount["All"]})</option>
+              <optgroup label="Counties">
+                {COUNTIES.map((county) => (
+                  <option key={county} value={county}>
+                    {county} County ({areaCount[county] || 0})
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Military Installation">
+                <option value="Fort Liberty">Fort Liberty (Fort Bragg) ({areaCount["Fort Liberty"] || 0})</option>
+              </optgroup>
+            </select>
           </div>
-        </div>
 
-        {/* Categories */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Service Type</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setActiveCategory("All")}
-              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all ${
-                activeCategory === "All"
-                  ? "bg-teal-500/20 text-teal-600 dark:text-teal-400 border-teal-500/30"
-                  : "bg-muted/50 text-muted-foreground border-border hover:border-input hover:text-foreground"
-              }`}
+          {/* Service Type dropdown */}
+          <div className="space-y-1.5 flex-1 max-w-xs">
+            <label htmlFor="category-filter" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Service Type
+            </label>
+            <select
+              id="category-filter"
+              value={activeCategory}
+              onChange={(e) => setActiveCategory(e.target.value as Category | "All")}
+              className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500/50 transition-colors appearance-none cursor-pointer"
+              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center" }}
             >
-              All <span className="rounded-full bg-muted px-1.5 py-0 text-[10px]">{categoryCount["All"]}</span>
-            </button>
-            {CATEGORIES.map(({ label, icon: Icon }) => (
-              <button
-                key={label}
-                onClick={() => setActiveCategory(label)}
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all ${
-                  activeCategory === label
-                    ? `${CATEGORY_COLORS[label].badge}`
-                    : "bg-muted/50 text-muted-foreground border-border hover:border-input hover:text-foreground"
-                }`}
-              >
-                <Icon className="h-3 w-3" />
-                {label}
-                {categoryCount[label] ? (
-                  <span className="rounded-full bg-muted px-1.5 py-0 text-[10px]">{categoryCount[label]}</span>
-                ) : null}
-              </button>
-            ))}
+              <option value="All">All Service Types ({categoryCount["All"]})</option>
+              {CATEGORIES.map(({ label }) => (
+                <option key={label} value={label}>
+                  {label} ({categoryCount[label] || 0})
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -588,8 +611,8 @@ export default function CommunityServicesPage() {
           {activeCategory !== "All" && (
             <> in <span className="font-medium text-foreground">{activeCategory}</span></>
           )}
-          {activeCounty !== "All" && (
-            <> &middot; <span className="font-medium text-foreground">{activeCounty} County</span></>
+          {activeArea !== "All" && (
+            <> &middot; <span className="font-medium text-foreground">{activeArea}{activeArea !== "Fort Liberty" ? " County" : ""}</span></>
           )}
         </p>
 
@@ -611,7 +634,7 @@ export default function CommunityServicesPage() {
                 <Search className="h-8 w-8 text-muted-foreground/50" />
                 <p className="text-sm text-muted-foreground">No services found.</p>
                 <button
-                  onClick={() => { setSearchQuery(""); setActiveCategory("All"); setActiveCounty("All"); }}
+                  onClick={() => { setSearchQuery(""); setActiveCategory("All"); setActiveArea("All"); }}
                   className="text-xs text-teal-600 dark:text-teal-400 hover:text-teal-500 dark:text-teal-300"
                 >
                   Clear filters
@@ -680,11 +703,11 @@ export default function CommunityServicesPage() {
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {COUNTIES.map((county) => {
-            const count = countyCount[county] || 0;
+            const count = areaCount[county] || 0;
             return (
               <button
                 key={county}
-                onClick={() => { setActiveCounty(county); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                onClick={() => { setActiveArea(county); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                 className="rounded-xl border border-border bg-muted/30 p-4 text-left transition-all hover:border-border hover:bg-muted/50"
               >
                 <h3 className="font-semibold text-foreground">{county} County</h3>
@@ -707,14 +730,15 @@ export default function CommunityServicesPage() {
             <h3 className="text-lg font-bold text-foreground">Fort Liberty (Fort Bragg)</h3>
             <p className="text-sm text-muted-foreground">
               Home of the XVIII Airborne Corps and U.S. Army Special Operations Command.
-              Our directory includes on-post services including military police,
-              fire &amp; emergency services, and Womack Army Medical Center.
+              Our directory includes {areaCount["Fort Liberty"] || 0}+ on-post services — DEERS/ID cards,
+              Womack Army Medical Center, ACS, legal assistance, housing, commissary, PX,
+              MWR, education center, finance, transportation, and more for soldiers, civilians, and families.
             </p>
             <button
-              onClick={() => { setSearchQuery("Fort Liberty"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+              onClick={() => { setActiveArea("Fort Liberty"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
               className="text-sm text-orange-600 dark:text-orange-400 hover:text-orange-500 dark:text-orange-300 font-medium"
             >
-              View Fort Liberty services →
+              View all Fort Liberty services →
             </button>
           </div>
         </div>
