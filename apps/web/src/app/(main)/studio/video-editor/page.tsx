@@ -144,6 +144,7 @@ export default function VideoEditorPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoUrlRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const simTimeRef = useRef(0); // Tracks simulated time in ref to avoid stale closures
   const [hasVideo, setHasVideo] = useState(false);
   const [importedMedia, setImportedMedia] = useState<MediaItem[]>(MOCK_MEDIA);
 
@@ -215,6 +216,9 @@ export default function VideoEditorPage() {
     if (hasVideo && videoRef.current) {
       videoRef.current.currentTime = currentTime;
       videoRef.current.play().catch(() => {});
+    } else {
+      // Init simulation ref from current state
+      simTimeRef.current = currentTime;
     }
 
     const interval = setInterval(() => {
@@ -229,17 +233,17 @@ export default function VideoEditorPage() {
           setPlayheadPosition(0);
         }
       } else {
-        // Simulated playback — playhead scrubs across the timeline
-        setCurrentTime((prev) => {
-          const next = prev + 0.05;
-          if (next >= totalDuration) {
-            setIsPlaying(false);
-            setPlayheadPosition(0);
-            return 0;
-          }
-          setPlayheadPosition((next / totalDuration) * 100);
-          return next;
-        });
+        // Simulated playback — use ref to track time, call setters separately
+        simTimeRef.current += 0.05;
+        if (simTimeRef.current >= totalDuration) {
+          simTimeRef.current = 0;
+          setIsPlaying(false);
+          setCurrentTime(0);
+          setPlayheadPosition(0);
+        } else {
+          setCurrentTime(simTimeRef.current);
+          setPlayheadPosition((simTimeRef.current / totalDuration) * 100);
+        }
       }
     }, 50);
 
