@@ -81,12 +81,14 @@ function WaveformDisplay({
   isPlaying,
   isRecording,
   onSeek,
+  waveformData,
 }: {
   currentTime: number;
   duration: number;
   isPlaying: boolean;
   isRecording: boolean;
   onSeek: (time: number) => void;
+  waveformData: number[] | null;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -138,14 +140,22 @@ function WaveformDisplay({
 
     for (let i = 0; i < bars; i++) {
       const x = i * (barWidth + gap);
-      // Procedural waveform shape using sine combinations
-      const t = i / bars;
-      const amplitude =
-        0.3 +
-        0.2 * Math.sin(t * Math.PI * 8) +
-        0.15 * Math.sin(t * Math.PI * 23) +
-        0.1 * Math.sin(t * Math.PI * 47) +
-        0.08 * Math.cos(t * Math.PI * 13);
+      let amplitude: number;
+
+      if (waveformData && waveformData.length > 0) {
+        // Use real waveform data
+        const dataIndex = Math.floor((i / bars) * waveformData.length);
+        amplitude = waveformData[Math.min(dataIndex, waveformData.length - 1)];
+      } else {
+        // Procedural waveform shape as fallback
+        const t = i / bars;
+        amplitude =
+          0.3 +
+          0.2 * Math.sin(t * Math.PI * 8) +
+          0.15 * Math.sin(t * Math.PI * 23) +
+          0.1 * Math.sin(t * Math.PI * 47) +
+          0.08 * Math.cos(t * Math.PI * 13);
+      }
       const barH = Math.max(2, amplitude * h * 0.8);
 
       if (x < playheadPos) {
@@ -185,7 +195,7 @@ function WaveformDisplay({
         ctx.fillText(formatTime(t).split(".")[0], x + 2, 12);
       }
     }
-  }, [currentTime, duration, isPlaying, isRecording]);
+  }, [currentTime, duration, isPlaying, isRecording, waveformData]);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -296,13 +306,109 @@ export default function AudioEditorPage() {
   const [outputFormat, setOutputFormat] = useState<"WAV" | "MP3" | "FLAC">("WAV");
   const [isMuted, setIsMuted] = useState(false);
 
-  // Demo data
-  const [audioFiles] = useState<AudioFile[]>([
-    { id: "1", name: "Interview_Raw.wav", duration: "12:34", size: "128 MB" },
-    { id: "2", name: "Intro_Music.mp3", duration: "0:32", size: "1.2 MB" },
-    { id: "3", name: "Outro_Jingle.wav", duration: "0:18", size: "4.8 MB" },
-    { id: "4", name: "SFX_Transition.wav", duration: "0:03", size: "0.6 MB" },
-  ]);
+  // Real audio state
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [waveformData, setWaveformData] = useState<number[] | null>(null);
+  const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
+
+  // Real recording state
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const recordChunksRef = useRef<Blob[]>([]);
+
+  // Load audio file and decode waveform
+  const loadAudioFile = useCallback(async (file: File) => {
+    try {
+      // Revoke previous URL
+      if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
+
+      const url = URL.createObjectURL(file);
+      audioUrlRef.current = url;
+
+      // Create audio element for playback
+      const audio = new Audio(url);
+      audio.preload = "auto";
+      audioRef.current = audio;
+
+      // Wait for metadata
+      await new Promise<void>((resolve, reject) => {
+        audio.onloadedmetadata = () => resolve();
+        audio.onerror = () => reject(new Error("Failed to load audio"));
+        setTimeout(() => resolve(), 3000); // fallback
+      });
+
+      setDuration(audio.duration || 0);
+      setCurrentTime(0);
+
+      // Add to file list
+      const sizeStr = file.size > 1048576
+        ? `${(file.size / 1048576).toFixed(1)} MB`
+        : `${(file.size / 1024).toFixed(0)} KB`;
+      const durStr = audio.duration
+        ? `${Math.floor(audio.duration / 60)}:${String(Math.floor(audio.duration % 60)).padStart(2, "0")}`
+        : "0:00";
+
+      setAudioFiles((prev) => [
+        ...prev,
+        { id: `file-${Date.now()}`, name: file.name, duration: durStr, size: sizeStr },
+      ]);
+
+      // Decode for waveform
+      const arrayBuffer = await file.arrayBuffer();
+      const audioCtx = new AudioContext();
+      const decoded = await audioCtx.decodeAudioData(arrayBuffer);
+      const channelData = decoded.getChannelData(0);
+
+      // Downsample to ~2000 points for waveform
+      const samples = 2000;
+      const blockSize = Math.floor(channelData.length / samples);
+      const peaks: number[] = [];
+      for (let i = 0; i < samples; i++) {
+        let max = 0;
+        for (let j = 0; j < blockSize; j++) {
+          const abs = Math.abs(channelData[i * blockSize + j] || 0);
+          if (abs > max) max = abs;
+        }
+        peaks.push(max);
+      }
+      setWaveformData(peaks);
+      audioCtx.close();
+
+      console.log("[AudioEditor] Loaded:", file.name, "duration:", audio.duration);
+    } catch (err) {
+      console.error("[AudioEditor] Failed to load audio:", err);
+    }
+  }, []);
+
+  // Handle file input change
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) loadAudioFile(file);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    },
+    [loadAudioFile]
+  );
+
+  // Handle drop
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      const file = e.dataTransfer.files?.[0];
+      if (file && file.type.startsWith("audio/")) loadAudioFile(file);
+    },
+    [loadAudioFile]
+  );
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
+      if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
 
   const [effects, setEffects] = useState<Effect[]>([
     { id: "eq", name: "Equalizer", description: "3-band parametric EQ", enabled: false },
@@ -313,27 +419,47 @@ export default function AudioEditorPage() {
     { id: "limiter", name: "Limiter", description: "Brick-wall output limiter", enabled: false },
   ]);
 
-  // Simulate playback / recording timer
+  // Real audio playback sync
   useEffect(() => {
-    if (!isPlaying && !isRecording) return;
+    if (!isPlaying) return;
+    const audio = audioRef.current;
+    if (audio && audio.src) {
+      audio.currentTime = currentTime;
+      audio.play().catch(() => {});
+    }
     const interval = setInterval(() => {
-      if (isPlaying) {
+      if (audio && audio.src && !audio.paused) {
+        setCurrentTime(audio.currentTime);
+        if (audio.currentTime >= audio.duration) {
+          setIsPlaying(false);
+          setCurrentTime(0);
+        }
+      } else if (!audio?.src) {
+        // No audio loaded — simulate for recording
         setCurrentTime((t) => {
-          if (t >= duration) {
+          if (t >= duration && duration > 0) {
             setIsPlaying(false);
             return 0;
           }
           return t + 0.1;
         });
       }
-      if (isRecording) {
-        setRecordingTime((t) => t + 0.1);
-        setDuration((d) => d + 0.1);
-        setCurrentTime((t) => t + 0.1);
-      }
+    }, 100);
+    return () => {
+      clearInterval(interval);
+      if (audio && !audio.paused) audio.pause();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying]);
+
+  // Recording timer
+  useEffect(() => {
+    if (!isRecording) return;
+    const interval = setInterval(() => {
+      setRecordingTime((t) => t + 0.1);
     }, 100);
     return () => clearInterval(interval);
-  }, [isPlaying, isRecording, duration]);
+  }, [isRecording]);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -345,29 +471,91 @@ export default function AudioEditorPage() {
     }
   }, []);
 
-  const handleRecord = useCallback(() => {
+  const handleRecord = useCallback(async () => {
     if (isRecording) {
+      // Stop recording
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.requestData();
+        mediaRecorderRef.current.stop();
+      }
       setIsRecording(false);
     } else {
-      setIsPlaying(false);
-      setIsRecording(true);
-      setRecordingTime(0);
+      // Start recording
+      try {
+        setIsPlaying(false);
+        if (audioRef.current && !audioRef.current.paused) audioRef.current.pause();
+
+        if (!navigator.mediaDevices?.getUserMedia) {
+          console.error("[AudioEditor] getUserMedia not supported");
+          return;
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaStreamRef.current = stream;
+
+        const mimeTypes = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"];
+        let mimeType = "";
+        for (const mt of mimeTypes) {
+          if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
+        }
+
+        const opts: MediaRecorderOptions = {};
+        if (mimeType) opts.mimeType = mimeType;
+
+        const recorder = new MediaRecorder(stream, opts);
+        mediaRecorderRef.current = recorder;
+        recordChunksRef.current = [];
+
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) recordChunksRef.current.push(e.data);
+        };
+
+        recorder.onstop = () => {
+          stream.getTracks().forEach((t) => t.stop());
+          mediaStreamRef.current = null;
+          if (recordChunksRef.current.length === 0) return;
+
+          const blob = new Blob(recordChunksRef.current, { type: mimeType || "audio/webm" });
+          const file = new File([blob], `recording-${Date.now()}.webm`, { type: blob.type });
+          loadAudioFile(file);
+          console.log("[AudioEditor] Recording captured, size:", blob.size);
+        };
+
+        recorder.start(1000);
+        setIsRecording(true);
+        setRecordingTime(0);
+        console.log("[AudioEditor] Recording started");
+      } catch (err) {
+        console.error("[AudioEditor] Record failed:", err);
+      }
     }
-  }, [isRecording]);
+  }, [isRecording, isPlaying, loadAudioFile]);
 
   const handlePlayPause = useCallback(() => {
     if (isRecording) return;
-    setIsPlaying((p) => !p);
-  }, [isRecording]);
+    if (isPlaying) {
+      if (audioRef.current && !audioRef.current.paused) audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      setIsPlaying(true);
+    }
+  }, [isRecording, isPlaying]);
 
   const handleStop = useCallback(() => {
+    if (audioRef.current && !audioRef.current.paused) audioRef.current.pause();
+    if (isRecording && mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
     setIsPlaying(false);
     setIsRecording(false);
     setCurrentTime(0);
-  }, []);
+    if (audioRef.current) audioRef.current.currentTime = 0;
+  }, [isRecording]);
 
   const handleSeek = useCallback((time: number) => {
-    setCurrentTime(Math.max(0, time));
+    const t = Math.max(0, time);
+    setCurrentTime(t);
+    if (audioRef.current) audioRef.current.currentTime = t;
   }, []);
 
   const toggleEffect = useCallback((id: string) => {
@@ -558,7 +746,19 @@ export default function AudioEditorPage() {
               {leftPanel === "library" ? (
                 <div className="p-2 space-y-2">
                   {/* Import area */}
-                  <div className="border-2 border-dashed border-border/60 rounded-lg p-4 text-center hover:border-[#74ddc7]/40 hover:bg-[#74ddc7]/[0.02] transition-colors cursor-pointer group">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="audio/*"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                  <div
+                    className="border-2 border-dashed border-border/60 rounded-lg p-4 text-center hover:border-[#74ddc7]/40 hover:bg-[#74ddc7]/[0.02] transition-colors cursor-pointer group"
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={handleDrop}
+                  >
                     <Upload className="h-5 w-5 mx-auto mb-1.5 text-muted-foreground group-hover:text-[#74ddc7] transition-colors" />
                     <p className="text-[10px] text-muted-foreground group-hover:text-foreground/70 transition-colors">
                       Drop audio files here or click to import
@@ -679,6 +879,7 @@ export default function AudioEditorPage() {
                 isPlaying={isPlaying}
                 isRecording={isRecording}
                 onSeek={handleSeek}
+                waveformData={waveformData}
               />
               {/* Empty state */}
               {duration === 0 && !isRecording && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import {
   Camera,
@@ -21,6 +21,7 @@ import {
   Video,
   Layers,
   LayoutGrid,
+  Download,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------
@@ -101,6 +102,24 @@ function sourceIcon(type: Source["type"]) {
   }
 }
 
+/* ------------------------------------------------------------------
+   MIME type detection for recording
+   ------------------------------------------------------------------ */
+
+function getSupportedMimeType(): string {
+  const types = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/mp4",
+    "audio/ogg;codecs=opus",
+    "audio/ogg",
+  ];
+  for (const type of types) {
+    if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(type)) return type;
+  }
+  return "";
+}
+
 /* ==================================================================
    Shared state hook — useOBSState
    ================================================================== */
@@ -121,6 +140,14 @@ export function useOBSState(opts: UseOBSStateOptions = {}) {
   const [outputFormat, setOutputFormat] = useState("MP4");
   const [qualityPreset, setQualityPreset] = useState("1080p60");
   const [stats, setStats] = useState({ cpu: 12, droppedFrames: 0, bitrate: 6000 });
+  const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
+
+  // Real recording refs
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recordedUrlRef = useRef<string | null>(null);
 
   const activeScene = scenes.find((s) => s.id === activeSceneId) ?? scenes[0];
 
@@ -150,6 +177,21 @@ export function useOBSState(opts: UseOBSStateOptions = {}) {
     return () => clearInterval(interval);
   }, []);
 
+  // Cleanup recording on unmount
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+      if (recordedUrlRef.current) {
+        URL.revokeObjectURL(recordedUrlRef.current);
+      }
+    };
+  }, []);
+
   const formatTime = useCallback((totalSeconds: number) => {
     const h = Math.floor(totalSeconds / 3600);
     const m = Math.floor((totalSeconds % 3600) / 60);
@@ -157,11 +199,78 @@ export function useOBSState(opts: UseOBSStateOptions = {}) {
     return [h, m, s].map((v) => v.toString().padStart(2, "0")).join(":");
   }, []);
 
-  const toggleRecording = () => {
-    const next = !isRecording;
-    setIsRecording(next);
-    if (!next) setRecordingTime(0);
-    opts.onRecordingChange?.(next);
+  const toggleRecording = async () => {
+    if (isRecording) {
+      // Stop recording
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.requestData();
+        mediaRecorderRef.current.stop();
+      }
+      setIsRecording(false);
+      setRecordingTime(0);
+      opts.onRecordingChange?.(false);
+    } else {
+      // Start recording
+      try {
+        setRecordingError(null);
+        if (recordedUrlRef.current) {
+          URL.revokeObjectURL(recordedUrlRef.current);
+          recordedUrlRef.current = null;
+          setRecordedUrl(null);
+        }
+
+        if (!navigator.mediaDevices?.getUserMedia) {
+          setRecordingError("Recording not supported in this browser");
+          return;
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaStreamRef.current = stream;
+
+        const mimeType = getSupportedMimeType();
+        const options: MediaRecorderOptions = {};
+        if (mimeType) options.mimeType = mimeType;
+
+        const recorder = new MediaRecorder(stream, options);
+        mediaRecorderRef.current = recorder;
+        chunksRef.current = [];
+
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunksRef.current.push(e.data);
+        };
+
+        recorder.onstop = () => {
+          stream.getTracks().forEach((t) => t.stop());
+          mediaStreamRef.current = null;
+          if (chunksRef.current.length === 0) {
+            setRecordingError("No audio data was captured");
+            return;
+          }
+          const blob = new Blob(chunksRef.current, { type: mimeType || "audio/webm" });
+          const url = URL.createObjectURL(blob);
+          recordedUrlRef.current = url;
+          setRecordedUrl(url);
+          console.log("[PodcastStudio] Recording saved, size:", blob.size);
+        };
+
+        recorder.onerror = () => {
+          setRecordingError("Recording failed");
+          stream.getTracks().forEach((t) => t.stop());
+          mediaStreamRef.current = null;
+          setIsRecording(false);
+        };
+
+        recorder.start(1000);
+        setIsRecording(true);
+        opts.onRecordingChange?.(true);
+        console.log("[PodcastStudio] Recording started with MIME:", mimeType || "default");
+      } catch (err) {
+        console.error("[PodcastStudio] Failed to start recording:", err);
+        setRecordingError(
+          err instanceof Error ? err.message : "Microphone access denied"
+        );
+      }
+    }
   };
 
   const toggleStreaming = () => {
@@ -254,6 +363,8 @@ export function useOBSState(opts: UseOBSStateOptions = {}) {
     toggleSourceLock,
     addScene,
     addSource,
+    recordedUrl,
+    recordingError,
   };
 }
 
@@ -477,6 +588,8 @@ export function RecordingControls({
     formatTime,
     toggleRecording,
     toggleStreaming,
+    recordedUrl,
+    recordingError,
   } = state;
 
   return (
@@ -546,6 +659,29 @@ export function RecordingControls({
           )}
         </button>
       </div>
+
+      {/* Recording error */}
+      {recordingError && (
+        <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-3 py-2">
+          <p className="text-[11px] text-red-400">{recordingError}</p>
+        </div>
+      )}
+
+      {/* Recording result */}
+      {recordedUrl && (
+        <div className="flex flex-col gap-1.5">
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+          <audio src={recordedUrl} controls className="w-full" style={{ height: 32 }} />
+          <a
+            href={recordedUrl}
+            download={`podcast-recording-${Date.now()}.webm`}
+            className="flex items-center justify-center gap-1.5 rounded-lg bg-[#74ddc7]/10 text-[#74ddc7] border border-[#74ddc7]/30 px-3 py-2 text-xs font-semibold hover:bg-[#74ddc7]/20 transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Download Recording
+          </a>
+        </div>
+      )}
 
       {/* ── Output & Quality ── */}
       <div className="flex flex-col gap-1.5">

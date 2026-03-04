@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -134,8 +134,15 @@ export default function VideoEditorPage() {
 
   // Playback state
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(42.5);
-  const totalDuration = 220; // ~3:40
+  const [currentTime, setCurrentTime] = useState(0);
+  const [totalDuration, setTotalDuration] = useState(220);
+
+  // Real video state
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoUrlRef = useRef<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [hasVideo, setHasVideo] = useState(false);
+  const [importedMedia, setImportedMedia] = useState<MediaItem[]>(MOCK_MEDIA);
 
   // Timeline
   const [timelineZoom, setTimelineZoom] = useState(100);
@@ -149,6 +156,86 @@ export default function VideoEditorPage() {
 
   // Drag state (visual only)
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+
+  // Load a video/audio file
+  const loadMediaFile = useCallback((file: File) => {
+    try {
+      if (videoUrlRef.current) URL.revokeObjectURL(videoUrlRef.current);
+      const url = URL.createObjectURL(file);
+      videoUrlRef.current = url;
+
+      if (videoRef.current) {
+        videoRef.current.src = url;
+        videoRef.current.load();
+        videoRef.current.onloadedmetadata = () => {
+          const dur = videoRef.current?.duration || 0;
+          setTotalDuration(dur);
+          setCurrentTime(0);
+          setHasVideo(true);
+          setPlayheadPosition(0);
+          console.log("[VideoEditor] Loaded:", file.name, "duration:", dur);
+        };
+      }
+
+      // Add to media list
+      const isVideo = file.type.startsWith("video/");
+      const isAudio = file.type.startsWith("audio/");
+      const isImage = file.type.startsWith("image/");
+      const type: "video" | "audio" | "image" = isVideo ? "video" : isAudio ? "audio" : isImage ? "image" : "video";
+      const newItem: MediaItem = {
+        id: `imported-${Date.now()}`,
+        name: file.name,
+        type,
+        duration: "loading...",
+        thumbnail: type === "video" ? "bg-[#74ddc7]/30" : type === "audio" ? "bg-pink-500/30" : "bg-emerald-500/30",
+      };
+      setImportedMedia((prev) => [...prev, newItem]);
+    } catch (err) {
+      console.error("[VideoEditor] Failed to load file:", err);
+    }
+  }, []);
+
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) loadMediaFile(file);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    },
+    [loadMediaFile]
+  );
+
+  // Sync video playback
+  useEffect(() => {
+    if (!isPlaying || !hasVideo || !videoRef.current) return;
+    videoRef.current.currentTime = currentTime;
+    videoRef.current.play().catch(() => {});
+
+    const interval = setInterval(() => {
+      if (videoRef.current && !videoRef.current.paused) {
+        const t = videoRef.current.currentTime;
+        setCurrentTime(t);
+        setPlayheadPosition((t / totalDuration) * 100);
+        if (t >= totalDuration) {
+          setIsPlaying(false);
+          setCurrentTime(0);
+          setPlayheadPosition(0);
+        }
+      }
+    }, 50);
+
+    return () => {
+      clearInterval(interval);
+      if (videoRef.current && !videoRef.current.paused) videoRef.current.pause();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, hasVideo]);
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      if (videoUrlRef.current) URL.revokeObjectURL(videoUrlRef.current);
+    };
+  }, []);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -333,12 +420,20 @@ export default function VideoEditorPage() {
               {leftTab === "media" ? (
                 <div className="p-2 space-y-2">
                   {/* Import Drop Zone */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="video/*,audio/*,image/*"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
                   <div
-                    className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+                    className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${
                       isDraggingOver
                         ? "border-[#74ddc7] bg-[#74ddc7]/10"
                         : "border-border hover:border-muted-foreground/40"
                     }`}
+                    onClick={() => fileInputRef.current?.click()}
                     onDragOver={(e) => {
                       e.preventDefault();
                       setIsDraggingOver(true);
@@ -347,6 +442,8 @@ export default function VideoEditorPage() {
                     onDrop={(e) => {
                       e.preventDefault();
                       setIsDraggingOver(false);
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) loadMediaFile(file);
                     }}
                   >
                     <ImagePlus className="h-5 w-5 mx-auto mb-1.5 text-muted-foreground" />
@@ -360,7 +457,7 @@ export default function VideoEditorPage() {
 
                   {/* Media Items */}
                   <div className="space-y-1">
-                    {MOCK_MEDIA.map((item) => (
+                    {importedMedia.map((item) => (
                       <div
                         key={item.id}
                         className="flex items-center gap-2 p-1.5 rounded-md hover:bg-foreground/[0.04] cursor-grab transition-colors group"
@@ -438,12 +535,29 @@ export default function VideoEditorPage() {
             {/* Video Preview Area */}
             <div className="flex-1 flex items-center justify-center relative">
               <div className="relative w-full max-w-3xl aspect-video bg-black/80 rounded-sm mx-4 flex items-center justify-center overflow-hidden">
-                {/* Mock video content */}
-                <div className="absolute inset-0 bg-gradient-to-br from-[#7401df]/20 via-black/60 to-[#74ddc7]/10" />
-                <div className="relative text-center">
-                  <Film className="h-10 w-10 text-foreground/20 mx-auto mb-2" />
-                  <p className="text-xs text-foreground/30">Preview Monitor</p>
-                </div>
+                {hasVideo ? (
+                  /* eslint-disable-next-line jsx-a11y/media-has-caption */
+                  <video
+                    ref={videoRef}
+                    className="absolute inset-0 w-full h-full object-contain"
+                    playsInline
+                    onClick={() => setIsPlaying(!isPlaying)}
+                  />
+                ) : (
+                  <>
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#7401df]/20 via-black/60 to-[#74ddc7]/10" />
+                    <div className="relative text-center">
+                      <Film className="h-10 w-10 text-foreground/20 mx-auto mb-2" />
+                      <p className="text-xs text-foreground/30">Import a video to preview</p>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="mt-2 text-xs text-[#74ddc7] hover:underline"
+                      >
+                        Browse Files
+                      </button>
+                    </div>
+                  </>
+                )}
 
                 {/* Timecode Overlay */}
                 <div className="absolute top-2 right-2 bg-black/70 px-2 py-0.5 rounded text-[10px] font-mono text-[#74ddc7]">
@@ -461,14 +575,26 @@ export default function VideoEditorPage() {
                 <button
                   className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
                   title="Previous frame"
-                  onClick={() => setCurrentTime(Math.max(0, currentTime - 1 / 30))}
+                  onClick={() => {
+                    const t = Math.max(0, currentTime - 1 / 30);
+                    setCurrentTime(t);
+                    if (videoRef.current) videoRef.current.currentTime = t;
+                    setPlayheadPosition((t / totalDuration) * 100);
+                  }}
                 >
                   <SkipBack className="h-3.5 w-3.5" />
                 </button>
                 <button
                   className="p-2 rounded-lg bg-foreground/[0.08] text-foreground hover:bg-foreground/[0.12] transition-colors"
                   title={isPlaying ? "Pause" : "Play"}
-                  onClick={() => setIsPlaying(!isPlaying)}
+                  onClick={() => {
+                    if (isPlaying) {
+                      if (videoRef.current && !videoRef.current.paused) videoRef.current.pause();
+                      setIsPlaying(false);
+                    } else {
+                      setIsPlaying(true);
+                    }
+                  }}
                 >
                   {isPlaying ? (
                     <Pause className="h-4 w-4" />
@@ -479,9 +605,12 @@ export default function VideoEditorPage() {
                 <button
                   className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
                   title="Next frame"
-                  onClick={() =>
-                    setCurrentTime(Math.min(totalDuration, currentTime + 1 / 30))
-                  }
+                  onClick={() => {
+                    const t = Math.min(totalDuration, currentTime + 1 / 30);
+                    setCurrentTime(t);
+                    if (videoRef.current) videoRef.current.currentTime = t;
+                    setPlayheadPosition((t / totalDuration) * 100);
+                  }}
                 >
                   <SkipForward className="h-3.5 w-3.5" />
                 </button>
@@ -596,7 +725,9 @@ export default function VideoEditorPage() {
                     const pct =
                       ((e.clientX - rect.left) / rect.width) * 100;
                     setPlayheadPosition(Math.max(0, Math.min(100, pct)));
-                    setCurrentTime((pct / 100) * totalDuration);
+                    const t = (pct / 100) * totalDuration;
+                    setCurrentTime(t);
+                    if (videoRef.current) videoRef.current.currentTime = t;
                   }}
                 >
                   {/* Time Ruler */}

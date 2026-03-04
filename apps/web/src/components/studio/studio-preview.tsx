@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import {
   Camera,
@@ -221,25 +221,69 @@ function NoScene() {
 }
 
 function FullScreenCam() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [hasCamera, setHasCamera] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    let cancelled = false;
+
+    async function startCamera() {
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          setCameraError("Camera not supported");
+          return;
+        }
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1920 }, height: { ideal: 1080 }, facingMode: "user" },
+          audio: false,
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          setHasCamera(true);
+        }
+      } catch (err) {
+        console.warn("[StudioPreview] Camera not available:", err);
+        setCameraError(err instanceof Error ? err.message : "Camera not available");
+      }
+    }
+
+    startCamera();
+
+    return () => {
+      cancelled = true;
+      if (stream) {
+        stream.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, []);
+
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900">
-      {/* Simulated camera view */}
-      <div className="relative flex flex-col items-center gap-3">
-        <div className="h-20 w-20 rounded-full bg-zinc-700 flex items-center justify-center ring-2 ring-zinc-600">
-          <Camera className="h-8 w-8 text-zinc-400" />
+      {hasCamera ? (
+        /* eslint-disable-next-line jsx-a11y/media-has-caption */
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      ) : (
+        <div className="relative flex flex-col items-center gap-3">
+          <div className="h-20 w-20 rounded-full bg-zinc-700 flex items-center justify-center ring-2 ring-zinc-600">
+            <Camera className="h-8 w-8 text-zinc-400" />
+          </div>
+          <span className="text-sm text-zinc-500 font-medium">
+            {cameraError || "Click to enable webcam"}
+          </span>
         </div>
-        <span className="text-sm text-zinc-500 font-medium">Webcam Feed</span>
-        {/* Scan-line effect */}
-        <div className="absolute inset-0 pointer-events-none opacity-[0.03]">
-          {Array.from({ length: 20 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-[1px] w-full bg-white"
-              style={{ marginBottom: "4px" }}
-            />
-          ))}
-        </div>
-      </div>
+      )}
       {/* Corner brackets */}
       <CornerBrackets />
     </div>
