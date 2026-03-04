@@ -19,7 +19,7 @@ const STATIC_STREAMS = [
     category: "MAIN",
     status: "ACTIVE",
     sortOrder: 1,
-    streamUrl: "https://streamdb7web.securenetsystems.net/cirruscontent/WCCG",
+    streamUrl: "https://ice66.securenetsystems.net/WCCG",
   },
   {
     id: "stream_soul",

@@ -57,7 +57,7 @@ function getCategoryColor(category?: string) {
 
 // Fallback stream data when API is unavailable
 const FALLBACK_STREAMS: Record<string, { name: string; description: string; category: string; status: string; streamUrl: string }> = {
-  stream_wccg: { name: "WCCG 104.5 FM", description: "Hip Hop and Hot R&B — Fayetteville's #1 for Hip Hop, Sports, Reactions & Podcasts.", category: "MAIN", status: "active", streamUrl: "https://stream.wccg1045fm.com/live" },
+  stream_wccg: { name: "WCCG 104.5 FM", description: "Hip Hop and Hot R&B — Fayetteville's #1 for Hip Hop, Sports, Reactions & Podcasts.", category: "MAIN", status: "active", streamUrl: "https://ice66.securenetsystems.net/WCCG" },
   stream_soul: { name: "Soul 104.5", description: "Hot R&B and Urban AC — the best in classic and contemporary R&B.", category: "RNB", status: "coming_soon", streamUrl: "" },
   stream_hot: { name: "Hot 104.5", description: "Today's Hottest Hits — the biggest pop and hip-hop tracks.", category: "HIP_HOP", status: "coming_soon", streamUrl: "" },
   stream_vibe: { name: "The Vibe", description: "Non-stop Vibes & Chill — smooth R&B, neo-soul, and chill beats.", category: "RNB", status: "coming_soon", streamUrl: "" },
