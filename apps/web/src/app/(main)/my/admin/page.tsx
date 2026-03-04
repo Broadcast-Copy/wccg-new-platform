@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/hooks/use-auth";
+import { useUserRoles } from "@/hooks/use-user-roles";
 import Link from "next/link";
 import {
   Shield,
@@ -13,10 +14,24 @@ import {
   Settings,
   ExternalLink,
   Lock,
+  Briefcase,
+  FileAudio,
+  Palette,
+  Trophy,
+  MessageSquare,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const adminModules = [
+interface AdminModule {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  href: string;
+  color: string;
+}
+
+const defaultModules: AdminModule[] = [
   {
     icon: Radio,
     title: "Stream Management",
@@ -68,8 +83,174 @@ const adminModules = [
   },
 ];
 
+const salesModules: AdminModule[] = [
+  {
+    icon: Megaphone,
+    title: "Campaign Builder",
+    description: "Create and manage advertising campaigns.",
+    href: "/my/admin/campaigns",
+    color: "from-[#dc2626] to-[#b91c1c]",
+  },
+  {
+    icon: Briefcase,
+    title: "Client Manager",
+    description: "Manage advertiser accounts and contacts.",
+    href: "/advertise/portal/clients",
+    color: "from-[#3b82f6] to-[#1d4ed8]",
+  },
+  {
+    icon: BarChart3,
+    title: "Sales Reports",
+    description: "Revenue tracking, pipeline, and sales analytics.",
+    href: "/my/admin/reports",
+    color: "from-[#f59e0b] to-[#d97706]",
+  },
+  {
+    icon: FileAudio,
+    title: "Rate Cards",
+    description: "Manage advertising rates and packages.",
+    href: "/advertise/portal",
+    color: "from-[#74ddc7] to-[#0d9488]",
+  },
+  {
+    icon: Settings,
+    title: "Advertising Portal",
+    description: "Full advertiser management portal.",
+    href: "/advertise/portal",
+    color: "from-[#8b5cf6] to-[#6d28d9]",
+  },
+];
+
+const productionModules: AdminModule[] = [
+  {
+    icon: FileAudio,
+    title: "Production Queue",
+    description: "Active jobs, deadlines, and production workflow.",
+    href: "/my/admin/production",
+    color: "from-[#f59e0b] to-[#d97706]",
+  },
+  {
+    icon: CalendarDays,
+    title: "Studio Booking",
+    description: "Reserve studio time and manage sessions.",
+    href: "/studio/booking",
+    color: "from-[#3b82f6] to-[#1d4ed8]",
+  },
+  {
+    icon: Radio,
+    title: "Content Library",
+    description: "Browse and manage audio assets and recordings.",
+    href: "/studio",
+    color: "from-[#74ddc7] to-[#0d9488]",
+  },
+  {
+    icon: Music,
+    title: "Audio Editor",
+    description: "Edit, mix, and master audio content.",
+    href: "/studio/audio-editor",
+    color: "from-[#7401df] to-[#4c1d95]",
+  },
+  {
+    icon: Megaphone,
+    title: "Shows & Programming",
+    description: "Manage show listings, host assignments, and schedules.",
+    href: "/shows",
+    color: "from-[#ec4899] to-[#be185d]",
+  },
+];
+
+const promotionsModules: AdminModule[] = [
+  {
+    icon: CalendarDays,
+    title: "Events Manager",
+    description: "Create and manage station events and appearances.",
+    href: "/events/create",
+    color: "from-[#ec4899] to-[#be185d]",
+  },
+  {
+    icon: Trophy,
+    title: "Contests Manager",
+    description: "Run contests, giveaways, and listener promotions.",
+    href: "/contests",
+    color: "from-[#f59e0b] to-[#d97706]",
+  },
+  {
+    icon: MessageSquare,
+    title: "Community Hub",
+    description: "Engage with listeners and manage community content.",
+    href: "/community",
+    color: "from-[#3b82f6] to-[#1d4ed8]",
+  },
+  {
+    icon: Palette,
+    title: "Social Content",
+    description: "Create and schedule social media content.",
+    href: "/studio/social-content",
+    color: "from-[#7401df] to-[#4c1d95]",
+  },
+];
+
+const allModules: AdminModule[] = [
+  ...defaultModules,
+  {
+    icon: Megaphone,
+    title: "Campaign Builder",
+    description: "Create and manage advertising campaigns.",
+    href: "/my/admin/campaigns",
+    color: "from-[#dc2626] to-[#b91c1c]",
+  },
+  {
+    icon: BarChart3,
+    title: "Reports",
+    description: "Revenue tracking, pipeline, and sales analytics.",
+    href: "/my/admin/reports",
+    color: "from-[#f59e0b] to-[#d97706]",
+  },
+  {
+    icon: Radio,
+    title: "Programming",
+    description: "Programming schedules, show management, and hosts.",
+    href: "/my/admin/programming",
+    color: "from-[#74ddc7] to-[#0d9488]",
+  },
+];
+
+function getModulesForRole(flags: {
+  isSales: boolean;
+  isProduction: boolean;
+  isManagement: boolean;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+  isPromotions: boolean;
+}): AdminModule[] {
+  if (flags.isManagement || flags.isAdmin || flags.isSuperAdmin) {
+    return allModules;
+  }
+  if (flags.isSales) return salesModules;
+  if (flags.isProduction) return productionModules;
+  if (flags.isPromotions) return promotionsModules;
+  return defaultModules;
+}
+
 export default function StationControlPage() {
   const { user } = useAuth();
+  const {
+    isSales,
+    isProduction,
+    isManagement,
+    isAdmin,
+    isSuperAdmin,
+    isPromotions,
+  } = useUserRoles();
+
+  const modules = getModulesForRole({
+    isSales,
+    isProduction,
+    isManagement,
+    isAdmin,
+    isSuperAdmin,
+    isPromotions,
+  });
 
   return (
     <div className="space-y-8">
@@ -119,7 +300,7 @@ export default function StationControlPage() {
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">Modules</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {adminModules.map((mod) => (
+          {modules.map((mod) => (
             <Link
               key={mod.title}
               href={mod.href}

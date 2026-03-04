@@ -13,11 +13,16 @@ import type { SupabaseUser } from './supabase-auth.guard.js';
 /** Role priority — lower number = higher privilege. */
 const ROLE_PRIORITY: Record<string, number> = {
   super_admin: 0,
+  management: 1,
   role_admin: 1,
   admin: 2,
-  editor: 3,
-  content_creator: 4,
-  host: 5,
+  sales: 3,
+  production: 3,
+  engineering: 3,
+  promotions: 3,
+  host: 4,
+  editor: 4,
+  content_creator: 5,
   listener: 6,
 };
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useUserRoles } from "@/hooks/use-user-roles";
 import {
   LayoutDashboard,
   Star,
@@ -18,6 +19,14 @@ import {
   X,
   User,
   Shield,
+  Clapperboard,
+  Palette,
+  Megaphone,
+  Briefcase,
+  BarChart3,
+  Calendar,
+  Radio,
+  Gift,
 } from "lucide-react";
 
 const sidebarItems = [
@@ -34,6 +43,15 @@ const sidebarItems = [
 
 function SidebarContent({ pathname }: { pathname: string }) {
   const { user } = useAuth();
+  const {
+    isCreator,
+    isHost,
+    isEmployee,
+    isSales,
+    isProduction,
+    isManagement,
+    isPromotions,
+  } = useUserRoles();
 
   return (
     <>
@@ -77,6 +95,166 @@ function SidebarContent({ pathname }: { pathname: string }) {
             </Link>
           );
         })}
+
+        {/* Creator Tools section */}
+        {(isCreator || isHost) && (
+          <>
+            <div className="my-2 border-t border-border" />
+            <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+              Creator Tools
+            </p>
+            {[
+              { href: "/studio", label: "Studio Tools", icon: Clapperboard },
+              { href: "/creators", label: "Creator Hub", icon: Palette },
+            ].map((item) => {
+              const isActive =
+                pathname === item.href ||
+                pathname.startsWith(item.href + "/");
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all ${
+                    isActive
+                      ? "bg-foreground/[0.08] text-[#74ddc7]"
+                      : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground/80"
+                  }`}
+                >
+                  <item.icon
+                    className={`h-4 w-4 shrink-0 ${
+                      isActive ? "text-[#74ddc7]" : "text-muted-foreground"
+                    }`}
+                  />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </>
+        )}
+
+        {/* Back Office section */}
+        {isEmployee && (
+          <>
+            <div className="my-2 border-t border-border" />
+            <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+              Back Office
+            </p>
+
+            {isSales &&
+              [
+                { href: "/my/admin/campaigns", label: "Campaign Builder", icon: Megaphone },
+                { href: "/advertise/portal/clients", label: "Clients", icon: Briefcase },
+                { href: "/my/admin/reports", label: "Reports", icon: BarChart3 },
+              ].map((item) => {
+                const isActive =
+                  pathname === item.href ||
+                  pathname.startsWith(item.href + "/");
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all ${
+                      isActive
+                        ? "bg-foreground/[0.08] text-[#74ddc7]"
+                        : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground/80"
+                    }`}
+                  >
+                    <item.icon
+                      className={`h-4 w-4 shrink-0 ${
+                        isActive ? "text-[#74ddc7]" : "text-muted-foreground"
+                      }`}
+                    />
+                    {item.label}
+                  </Link>
+                );
+              })}
+
+            {isProduction &&
+              [
+                { href: "/my/admin/production", label: "Production Queue", icon: Clapperboard },
+                { href: "/studio/booking", label: "Studio Booking", icon: Calendar },
+              ].map((item) => {
+                const isActive =
+                  pathname === item.href ||
+                  pathname.startsWith(item.href + "/");
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all ${
+                      isActive
+                        ? "bg-foreground/[0.08] text-[#74ddc7]"
+                        : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground/80"
+                    }`}
+                  >
+                    <item.icon
+                      className={`h-4 w-4 shrink-0 ${
+                        isActive ? "text-[#74ddc7]" : "text-muted-foreground"
+                      }`}
+                    />
+                    {item.label}
+                  </Link>
+                );
+              })}
+
+            {isManagement &&
+              [
+                { href: "/my/admin/campaigns", label: "Campaigns", icon: Megaphone },
+                { href: "/my/admin/reports", label: "Reports", icon: BarChart3 },
+                { href: "/my/admin/programming", label: "Programming", icon: Radio },
+              ].map((item) => {
+                const isActive =
+                  pathname === item.href ||
+                  pathname.startsWith(item.href + "/");
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all ${
+                      isActive
+                        ? "bg-foreground/[0.08] text-[#74ddc7]"
+                        : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground/80"
+                    }`}
+                  >
+                    <item.icon
+                      className={`h-4 w-4 shrink-0 ${
+                        isActive ? "text-[#74ddc7]" : "text-muted-foreground"
+                      }`}
+                    />
+                    {item.label}
+                  </Link>
+                );
+              })}
+
+            {isPromotions &&
+              [
+                { href: "/events/create", label: "Events Manager", icon: CalendarDays },
+                { href: "/contests", label: "Contests", icon: Gift },
+              ].map((item) => {
+                const isActive =
+                  pathname === item.href ||
+                  pathname.startsWith(item.href + "/");
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all ${
+                      isActive
+                        ? "bg-foreground/[0.08] text-[#74ddc7]"
+                        : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground/80"
+                    }`}
+                  >
+                    <item.icon
+                      className={`h-4 w-4 shrink-0 ${
+                        isActive ? "text-[#74ddc7]" : "text-muted-foreground"
+                      }`}
+                    />
+                    {item.label}
+                  </Link>
+                );
+              })}
+          </>
+        )}
 
         {/* Admin divider + Station Control */}
         <div className="my-2 border-t border-border" />

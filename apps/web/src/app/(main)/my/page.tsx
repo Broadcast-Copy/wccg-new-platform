@@ -23,6 +23,8 @@ import {
   ListMusic,
   Eye,
   Headphones,
+  Clapperboard,
+  Palette,
 } from "lucide-react";
 import {
   Card,
@@ -33,6 +35,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
+import { useUserRoles } from "@/hooks/use-user-roles";
 import { apiClient } from "@/lib/api-client";
 
 // ─── Types ──────────────────────────────────────────────────────────────
@@ -79,10 +82,67 @@ function reasonLabel(reason: string) {
   }
 }
 
+function getEmployeeCards(
+  department: string | null,
+  isSales: boolean,
+  isProduction: boolean,
+  isManagement: boolean,
+  isPromotions: boolean,
+) {
+  if (isSales) {
+    return [
+      { href: "/my/admin/campaigns", label: "Campaign Builder", desc: "Create & manage ad campaigns", icon: Megaphone, color: "#7401df" },
+      { href: "/advertise/portal/clients", label: "Client Manager", desc: "Manage advertiser accounts", icon: Users, color: "#74ddc7" },
+      { href: "/my/admin/reports", label: "Sales Reports", desc: "Revenue & performance data", icon: BarChart3, color: "#7401df" },
+      { href: "/advertise/portal", label: "Rate Cards", desc: "Pricing & packages", icon: FileText, color: "#74ddc7" },
+    ];
+  }
+  if (isProduction) {
+    return [
+      { href: "/my/admin/production", label: "Production Queue", desc: "Manage production tasks", icon: Clapperboard, color: "#7401df" },
+      { href: "/studio/booking", label: "Studio Booking", desc: "Reserve studio time", icon: CalendarDays, color: "#74ddc7" },
+      { href: "/studio", label: "Content Library", desc: "Browse media assets", icon: Music, color: "#7401df" },
+      { href: "/studio/audio-editor", label: "Audio Editor", desc: "Edit & mix audio files", icon: Mic, color: "#74ddc7" },
+    ];
+  }
+  if (isManagement) {
+    return [
+      { href: "/my/admin/campaigns", label: "Campaign Builder", desc: "Ad campaigns & scheduling", icon: Megaphone, color: "#7401df" },
+      { href: "/my/admin/reports", label: "Reports", desc: "Station analytics & reports", icon: BarChart3, color: "#74ddc7" },
+      { href: "/my/admin/programming", label: "Programming", desc: "Schedule & show management", icon: Radio, color: "#7401df" },
+      { href: "/my/admin", label: "User Management", desc: "Roles, permissions, accounts", icon: Users, color: "#74ddc7" },
+    ];
+  }
+  if (isPromotions) {
+    return [
+      { href: "/events/create", label: "Events Manager", desc: "Create & manage events", icon: CalendarDays, color: "#7401df" },
+      { href: "/contests", label: "Contests", desc: "Run listener contests", icon: Star, color: "#74ddc7" },
+      { href: "/community", label: "Community", desc: "Engage with listeners", icon: Users, color: "#7401df" },
+      { href: "/studio/social-content", label: "Social Content", desc: "Create social media posts", icon: Palette, color: "#74ddc7" },
+    ];
+  }
+  // Default / other departments
+  return [
+    { href: "/my/admin", label: "Station Admin", desc: "Admin dashboard", icon: Shield, color: "#7401df" },
+    { href: "/my/admin", label: "Reports", desc: "View station reports", icon: BarChart3, color: "#74ddc7" },
+    { href: "/my/admin", label: "Settings", desc: "Station configuration", icon: Settings, color: "#7401df" },
+    { href: "/my/admin", label: "Content", desc: "Manage content", icon: FileText, color: "#74ddc7" },
+  ];
+}
+
 // ─── Component ──────────────────────────────────────────────────────────
 
 export default function UserDashboardPage() {
   const { user } = useAuth();
+  const {
+    isCreator,
+    isEmployee,
+    isSales,
+    isProduction,
+    isManagement,
+    isPromotions,
+    department,
+  } = useUserRoles();
   const [stats, setStats] = useState<DashboardStats>({
     pointsBalance: 0,
     favoritesCount: 0,
@@ -162,6 +222,14 @@ export default function UserDashboardPage() {
       </div>
     );
   }
+
+  const employeeCards = getEmployeeCards(
+    department,
+    isSales,
+    isProduction,
+    isManagement,
+    isPromotions,
+  );
 
   return (
     <div className="space-y-8">
@@ -356,6 +424,91 @@ export default function UserDashboardPage() {
           </Link>
         </div>
       </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          CREATOR: Creator Dashboard
+          ═══════════════════════════════════════════════════════════════════ */}
+      {isCreator && (
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Mic className="h-4 w-4 text-[#7401df]" />
+            <h2 className="text-lg font-semibold">Creator Dashboard</h2>
+            <Badge className="border-[#7401df]/30 bg-[#7401df]/10 text-[#7401df] text-[10px]">
+              Creator
+            </Badge>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { href: "/my/podcasts", label: "My Podcasts", desc: "Manage episodes & analytics", icon: Mic, color: "#7401df" },
+              { href: "/mixes", label: "My Mixes", desc: "Upload & manage DJ mixes", icon: Music, color: "#74ddc7" },
+              { href: "/studio", label: "Studio Tools", desc: "OBS, audio/video editors", icon: Clapperboard, color: "#7401df" },
+              { href: "/creators", label: "Creator Hub", desc: "Resources & support", icon: Palette, color: "#74ddc7" },
+            ].map((item) => (
+              <Link key={item.href} href={item.href}>
+                <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors"
+                      style={{ backgroundColor: `${item.color}15` }}
+                    >
+                      <item.icon className="h-5 w-5" style={{ color: item.color }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{item.label}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        {item.desc}
+                      </p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground/60 transition-colors" />
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          EMPLOYEE: Back Office
+          ═══════════════════════════════════════════════════════════════════ */}
+      {isEmployee && (
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-[#74ddc7]" />
+            <h2 className="text-lg font-semibold">Back Office</h2>
+            {department && (
+              <Badge className="border-[#74ddc7]/30 bg-[#74ddc7]/10 text-[#74ddc7] text-[10px] capitalize">
+                {department}
+              </Badge>
+            )}
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {employeeCards.map((item) => (
+              <Link key={item.href + item.label} href={item.href}>
+                <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors"
+                      style={{ backgroundColor: `${item.color}15` }}
+                    >
+                      <item.icon className="h-5 w-5" style={{ color: item.color }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{item.label}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        {item.desc}
+                      </p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground/60 transition-colors" />
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════════════
           USER: Personal Stats
