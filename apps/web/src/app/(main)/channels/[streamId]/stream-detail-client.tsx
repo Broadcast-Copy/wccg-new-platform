@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { AppImage as Image } from "@/components/ui/app-image";
@@ -21,7 +21,15 @@ import {
   Share2,
   Clock,
   Zap,
+  Info,
+  Lock,
+  Megaphone,
+  User,
+  Calendar,
 } from "lucide-react";
+import { ALL_SHOWS, getDayPart } from "@/data/shows";
+import type { ShowData } from "@/data/shows";
+import { getHostsByShowId } from "@/data/hosts";
 
 // ---------------------------------------------------------------------------
 // Channel logo mapping
@@ -91,6 +99,175 @@ interface Stream {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Format schedule line, e.g. "Weekdays: 6:00 AM – 10:00 AM, EST" */
+function formatScheduleLine(show: ShowData): string | null {
+  if (!show.timeSlot && !show.days) return null;
+  const dayLabel =
+    show.days === "Monday - Friday"
+      ? "Weekdays"
+      : show.days === "Every Day"
+        ? "Daily"
+        : (show.days ?? "");
+  const timePart = show.timeSlot ? show.timeSlot.replace(" - ", " \u2013 ") : "";
+  if (dayLabel && timePart) return `${dayLabel}: ${timePart}, EST`;
+  return timePart || dayLabel;
+}
+
+/** Get show image — try show image, then host image, then first host with avatar */
+function getShowImage(show: ShowData): string | null {
+  if (show.showImageUrl) return show.showImageUrl;
+  if (show.imageUrl) return show.imageUrl;
+  // Try to find a host with an image
+  const hosts = getHostsByShowId(show.id);
+  const hostWithImage = hosts.find((h) => h.imageUrl);
+  return hostWithImage?.imageUrl ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Program Tile — wide tile matching reference layout
+// ---------------------------------------------------------------------------
+
+function ProgramTile({ show }: { show: ShowData }) {
+  const imageUrl = getShowImage(show);
+  const scheduleLine = formatScheduleLine(show);
+  const dayPart = getDayPart(show);
+
+  return (
+    <div className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20">
+      <div className="flex flex-col sm:flex-row items-stretch">
+        {/* ── Left: Show Image + Program Info ── */}
+        <div className="flex flex-col items-center flex-shrink-0">
+          <Link
+            href={`/shows/${show.id}`}
+            className="relative w-full sm:w-44 md:w-52 h-48 sm:h-auto overflow-hidden bg-muted"
+          >
+            {imageUrl ? (
+              <Image
+                src={imageUrl}
+                alt={show.name}
+                fill
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                sizes="(max-width: 640px) 100vw, 208px"
+              />
+            ) : (
+              <div className="flex h-full min-h-[160px] w-full items-center justify-center bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10">
+                <User className="h-12 w-12 text-muted-foreground/40" />
+              </div>
+            )}
+            {/* Gradient overlay on mobile */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent sm:hidden" />
+          </Link>
+
+          {/* Program Info link — under the image */}
+          <Link
+            href={`/shows/${show.id}`}
+            className="flex items-center gap-1.5 py-2.5 px-3 text-xs text-muted-foreground hover:text-foreground transition-colors w-full justify-center border-t border-border sm:border-t-0 bg-foreground/[0.02]"
+          >
+            <Info className="h-3 w-3" />
+            <span className="font-medium">Program Info</span>
+          </Link>
+        </div>
+
+        {/* ── Center: Details ── */}
+        <div className="flex-1 min-w-0 p-4 sm:p-5 md:p-6 space-y-2.5">
+          {/* Title */}
+          <Link href={`/shows/${show.id}`}>
+            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground leading-tight group-hover:text-[#74ddc7] transition-colors line-clamp-2 uppercase tracking-wide">
+              {show.name}
+            </h3>
+          </Link>
+
+          {/* Schedule line */}
+          {scheduleLine && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="h-3.5 w-3.5 flex-shrink-0 text-primary/60" />
+              <span className="font-medium">{scheduleLine}</span>
+            </div>
+          )}
+
+          {/* Description */}
+          {show.description && (
+            <p className="text-sm text-muted-foreground/80 line-clamp-3 leading-relaxed">
+              {show.description}
+            </p>
+          )}
+
+          {/* Day part badge */}
+          {dayPart && (
+            <div className="pt-0.5">
+              <Badge
+                variant="outline"
+                className="bg-foreground/[0.04] text-muted-foreground border-0 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5"
+              >
+                {dayPart}
+              </Badge>
+              {show.isSyndicated && (
+                <Badge
+                  variant="outline"
+                  className="ml-2 bg-purple-500/10 text-purple-600 dark:text-purple-400 border-0 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5"
+                >
+                  Syndicated
+                </Badge>
+              )}
+            </div>
+          )}
+
+          {/* Action links */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-4 pt-1">
+            <Link
+              href="/rewards"
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Lock className="h-3 w-3" />
+              <span className="underline underline-offset-2 uppercase tracking-wider font-semibold text-[11px]">
+                Unlocked: Exclusive Content
+              </span>
+            </Link>
+
+            <Link
+              href={`/advertise?show=${show.id}`}
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground/70 hover:text-primary transition-colors"
+            >
+              <Megaphone className="h-3 w-3" />
+              <span className="underline underline-offset-2 uppercase tracking-wider font-semibold text-[11px]">
+                Advertise on This Show
+              </span>
+            </Link>
+          </div>
+        </div>
+
+        {/* ── Right: Unlocked / Coming 2026 ── */}
+        <div className="hidden sm:flex flex-col items-center justify-center gap-2 px-6 py-4 border-l border-border bg-foreground/[0.02] min-w-[140px] md:min-w-[160px]">
+          <Lock className="h-5 w-5 text-muted-foreground" />
+          <span className="text-xs sm:text-sm font-semibold text-foreground">
+            Unlocked
+          </span>
+          <span className="text-xs text-[#74ddc7] font-medium">
+            Coming 2026
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Schedule Day Tab
+// ---------------------------------------------------------------------------
+
+type DayFilter = "weekday" | "saturday" | "sunday" | "all";
+
+const DAY_TABS: { key: DayFilter; label: string }[] = [
+  { key: "all", label: "All Shows" },
+  { key: "weekday", label: "Mon – Fri" },
+  { key: "saturday", label: "Saturday" },
+  { key: "sunday", label: "Sunday" },
+];
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -101,6 +278,7 @@ export default function StreamDetailPage() {
   const [stream, setStream] = useState<Stream | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dayFilter, setDayFilter] = useState<DayFilter>("all");
 
   const { play, pause, isPlaying, currentStream } = useAudioPlayer();
 
@@ -132,6 +310,39 @@ export default function StreamDetailPage() {
       cancelled = true;
     };
   }, [streamId]);
+
+  // Get shows for this channel
+  const channelShows = useMemo(() => {
+    return ALL_SHOWS.filter((s) => s.streamId === streamId && s.isActive);
+  }, [streamId]);
+
+  // Filter shows by day
+  const filteredShows = useMemo(() => {
+    if (dayFilter === "all") return channelShows;
+    if (dayFilter === "weekday")
+      return channelShows.filter(
+        (s) => s.category === "weekday" || (s.category === "gospel" && s.days === "Sunday") === false && s.days === "Monday - Friday",
+      );
+    if (dayFilter === "saturday")
+      return channelShows.filter((s) => s.category === "saturday" || s.days === "Saturday");
+    if (dayFilter === "sunday")
+      return channelShows.filter(
+        (s) => s.category === "sunday" || s.category === "gospel" || s.days === "Sunday",
+      );
+    return channelShows;
+  }, [channelShows, dayFilter]);
+
+  // Group shows by day category for "all" view
+  const groupedShows = useMemo(() => {
+    if (dayFilter !== "all") return null;
+    const weekday = channelShows.filter((s) => s.days === "Monday - Friday");
+    const saturday = channelShows.filter((s) => s.days === "Saturday");
+    const sunday = channelShows.filter((s) => s.days === "Sunday");
+    const other = channelShows.filter(
+      (s) => s.days !== "Monday - Friday" && s.days !== "Saturday" && s.days !== "Sunday",
+    );
+    return { weekday, saturday, sunday, other };
+  }, [channelShows, dayFilter]);
 
   const streamUrl = stream?.source?.primaryUrl ?? null;
   const isThisPlaying = isPlaying && streamUrl !== null && currentStream === streamUrl;
@@ -337,7 +548,7 @@ export default function StreamDetailPage() {
       </div>
 
       {/* ================================================================= */}
-      {/* Content Grid                                                      */}
+      {/* Now Playing + Sidebar                                             */}
       {/* ================================================================= */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Column — 2/3 */}
@@ -530,6 +741,134 @@ export default function StreamDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* ================================================================= */}
+      {/* Show Information & Schedules                                      */}
+      {/* ================================================================= */}
+      {channelShows.length > 0 && (
+        <section id="schedule" className="space-y-6">
+          {/* Section Header */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                <Calendar className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-foreground">
+                  Show Information & Schedules
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {channelShows.length} program{channelShows.length !== 1 ? "s" : ""} on {stream.name}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Day Filter Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {DAY_TABS.map((tab) => {
+              const isActive = dayFilter === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setDayFilter(tab.key)}
+                  className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-all ${
+                    isActive
+                      ? "bg-[#74ddc7] text-[#0a0a0f] shadow-md shadow-[#74ddc7]/20"
+                      : "bg-foreground/[0.06] text-muted-foreground hover:bg-foreground/[0.1] hover:text-foreground/80"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Show Tiles */}
+          {dayFilter === "all" && groupedShows ? (
+            <div className="space-y-8">
+              {/* Weekday Shows */}
+              {groupedShows.weekday.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                    <span className="h-px flex-1 bg-border" />
+                    Monday – Friday
+                    <span className="h-px flex-1 bg-border" />
+                  </h3>
+                  <div className="flex flex-col gap-4">
+                    {groupedShows.weekday.map((show) => (
+                      <ProgramTile key={show.id} show={show} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Saturday Shows */}
+              {groupedShows.saturday.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                    <span className="h-px flex-1 bg-border" />
+                    Saturday
+                    <span className="h-px flex-1 bg-border" />
+                  </h3>
+                  <div className="flex flex-col gap-4">
+                    {groupedShows.saturday.map((show) => (
+                      <ProgramTile key={show.id} show={show} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Sunday Shows */}
+              {groupedShows.sunday.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                    <span className="h-px flex-1 bg-border" />
+                    Sunday
+                    <span className="h-px flex-1 bg-border" />
+                  </h3>
+                  <div className="flex flex-col gap-4">
+                    {groupedShows.sunday.map((show) => (
+                      <ProgramTile key={show.id} show={show} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Other (e.g. "Every Day" streams) */}
+              {groupedShows.other.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                    <span className="h-px flex-1 bg-border" />
+                    24/7 Programming
+                    <span className="h-px flex-1 bg-border" />
+                  </h3>
+                  <div className="flex flex-col gap-4">
+                    {groupedShows.other.map((show) => (
+                      <ProgramTile key={show.id} show={show} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {filteredShows.length > 0 ? (
+                filteredShows.map((show) => (
+                  <ProgramTile key={show.id} show={show} />
+                ))
+              ) : (
+                <div className="flex flex-col h-32 items-center justify-center rounded-2xl border border-dashed border-border bg-foreground/[0.02]">
+                  <Radio className="h-6 w-6 text-muted-foreground/30 mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    No shows scheduled for this day
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

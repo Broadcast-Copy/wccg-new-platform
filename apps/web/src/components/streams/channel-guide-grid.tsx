@@ -185,7 +185,7 @@ function ChannelTile({ stream }: { stream: Stream }) {
           {isLive && (
             <div className="pt-2">
               <Link
-                href={`/channels/${stream.id}`}
+                href={`/channels/${stream.id}#schedule`}
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
               >
                 Show Information & Schedules
