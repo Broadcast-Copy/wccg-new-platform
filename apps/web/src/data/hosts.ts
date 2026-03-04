@@ -173,7 +173,7 @@ export const HOST_DJ_RICOVELLI: HostData = {
   role: "DJ",
   showIds: ["show_riich_villianz", "show_mixsquad_radio"],
   bio: "DJ Ricovelli is a core member of both Rich Villianz Radio and MixxSquadd Radio. As one of the featured Saturday night DJs, he brings high-energy sets blending hip hop, trap, and club tracks to keep the party going all night.",
-  imageUrl: null,
+  imageUrl: "/images/hosts/dj-ricoveli.png",
   socialLinks: [],
   isActive: true,
   category: "weekend",
@@ -185,7 +185,7 @@ export const HOST_DJ_TONY_NEAL: HostData = {
   role: "DJ",
   showIds: ["show_riich_villianz"],
   bio: "DJ Tony Neal is the founder of Core DJs, one of the most influential DJ coalitions in the industry. He brings his legendary mixing skills and deep industry connections to Rich Villianz Radio every Saturday night.",
-  imageUrl: null,
+  imageUrl: "/images/hosts/dj-tony-neal.png",
   socialLinks: [
     { platform: "website", url: "https://djtonyneal.com", label: "djtonyneal.com" },
     { platform: "instagram", url: "https://instagram.com/djtonyneal", label: "@djtonyneal" },
@@ -214,7 +214,7 @@ export const HOST_DJ_IKE_GDA: HostData = {
   role: "DJ",
   showIds: ["show_sunday_snacks"],
   bio: "DJ Ike GDA is part of the Sunday Snacks crew, delivering club-ready mixes and the hottest tracks to wrap up the weekend right.",
-  imageUrl: null,
+  imageUrl: "/images/hosts/dj-ike-gda.png",
   socialLinks: [],
   isActive: true,
   category: "sunday",
@@ -226,7 +226,7 @@ export const HOST_DJ_IZZYNICE: HostData = {
   role: "DJ",
   showIds: ["show_sunday_snacks"],
   bio: "DJ Izzynice rounds out the Sunday Snacks team, bringing smooth transitions and eclectic selections to the Sunday night mix.",
-  imageUrl: null,
+  imageUrl: "/images/hosts/dj-izzynice.png",
   socialLinks: [],
   isActive: true,
   category: "sunday",
@@ -317,7 +317,7 @@ export const HOST_DJ_SPINWIZ: HostData = {
   role: "DJ",
   showIds: ["show_mixsquad_radio"],
   bio: "DJ SpinWiz is part of the MixxSquadd Radio roster, contributing to the 24/7 DJ mix stream with high-energy sets and creative blends.",
-  imageUrl: null,
+  imageUrl: "/images/hosts/dj-spinwiz.png",
   socialLinks: [],
   isActive: true,
   category: "mixsquad",
@@ -329,7 +329,7 @@ export const HOST_DJ_RAYN: HostData = {
   role: "DJ",
   showIds: ["show_mixsquad_radio"],
   bio: "DJ Rayn brings smooth transitions and diverse track selections to the MixxSquadd Radio 24/7 stream.",
-  imageUrl: null,
+  imageUrl: "/images/hosts/dj-rayn.png",
   socialLinks: [],
   isActive: true,
   category: "mixsquad",
@@ -341,7 +341,7 @@ export const HOST_DJ_TOMMYGEE: HostData = {
   role: "DJ",
   showIds: ["show_mixsquad_radio"],
   bio: "DJ TommyGee Mixx is a featured DJ on MixxSquadd Radio, known for his party-rocking mixes that keep the energy going around the clock.",
-  imageUrl: null,
+  imageUrl: "/images/hosts/dj-tommygeemixx.png",
   socialLinks: [],
   isActive: true,
   category: "mixsquad",
@@ -353,7 +353,237 @@ export const HOST_DJ_YODO: HostData = {
   role: "DJ",
   showIds: ["show_mixsquad_radio"],
   bio: "DJ Yodo rounds out the MixxSquadd Radio lineup, delivering non-stop mixes that span hip hop, R&B, dancehall, and more.",
-  imageUrl: null,
+  imageUrl: "/images/hosts/dj-yodo.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+// ─── Extended MixxSquadd DJs ─────────────────────────────────────
+
+export const HOST_DJ_CHUCK_T: HostData = {
+  id: "host_dj_chuck_t",
+  name: "DJ Chuck T",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ Chuck T is a legendary mixtape king and one of the most respected DJs in the Carolinas. Known for breaking records and rocking crowds, he brings certified street heat to the MixxSquadd.",
+  imageUrl: "/images/hosts/dj-chuck-t.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+export const HOST_DJ_DADDYBLACK: HostData = {
+  id: "host_dj_daddyblack",
+  name: "DJ DaddyBlack",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ DaddyBlack delivers raw energy and seamless transitions on MixxSquadd Radio, keeping the vibes right with his signature blends.",
+  imageUrl: "/images/hosts/dj-daddyblack.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+export const HOST_DJ_DAFFIE: HostData = {
+  id: "host_dj_daffie",
+  name: "DJ Daffie",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ Daffie keeps the party moving with infectious energy and creative mixes spanning hip hop, R&B, and Afrobeats on MixxSquadd Radio.",
+  imageUrl: "/images/hosts/dj-daffie.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+export const HOST_DJ_DANE_DINERO: HostData = {
+  id: "host_dj_dane_dinero",
+  name: "DJ Dane Dinero",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ Dane Dinero brings a versatile style to MixxSquadd Radio, moving effortlessly between genres and keeping every set fresh.",
+  imageUrl: "/images/hosts/dj-dane-dinero.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+export const HOST_DJ_ITANIST: HostData = {
+  id: "host_dj_itanist",
+  name: "DJ Itanist",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ Itanist is a creative force on MixxSquadd Radio, known for his innovative blends and electrifying live sets.",
+  imageUrl: "/images/hosts/dj-itanist.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+export const HOST_DJ_JAY_B: HostData = {
+  id: "host_dj_jay_b",
+  name: "DJ Jay B",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ Jay B brings smooth vibes and hard-hitting drops to MixxSquadd Radio, curating the perfect blend of hip hop and R&B.",
+  imageUrl: "/images/hosts/dj-jay-b.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+export const HOST_DJ_JUICE: HostData = {
+  id: "host_dj_juice",
+  name: "DJ Juice",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ Juice serves up premium mixes on MixxSquadd Radio, blending old school classics with new school heat.",
+  imageUrl: "/images/hosts/dj-juice.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+export const HOST_DJ_KILLAKO: HostData = {
+  id: "host_dj_killako",
+  name: "DJ Killako",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ Killako brings the energy with hard-hitting trap and hip hop mixes that keep the MixxSquadd Radio listeners locked in.",
+  imageUrl: "/images/hosts/dj-killako.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+export const HOST_DJ_KINGVIV: HostData = {
+  id: "host_dj_kingviv",
+  name: "DJ KingViv",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ KingViv reigns over the turntables with regal precision, delivering sets that span hip hop, dancehall, and Afrobeats on MixxSquadd Radio.",
+  imageUrl: "/images/hosts/dj-kingviv.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+export const HOST_DJ_LJ: HostData = {
+  id: "host_dj_lj",
+  name: "DJ LJ",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ LJ keeps the crowd moving with seamless transitions and genre-bending mixes on MixxSquadd Radio.",
+  imageUrl: "/images/hosts/dj-lj.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+export const HOST_DJ_LOUDIAMONDS: HostData = {
+  id: "host_dj_loudiamonds",
+  name: "DJ Lou Diamonds",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ Lou Diamonds shines bright on MixxSquadd Radio, delivering polished mixes with a signature style that keeps listeners coming back.",
+  imageUrl: "/images/hosts/dj-loudiamonds.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+export const HOST_DJ_OFFICIAL: HostData = {
+  id: "host_dj_official",
+  name: "DJ Official",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ Official lives up to the name with certified club-ready mixes and high-energy sets on MixxSquadd Radio.",
+  imageUrl: "/images/hosts/dj-official.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+export const HOST_DJ_SWAZZEY: HostData = {
+  id: "host_dj_swazzey",
+  name: "DJ Swazzey",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ Swazzey brings the sauce with creative blends and innovative mixes that push boundaries on MixxSquadd Radio.",
+  imageUrl: "/images/hosts/dj-swazzey.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+export const HOST_DJ_T_MONEY: HostData = {
+  id: "host_dj_t_money",
+  name: "DJ T-Money",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ T-Money delivers premium mixes with a focus on Southern hip hop and club bangers on MixxSquadd Radio.",
+  imageUrl: "/images/hosts/dj-t-money.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+export const HOST_DJ_TONELO: HostData = {
+  id: "host_dj_tonelo",
+  name: "DJ Tonelo",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ Tonelo sets the tone with smooth R&B blends and hard-hitting hip hop on MixxSquadd Radio.",
+  imageUrl: "/images/hosts/dj-tonelo.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+export const HOST_DJ_WEEZY: HostData = {
+  id: "host_dj_weezy",
+  name: "DJ Weezy",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ Weezy brings non-stop energy with bass-heavy mixes and creative drops on MixxSquadd Radio.",
+  imageUrl: "/images/hosts/dj-weezy.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+export const HOST_DJ_WHOSANE: HostData = {
+  id: "host_dj_whosane",
+  name: "DJ Whosane",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ Whosane keeps the streets talking with certified mixes that blend trap, hip hop, and club music on MixxSquadd Radio.",
+  imageUrl: "/images/hosts/dj-whosane.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+export const HOST_DJ_WOLF: HostData = {
+  id: "host_dj_wolf",
+  name: "DJ Wolf",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ Wolf prowls the MixxSquadd Radio airwaves with aggressive mixes and high-octane energy that keeps the party alive.",
+  imageUrl: "/images/hosts/dj-wolf.png",
+  socialLinks: [],
+  isActive: true,
+  category: "mixsquad",
+};
+
+export const HOST_DJ_YAFEELME: HostData = {
+  id: "host_dj_yafeelme",
+  name: "DJ YaFeelMe",
+  role: "DJ",
+  showIds: ["show_mixsquad_radio"],
+  bio: "DJ YaFeelMe connects with the listeners through feel-good mixes and undeniable vibes on MixxSquadd Radio.",
+  imageUrl: "/images/hosts/dj-yafeelme.png",
   socialLinks: [],
   isActive: true,
   category: "mixsquad",
@@ -387,6 +617,25 @@ export const ALL_HOSTS: HostData[] = [
   HOST_DJ_RAYN,
   HOST_DJ_TOMMYGEE,
   HOST_DJ_YODO,
+  HOST_DJ_CHUCK_T,
+  HOST_DJ_DADDYBLACK,
+  HOST_DJ_DAFFIE,
+  HOST_DJ_DANE_DINERO,
+  HOST_DJ_ITANIST,
+  HOST_DJ_JAY_B,
+  HOST_DJ_JUICE,
+  HOST_DJ_KILLAKO,
+  HOST_DJ_KINGVIV,
+  HOST_DJ_LJ,
+  HOST_DJ_LOUDIAMONDS,
+  HOST_DJ_OFFICIAL,
+  HOST_DJ_SWAZZEY,
+  HOST_DJ_T_MONEY,
+  HOST_DJ_TONELO,
+  HOST_DJ_WEEZY,
+  HOST_DJ_WHOSANE,
+  HOST_DJ_WOLF,
+  HOST_DJ_YAFEELME,
 ];
 
 export const MAIN_HOSTS = ALL_HOSTS.filter((h) => h.category === "main");

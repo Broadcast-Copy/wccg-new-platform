@@ -138,7 +138,7 @@ export default function DiscoverPage() {
         {/* 2×2 Feature Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Card 1: Curated DJ Mixshows */}
-          <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4">
+          <Link href="/mix-squad" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg hover:shadow-purple-500/5">
             <div className="flex items-center gap-3">
               <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
                 <AppImage src="/images/shows/crank-corleone.png" alt="DJ" fill className="object-cover" />
@@ -151,12 +151,16 @@ export default function DiscoverPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-lg sm:text-xl font-bold text-foreground">Curated DJ Mixshows</h3>
+              <h3 className="text-lg sm:text-xl font-bold text-foreground group-hover:text-[#74ddc7] transition-colors">Curated DJ Mixshows</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Our curated mixshows bring together top DJs, exclusive blends, and genre-spanning sets that keep the energy moving.
               </p>
             </div>
-          </div>
+            <div className="flex items-center gap-1 text-xs text-[#7401df] group-hover:text-[#74ddc7] transition-colors font-medium">
+              Meet The Mix Squad
+              <ArrowRight className="h-3 w-3" />
+            </div>
+          </Link>
 
           {/* Card 2: Live Shows & Podcasts */}
           <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4">
