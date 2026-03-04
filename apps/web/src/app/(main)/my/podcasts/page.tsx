@@ -1095,40 +1095,41 @@ export default function MyPodcastsPage() {
                 className="overflow-hidden border-border transition-colors"
               >
                 {/* Series header row */}
-                <div
-                  className="flex cursor-pointer items-start gap-4 px-6 pt-6 pb-2"
-                  onClick={() => handleToggleExpand(s.id)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      handleToggleExpand(s.id);
-                    }
-                  }}
-                >
-                  {/* Cover image or placeholder */}
-                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-card">
+                <div className="flex items-start gap-4 px-6 pt-6 pb-2">
+                  {/* Cover image — click to open studio */}
+                  <button
+                    className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-card cursor-pointer group"
+                    onClick={() => router.push("/studio/podcast")}
+                    title="Open in Studio"
+                  >
                     {s.coverImageUrl ? (
                       <div
-                        className="h-full w-full bg-cover bg-center"
+                        className="h-full w-full bg-cover bg-center group-hover:scale-105 transition-transform"
                         style={{ backgroundImage: `url(${s.coverImageUrl})` }}
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#7401df]/60 via-[#7401df]/40 to-[#74ddc7]/30">
+                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#7401df]/60 via-[#7401df]/40 to-[#74ddc7]/30 group-hover:from-[#7401df]/80 group-hover:via-[#7401df]/60 group-hover:to-[#74ddc7]/50 transition-colors">
                         <Podcast className="h-8 w-8 text-foreground/60" />
                       </div>
                     )}
-                  </div>
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors rounded-lg">
+                      <Play className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </button>
 
                   {/* Series info */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="truncate text-base font-semibold">
+                          {/* Title — click to open studio */}
+                          <button
+                            className="truncate text-base font-semibold text-foreground hover:text-[#74ddc7] transition-colors text-left"
+                            onClick={() => router.push("/studio/podcast")}
+                            title="Open in Studio"
+                          >
                             {s.title}
-                          </h3>
+                          </button>
                           <Badge className={getSeriesStatusStyle(s.status)}>
                             {s.status}
                           </Badge>
@@ -1148,10 +1149,7 @@ export default function MyPodcastsPage() {
                           variant="ghost"
                           className="h-7 w-7"
                           title="Edit series"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEditSeriesDialog(s);
-                          }}
+                          onClick={() => openEditSeriesDialog(s)}
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
@@ -1161,10 +1159,7 @@ export default function MyPodcastsPage() {
                           variant="ghost"
                           className="h-7 w-7"
                           title="Open in Studio"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push("/studio/podcast");
-                          }}
+                          onClick={() => router.push("/studio/podcast")}
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
                         </Button>
@@ -1174,23 +1169,28 @@ export default function MyPodcastsPage() {
                           variant="ghost"
                           className="h-7 w-7 text-muted-foreground hover:text-red-500"
                           title="Delete series"
-                          onClick={(e) => {
-                            e.stopPropagation();
+                          onClick={() =>
                             setDeleteTarget({
                               type: "series",
                               id: s.id,
                               title: s.title,
-                            });
-                          }}
+                            })
+                          }
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
-                        {/* Chevron */}
-                        {isExpanded ? (
-                          <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                        )}
+                        {/* Chevron to expand episodes */}
+                        <button
+                          className="p-1 rounded hover:bg-foreground/[0.06] transition-colors"
+                          onClick={() => handleToggleExpand(s.id)}
+                          title={isExpanded ? "Collapse episodes" : "Show episodes"}
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </button>
                       </div>
                     </div>
 

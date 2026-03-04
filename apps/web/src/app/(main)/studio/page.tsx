@@ -13,6 +13,9 @@ import {
   PlusCircle,
   Building2,
   Users2,
+  Podcast,
+  Film,
+  AudioLines,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -178,6 +181,39 @@ const studios = [
   },
 ];
 
+const creatorTools = [
+  {
+    icon: Podcast,
+    title: "OBS Studio for Live Podcasting",
+    description:
+      "Launch your live podcast with OBS-powered controls — manage scenes, audio mixing, overlays, and stream directly to your audience in real time.",
+    href: "/studio/podcast",
+    cta: "Open OBS Studio",
+    color: "from-[#7401df] to-[#4c1d95]",
+    badge: "Live",
+  },
+  {
+    icon: Film,
+    title: "Premiere Video Editor",
+    description:
+      "Professional non-linear video editing with multi-track timeline, effects, transitions, and color grading — create broadcast-quality video content.",
+    href: "/studio/video-editor",
+    cta: "Open Video Editor",
+    color: "from-[#f59e0b] to-[#d97706]",
+    badge: "NLE",
+  },
+  {
+    icon: AudioLines,
+    title: "Audio Editor & Recorder",
+    description:
+      "Record, edit, and mix audio with a full-featured DAW — waveform editing, multi-track timeline, effects processing, and export to WAV, MP3, or FLAC.",
+    href: "/studio/audio-editor",
+    cta: "Open Audio Editor",
+    color: "from-[#3b82f6] to-[#1d4ed8]",
+    badge: "DAW",
+  },
+];
+
 export const metadata = {
   title: "Studio & Production Services | WCCG 104.5 FM",
   description:
@@ -218,6 +254,56 @@ export default function StudioPage() {
 
       {/* My Studio Projects */}
       <StudioProjects />
+
+      {/* Creator Tools */}
+      <section className="space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#74ddc7] to-[#0d9488]">
+            <Clapperboard className="h-4 w-4 text-white" />
+          </div>
+          <h2 className="text-xl font-bold text-foreground">Creator Tools</h2>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#74ddc7] bg-[#74ddc7]/10 border border-[#74ddc7]/20 px-2 py-0.5 rounded-full">
+            Free
+          </span>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {creatorTools.map((tool) => (
+            <Link
+              key={tool.title}
+              href={tool.href}
+              className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:border-[#74ddc7]/40 hover:shadow-lg hover:shadow-purple-500/5 hover:-translate-y-0.5"
+            >
+              <div className="flex items-start gap-4 flex-1">
+                <div
+                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${tool.color} shadow-lg`}
+                >
+                  <tool.icon className="h-6 w-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors text-sm leading-tight">
+                      {tool.title}
+                    </h3>
+                  </div>
+                  <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-foreground/[0.06] px-1.5 py-0.5 rounded">
+                    {tool.badge}
+                  </span>
+                  <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                    {tool.description}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-border flex items-center gap-1 text-xs font-semibold text-[#7401df] group-hover:text-[#74ddc7] transition-colors">
+                {tool.cta}
+                <ArrowRight className="h-3 w-3" />
+              </div>
+              <div
+                className={`pointer-events-none absolute -inset-1 bg-gradient-to-br ${tool.color} opacity-0 group-hover:opacity-[0.03] rounded-xl transition-opacity`}
+              />
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {/* Full-Service Media Solutions */}
       <section className="space-y-5">
