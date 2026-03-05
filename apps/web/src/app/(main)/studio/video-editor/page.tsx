@@ -431,6 +431,31 @@ export default function VideoEditorPage() {
     [timelineClips, showStatus]
   );
 
+  // Clear all mock / all data
+  const clearAllMedia = useCallback(() => {
+    setImportedMedia([]);
+    setTimelineClips([]);
+    setSelectedClipId(null);
+    setMarkers([]);
+    setAppliedEffects(new Set());
+    showStatus("Cleared all media & timeline");
+  }, [showStatus]);
+
+  // Remove a single media item + its timeline clips
+  const removeMediaItem = useCallback(
+    (item: MediaItem) => {
+      setImportedMedia((prev) => prev.filter((m) => m.id !== item.id));
+      const clipName = item.name.replace(/\.\w+$/, "");
+      setTimelineClips((prev) => prev.filter((c) => c.name !== clipName));
+      if (selectedClipId) {
+        const sel = timelineClips.find((c) => c.id === selectedClipId);
+        if (sel && sel.name === clipName) setSelectedClipId(null);
+      }
+      showStatus(`Removed: ${item.name}`);
+    },
+    [selectedClipId, timelineClips, showStatus]
+  );
+
   // Toggle effect
   const toggleEffect = useCallback(
     (effectId: string, effectName: string) => {
@@ -448,6 +473,40 @@ export default function VideoEditorPage() {
     },
     [showStatus]
   );
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        if (selectedClipId) {
+          const clip = timelineClips.find((c) => c.id === selectedClipId);
+          if (clip) {
+            setTimelineClips((prev) => prev.filter((c) => c.id !== selectedClipId));
+            setSelectedClipId(null);
+            showStatus(`Deleted "${clip.name}"`);
+          }
+        }
+      } else if (e.key === " ") {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.key === "s" || e.key === "S") {
+        if (!e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          splitClip();
+        }
+      } else if (e.key === "m" || e.key === "M") {
+        e.preventDefault();
+        addMarker();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedClipId, timelineClips, showStatus, togglePlay, splitClip, addMarker]);
 
   const selectedClip = timelineClips.find((c) => c.id === selectedClipId);
 
@@ -696,11 +755,10 @@ export default function VideoEditorPage() {
                         </button>
                         <button
                           className="opacity-0 group-hover:opacity-100 p-0.5 text-muted-foreground hover:text-red-400 transition-all"
-                          title="Remove"
+                          title="Remove from media bin & timeline"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setImportedMedia((prev) => prev.filter((m) => m.id !== item.id));
-                            showStatus(`Removed: ${item.name}`);
+                            removeMediaItem(item);
                           }}
                         >
                           <Trash2 className="h-3 w-3" />
@@ -708,6 +766,17 @@ export default function VideoEditorPage() {
                       </div>
                     ))}
                   </div>
+
+                  {/* Clear All button */}
+                  {importedMedia.length > 0 && (
+                    <button
+                      onClick={clearAllMedia}
+                      className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[10px] text-red-400 hover:bg-red-500/10 hover:text-red-300 border border-red-500/20 transition-colors active:scale-[0.98]"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      Clear All Media & Timeline
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="p-2 space-y-1">
