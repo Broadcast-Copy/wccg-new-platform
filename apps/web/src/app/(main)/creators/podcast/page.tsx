@@ -24,6 +24,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LoginRequired } from "@/components/auth/login-required";
 
 // ─── Constants ──────────────────────────────────────────────────────────
 
@@ -233,8 +234,9 @@ export default function PodcastPage() {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════
-          MULTI-STEP APPLICATION FORM
+          MULTI-STEP APPLICATION FORM — Login Required
           ═══════════════════════════════════════════════════════════════ */}
+      <LoginRequired message="Sign in to your WCCG account to apply for the Podcast Program. Create a free account to get started.">
       <div className="rounded-xl border border-[#7401df]/30 bg-card overflow-hidden">
         {/* Form header */}
         <div className="border-b border-border px-6 py-5 sm:px-8">
@@ -920,6 +922,7 @@ export default function PodcastPage() {
           </>
         )}
       </div>
+      </LoginRequired>
     </div>
   );
 }

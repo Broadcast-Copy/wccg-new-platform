@@ -25,6 +25,7 @@ import {
 import { StudioTimeline } from "@/components/studio/timeline";
 import { AudioMixer } from "@/components/studio/audio-mixer";
 import { MediaBin } from "@/components/studio/media-bin";
+import { LoginRequired } from "@/components/auth/login-required";
 
 // ---------------------------------------------------------------------------
 // Bottom‑panel tab type
@@ -32,7 +33,7 @@ import { MediaBin } from "@/components/studio/media-bin";
 
 type BottomPanel = "timeline" | "mixer";
 
-export default function PodcastStudioPage() {
+function PodcastStudioContent() {
   const [showBottomPanel, setShowBottomPanel] = useState(true);
   const [bottomPanel, setBottomPanel] = useState<BottomPanel>("timeline");
   const [showMediaOverlay, setShowMediaOverlay] = useState(false);
@@ -268,5 +269,16 @@ export default function PodcastStudioPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function PodcastStudioPage() {
+  return (
+    <LoginRequired
+      fullPage
+      message="Sign in to access the Podcast Studio. Record, edit, and publish your podcast episodes."
+    >
+      <PodcastStudioContent />
+    </LoginRequired>
   );
 }

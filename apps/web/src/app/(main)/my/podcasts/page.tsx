@@ -58,6 +58,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
+import { LoginRequired } from "@/components/auth/login-required";
 
 // ─── Types ─────────────────────────────────────────────────────────────
 
@@ -216,6 +217,17 @@ function genId(): string {
 // ─── Component ─────────────────────────────────────────────────────────
 
 export default function MyPodcastsPage() {
+  return (
+    <LoginRequired
+      fullPage
+      message="Sign in to manage your podcast series and episodes. Your creator dashboard is waiting."
+    >
+      <MyPodcastsContent />
+    </LoginRequired>
+  );
+}
+
+function MyPodcastsContent() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
