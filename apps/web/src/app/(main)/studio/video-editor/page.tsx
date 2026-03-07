@@ -80,16 +80,8 @@ interface Marker {
 // Mock Data
 // ---------------------------------------------------------------------------
 
-const MOCK_MEDIA: MediaItem[] = [
-  { id: "m1", name: "Interview_Main.mp4", type: "video", duration: "12:34", thumbnail: "bg-[#7401df]/30" },
-  { id: "m2", name: "B-Roll_Studio.mp4", type: "video", duration: "03:21", thumbnail: "bg-[#74ddc7]/30" },
-  { id: "m3", name: "Intro_Animation.mp4", type: "video", duration: "00:08", thumbnail: "bg-blue-500/30" },
-  { id: "m4", name: "Outro_Card.mp4", type: "video", duration: "00:12", thumbnail: "bg-orange-500/30" },
-  { id: "m5", name: "Background_Beat.wav", type: "audio", duration: "04:15", thumbnail: "bg-pink-500/30" },
-  { id: "m6", name: "Voiceover_Take3.wav", type: "audio", duration: "11:52", thumbnail: "bg-yellow-500/30" },
-  { id: "m7", name: "Logo_Overlay.png", type: "image", thumbnail: "bg-emerald-500/30" },
-  { id: "m8", name: "Lower_Third.png", type: "image", thumbnail: "bg-cyan-500/30" },
-];
+// Start with empty media bin — user imports their own files or records
+const MOCK_MEDIA: MediaItem[] = [];
 
 const MOCK_EFFECTS: EffectItem[] = [
   { id: "e1", name: "Cross Dissolve", category: "Transitions" },
@@ -105,15 +97,8 @@ const MOCK_EFFECTS: EffectItem[] = [
   { id: "e11", name: "Noise Reduction", category: "Audio" },
 ];
 
-const INITIAL_TIMELINE_CLIPS: TimelineClip[] = [
-  { id: "tc1", name: "Intro_Animation", track: "V2", start: 0, width: 8, color: "bg-blue-500/60" },
-  { id: "tc2", name: "Interview_Main", track: "V1", start: 8, width: 55, color: "bg-[#7401df]/50" },
-  { id: "tc3", name: "B-Roll_Studio", track: "V2", start: 20, width: 15, color: "bg-[#74ddc7]/50" },
-  { id: "tc4", name: "Outro_Card", track: "V1", start: 63, width: 10, color: "bg-orange-500/50" },
-  { id: "tc5", name: "Lower_Third", track: "V2", start: 10, width: 6, color: "bg-cyan-500/50" },
-  { id: "tc6", name: "Background_Beat", track: "A1", start: 0, width: 73, color: "bg-pink-500/40" },
-  { id: "tc7", name: "Voiceover_Take3", track: "A2", start: 8, width: 55, color: "bg-yellow-500/40" },
-];
+// Start with empty timeline — user adds their own clips
+const INITIAL_TIMELINE_CLIPS: TimelineClip[] = [];
 
 const TRACKS = ["V2", "V1", "A1", "A2"];
 
@@ -156,7 +141,7 @@ export default function VideoEditorPage() {
   // Playback state
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [totalDuration, setTotalDuration] = useState(220);
+  const [totalDuration, setTotalDuration] = useState(60);
 
   // Volume
   const [volume, setVolume] = useState(75);
@@ -171,8 +156,8 @@ export default function VideoEditorPage() {
 
   // Timeline
   const [timelineZoom, setTimelineZoom] = useState(100);
-  const [playheadPosition, setPlayheadPosition] = useState(28);
-  const [selectedClipId, setSelectedClipId] = useState<string | null>("tc2");
+  const [playheadPosition, setPlayheadPosition] = useState(0);
+  const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [timelineClips, setTimelineClips] = useState<TimelineClip[]>(INITIAL_TIMELINE_CLIPS);
   const [markers, setMarkers] = useState<Marker[]>([]);
 
@@ -911,25 +896,34 @@ export default function VideoEditorPage() {
                     </button>
                   </div>
 
-                  {/* Record Buttons */}
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() => openRecordModal("webcam")}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[10px] font-medium text-foreground/80 hover:text-[#74ddc7] bg-foreground/[0.04] hover:bg-[#74ddc7]/10 border border-border hover:border-[#74ddc7]/40 transition-colors active:scale-[0.98]"
-                    >
-                      <Camera className="h-3 w-3" />
-                      Webcam
-                    </button>
-                    <button
-                      onClick={() => openRecordModal("screen")}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[10px] font-medium text-foreground/80 hover:text-[#7401df] bg-foreground/[0.04] hover:bg-[#7401df]/10 border border-border hover:border-[#7401df]/40 transition-colors active:scale-[0.98]"
-                    >
-                      <Monitor className="h-3 w-3" />
-                      Screen
-                    </button>
+                  {/* Record Buttons — Prominent */}
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Record</p>
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => openRecordModal("webcam")}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg text-[11px] font-semibold text-[#74ddc7] bg-[#74ddc7]/10 hover:bg-[#74ddc7]/20 border border-[#74ddc7]/30 hover:border-[#74ddc7]/50 transition-colors active:scale-[0.97]"
+                      >
+                        <Camera className="h-4 w-4" />
+                        Webcam
+                      </button>
+                      <button
+                        onClick={() => openRecordModal("screen")}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg text-[11px] font-semibold text-[#7401df] bg-[#7401df]/10 hover:bg-[#7401df]/20 border border-[#7401df]/30 hover:border-[#7401df]/50 transition-colors active:scale-[0.97]"
+                      >
+                        <Monitor className="h-4 w-4" />
+                        Screen
+                      </button>
+                    </div>
                   </div>
 
                   {/* Media Items — clickable to add to timeline */}
+                  {importedMedia.length === 0 && (
+                    <div className="text-center py-4 text-muted-foreground/50">
+                      <p className="text-[10px]">No media yet</p>
+                      <p className="text-[10px] mt-0.5">Import files or record to get started</p>
+                    </div>
+                  )}
                   <div className="space-y-1">
                     {importedMedia.map((item) => (
                       <div
@@ -1183,27 +1177,35 @@ export default function VideoEditorPage() {
                 {!hasVideo && !showRecordModal && (
                   <>
                     <div className="absolute inset-0 bg-gradient-to-br from-[#7401df]/20 via-black/60 to-[#74ddc7]/10" />
-                    <div className="relative text-center">
-                      {/* Big play/pause button overlay */}
-                      <div className="h-16 w-16 rounded-full bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
-                        {isPlaying ? (
-                          <Pause className="h-8 w-8 text-white/80" />
-                        ) : (
-                          <Play className="h-8 w-8 text-white/80 ml-1" />
-                        )}
-                      </div>
-                      <p className="text-xs text-foreground/30">
-                        {isPlaying ? "Playing — click to pause" : "Click to play • Import a video for preview"}
+                    <div className="relative text-center" onClick={(e) => e.stopPropagation()}>
+                      <Film className="h-10 w-10 text-white/20 mx-auto mb-3" />
+                      <p className="text-sm font-medium text-white/60 mb-1">Get Started</p>
+                      <p className="text-[11px] text-white/30 mb-5 max-w-xs mx-auto">
+                        Import a file, record your webcam, or capture your screen
                       </p>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          fileInputRef.current?.click();
-                        }}
-                        className="mt-2 px-3 py-1 rounded-md text-xs text-[#74ddc7] hover:bg-[#74ddc7]/10 border border-[#74ddc7]/30 hover:border-[#74ddc7]/50 transition-colors"
-                      >
-                        Browse Files
-                      </button>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition-colors active:scale-95"
+                        >
+                          <ImagePlus className="h-3.5 w-3.5" />
+                          Import File
+                        </button>
+                        <button
+                          onClick={() => openRecordModal("webcam")}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-[#74ddc7] bg-[#74ddc7]/15 hover:bg-[#74ddc7]/25 border border-[#74ddc7]/30 transition-colors active:scale-95"
+                        >
+                          <Camera className="h-3.5 w-3.5" />
+                          Record Webcam
+                        </button>
+                        <button
+                          onClick={() => openRecordModal("screen")}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-[#7401df] bg-[#7401df]/15 hover:bg-[#7401df]/25 border border-[#7401df]/30 transition-colors active:scale-95"
+                        >
+                          <Monitor className="h-3.5 w-3.5" />
+                          Record Screen
+                        </button>
+                      </div>
                     </div>
                   </>
                 )}
