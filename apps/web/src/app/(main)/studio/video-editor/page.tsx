@@ -32,6 +32,12 @@ import {
   ZoomOut,
   ChevronDown,
   Check,
+  Camera,
+  Monitor,
+  StopCircle,
+  Circle,
+  Loader2,
+  X,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -180,6 +186,18 @@ export default function VideoEditorPage() {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [activeMediaId, setActiveMediaId] = useState<string | null>(null);
 
+  // Recording state
+  const [showRecordModal, setShowRecordModal] = useState(false);
+  const [recordMode, setRecordMode] = useState<"webcam" | "screen">("webcam");
+  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+  const [recordingElapsed, setRecordingElapsed] = useState(0);
+  const [isLoadingMedia, setIsLoadingMedia] = useState(false);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordChunksRef = useRef<Blob[]>([]);
+  const recordPreviewRef = useRef<HTMLVideoElement>(null);
+  const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // Clip properties (editable)
   const [clipPosX, setClipPosX] = useState(960);
   const [clipPosY, setClipPosY] = useState(540);
@@ -207,13 +225,32 @@ export default function VideoEditorPage() {
     statusTimer.current = setTimeout(() => setStatusMsg("Ready"), 3000);
   }, []);
 
+  // Supported file formats
+  const SUPPORTED_VIDEO = ["video/mp4", "video/webm", "video/ogg", "video/quicktime", "video/x-matroska"];
+  const SUPPORTED_AUDIO = ["audio/mpeg", "audio/wav", "audio/ogg", "audio/webm", "audio/aac", "audio/mp4"];
+  const SUPPORTED_IMAGE = ["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"];
+
   // Load a video/audio file
   const loadMediaFile = useCallback((file: File) => {
     try {
       const isVideo = file.type.startsWith("video/");
       const isAudio = file.type.startsWith("audio/");
       const isImage = file.type.startsWith("image/");
-      const type: "video" | "audio" | "image" = isVideo ? "video" : isAudio ? "audio" : isImage ? "image" : "video";
+
+      // Validate file type
+      if (!isVideo && !isAudio && !isImage) {
+        showStatus(`Unsupported format: ${file.type || file.name.split(".").pop()}`);
+        return;
+      }
+      if (isVideo && !SUPPORTED_VIDEO.some((t) => file.type === t)) {
+        showStatus(`Unsupported video format: ${file.type}. Try MP4 or WebM.`);
+        return;
+      }
+
+      const type: "video" | "audio" | "image" = isVideo ? "video" : isAudio ? "audio" : "image";
+
+      setIsLoadingMedia(true);
+      showStatus(`Loading: ${file.name}...`);
 
       // For video/audio, load into the player
       if ((isVideo || isAudio) && videoRef.current) {
@@ -221,20 +258,39 @@ export default function VideoEditorPage() {
         const url = URL.createObjectURL(file);
         videoUrlRef.current = url;
 
-        videoRef.current.src = url;
-        videoRef.current.load();
-        videoRef.current.onloadedmetadata = () => {
-          const dur = videoRef.current?.duration || 0;
+        const vid = videoRef.current;
+        vid.src = url;
+        vid.load();
+        vid.onloadedmetadata = () => {
+          const dur = vid.duration || 0;
           setTotalDuration(dur);
           setCurrentTime(0);
           setPlayheadPosition(0);
           if (isVideo) setHasVideo(true);
+          setIsLoadingMedia(false);
           showStatus(`Loaded: ${file.name} (${Math.floor(dur)}s)`);
+
+          // Auto-preview: play briefly then pause
+          vid.currentTime = 0;
+          vid.play().then(() => {
+            setTimeout(() => {
+              if (vid && !vid.paused) {
+                vid.pause();
+                vid.currentTime = 0;
+                setCurrentTime(0);
+                setPlayheadPosition(0);
+              }
+            }, 1000);
+          }).catch(() => {
+            // autoplay blocked — that's fine
+          });
         };
-        videoRef.current.onerror = () => {
-          showStatus(`Error: Could not load ${file.name}`);
+        vid.onerror = () => {
+          setIsLoadingMedia(false);
+          showStatus(`Error: Could not load ${file.name} — format may be unsupported`);
         };
       } else if (isImage) {
+        setIsLoadingMedia(false);
         showStatus(`Imported image: ${file.name}`);
       }
 
@@ -262,6 +318,7 @@ export default function VideoEditorPage() {
       setSelectedClipId(newClip.id);
     } catch (err) {
       console.error("[VideoEditor] Failed to load file:", err);
+      setIsLoadingMedia(false);
       showStatus("Error loading file");
     }
   }, [showStatus]);
@@ -274,6 +331,151 @@ export default function VideoEditorPage() {
     },
     [loadMediaFile]
   );
+
+  // ---------------------------------------------------------------------------
+  // Recording Functions
+  // ---------------------------------------------------------------------------
+
+  const openRecordModal = useCallback((mode: "webcam" | "screen") => {
+    setRecordMode(mode);
+    setShowRecordModal(true);
+    setRecordingElapsed(0);
+    recordChunksRef.current = [];
+  }, []);
+
+  const startRecording = useCallback(async () => {
+    try {
+      let stream: MediaStream;
+      if (recordMode === "webcam") {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      } else {
+        stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      }
+
+      mediaStreamRef.current = stream;
+
+      // Show live preview
+      if (recordPreviewRef.current) {
+        recordPreviewRef.current.srcObject = stream;
+        recordPreviewRef.current.play().catch(() => {});
+      }
+
+      // Determine a supported MIME type
+      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+        ? "video/webm;codecs=vp9,opus"
+        : MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
+        ? "video/webm;codecs=vp8,opus"
+        : "video/webm";
+
+      const recorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = recorder;
+      recordChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        // Build blob and convert to File, then load into editor
+        const blob = new Blob(recordChunksRef.current, { type: "video/webm" });
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+        const fileName = `${recordMode}-recording-${timestamp}.webm`;
+        const file = new File([blob], fileName, { type: "video/webm" });
+        loadMediaFile(file);
+
+        // Cleanup
+        if (mediaStreamRef.current) {
+          mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+          mediaStreamRef.current = null;
+        }
+        if (recordPreviewRef.current) {
+          recordPreviewRef.current.srcObject = null;
+        }
+        setShowRecordModal(false);
+        setIsRecordingVideo(false);
+        setRecordingElapsed(0);
+        if (recordTimerRef.current) {
+          clearInterval(recordTimerRef.current);
+          recordTimerRef.current = null;
+        }
+        showStatus(`Recording saved: ${fileName}`);
+      };
+
+      recorder.start(250); // collect data every 250ms
+      setIsRecordingVideo(true);
+      setRecordingElapsed(0);
+      showStatus("Recording started...");
+
+      // Start elapsed timer
+      recordTimerRef.current = setInterval(() => {
+        setRecordingElapsed((prev) => prev + 1);
+      }, 1000);
+
+      // Handle screen share "Stop sharing" button
+      if (recordMode === "screen") {
+        stream.getVideoTracks()[0].onended = () => {
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+            mediaRecorderRef.current.stop();
+          }
+        };
+      }
+    } catch (err) {
+      console.error("[VideoEditor] Recording error:", err);
+      showStatus(
+        recordMode === "webcam"
+          ? "Camera access denied — check browser permissions"
+          : "Screen share cancelled or denied"
+      );
+      setShowRecordModal(false);
+    }
+  }, [recordMode, loadMediaFile, showStatus]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop(); // triggers onstop which handles the rest
+    }
+  }, []);
+
+  const cancelRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      // Remove the onstop handler so it doesn't create a file
+      mediaRecorderRef.current.onstop = null;
+      mediaRecorderRef.current.stop();
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      mediaStreamRef.current = null;
+    }
+    if (recordPreviewRef.current) {
+      recordPreviewRef.current.srcObject = null;
+    }
+    if (recordTimerRef.current) {
+      clearInterval(recordTimerRef.current);
+      recordTimerRef.current = null;
+    }
+    setShowRecordModal(false);
+    setIsRecordingVideo(false);
+    setRecordingElapsed(0);
+    recordChunksRef.current = [];
+    showStatus("Recording cancelled");
+  }, [showStatus]);
+
+  // Format recording elapsed as MM:SS
+  const formatRecordTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
+
+  // Cleanup recording timer on unmount
+  useEffect(() => {
+    return () => {
+      if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, []);
 
   // Sync video playback (with simulation fallback when no video loaded)
   useEffect(() => {
@@ -709,6 +911,24 @@ export default function VideoEditorPage() {
                     </button>
                   </div>
 
+                  {/* Record Buttons */}
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => openRecordModal("webcam")}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[10px] font-medium text-foreground/80 hover:text-[#74ddc7] bg-foreground/[0.04] hover:bg-[#74ddc7]/10 border border-border hover:border-[#74ddc7]/40 transition-colors active:scale-[0.98]"
+                    >
+                      <Camera className="h-3 w-3" />
+                      Webcam
+                    </button>
+                    <button
+                      onClick={() => openRecordModal("screen")}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[10px] font-medium text-foreground/80 hover:text-[#7401df] bg-foreground/[0.04] hover:bg-[#7401df]/10 border border-border hover:border-[#7401df]/40 transition-colors active:scale-[0.98]"
+                    >
+                      <Monitor className="h-3 w-3" />
+                      Screen
+                    </button>
+                  </div>
+
                   {/* Media Items — clickable to add to timeline */}
                   <div className="space-y-1">
                     {importedMedia.map((item) => (
@@ -835,19 +1055,132 @@ export default function VideoEditorPage() {
             {/* Video Preview Area — ALWAYS clickable for play/pause */}
             <div
               className="flex-1 flex items-center justify-center relative cursor-pointer overflow-hidden min-h-0"
-              onClick={togglePlay}
+              onClick={!showRecordModal ? togglePlay : undefined}
             >
               <div className="relative w-full max-w-3xl max-h-full aspect-video bg-black/80 rounded-sm mx-4 flex items-center justify-center overflow-hidden">
                 {/* Video element ALWAYS in DOM so ref is available for file loading */}
                 {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                 <video
                   ref={videoRef}
-                  className={`absolute inset-0 w-full h-full object-contain ${hasVideo ? "z-[1]" : "hidden"}`}
+                  className={`absolute inset-0 w-full h-full object-contain ${hasVideo && !showRecordModal ? "z-[1]" : "hidden"}`}
                   playsInline
                 />
 
+                {/* Loading indicator */}
+                {isLoadingMedia && !showRecordModal && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center z-[2] bg-black/60">
+                    <Loader2 className="h-10 w-10 text-[#74ddc7] animate-spin mb-2" />
+                    <p className="text-xs text-[#74ddc7]">Loading media...</p>
+                  </div>
+                )}
+
+                {/* ============================================ */}
+                {/* Recording Modal Overlay                      */}
+                {/* ============================================ */}
+                {showRecordModal && (
+                  <div className="absolute inset-0 z-[5] bg-black/90 flex flex-col items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                    {/* Close button */}
+                    <button
+                      onClick={cancelRecording}
+                      className="absolute top-3 right-3 p-1.5 rounded-md text-white/60 hover:text-white hover:bg-white/10 transition-colors z-10"
+                      title="Cancel recording"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+
+                    {/* Mode indicator */}
+                    <div className="absolute top-3 left-3 flex items-center gap-2 z-10">
+                      <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium ${
+                        recordMode === "webcam"
+                          ? "bg-[#74ddc7]/20 text-[#74ddc7]"
+                          : "bg-[#7401df]/20 text-[#7401df]"
+                      }`}>
+                        {recordMode === "webcam" ? <Camera className="h-3 w-3" /> : <Monitor className="h-3 w-3" />}
+                        {recordMode === "webcam" ? "Webcam" : "Screen"} Recording
+                      </div>
+                    </div>
+
+                    {/* Live preview video */}
+                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                    <video
+                      ref={recordPreviewRef}
+                      className={`w-full h-full object-contain ${isRecordingVideo || mediaStreamRef.current ? "block" : "hidden"}`}
+                      playsInline
+                      muted
+                    />
+
+                    {/* Pre-recording state — prompt to start */}
+                    {!isRecordingVideo && !mediaStreamRef.current && (
+                      <div className="text-center">
+                        <div className={`h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-4 ${
+                          recordMode === "webcam"
+                            ? "bg-[#74ddc7]/20 border-2 border-[#74ddc7]/40"
+                            : "bg-[#7401df]/20 border-2 border-[#7401df]/40"
+                        }`}>
+                          {recordMode === "webcam" ? (
+                            <Camera className="h-10 w-10 text-[#74ddc7]" />
+                          ) : (
+                            <Monitor className="h-10 w-10 text-[#7401df]" />
+                          )}
+                        </div>
+                        <p className="text-sm text-white/80 mb-1">
+                          {recordMode === "webcam" ? "Record from your webcam" : "Record your screen"}
+                        </p>
+                        <p className="text-[11px] text-white/40 mb-4">
+                          {recordMode === "webcam"
+                            ? "Camera and microphone access will be requested"
+                            : "Choose a screen, window, or tab to share"}
+                        </p>
+                        <button
+                          onClick={startRecording}
+                          className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-white transition-all active:scale-95 ${
+                            recordMode === "webcam"
+                              ? "bg-[#74ddc7] hover:bg-[#74ddc7]/80"
+                              : "bg-[#7401df] hover:bg-[#7401df]/80"
+                          }`}
+                        >
+                          <Circle className="h-4 w-4" />
+                          Start Recording
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Recording controls bar at bottom */}
+                    {isRecordingVideo && (
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/80 backdrop-blur-sm rounded-full px-4 py-2 border border-white/10">
+                        {/* Recording timer */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                          <span className="text-sm font-mono text-red-400 tabular-nums min-w-[3.5rem]">
+                            {formatRecordTime(recordingElapsed)}
+                          </span>
+                        </div>
+
+                        <div className="h-4 w-px bg-white/20" />
+
+                        {/* Stop button */}
+                        <button
+                          onClick={stopRecording}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-red-300 text-xs font-medium transition-colors active:scale-95"
+                        >
+                          <StopCircle className="h-3.5 w-3.5" />
+                          Stop & Save
+                        </button>
+
+                        {/* Cancel button */}
+                        <button
+                          onClick={cancelRecording}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 text-white/60 hover:bg-white/10 hover:text-white text-xs font-medium transition-colors active:scale-95"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Placeholder overlay — shown when no video loaded */}
-                {!hasVideo && (
+                {!hasVideo && !showRecordModal && (
                   <>
                     <div className="absolute inset-0 bg-gradient-to-br from-[#7401df]/20 via-black/60 to-[#74ddc7]/10" />
                     <div className="relative text-center">
@@ -867,7 +1200,7 @@ export default function VideoEditorPage() {
                           e.stopPropagation();
                           fileInputRef.current?.click();
                         }}
-                        className="mt-2 text-xs text-[#74ddc7] hover:underline"
+                        className="mt-2 px-3 py-1 rounded-md text-xs text-[#74ddc7] hover:bg-[#74ddc7]/10 border border-[#74ddc7]/30 hover:border-[#74ddc7]/50 transition-colors"
                       >
                         Browse Files
                       </button>
@@ -876,12 +1209,14 @@ export default function VideoEditorPage() {
                 )}
 
                 {/* Timecode Overlay */}
-                <div className="absolute top-2 right-2 bg-black/70 px-2 py-0.5 rounded text-[10px] font-mono text-[#74ddc7]">
-                  {formatTimecode(currentTime)}
-                </div>
+                {!showRecordModal && (
+                  <div className="absolute top-2 right-2 bg-black/70 px-2 py-0.5 rounded text-[10px] font-mono text-[#74ddc7]">
+                    {formatTimecode(currentTime)}
+                  </div>
+                )}
 
                 {/* Playing indicator */}
-                {isPlaying && (
+                {isPlaying && !showRecordModal && (
                   <div className="absolute top-2 left-2 bg-red-500/80 px-2 py-0.5 rounded text-[10px] font-mono text-white flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
                     PLAYING
@@ -889,7 +1224,9 @@ export default function VideoEditorPage() {
                 )}
 
                 {/* Safe area guides */}
-                <div className="absolute inset-[5%] border border-foreground/[0.06] rounded-sm pointer-events-none" />
+                {!showRecordModal && (
+                  <div className="absolute inset-[5%] border border-foreground/[0.06] rounded-sm pointer-events-none" />
+                )}
               </div>
             </div>
 

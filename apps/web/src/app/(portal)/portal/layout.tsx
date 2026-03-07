@@ -53,10 +53,12 @@ function SidebarNav({ role }: { role: RoleId }) {
   return (
     <nav className="space-y-1 p-4">
       {config.navItems.map((item) => {
+        // Strip hash from href for matching (e.g. /portal/overview#settings -> /portal/overview)
+        const hrefPath = item.href.split("#")[0];
         const isActive =
-          item.href === "/portal/overview"
-            ? pathname === "/portal/overview"
-            : pathname === item.href || pathname.startsWith(item.href + "/");
+          hrefPath === "/portal/overview"
+            ? pathname === "/portal/overview" && !item.href.includes("#")
+            : pathname === hrefPath || pathname.startsWith(hrefPath + "/");
         const Icon = item.icon;
         return (
           <Link

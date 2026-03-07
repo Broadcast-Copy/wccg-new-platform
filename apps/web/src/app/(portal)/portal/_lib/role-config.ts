@@ -71,7 +71,7 @@ export interface RoleConfig {
 }
 
 // ---------------------------------------------------------------------------
-// All 5 role configs
+// All 6 role configs
 // ---------------------------------------------------------------------------
 
 export const ROLE_CONFIGS: Record<RoleId, RoleConfig> = {
@@ -92,9 +92,8 @@ export const ROLE_CONFIGS: Record<RoleId, RoleConfig> = {
     },
     navItems: [
       { href: "/portal/overview", label: "Overview", icon: LayoutDashboard },
-      { href: "/portal/overview#users", label: "Users", icon: Users },
+      { href: "/portal/users", label: "Users", icon: Users },
       { href: "/portal/overview#streams", label: "Streams", icon: Radio },
-      { href: "/portal/overview#content", label: "Content", icon: Database },
       { href: "/portal/overview#analytics", label: "Analytics", icon: BarChart3 },
       { href: "/portal/overview#settings", label: "Settings", icon: Settings },
       { href: "/portal/prd", label: "Platform PRD", icon: FileText },
@@ -118,8 +117,8 @@ export const ROLE_CONFIGS: Record<RoleId, RoleConfig> = {
     },
     navItems: [
       { href: "/portal/overview", label: "Overview", icon: LayoutDashboard },
+      { href: "/portal/campaigns", label: "Campaigns", icon: Target },
       { href: "/portal/overview#clients", label: "Clients", icon: Users },
-      { href: "/portal/overview#campaigns", label: "Campaigns", icon: Target },
       { href: "/portal/overview#revenue", label: "Revenue", icon: TrendingUp },
       { href: "/portal/overview#proposals", label: "Proposals", icon: FileText },
     ],
@@ -141,7 +140,7 @@ export const ROLE_CONFIGS: Record<RoleId, RoleConfig> = {
     },
     navItems: [
       { href: "/portal/overview", label: "Overview", icon: LayoutDashboard },
-      { href: "/portal/overview#shows", label: "My Shows", icon: Radio },
+      { href: "/portal/shows", label: "My Shows", icon: Radio },
       { href: "/portal/overview#mixes", label: "My Mixes", icon: Music },
       { href: "/portal/overview#upload", label: "Upload Mix", icon: Upload },
       { href: "/portal/overview#schedule", label: "Schedule", icon: CalendarDays },
@@ -164,7 +163,7 @@ export const ROLE_CONFIGS: Record<RoleId, RoleConfig> = {
     },
     navItems: [
       { href: "/portal/overview", label: "Overview", icon: LayoutDashboard },
-      { href: "/portal/overview#podcasts", label: "Podcasts", icon: Mic },
+      { href: "/portal/content", label: "My Content", icon: Mic },
       { href: "/portal/overview#music", label: "Music", icon: Music },
       { href: "/portal/overview#upload", label: "Upload", icon: Upload },
       { href: "/portal/overview#analytics", label: "Analytics", icon: BarChart3 },
@@ -187,7 +186,7 @@ export const ROLE_CONFIGS: Record<RoleId, RoleConfig> = {
     },
     navItems: [
       { href: "/portal/overview", label: "Overview", icon: LayoutDashboard },
-      { href: "/portal/overview#campaigns", label: "Campaigns", icon: Target },
+      { href: "/portal/campaigns", label: "Campaigns", icon: Target },
       { href: "/portal/overview#creative", label: "Ad Creative", icon: Image },
       { href: "/portal/overview#analytics", label: "Analytics", icon: BarChart3 },
       { href: "/portal/overview#billing", label: "Billing", icon: CreditCard },
