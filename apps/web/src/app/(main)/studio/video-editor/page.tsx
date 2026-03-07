@@ -59,7 +59,9 @@ interface MediaItem {
   name: string;
   type: "video" | "audio" | "image";
   duration?: string;
+  durationSecs?: number;
   thumbnail: string;
+  thumbnailUrl?: string;
 }
 
 interface EffectItem {
@@ -302,24 +304,69 @@ export default function VideoEditorPage() {
         vid.load();
         vid.onloadedmetadata = () => {
           const dur = vid.duration || 0;
-          setTotalDuration(dur);
+          // Set timeline to at least 120% of clip duration or 60s minimum
+          const newTotalDur = Math.max(dur * 1.2, 60);
+          setTotalDuration(newTotalDur);
           setCurrentTime(0);
           setPlayheadPosition(0);
           if (isVideo) setHasVideo(true);
           setIsLoadingMedia(false);
-          showStatus(`Loaded: ${file.name} (${Math.floor(dur)}s)`);
 
-          // Auto-preview: play briefly then pause
+          // Real duration formatted as M:SS
+          const mins = Math.floor(dur / 60);
+          const secs = Math.floor(dur % 60);
+          const durationStr = `${mins}:${String(secs).padStart(2, "0")}`;
+
+          // Update media item with real duration
+          setImportedMedia((prev) =>
+            prev.map((m) =>
+              m.id === newItem.id
+                ? { ...m, duration: durationStr, durationSecs: dur }
+                : m
+            )
+          );
+
+          // Update timeline clip width based on real duration
+          const clipWidthPct = Math.max(5, Math.min(95, (dur / newTotalDur) * 100));
+          setTimelineClips((prev) =>
+            prev.map((c) =>
+              c.id === newClip.id ? { ...c, width: clipWidthPct } : c
+            )
+          );
+
+          showStatus(`Loaded: ${file.name} (${durationStr})`);
+
+          // Auto-preview: play briefly then capture real thumbnail
           vid.currentTime = 0;
           vid.play().then(() => {
             setTimeout(() => {
               if (vid && !vid.paused) {
+                // Capture real thumbnail from rendered video frame
+                if (isVideo && vid.videoWidth > 0) {
+                  try {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = 160;
+                    canvas.height = 90;
+                    const ctx = canvas.getContext("2d");
+                    if (ctx) {
+                      ctx.drawImage(vid, 0, 0, 160, 90);
+                      const thumbUrl = canvas.toDataURL("image/jpeg", 0.6);
+                      setImportedMedia((prev) =>
+                        prev.map((m) =>
+                          m.id === newItem.id ? { ...m, thumbnailUrl: thumbUrl } : m
+                        )
+                      );
+                    }
+                  } catch (_e) {
+                    // Canvas capture may fail for some video types
+                  }
+                }
                 vid.pause();
                 vid.currentTime = 0;
                 setCurrentTime(0);
                 setPlayheadPosition(0);
               }
-            }, 1000);
+            }, 500);
           }).catch(() => {
             // autoplay blocked — that's fine
           });
@@ -329,16 +376,37 @@ export default function VideoEditorPage() {
           showStatus(`Error: Could not load ${file.name} — format may be unsupported`);
         };
       } else if (isImage) {
+        // Generate real thumbnail from image file
+        const imgUrl = URL.createObjectURL(file);
+        const img = new window.Image();
+        img.onload = () => {
+          try {
+            const canvas = document.createElement("canvas");
+            canvas.width = 160;
+            canvas.height = 90;
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, 160, 90);
+              const thumbUrl = canvas.toDataURL("image/jpeg", 0.6);
+              setImportedMedia((prev) =>
+                prev.map((m) => m.id === newItem.id ? { ...m, thumbnailUrl: thumbUrl } : m)
+              );
+            }
+          } catch (_e) { /* canvas capture failed */ }
+          URL.revokeObjectURL(imgUrl);
+        };
+        img.src = imgUrl;
         setIsLoadingMedia(false);
         showStatus(`Imported image: ${file.name}`);
       }
 
-      // Add to media bin
+      // Add to media bin — duration & thumbnail updated with real data once loaded
       const newItem: MediaItem = {
         id: `imported-${Date.now()}`,
         name: file.name,
         type,
-        duration: "loading...",
+        duration: isImage ? "image" : "loading...",
+        durationSecs: isImage ? 5 : undefined,
         thumbnail: type === "video" ? "bg-[#74ddc7]/30" : type === "audio" ? "bg-pink-500/30" : "bg-emerald-500/30",
       };
       setImportedMedia((prev) => [...prev, newItem]);
@@ -350,7 +418,7 @@ export default function VideoEditorPage() {
         name: file.name.replace(/\.\w+$/, ""),
         track,
         start: 0,
-        width: 30,
+        width: isImage ? 8 : 15, // placeholder — updated with real duration in onloadedmetadata
         color: TRACK_COLORS[track] || "bg-gray-500/40",
       };
       setTimelineClips((prev) => [...prev, newClip]);
@@ -682,19 +750,23 @@ export default function VideoEditorPage() {
       const track = item.type === "audio" ? "A1" : "V1";
       const existingOnTrack = timelineClips.filter((c) => c.track === track);
       const maxEnd = existingOnTrack.reduce((m, c) => Math.max(m, c.start + c.width), 0);
+      // Use real duration for clip width, or default for images
+      const clipWidth = item.durationSecs
+        ? Math.max(5, Math.min(95, (item.durationSecs / totalDuration) * 100))
+        : item.type === "image" ? 8 : 10;
       const newClip: TimelineClip = {
         id: `tc-${Date.now()}`,
         name: item.name.replace(/\.\w+$/, ""),
         track,
         start: Math.min(maxEnd + 1, 90),
-        width: 10,
+        width: clipWidth,
         color: TRACK_COLORS[track] || "bg-gray-500/40",
       };
       setTimelineClips((prev) => [...prev, newClip]);
       setSelectedClipId(newClip.id);
       showStatus(`Added "${item.name}" to ${track}`);
     },
-    [timelineClips, showStatus]
+    [timelineClips, totalDuration, showStatus]
   );
 
   // Clear all mock / all data
@@ -1230,11 +1302,18 @@ export default function VideoEditorPage() {
                         draggable
                       >
                         <div
-                          className={`h-8 w-12 rounded ${item.thumbnail} flex items-center justify-center shrink-0`}
+                          className={`h-8 w-12 rounded ${item.thumbnailUrl ? "bg-black" : item.thumbnail} flex items-center justify-center shrink-0 overflow-hidden`}
                         >
-                          {item.type === "video" && <Film className="h-3 w-3 text-foreground/60" />}
-                          {item.type === "audio" && <Volume2 className="h-3 w-3 text-foreground/60" />}
-                          {item.type === "image" && <ImagePlus className="h-3 w-3 text-foreground/60" />}
+                          {item.thumbnailUrl ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img src={item.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <>
+                              {item.type === "video" && <Film className="h-3 w-3 text-foreground/60" />}
+                              {item.type === "audio" && <Volume2 className="h-3 w-3 text-foreground/60" />}
+                              {item.type === "image" && <ImagePlus className="h-3 w-3 text-foreground/60" />}
+                            </>
+                          )}
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-[11px] text-foreground truncate">
