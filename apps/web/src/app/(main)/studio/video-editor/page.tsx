@@ -38,6 +38,12 @@ import {
   Circle,
   Loader2,
   X,
+  Copy,
+  ArrowUpDown,
+  Mic,
+  Video,
+  RefreshCw,
+  Keyboard,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -201,6 +207,28 @@ export default function VideoEditorPage() {
   const [textColor, setTextColor] = useState("#FFFFFF");
   const [textAlign, setTextAlign] = useState("Center");
   const [textBgEnabled, setTextBgEnabled] = useState(false);
+
+  // Context menu state (right-click on timeline clips)
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    clipId: string;
+  } | null>(null);
+
+  // Settings dialog state
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [availableVideoDevices, setAvailableVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [availableAudioDevices, setAvailableAudioDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedVideoDevice, setSelectedVideoDevice] = useState<string>("");
+  const [selectedAudioDevice, setSelectedAudioDevice] = useState<string>("");
+  const [audioTestLevel, setAudioTestLevel] = useState(0);
+  const [settingsPreviewStream, setSettingsPreviewStream] = useState<MediaStream | null>(null);
+  const settingsPreviewRef = useRef<HTMLVideoElement>(null);
+  const audioAnalyserRef = useRef<AnalyserNode | null>(null);
+  const audioAnimRef = useRef<number | null>(null);
+
+  // Keyboard shortcuts dialog
+  const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
 
   // Status message (toast feedback)
   const [statusMsg, setStatusMsg] = useState("Ready");
@@ -688,6 +716,146 @@ export default function VideoEditorPage() {
     [showStatus]
   );
 
+  // Context menu actions
+  const duplicateClip = useCallback(
+    (clipId: string) => {
+      const clip = timelineClips.find((c) => c.id === clipId);
+      if (!clip) return;
+      const newClip: TimelineClip = {
+        ...clip,
+        id: `tc-${Date.now()}`,
+        name: `${clip.name}_copy`,
+        start: Math.min(clip.start + clip.width + 1, 90),
+      };
+      setTimelineClips((prev) => [...prev, newClip]);
+      setSelectedClipId(newClip.id);
+      showStatus(`Duplicated "${clip.name}"`);
+    },
+    [timelineClips, showStatus]
+  );
+
+  const moveClipToTrack = useCallback(
+    (clipId: string, newTrack: string) => {
+      setTimelineClips((prev) =>
+        prev.map((c) =>
+          c.id === clipId
+            ? { ...c, track: newTrack, color: TRACK_COLORS[newTrack] || "bg-gray-500/40" }
+            : c
+        )
+      );
+      const clip = timelineClips.find((c) => c.id === clipId);
+      showStatus(`Moved "${clip?.name}" to ${newTrack}`);
+    },
+    [timelineClips, showStatus]
+  );
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent, clipId: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setSelectedClipId(clipId);
+      setContextMenu({ x: e.clientX, y: e.clientY, clipId });
+    },
+    []
+  );
+
+  // Close context menu on click outside
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    if (contextMenu) {
+      window.addEventListener("click", handleClick);
+      window.addEventListener("contextmenu", handleClick);
+      return () => {
+        window.removeEventListener("click", handleClick);
+        window.removeEventListener("contextmenu", handleClick);
+      };
+    }
+  }, [contextMenu]);
+
+  // Settings: enumerate devices
+  const enumerateDevices = useCallback(async () => {
+    try {
+      if (!navigator.mediaDevices?.enumerateDevices) {
+        showStatus("Device enumeration not supported");
+        return;
+      }
+      // Must request permission first to get labels
+      const tempStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true }).catch(() => null);
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter((d) => d.kind === "videoinput");
+      const audioDevices = devices.filter((d) => d.kind === "audioinput");
+      setAvailableVideoDevices(videoDevices);
+      setAvailableAudioDevices(audioDevices);
+      if (!selectedVideoDevice && videoDevices.length > 0) setSelectedVideoDevice(videoDevices[0].deviceId);
+      if (!selectedAudioDevice && audioDevices.length > 0) setSelectedAudioDevice(audioDevices[0].deviceId);
+      if (tempStream) tempStream.getTracks().forEach((t) => t.stop());
+    } catch (err) {
+      console.error("[Settings] Device enumeration error:", err);
+    }
+  }, [selectedVideoDevice, selectedAudioDevice, showStatus]);
+
+  // Settings: start preview
+  const startSettingsPreview = useCallback(async (videoDeviceId?: string, audioDeviceId?: string) => {
+    // Stop existing
+    if (settingsPreviewStream) {
+      settingsPreviewStream.getTracks().forEach((t) => t.stop());
+    }
+    if (audioAnimRef.current) cancelAnimationFrame(audioAnimRef.current);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined, width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: { deviceId: audioDeviceId ? { exact: audioDeviceId } : undefined },
+      });
+      setSettingsPreviewStream(stream);
+
+      // Attach video
+      setTimeout(() => {
+        if (settingsPreviewRef.current) {
+          settingsPreviewRef.current.srcObject = stream;
+          settingsPreviewRef.current.play().catch(() => {});
+        }
+      }, 100);
+
+      // Set up audio level meter
+      const audioCtx = new AudioContext();
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      audioAnalyserRef.current = analyser;
+
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      const updateLevel = () => {
+        analyser.getByteFrequencyData(dataArray);
+        const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+        setAudioTestLevel(Math.round((avg / 255) * 100));
+        audioAnimRef.current = requestAnimationFrame(updateLevel);
+      };
+      updateLevel();
+    } catch (err) {
+      console.error("[Settings] Preview error:", err);
+      showStatus("Could not access camera/mic — check permissions");
+    }
+  }, [settingsPreviewStream, showStatus]);
+
+  // Settings: cleanup
+  const closeSettings = useCallback(() => {
+    if (settingsPreviewStream) {
+      settingsPreviewStream.getTracks().forEach((t) => t.stop());
+      setSettingsPreviewStream(null);
+    }
+    if (audioAnimRef.current) cancelAnimationFrame(audioAnimRef.current);
+    setAudioTestLevel(0);
+    setShowSettingsDialog(false);
+  }, [settingsPreviewStream]);
+
+  // Settings: open
+  const openSettings = useCallback(async () => {
+    setShowSettingsDialog(true);
+    await enumerateDevices();
+  }, [enumerateDevices]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -820,14 +988,21 @@ export default function VideoEditorPage() {
         {/* Right: Actions */}
         <div className="flex items-center gap-1">
           <button
-            onClick={() => showStatus("Settings panel coming soon")}
+            onClick={openSettings}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
             title="Settings"
           >
             <Settings className="h-3.5 w-3.5" />
           </button>
           <button
-            onClick={() => showStatus("Keyboard shortcuts: Space = Play/Pause, S = Split, Del = Delete")}
+            onClick={() => setShowShortcutsDialog(true)}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
+            title="Keyboard shortcuts"
+          >
+            <Keyboard className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={() => showStatus("Help: Use toolbar buttons to import, record, and edit. Keyboard: Space=Play, S=Split, Del=Delete, M=Marker")}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
             title="Help"
           >
@@ -1557,6 +1732,7 @@ export default function VideoEditorPage() {
                                 setSelectedClipId(clip.id);
                                 showStatus(`Selected: ${clip.name}`);
                               }}
+                              onContextMenu={(e) => handleContextMenu(e, clip.id)}
                             >
                               <span className="absolute inset-x-1 top-0.5 text-[9px] text-foreground/70 truncate">
                                 {clip.name}
@@ -1928,6 +2104,275 @@ export default function VideoEditorPage() {
           <span className="text-muted-foreground/60">v1.0.0-beta</span>
         </div>
       </div>
+
+      {/* ================================================================= */}
+      {/* Context Menu (right-click on timeline clips)                      */}
+      {/* ================================================================= */}
+      {contextMenu && (() => {
+        const ctxClip = timelineClips.find((c) => c.id === contextMenu.clipId);
+        if (!ctxClip) return null;
+        const otherTracks = TRACKS.filter((t) => t !== ctxClip.track);
+        return (
+          <div
+            className="fixed z-[100] min-w-[180px] py-1 rounded-lg border border-border bg-card shadow-2xl backdrop-blur-sm"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border mb-1">
+              {ctxClip.name}
+            </div>
+            <button
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-foreground/[0.06] transition-colors"
+              onClick={() => { splitClip(); setContextMenu(null); }}
+            >
+              <Scissors className="h-3 w-3 text-[#74ddc7]" />
+              Split at Playhead
+            </button>
+            <button
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-foreground/[0.06] transition-colors"
+              onClick={() => { duplicateClip(contextMenu.clipId); setContextMenu(null); }}
+            >
+              <Copy className="h-3 w-3 text-[#7401df]" />
+              Duplicate
+            </button>
+            <div className="h-px bg-border my-1" />
+            <div className="px-3 py-1 text-[10px] text-muted-foreground/60 uppercase tracking-wider">
+              Move to Track
+            </div>
+            {otherTracks.map((track) => (
+              <button
+                key={track}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-foreground/[0.06] transition-colors"
+                onClick={() => { moveClipToTrack(contextMenu.clipId, track); setContextMenu(null); }}
+              >
+                <ArrowUpDown className="h-3 w-3 text-muted-foreground" />
+                {track}
+              </button>
+            ))}
+            <div className="h-px bg-border my-1" />
+            <button
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-foreground/[0.06] transition-colors"
+              onClick={() => {
+                setTimelineClips((prev) => prev.map((c) =>
+                  c.id === contextMenu.clipId ? { ...c, start: 0 } : c
+                ));
+                showStatus(`"${ctxClip.name}" snapped to start`);
+                setContextMenu(null);
+              }}
+            >
+              <SkipBack className="h-3 w-3 text-muted-foreground" />
+              Snap to Start
+            </button>
+            <button
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+              onClick={() => {
+                setTimelineClips((prev) => prev.filter((c) => c.id !== contextMenu.clipId));
+                if (selectedClipId === contextMenu.clipId) setSelectedClipId(null);
+                showStatus(`Deleted "${ctxClip.name}"`);
+                setContextMenu(null);
+              }}
+            >
+              <Trash2 className="h-3 w-3" />
+              Delete
+            </button>
+          </div>
+        );
+      })()}
+
+      {/* ================================================================= */}
+      {/* Settings Dialog                                                    */}
+      {/* ================================================================= */}
+      {showSettingsDialog && (
+        <>
+          <div className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm" onClick={closeSettings} />
+          <div className="fixed inset-x-4 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 top-[10%] bottom-[10%] sm:w-[520px] z-[90] flex flex-col rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-border shrink-0">
+              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Settings className="h-4 w-4 text-[#74ddc7]" />
+                Settings — Camera &amp; Audio
+              </h2>
+              <button
+                onClick={closeSettings}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              {/* Camera Selection */}
+              <div>
+                <label className="text-xs font-medium text-foreground flex items-center gap-1.5 mb-2">
+                  <Video className="h-3.5 w-3.5 text-[#74ddc7]" />
+                  Camera
+                </label>
+                <select
+                  value={selectedVideoDevice}
+                  onChange={(e) => {
+                    setSelectedVideoDevice(e.target.value);
+                    if (settingsPreviewStream) startSettingsPreview(e.target.value, selectedAudioDevice);
+                  }}
+                  className="w-full text-xs bg-foreground/[0.04] border border-border rounded-lg px-3 py-2 text-foreground appearance-none cursor-pointer focus:border-[#74ddc7] focus:outline-none transition-colors"
+                >
+                  {availableVideoDevices.length === 0 && <option value="">No cameras found</option>}
+                  {availableVideoDevices.map((d) => (
+                    <option key={d.deviceId} value={d.deviceId}>
+                      {d.label || `Camera ${availableVideoDevices.indexOf(d) + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Camera Preview */}
+              <div className="relative aspect-video bg-black rounded-lg overflow-hidden border border-border">
+                {settingsPreviewStream ? (
+                  <>
+                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                    <video
+                      ref={settingsPreviewRef}
+                      autoPlay
+                      muted
+                      playsInline
+                      className="w-full h-full object-contain"
+                      style={{ transform: "scaleX(-1)" }}
+                    />
+                    <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/70 px-2 py-0.5 rounded-full">
+                      <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                      <span className="text-[10px] font-mono text-green-400">PREVIEW</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-center">
+                    <Camera className="h-8 w-8 text-white/15 mb-2" />
+                    <p className="text-[11px] text-white/40">Click &quot;Start Preview&quot; to test</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Audio Input Selection */}
+              <div>
+                <label className="text-xs font-medium text-foreground flex items-center gap-1.5 mb-2">
+                  <Mic className="h-3.5 w-3.5 text-[#7401df]" />
+                  Microphone
+                </label>
+                <select
+                  value={selectedAudioDevice}
+                  onChange={(e) => {
+                    setSelectedAudioDevice(e.target.value);
+                    if (settingsPreviewStream) startSettingsPreview(selectedVideoDevice, e.target.value);
+                  }}
+                  className="w-full text-xs bg-foreground/[0.04] border border-border rounded-lg px-3 py-2 text-foreground appearance-none cursor-pointer focus:border-[#74ddc7] focus:outline-none transition-colors"
+                >
+                  {availableAudioDevices.length === 0 && <option value="">No microphones found</option>}
+                  {availableAudioDevices.map((d) => (
+                    <option key={d.deviceId} value={d.deviceId}>
+                      {d.label || `Microphone ${availableAudioDevices.indexOf(d) + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Audio Level Meter */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">Audio Level</span>
+                  <span className="text-[10px] text-muted-foreground tabular-nums">{audioTestLevel}%</span>
+                </div>
+                <div className="h-3 bg-foreground/[0.06] rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-75 ${
+                      audioTestLevel > 80 ? "bg-red-500" : audioTestLevel > 50 ? "bg-amber-500" : "bg-[#74ddc7]"
+                    }`}
+                    style={{ width: `${audioTestLevel}%` }}
+                  />
+                </div>
+                {settingsPreviewStream && (
+                  <p className="text-[10px] text-muted-foreground/60 mt-1.5">
+                    Speak into your microphone to test audio levels
+                  </p>
+                )}
+              </div>
+
+              {/* Refresh + Preview buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => startSettingsPreview(selectedVideoDevice, selectedAudioDevice)}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold text-[#74ddc7] bg-[#74ddc7]/10 hover:bg-[#74ddc7]/20 border border-[#74ddc7]/30 transition-colors active:scale-[0.97]"
+                >
+                  <Camera className="h-3.5 w-3.5" />
+                  {settingsPreviewStream ? "Refresh Preview" : "Start Preview"}
+                </button>
+                <button
+                  onClick={async () => { await enumerateDevices(); showStatus("Devices refreshed"); }}
+                  className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground bg-foreground/[0.04] hover:bg-foreground/[0.08] border border-border transition-colors active:scale-[0.97]"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Refresh Devices
+                </button>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-border shrink-0">
+              <button
+                onClick={closeSettings}
+                className="px-4 py-2 rounded-lg text-xs font-medium text-foreground bg-foreground/[0.06] hover:bg-foreground/[0.1] transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ================================================================= */}
+      {/* Keyboard Shortcuts Dialog                                         */}
+      {/* ================================================================= */}
+      {showShortcutsDialog && (
+        <>
+          <div className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm" onClick={() => setShowShortcutsDialog(false)} />
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] z-[90] rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Keyboard className="h-4 w-4 text-[#74ddc7]" />
+                Keyboard Shortcuts
+              </h2>
+              <button
+                onClick={() => setShowShortcutsDialog(false)}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-2">
+              {[
+                ["Space", "Play / Pause"],
+                ["S", "Split clip at playhead"],
+                ["Delete / Backspace", "Delete selected clip"],
+                ["M", "Add marker at playhead"],
+                ["Scroll", "Zoom timeline (with cursor)"],
+              ].map(([key, desc]) => (
+                <div key={key} className="flex items-center justify-between py-1.5">
+                  <span className="text-xs text-muted-foreground">{desc}</span>
+                  <kbd className="px-2 py-0.5 rounded bg-foreground/[0.06] text-[11px] font-mono text-foreground border border-border">
+                    {key}
+                  </kbd>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-end px-5 py-3 border-t border-border">
+              <button
+                onClick={() => setShowShortcutsDialog(false)}
+                className="px-4 py-2 rounded-lg text-xs font-medium text-foreground bg-foreground/[0.06] hover:bg-foreground/[0.1] transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
