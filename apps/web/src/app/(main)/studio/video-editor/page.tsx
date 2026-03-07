@@ -132,6 +132,26 @@ function formatTimecode(seconds: number): string {
 // ---------------------------------------------------------------------------
 
 export default function VideoEditorPage() {
+  // Editor container height — measure dynamically to fill viewport
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+  const [editorHeight, setEditorHeight] = useState("calc(100dvh - 100px)");
+
+  useEffect(() => {
+    const measure = () => {
+      if (editorContainerRef.current) {
+        const top = editorContainerRef.current.getBoundingClientRect().top;
+        setEditorHeight(`${window.innerHeight - top}px`);
+      }
+    };
+    // Measure after initial paint
+    const id = requestAnimationFrame(measure);
+    window.addEventListener("resize", measure);
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+
   // Panel visibility
   const [showLeftPanel, setShowLeftPanel] = useState(true);
   const [showRightPanel, setShowRightPanel] = useState(true);
@@ -908,7 +928,7 @@ export default function VideoEditorPage() {
   });
 
   return (
-    <div className="flex flex-col h-[calc(100vh-10rem)] -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 overflow-hidden">
+    <div ref={editorContainerRef} className="flex flex-col -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 -mb-40 overflow-hidden" style={{ height: editorHeight }}>
       {/* ================================================================= */}
       {/* Top Toolbar                                                       */}
       {/* ================================================================= */}
@@ -1247,7 +1267,7 @@ export default function VideoEditorPage() {
         {/* ============================================================= */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Preview Monitor */}
-          <div className="flex-1 min-h-0 flex flex-col bg-black/40">
+          <div className="flex-1 flex flex-col bg-black/40" style={{ minHeight: "220px" }}>
             {/* Video Preview Area — ALWAYS clickable for play/pause */}
             <div
               className="flex-1 flex items-center justify-center relative cursor-pointer overflow-hidden min-h-0"
@@ -1277,32 +1297,32 @@ export default function VideoEditorPage() {
                   <>
                     <div className="absolute inset-0 bg-gradient-to-br from-[#7401df]/20 via-black/60 to-[#74ddc7]/10 pointer-events-none" />
                     <div className="relative z-10 text-center" onClick={(e) => e.stopPropagation()}>
-                      <Film className="h-10 w-10 text-white/20 mx-auto mb-3" />
-                      <p className="text-sm font-medium text-white/60 mb-1">Get Started</p>
-                      <p className="text-[11px] text-white/30 mb-5 max-w-xs mx-auto">
+                      <Film className="h-8 w-8 text-white/20 mx-auto mb-1.5" />
+                      <p className="text-sm font-medium text-white/60 mb-0.5">Get Started</p>
+                      <p className="text-[10px] text-white/30 mb-3 max-w-xs mx-auto">
                         Import a file, record your webcam, or capture your screen
                       </p>
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-2 flex-wrap">
                         <button
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); fileInputRef.current?.click(); }}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition-colors active:scale-95"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition-colors active:scale-95"
                         >
-                          <ImagePlus className="h-3.5 w-3.5" />
-                          Import File
+                          <ImagePlus className="h-3 w-3" />
+                          Import
                         </button>
                         <button
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); openRecordModal("webcam"); }}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-[#74ddc7] bg-[#74ddc7]/15 hover:bg-[#74ddc7]/25 border border-[#74ddc7]/30 transition-colors active:scale-95"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-[#74ddc7] bg-[#74ddc7]/15 hover:bg-[#74ddc7]/25 border border-[#74ddc7]/30 transition-colors active:scale-95"
                         >
-                          <Camera className="h-3.5 w-3.5" />
-                          Record Webcam
+                          <Camera className="h-3 w-3" />
+                          Webcam
                         </button>
                         <button
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); openRecordModal("screen"); }}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-[#7401df] bg-[#7401df]/15 hover:bg-[#7401df]/25 border border-[#7401df]/30 transition-colors active:scale-95"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-[#7401df] bg-[#7401df]/15 hover:bg-[#7401df]/25 border border-[#7401df]/30 transition-colors active:scale-95"
                         >
-                          <Monitor className="h-3.5 w-3.5" />
-                          Record Screen
+                          <Monitor className="h-3 w-3" />
+                          Screen
                         </button>
                       </div>
                     </div>
@@ -1481,7 +1501,7 @@ export default function VideoEditorPage() {
             </div>
 
             {/* Transport Controls */}
-            <div className="flex items-center justify-center gap-3 py-2 border-t border-border/50 bg-card/80 backdrop-blur-sm shrink-0 z-10 relative">
+            <div className="flex items-center justify-center gap-3 py-1.5 border-t border-border/50 bg-card/80 backdrop-blur-sm shrink-0 z-10 relative">
               <div className="flex items-center gap-1">
                 <button
                   className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors active:scale-90"
@@ -1575,8 +1595,8 @@ export default function VideoEditorPage() {
           {/* ============================================================= */}
           {showBottomPanel && (
             <div
-              className="border-t border-border bg-card/50 shrink-0 flex flex-col"
-              style={{ height: "200px" }}
+              className="border-t border-border bg-card/50 shrink flex flex-col"
+              style={{ height: "clamp(100px, 25vh, 200px)" }}
             >
               {/* Timeline Toolbar */}
               <div className="flex items-center justify-between px-2 py-1 border-b border-border shrink-0">

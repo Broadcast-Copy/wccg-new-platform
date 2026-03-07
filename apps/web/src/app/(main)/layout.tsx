@@ -403,8 +403,12 @@ export default function MainLayout({
         </div>
       </footer>
 
-      {/* Bottom Tab Bar — iHeartRadio-inspired, fixed */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-xl">
+      {/* Bottom Tab Bar — iHeartRadio-inspired, fixed (hidden on studio editor pages) */}
+      <nav className={`fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-xl ${
+        pathname.startsWith("/studio/video-editor") || pathname.startsWith("/studio/podcast") || pathname.startsWith("/studio/audio-editor")
+          ? "hidden"
+          : ""
+      }`}>
         <div className="flex items-center justify-around h-14 max-w-lg mx-auto">
           {bottomTabs.map((tab) => {
             const isActive =
