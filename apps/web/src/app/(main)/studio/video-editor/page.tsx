@@ -44,6 +44,7 @@ import {
   Video,
   RefreshCw,
   Keyboard,
+  ClipboardPaste,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -228,12 +229,15 @@ export default function VideoEditorPage() {
   const [textAlign, setTextAlign] = useState("Center");
   const [textBgEnabled, setTextBgEnabled] = useState(false);
 
-  // Context menu state (right-click on timeline clips)
+  // Context menu state (right-click on timeline clips or empty area)
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
-    clipId: string;
+    clipId: string | null;
   } | null>(null);
+
+  // Clipboard for Cut/Copy/Paste
+  const [clipboard, setClipboard] = useState<TimelineClip | null>(null);
 
   // Settings dialog state
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
@@ -769,12 +773,64 @@ export default function VideoEditorPage() {
     [timelineClips, showStatus]
   );
 
+  // Cut — remove clip and store in clipboard
+  const cutClip = useCallback(
+    (clipId: string) => {
+      const clip = timelineClips.find((c) => c.id === clipId);
+      if (!clip) return;
+      setClipboard({ ...clip });
+      setTimelineClips((prev) => prev.filter((c) => c.id !== clipId));
+      if (selectedClipId === clipId) setSelectedClipId(null);
+      showStatus(`Cut "${clip.name}"`);
+    },
+    [timelineClips, selectedClipId, showStatus]
+  );
+
+  // Copy — store clip in clipboard
+  const copyClip = useCallback(
+    (clipId: string) => {
+      const clip = timelineClips.find((c) => c.id === clipId);
+      if (!clip) return;
+      setClipboard({ ...clip });
+      showStatus(`Copied "${clip.name}"`);
+    },
+    [timelineClips, showStatus]
+  );
+
+  // Paste — paste clip from clipboard at playhead
+  const pasteClip = useCallback(() => {
+    if (!clipboard) {
+      showStatus("Nothing to paste");
+      return;
+    }
+    const newClip: TimelineClip = {
+      ...clipboard,
+      id: `tc-${Date.now()}`,
+      name: clipboard.name.endsWith("_copy") ? clipboard.name : `${clipboard.name}_copy`,
+      start: Math.max(0, Math.min(playheadPosition, 90)),
+    };
+    setTimelineClips((prev) => [...prev, newClip]);
+    setSelectedClipId(newClip.id);
+    showStatus(`Pasted "${clipboard.name}" at playhead`);
+  }, [clipboard, playheadPosition, showStatus]);
+
+  // Right-click handler for timeline clips
   const handleContextMenu = useCallback(
     (e: React.MouseEvent, clipId: string) => {
       e.preventDefault();
       e.stopPropagation();
       setSelectedClipId(clipId);
       setContextMenu({ x: e.clientX, y: e.clientY, clipId });
+    },
+    []
+  );
+
+  // Right-click handler for empty timeline area
+  const handleTimelineContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setContextMenu({ x: e.clientX, y: e.clientY, clipId: null });
     },
     []
   );
@@ -883,7 +939,18 @@ export default function VideoEditorPage() {
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
 
-      if (e.key === "Delete" || e.key === "Backspace") {
+      const mod = e.ctrlKey || e.metaKey;
+
+      if (mod && (e.key === "x" || e.key === "X")) {
+        e.preventDefault();
+        if (selectedClipId) cutClip(selectedClipId);
+      } else if (mod && (e.key === "c" || e.key === "C")) {
+        e.preventDefault();
+        if (selectedClipId) copyClip(selectedClipId);
+      } else if (mod && (e.key === "v" || e.key === "V")) {
+        e.preventDefault();
+        pasteClip();
+      } else if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
         if (selectedClipId) {
           const clip = timelineClips.find((c) => c.id === selectedClipId);
@@ -897,7 +964,7 @@ export default function VideoEditorPage() {
         e.preventDefault();
         togglePlay();
       } else if (e.key === "s" || e.key === "S") {
-        if (!e.ctrlKey && !e.metaKey) {
+        if (!mod) {
           e.preventDefault();
           splitClip();
         }
@@ -908,7 +975,7 @@ export default function VideoEditorPage() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedClipId, timelineClips, showStatus, togglePlay, splitClip, addMarker]);
+  }, [selectedClipId, timelineClips, showStatus, togglePlay, splitClip, addMarker, cutClip, copyClip, pasteClip]);
 
   const selectedClip = timelineClips.find((c) => c.id === selectedClipId);
 
@@ -928,7 +995,7 @@ export default function VideoEditorPage() {
   });
 
   return (
-    <div ref={editorContainerRef} className="flex flex-col -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 -mb-40 overflow-hidden" style={{ height: editorHeight }}>
+    <div ref={editorContainerRef} className="flex flex-col -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 -mb-40 overflow-hidden" style={{ height: editorHeight }} onContextMenu={(e) => e.preventDefault()}>
       {/* ================================================================= */}
       {/* Top Toolbar                                                       */}
       {/* ================================================================= */}
@@ -1681,6 +1748,7 @@ export default function VideoEditorPage() {
                 {/* Timeline Tracks Area */}
                 <div
                   className="flex-1 overflow-x-auto overflow-y-hidden relative"
+                  onContextMenu={handleTimelineContextMenu}
                   onClick={(e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
                     const pct =
@@ -2126,75 +2194,125 @@ export default function VideoEditorPage() {
       </div>
 
       {/* ================================================================= */}
-      {/* Context Menu (right-click on timeline clips)                      */}
+      {/* Context Menu (right-click on timeline)                            */}
       {/* ================================================================= */}
       {contextMenu && (() => {
-        const ctxClip = timelineClips.find((c) => c.id === contextMenu.clipId);
-        if (!ctxClip) return null;
-        const otherTracks = TRACKS.filter((t) => t !== ctxClip.track);
+        const ctxClip = contextMenu.clipId ? timelineClips.find((c) => c.id === contextMenu.clipId) : null;
         return (
           <div
-            className="fixed z-[100] min-w-[180px] py-1 rounded-lg border border-border bg-card shadow-2xl backdrop-blur-sm"
+            className="fixed z-[100] min-w-[200px] py-1 rounded-lg border border-border bg-card shadow-2xl backdrop-blur-sm"
             style={{ left: contextMenu.x, top: contextMenu.y }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border mb-1">
-              {ctxClip.name}
-            </div>
-            <button
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-foreground/[0.06] transition-colors"
-              onClick={() => { splitClip(); setContextMenu(null); }}
-            >
-              <Scissors className="h-3 w-3 text-[#74ddc7]" />
-              Split at Playhead
-            </button>
-            <button
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-foreground/[0.06] transition-colors"
-              onClick={() => { duplicateClip(contextMenu.clipId); setContextMenu(null); }}
-            >
-              <Copy className="h-3 w-3 text-[#7401df]" />
-              Duplicate
-            </button>
-            <div className="h-px bg-border my-1" />
-            <div className="px-3 py-1 text-[10px] text-muted-foreground/60 uppercase tracking-wider">
-              Move to Track
-            </div>
-            {otherTracks.map((track) => (
+            {/* Clip-specific header */}
+            {ctxClip && (
+              <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border mb-1">
+                {ctxClip.name}
+              </div>
+            )}
+            {!ctxClip && (
+              <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border mb-1">
+                Timeline
+              </div>
+            )}
+
+            {/* Cut — only when a clip is selected */}
+            {ctxClip && (
               <button
-                key={track}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-foreground/[0.06] transition-colors"
-                onClick={() => { moveClipToTrack(contextMenu.clipId, track); setContextMenu(null); }}
+                className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-foreground hover:bg-foreground/[0.06] transition-colors"
+                onClick={() => { cutClip(contextMenu.clipId!); setContextMenu(null); }}
               >
-                <ArrowUpDown className="h-3 w-3 text-muted-foreground" />
-                {track}
+                <span className="flex items-center gap-2">
+                  <Scissors className="h-3 w-3 text-[#74ddc7]" />
+                  Cut
+                </span>
+                <kbd className="text-[10px] text-muted-foreground/60 font-mono">Ctrl+X</kbd>
               </button>
-            ))}
-            <div className="h-px bg-border my-1" />
+            )}
+
+            {/* Copy — only when a clip is selected */}
+            {ctxClip && (
+              <button
+                className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-foreground hover:bg-foreground/[0.06] transition-colors"
+                onClick={() => { copyClip(contextMenu.clipId!); setContextMenu(null); }}
+              >
+                <span className="flex items-center gap-2">
+                  <Copy className="h-3 w-3 text-[#7401df]" />
+                  Copy
+                </span>
+                <kbd className="text-[10px] text-muted-foreground/60 font-mono">Ctrl+C</kbd>
+              </button>
+            )}
+
+            {/* Paste — always available if clipboard has content */}
             <button
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-foreground/[0.06] transition-colors"
-              onClick={() => {
-                setTimelineClips((prev) => prev.map((c) =>
-                  c.id === contextMenu.clipId ? { ...c, start: 0 } : c
-                ));
-                showStatus(`"${ctxClip.name}" snapped to start`);
-                setContextMenu(null);
-              }}
+              className={`w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors ${
+                clipboard ? "text-foreground hover:bg-foreground/[0.06]" : "text-muted-foreground/40 cursor-not-allowed"
+              }`}
+              onClick={() => { if (clipboard) { pasteClip(); setContextMenu(null); } }}
+              disabled={!clipboard}
             >
-              <SkipBack className="h-3 w-3 text-muted-foreground" />
-              Snap to Start
+              <span className="flex items-center gap-2">
+                <ClipboardPaste className="h-3 w-3" />
+                Paste
+              </span>
+              <kbd className="text-[10px] text-muted-foreground/60 font-mono">Ctrl+V</kbd>
             </button>
-            <button
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/10 transition-colors"
-              onClick={() => {
-                setTimelineClips((prev) => prev.filter((c) => c.id !== contextMenu.clipId));
-                if (selectedClipId === contextMenu.clipId) setSelectedClipId(null);
-                showStatus(`Deleted "${ctxClip.name}"`);
-                setContextMenu(null);
-              }}
-            >
-              <Trash2 className="h-3 w-3" />
-              Delete
-            </button>
+
+            {ctxClip && <div className="h-px bg-border my-1" />}
+
+            {/* Slice (Split at Playhead) — only when a clip is selected */}
+            {ctxClip && (
+              <button
+                className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-foreground hover:bg-foreground/[0.06] transition-colors"
+                onClick={() => { splitClip(); setContextMenu(null); }}
+              >
+                <span className="flex items-center gap-2">
+                  <Scissors className="h-3 w-3 text-amber-400" />
+                  Slice at Playhead
+                </span>
+                <kbd className="text-[10px] text-muted-foreground/60 font-mono">S</kbd>
+              </button>
+            )}
+
+            {/* Delete — only when a clip is selected */}
+            {ctxClip && (
+              <>
+                <div className="h-px bg-border my-1" />
+                <button
+                  className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+                  onClick={() => {
+                    setTimelineClips((prev) => prev.filter((c) => c.id !== contextMenu.clipId));
+                    if (selectedClipId === contextMenu.clipId) setSelectedClipId(null);
+                    showStatus(`Deleted "${ctxClip.name}"`);
+                    setContextMenu(null);
+                  }}
+                >
+                  <span className="flex items-center gap-2">
+                    <Trash2 className="h-3 w-3" />
+                    Delete
+                  </span>
+                  <kbd className="text-[10px] text-muted-foreground/60 font-mono">Del</kbd>
+                </button>
+              </>
+            )}
+
+            {/* Non-clip menu extras */}
+            {!ctxClip && (
+              <>
+                <div className="h-px bg-border my-1" />
+                <button
+                  className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-foreground hover:bg-foreground/[0.06] transition-colors"
+                  onClick={() => { addMarker(); setContextMenu(null); }}
+                >
+                  <span className="flex items-center gap-2">
+                    <Plus className="h-3 w-3 text-amber-400" />
+                    Add Marker
+                  </span>
+                  <kbd className="text-[10px] text-muted-foreground/60 font-mono">M</kbd>
+                </button>
+              </>
+            )}
           </div>
         );
       })()}
@@ -2369,10 +2487,13 @@ export default function VideoEditorPage() {
             <div className="p-5 space-y-2">
               {[
                 ["Space", "Play / Pause"],
-                ["S", "Split clip at playhead"],
+                ["Ctrl+X", "Cut selected clip"],
+                ["Ctrl+C", "Copy selected clip"],
+                ["Ctrl+V", "Paste clip at playhead"],
+                ["S", "Slice (split) at playhead"],
                 ["Delete / Backspace", "Delete selected clip"],
                 ["M", "Add marker at playhead"],
-                ["Scroll", "Zoom timeline (with cursor)"],
+                ["Right-click", "Context menu (timeline)"],
               ].map(([key, desc]) => (
                 <div key={key} className="flex items-center justify-between py-1.5">
                   <span className="text-xs text-muted-foreground">{desc}</span>
