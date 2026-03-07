@@ -45,6 +45,9 @@ import {
   RefreshCw,
   Keyboard,
   ClipboardPaste,
+  Download,
+  Save,
+  HardDrive,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -62,6 +65,8 @@ interface MediaItem {
   durationSecs?: number;
   thumbnail: string;
   thumbnailUrl?: string;
+  blobUrl?: string; // for download/save
+  fileSize?: number; // bytes
 }
 
 interface EffectItem {
@@ -110,6 +115,10 @@ const MOCK_EFFECTS: EffectItem[] = [
 const INITIAL_TIMELINE_CLIPS: TimelineClip[] = [];
 
 const TRACKS = ["V2", "V1", "A1", "A2"];
+
+// Recording limits
+const MAX_RECORD_SECONDS = 300; // 5 minutes
+const MAX_STORAGE_MB = 500; // 500 MB local storage limit
 
 const TRACK_COLORS: Record<string, string> = {
   V2: "bg-[#74ddc7]/50",
@@ -400,6 +409,9 @@ export default function VideoEditorPage() {
         showStatus(`Imported image: ${file.name}`);
       }
 
+      // Create a persistent blob URL for download/save
+      const fileBlobUrl = URL.createObjectURL(file);
+
       // Add to media bin — duration & thumbnail updated with real data once loaded
       const newItem: MediaItem = {
         id: `imported-${Date.now()}`,
@@ -408,6 +420,8 @@ export default function VideoEditorPage() {
         duration: isImage ? "image" : "loading...",
         durationSecs: isImage ? 5 : undefined,
         thumbnail: type === "video" ? "bg-[#74ddc7]/30" : type === "audio" ? "bg-pink-500/30" : "bg-emerald-500/30",
+        blobUrl: fileBlobUrl,
+        fileSize: file.size,
       };
       setImportedMedia((prev) => [...prev, newItem]);
 
@@ -559,7 +573,12 @@ export default function VideoEditorPage() {
         ? "video/webm;codecs=vp8,opus"
         : "video/webm";
 
-      const recorder = new MediaRecorder(mediaStreamRef.current, { mimeType });
+      // Cap bitrate to prevent memory bloat & browser freeze
+      const recorder = new MediaRecorder(mediaStreamRef.current, {
+        mimeType,
+        videoBitsPerSecond: 2_500_000, // 2.5 Mbps
+        audioBitsPerSecond: 128_000,   // 128 kbps
+      });
       mediaRecorderRef.current = recorder;
       recordChunksRef.current = [];
 
@@ -568,29 +587,133 @@ export default function VideoEditorPage() {
       };
 
       recorder.onstop = () => {
-        const blob = new Blob(recordChunksRef.current, { type: "video/webm" });
-        const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-        const fileName = `${recordMode}-recording-${timestamp}.webm`;
-        const file = new File([blob], fileName, { type: "video/webm" });
-        loadMediaFile(file);
+        // Defer blob creation to avoid blocking main thread
+        setTimeout(() => {
+          try {
+            const blob = new Blob(recordChunksRef.current, { type: "video/webm" });
+            const blobUrl = URL.createObjectURL(blob);
+            const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+            const fileName = `${recordMode}-recording-${timestamp}.webm`;
+            const sizeMB = (blob.size / (1024 * 1024)).toFixed(1);
+
+            // Add to media bin with blob URL for download
+            const newItem: MediaItem = {
+              id: `imported-${Date.now()}`,
+              name: fileName,
+              type: "video",
+              duration: "loading...",
+              thumbnail: "bg-[#74ddc7]/30",
+              blobUrl,
+              fileSize: blob.size,
+            };
+            setImportedMedia((prev) => [...prev, newItem]);
+
+            // Add clip to timeline
+            const newClip: TimelineClip = {
+              id: `tc-${Date.now()}`,
+              name: fileName.replace(/\.\w+$/, ""),
+              track: "V1",
+              start: 0,
+              width: 15,
+              color: TRACK_COLORS.V1 || "bg-gray-500/40",
+            };
+            setTimelineClips((prev) => [...prev, newClip]);
+            setSelectedClipId(newClip.id);
+
+            // Load into video player (deferred to avoid freeze)
+            if (videoRef.current) {
+              if (videoUrlRef.current) URL.revokeObjectURL(videoUrlRef.current);
+              videoUrlRef.current = blobUrl;
+              const vid = videoRef.current;
+              vid.src = blobUrl;
+              vid.load();
+              vid.onloadedmetadata = () => {
+                const dur = vid.duration || 0;
+                const newTotalDur = Math.max(dur * 1.2, 60);
+                setTotalDuration(newTotalDur);
+                setCurrentTime(0);
+                setPlayheadPosition(0);
+                setHasVideo(true);
+
+                const mins = Math.floor(dur / 60);
+                const secs = Math.floor(dur % 60);
+                const durationStr = `${mins}:${String(secs).padStart(2, "0")}`;
+
+                // Update media item with real data
+                setImportedMedia((prev) =>
+                  prev.map((m) =>
+                    m.id === newItem.id
+                      ? { ...m, duration: `${durationStr} (${sizeMB} MB)`, durationSecs: dur }
+                      : m
+                  )
+                );
+
+                // Update clip width from real duration
+                const clipW = Math.max(5, Math.min(95, (dur / newTotalDur) * 100));
+                setTimelineClips((prev) =>
+                  prev.map((c) => c.id === newClip.id ? { ...c, width: clipW } : c)
+                );
+
+                // Capture thumbnail from first frame (no auto-play to avoid freeze)
+                vid.currentTime = 0.5;
+                vid.onseeked = () => {
+                  try {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = 160;
+                    canvas.height = 90;
+                    const ctx = canvas.getContext("2d");
+                    if (ctx && vid.videoWidth > 0) {
+                      ctx.drawImage(vid, 0, 0, 160, 90);
+                      const thumbUrl = canvas.toDataURL("image/jpeg", 0.5);
+                      setImportedMedia((prev) =>
+                        prev.map((m) => m.id === newItem.id ? { ...m, thumbnailUrl: thumbUrl } : m)
+                      );
+                    }
+                  } catch (_e) { /* ignore */ }
+                  vid.onseeked = null;
+                  vid.currentTime = 0;
+                };
+              };
+            }
+
+            showStatus(`Recording saved: ${fileName} (${sizeMB} MB)`);
+          } catch (err) {
+            console.error("[VideoEditor] Error saving recording:", err);
+            showStatus("Error saving recording");
+          }
+          // Free chunk memory
+          recordChunksRef.current = [];
+        }, 100);
+
         cleanupRecording();
-        showStatus(`Recording saved: ${fileName}`);
       };
 
-      recorder.start(250);
+      // 1 second timeslice — reduces memory pressure vs 250ms
+      recorder.start(1000);
       setIsRecordingVideo(true);
       setRecordingElapsed(0);
-      showStatus("Recording...");
+      showStatus(`Recording... (max ${Math.floor(MAX_RECORD_SECONDS / 60)} min)`);
 
+      // Timer with auto-stop at limit
       recordTimerRef.current = setInterval(() => {
-        setRecordingElapsed((prev) => prev + 1);
+        setRecordingElapsed((prev) => {
+          const next = prev + 1;
+          if (next >= MAX_RECORD_SECONDS) {
+            // Auto-stop at limit
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+              mediaRecorderRef.current.stop();
+            }
+            showStatus(`Recording auto-stopped at ${Math.floor(MAX_RECORD_SECONDS / 60)} min limit`);
+          }
+          return next;
+        });
       }, 1000);
     } catch (err) {
       console.error("[VideoEditor] MediaRecorder error:", err);
       setRecordError("Failed to start recording. Your browser may not support WebM recording.");
       showStatus("Recording failed — browser may not support WebM");
     }
-  }, [recordMode, loadMediaFile, showStatus, cleanupRecording]);
+  }, [recordMode, showStatus, cleanupRecording]);
 
   // Format recording elapsed as MM:SS
   const formatRecordTime = (secs: number) => {
@@ -669,6 +792,74 @@ export default function VideoEditorPage() {
       showStatus("Playing");
     }
   }, [isPlaying, showStatus]);
+
+  // Download a media item to local disk
+  const downloadMedia = useCallback((item: MediaItem) => {
+    if (!item.blobUrl) {
+      showStatus("No file data to download");
+      return;
+    }
+    const a = document.createElement("a");
+    a.href = item.blobUrl;
+    a.download = item.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showStatus(`Downloading: ${item.name}`);
+  }, [showStatus]);
+
+  // Save project metadata to localStorage
+  const saveProjectLocal = useCallback(() => {
+    try {
+      const projectData = {
+        version: 1,
+        savedAt: new Date().toISOString(),
+        clips: timelineClips,
+        markers,
+        appliedEffects: Array.from(appliedEffects),
+        totalDuration,
+        media: importedMedia.map((m) => ({
+          id: m.id,
+          name: m.name,
+          type: m.type,
+          duration: m.duration,
+          durationSecs: m.durationSecs,
+          fileSize: m.fileSize,
+        })),
+      };
+      const json = JSON.stringify(projectData);
+      const sizeMB = (json.length / (1024 * 1024)).toFixed(2);
+      if (json.length > 5 * 1024 * 1024) {
+        showStatus(`Project too large for local save (${sizeMB} MB). Download recordings first.`);
+        return;
+      }
+      localStorage.setItem("wccg-video-project", json);
+      showStatus(`Project saved locally (${sizeMB} MB) — media files must be downloaded separately`);
+    } catch (err) {
+      console.error("[VideoEditor] Save error:", err);
+      showStatus("Failed to save project — storage may be full");
+    }
+  }, [timelineClips, markers, appliedEffects, totalDuration, importedMedia, showStatus]);
+
+  // Load project from localStorage
+  const loadProjectLocal = useCallback(() => {
+    try {
+      const json = localStorage.getItem("wccg-video-project");
+      if (!json) {
+        showStatus("No saved project found");
+        return;
+      }
+      const data = JSON.parse(json);
+      if (data.clips) setTimelineClips(data.clips);
+      if (data.markers) setMarkers(data.markers);
+      if (data.appliedEffects) setAppliedEffects(new Set(data.appliedEffects));
+      if (data.totalDuration) setTotalDuration(data.totalDuration);
+      showStatus(`Project loaded (saved ${new Date(data.savedAt).toLocaleString()})`);
+    } catch (err) {
+      console.error("[VideoEditor] Load error:", err);
+      showStatus("Failed to load project");
+    }
+  }, [showStatus]);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -1147,6 +1338,21 @@ export default function VideoEditorPage() {
         {/* Right: Actions */}
         <div className="flex items-center gap-1">
           <button
+            onClick={saveProjectLocal}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-[#74ddc7] hover:bg-[#74ddc7]/10 transition-colors"
+            title="Save project locally"
+          >
+            <Save className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={loadProjectLocal}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
+            title="Load saved project"
+          >
+            <HardDrive className="h-3.5 w-3.5" />
+          </button>
+          <div className="h-4 w-px bg-border mx-0.5" />
+          <button
             onClick={openSettings}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
             title="Settings"
@@ -1335,6 +1541,18 @@ export default function VideoEditorPage() {
                         >
                           <Plus className="h-3 w-3" />
                         </button>
+                        {item.blobUrl && (
+                          <button
+                            className="opacity-0 group-hover:opacity-100 p-0.5 text-blue-400 hover:text-blue-300 transition-all"
+                            title={`Download ${item.name}${item.fileSize ? ` (${(item.fileSize / (1024 * 1024)).toFixed(1)} MB)` : ""}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadMedia(item);
+                            }}
+                          >
+                            <Download className="h-3 w-3" />
+                          </button>
+                        )}
                         <button
                           className="opacity-0 group-hover:opacity-100 p-0.5 text-muted-foreground hover:text-red-400 transition-all"
                           title="Remove from media bin & timeline"
@@ -1582,6 +1800,9 @@ export default function VideoEditorPage() {
                             <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
                             <span className="text-xs font-mono text-red-400 font-semibold">
                               REC {formatRecordTime(recordingElapsed)}
+                            </span>
+                            <span className="text-[10px] font-mono text-white/40">
+                              / {formatRecordTime(MAX_RECORD_SECONDS)}
                             </span>
                           </div>
                         )}
