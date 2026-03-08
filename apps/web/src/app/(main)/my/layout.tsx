@@ -40,8 +40,8 @@ const sidebarItems = [
   { href: "/my/history", label: "Listening History", icon: Clock, dividerAfter: true },
   { href: "/my/events", label: "My Events", icon: CalendarDays },
   { href: "/my/directory", label: "My Listings", icon: Building2 },
-  { href: "/my/studio", label: "My Studio", icon: Clapperboard },
-  { href: "/my/mixes", label: "My Media", icon: FolderOpen },
+  { href: "/my/studio", label: "Broadcast Studio", icon: Clapperboard },
+  { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
 ];
 
 function SidebarContent({ pathname }: { pathname: string }) {
@@ -152,6 +152,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
                 { href: "/my/sales", label: "Sales Dashboard", icon: DollarSign },
                 { href: "/my/sales/campaign-builder", label: "Campaign Builder", icon: Megaphone },
                 { href: "/my/sales/invoices", label: "Invoices", icon: Receipt },
+                { href: "/my/admin/campaigns", label: "My Campaigns", icon: Briefcase },
               ].map((item) => {
                 const isActive =
                   pathname === item.href ||

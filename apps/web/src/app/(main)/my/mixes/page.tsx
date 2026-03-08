@@ -1176,7 +1176,7 @@ export default function MediaManagerPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <FolderOpen className="h-6 w-6 text-[#74ddc7]" />
-            My Media Manager
+            Media Manager
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Organize audio files, mixes, commercials, and production assets.

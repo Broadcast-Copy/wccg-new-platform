@@ -15,6 +15,7 @@ import {
   Settings,
   ExternalLink,
   Lock,
+  ScrollText,
   Briefcase,
   FileAudio,
   Palette,
@@ -70,6 +71,7 @@ const defaultModules: AdminModule[] = [
   { icon: Music, title: "Shows & Programming", description: "Manage show listings, host assignments, and schedules.", href: "/shows", color: "from-[#7401df] to-[#4c1d95]" },
   { icon: BarChart3, title: "Analytics", description: "Listener metrics, stream stats, and engagement data.", href: "/my/admin", color: "from-[#f59e0b] to-[#d97706]" },
   { icon: Settings, title: "Platform Settings", description: "Site configuration, branding, and system preferences.", href: "/my/admin", color: "from-[#8b5cf6] to-[#6d28d9]" },
+  { icon: ScrollText, title: "Platform Changelog", description: "Version history and updates across all platform tools.", href: "/my/admin/changelog", color: "from-[#74ddc7] to-[#0d9488]" },
 ];
 
 const salesModules: AdminModule[] = [
