@@ -348,51 +348,56 @@ function WaveformDisplay({
     }
   }, [currentTime, duration, isPlaying, isRecording, waveformData, selectionStart, selectionEnd]);
 
-  // Convert mouse event to time
-  const timeFromMouse = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
+  // Convert clientX pixel to time using the container's rect
+  const getTimeFromX = useCallback((clientX: number) => {
+    const container = containerRef.current;
+    if (!container || duration <= 0) return 0;
+    const rect = container.getBoundingClientRect();
+    const x = clientX - rect.left;
     return Math.max(0, Math.min(duration, (x / rect.width) * duration));
-  };
+  }, [duration]);
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+  // Pointer events with setPointerCapture — drag continues even outside element
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (duration <= 0 || isRecording) return;
     e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
     isDraggingRef.current = true;
-    const t = timeFromMouse(e);
     dragStartXRef.current = e.clientX;
+    const t = getTimeFromX(e.clientX);
     dragStartTimeRef.current = t;
     onSelectionChange(t, t);
-  };
+  }, [duration, isRecording, getTimeFromX, onSelectionChange]);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDraggingRef.current || duration <= 0) return;
-    const t = timeFromMouse(e);
+    const t = getTimeFromX(e.clientX);
     onSelectionChange(dragStartTimeRef.current, t);
-  };
+  }, [duration, getTimeFromX, onSelectionChange]);
 
-  const handleMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDraggingRef.current) return;
     isDraggingRef.current = false;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
     const distance = Math.abs(e.clientX - dragStartXRef.current);
     if (distance < 5) {
       // Click, not drag — seek and clear selection
       onSelectionChange(null, null);
-      const t = timeFromMouse(e);
+      const t = getTimeFromX(e.clientX);
       onSeek(t);
     }
-  };
+  }, [getTimeFromX, onSelectionChange, onSeek]);
 
   return (
     <div
       ref={containerRef}
       className="w-full h-full cursor-crosshair relative select-none"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={() => { isDraggingRef.current = false; }}
+      style={{ touchAction: "none" }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
     >
-      <canvas ref={canvasRef} className="w-full h-full" />
+      <canvas ref={canvasRef} className="w-full h-full pointer-events-none" />
     </div>
   );
 }
@@ -1874,7 +1879,16 @@ export default function AudioEditorPage() {
               {/* Panel Content */}
               <div className="h-[calc(100%-29px)] overflow-hidden">
                 {bottomPanel === "timeline" ? (
-                  <TimelinePanel currentTime={currentTime} duration={duration} />
+                  <TimelinePanel
+                    currentTime={currentTime}
+                    duration={duration}
+                    selectionStart={selectionStart}
+                    selectionEnd={selectionEnd}
+                    onSelectionChange={handleSelectionChange}
+                    onSeek={handleSeek}
+                    waveformData={waveformData}
+                    hasAudio={!!audioBufferRef.current}
+                  />
                 ) : (
                   <MixerPanel isMuted={isMuted} />
                 )}
@@ -1928,53 +1942,108 @@ export default function AudioEditorPage() {
 function TimelinePanel({
   currentTime,
   duration,
+  selectionStart,
+  selectionEnd,
+  onSelectionChange,
+  onSeek,
+  waveformData,
+  hasAudio,
 }: {
   currentTime: number;
   duration: number;
+  selectionStart: number | null;
+  selectionEnd: number | null;
+  onSelectionChange: (start: number | null, end: number | null) => void;
+  onSeek: (time: number) => void;
+  waveformData: number[] | null;
+  hasAudio: boolean;
 }) {
-  const tracks = [
-    { id: 1, name: "Track 1", color: "#74ddc7", hasClip: true, clipStart: 0, clipEnd: 0.6 },
-    { id: 2, name: "Track 2", color: "#7401df", hasClip: true, clipStart: 0.15, clipEnd: 0.45 },
-    { id: 3, name: "Track 3", color: "#ec4899", hasClip: false, clipStart: 0, clipEnd: 0 },
-    { id: 4, name: "Track 4", color: "#f59e0b", hasClip: false, clipStart: 0, clipEnd: 0 },
-  ];
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartTimeRef = useRef(0);
 
   const playheadPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  // Selection percent range
+  let selPctStart = -1, selPctEnd = -1;
+  if (selectionStart != null && selectionEnd != null && duration > 0) {
+    const s0 = Math.min(selectionStart, selectionEnd);
+    const s1 = Math.max(selectionStart, selectionEnd);
+    if (s1 - s0 > 0.001) {
+      selPctStart = (s0 / duration) * 100;
+      selPctEnd = (s1 / duration) * 100;
+    }
+  }
+
+  const getTimeFromX = useCallback((clientX: number) => {
+    const el = timelineRef.current;
+    if (!el || duration <= 0) return 0;
+    const rect = el.getBoundingClientRect();
+    const x = clientX - rect.left;
+    return Math.max(0, Math.min(duration, (x / rect.width) * duration));
+  }, [duration]);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (duration <= 0) return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    isDraggingRef.current = true;
+    dragStartXRef.current = e.clientX;
+    const t = getTimeFromX(e.clientX);
+    dragStartTimeRef.current = t;
+    onSelectionChange(t, t);
+  }, [duration, getTimeFromX, onSelectionChange]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current || duration <= 0) return;
+    const t = getTimeFromX(e.clientX);
+    onSelectionChange(dragStartTimeRef.current, t);
+  }, [duration, getTimeFromX, onSelectionChange]);
+
+  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+    const distance = Math.abs(e.clientX - dragStartXRef.current);
+    if (distance < 5) {
+      onSelectionChange(null, null);
+      onSeek(getTimeFromX(e.clientX));
+    }
+  }, [getTimeFromX, onSelectionChange, onSeek]);
 
   return (
     <div className="flex h-full">
       {/* Track headers */}
       <div className="w-32 border-r border-border shrink-0 bg-card/30">
-        {/* Ruler header */}
         <div className="h-6 border-b border-border px-2 flex items-center">
           <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">Tracks</span>
         </div>
-        {tracks.map((track) => (
-          <div
-            key={track.id}
-            className="h-12 border-b border-border px-2 flex items-center gap-2 group hover:bg-foreground/[0.02]"
-          >
-            <div
-              className="w-2 h-2 rounded-full shrink-0"
-              style={{ backgroundColor: track.color }}
-            />
-            <span className="text-[10px] text-foreground truncate">{track.name}</span>
-            <div className="ml-auto flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button className="text-[8px] px-1 py-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06]">
-                M
-              </button>
-              <button className="text-[8px] px-1 py-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06]">
-                S
-              </button>
-            </div>
+        {/* Main audio track */}
+        <div className="h-12 border-b border-border px-2 flex items-center gap-2 group hover:bg-foreground/[0.02]">
+          <div className="w-2 h-2 rounded-full shrink-0 bg-[#74ddc7]" />
+          <span className="text-[10px] text-foreground truncate">Audio</span>
+        </div>
+        {/* Empty tracks */}
+        {[2, 3].map((id) => (
+          <div key={id} className="h-12 border-b border-border px-2 flex items-center gap-2 group hover:bg-foreground/[0.02]">
+            <div className="w-2 h-2 rounded-full shrink-0 bg-foreground/10" />
+            <span className="text-[10px] text-muted-foreground/40 truncate">Track {id}</span>
           </div>
         ))}
       </div>
 
-      {/* Timeline area */}
-      <div className="flex-1 relative overflow-x-auto">
+      {/* Timeline area — drag-to-select */}
+      <div
+        ref={timelineRef}
+        className="flex-1 relative overflow-x-auto cursor-crosshair select-none"
+        style={{ touchAction: "none" }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+      >
         {/* Time ruler */}
-        <div className="h-6 border-b border-border bg-card/20 relative">
+        <div className="h-6 border-b border-border bg-card/20 relative pointer-events-none">
           {Array.from({ length: 11 }).map((_, i) => {
             const t = (i / 10) * duration;
             return (
@@ -1992,36 +2061,62 @@ function TimelinePanel({
           })}
         </div>
 
-        {/* Track lanes */}
-        {tracks.map((track) => (
-          <div key={track.id} className="h-12 border-b border-border relative">
-            {track.hasClip && (
-              <div
-                className="absolute top-1 bottom-1 rounded-md border overflow-hidden"
-                style={{
-                  left: `${track.clipStart * 100}%`,
-                  width: `${(track.clipEnd - track.clipStart) * 100}%`,
-                  backgroundColor: `${track.color}15`,
-                  borderColor: `${track.color}30`,
-                }}
-              >
-                {/* Mini waveform in clip */}
-                <div className="flex items-center h-full px-1 gap-px">
-                  {Array.from({ length: 40 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="w-0.5 rounded-full shrink-0"
-                      style={{
-                        height: `${15 + Math.sin(i * 0.5) * 25 + Math.random() * 25}%`,
-                        backgroundColor: `${track.color}60`,
-                      }}
-                    />
-                  ))}
-                </div>
+        {/* Main audio track lane */}
+        <div className="h-12 border-b border-border relative">
+          {hasAudio && (
+            <div
+              className="absolute top-1 bottom-1 left-0 right-0 rounded-md border overflow-hidden pointer-events-none"
+              style={{ backgroundColor: "#74ddc715", borderColor: "#74ddc730" }}
+            >
+              {/* Mini waveform in clip from real data */}
+              <div className="flex items-center h-full px-0.5 gap-px">
+                {waveformData
+                  ? waveformData.filter((_, i) => i % Math.max(1, Math.floor(waveformData.length / 80)) === 0).slice(0, 80).map((v, i) => (
+                      <div
+                        key={i}
+                        className="w-0.5 rounded-full shrink-0"
+                        style={{
+                          height: `${Math.max(8, v * 90)}%`,
+                          backgroundColor: "#74ddc760",
+                        }}
+                      />
+                    ))
+                  : Array.from({ length: 40 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-0.5 rounded-full shrink-0 bg-[#74ddc7]/30"
+                        style={{ height: `${15 + Math.sin(i * 0.5) * 25}%` }}
+                      />
+                    ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Empty track lanes */}
+        {[2, 3].map((id) => (
+          <div key={id} className="h-12 border-b border-border relative">
+            {!hasAudio && id === 2 && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-[9px] text-muted-foreground/30">Drag to select on waveform or timeline</span>
               </div>
             )}
           </div>
         ))}
+
+        {/* Selection highlight overlay */}
+        {selPctStart >= 0 && selPctEnd > selPctStart && (
+          <div
+            className="absolute top-6 bottom-0 pointer-events-none z-[5]"
+            style={{
+              left: `${selPctStart}%`,
+              width: `${selPctEnd - selPctStart}%`,
+              backgroundColor: "rgba(116, 221, 199, 0.1)",
+              borderLeft: "1px dashed rgba(116, 221, 199, 0.5)",
+              borderRight: "1px dashed rgba(116, 221, 199, 0.5)",
+            }}
+          />
+        )}
 
         {/* Playhead */}
         <div
