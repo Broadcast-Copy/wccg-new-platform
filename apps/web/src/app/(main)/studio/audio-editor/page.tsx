@@ -37,6 +37,12 @@ import {
   Redo2,
 } from "lucide-react";
 import { LoginRequired } from "@/components/auth/login-required";
+import {
+  saveAudioFile as dbSave,
+  loadAllAudioFiles as dbLoadAll,
+  deleteAudioFileFromDB as dbDelete,
+  type StoredAudioFile,
+} from "@/lib/audio-store";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -338,6 +344,33 @@ export default function AudioEditorPage() {
   const recordChunksRef = useRef<Blob[]>([]);
   const recordingTimeRef = useRef(0);
 
+  // Live audio analysis (for recording visualization)
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const liveAudioCtxRef = useRef<AudioContext | null>(null);
+  const animFrameRef = useRef<number>(0);
+  const liveWaveformRef = useRef<number[]>([]);
+  const durationRef = useRef(180); // stays in sync with duration state
+
+  // ── Restore persisted files from IndexedDB on mount ──
+  useEffect(() => {
+    let cancelled = false;
+    dbLoadAll()
+      .then((stored) => {
+        if (cancelled || stored.length === 0) return;
+        const restored: AudioFile[] = stored.map((s) => ({
+          id: s.id,
+          name: s.name,
+          duration: s.duration,
+          size: s.size,
+          blobUrl: URL.createObjectURL(s.blob),
+        }));
+        setAudioFiles(restored);
+        console.log("[AudioEditor] Restored", restored.length, "files from IndexedDB");
+      })
+      .catch((err) => console.warn("[AudioEditor] Failed to load persisted files:", err));
+    return () => { cancelled = true; };
+  }, []);
+
   // Load audio file and decode waveform
   const loadAudioFile = useCallback(async (file: File) => {
     const fileId = `file-${Date.now()}`;
@@ -356,6 +389,11 @@ export default function AudioEditorPage() {
     // Auto-show library panel so user can see the new file
     setShowLeftPanel(true);
     setLeftPanel("library");
+
+    // Persist to IndexedDB so file survives page refresh
+    dbSave({ id: fileId, name: file.name, duration: "...", size: sizeStr, blob: file, createdAt: Date.now() })
+      .then(() => console.log("[AudioEditor] Persisted to IndexedDB:", file.name))
+      .catch((err) => console.warn("[AudioEditor] IndexedDB save failed:", err));
 
     // Phase 2: Create audio element for playback
     try {
@@ -382,7 +420,8 @@ export default function AudioEditorPage() {
         audioDuration = 0;
       }
 
-      setDuration(audioDuration || 0);
+      // Only update duration if we got a real value (don't overwrite recording timer duration with 0)
+      if (audioDuration > 0) setDuration(audioDuration);
       setCurrentTime(0);
 
       // Update file entry with duration from audio element
@@ -390,6 +429,10 @@ export default function AudioEditorPage() {
         ? `${Math.floor(audioDuration / 60)}:${String(Math.floor(audioDuration % 60)).padStart(2, "0")}`
         : "0:00";
       setAudioFiles((prev) => prev.map((f) => f.id === fileId ? { ...f, duration: durStr } : f));
+      // Update duration in IndexedDB
+      if (durStr !== "0:00") {
+        dbSave({ id: fileId, name: file.name, duration: durStr, size: sizeStr, blob: file, createdAt: Date.now() }).catch(() => {});
+      }
 
       showStatus(`Loaded: ${file.name} (${durStr}, ${sizeStr})`);
       console.log("[AudioEditor] Audio element ready:", file.name, "duration:", audioDuration);
@@ -454,11 +497,16 @@ export default function AudioEditorPage() {
     [loadAudioFile]
   );
 
+  // Keep durationRef in sync with state (for use in closures)
+  useEffect(() => { durationRef.current = duration; }, [duration]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
       if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (liveAudioCtxRef.current) liveAudioCtxRef.current.close().catch(() => {});
     };
   }, []);
 
@@ -496,6 +544,8 @@ export default function AudioEditorPage() {
       }
       return prev.filter((f) => f.id !== fileId);
     });
+    // Remove from IndexedDB
+    dbDelete(fileId).catch((err) => console.warn("[AudioEditor] IndexedDB delete failed:", err));
     showStatus("File removed from library");
   }, [showStatus]);
 
@@ -512,28 +562,27 @@ export default function AudioEditorPage() {
   useEffect(() => {
     if (!isPlaying) return;
     const audio = audioRef.current;
-    if (audio && audio.src) {
-      audio.currentTime = currentTime;
-      audio.play().catch(() => {});
+    if (!audio || !audio.src) {
+      // No audio loaded — can't play
+      setIsPlaying(false);
+      return;
     }
+    audio.play().catch((err) => {
+      console.error("[AudioEditor] Playback failed:", err);
+      setIsPlaying(false);
+    });
     const interval = setInterval(() => {
-      if (audio && audio.src && !audio.paused) {
+      if (audio && !audio.paused) {
         setCurrentTime(audio.currentTime);
-        if (audio.currentTime >= audio.duration) {
+        // Use our stored duration if audio.duration is Infinity (common webm issue)
+        const effectiveDur = isFinite(audio.duration) ? audio.duration : durationRef.current;
+        if (effectiveDur > 0 && audio.currentTime >= effectiveDur) {
+          audio.pause();
           setIsPlaying(false);
           setCurrentTime(0);
         }
-      } else if (!audio?.src) {
-        // No audio loaded — simulate for recording
-        setCurrentTime((t) => {
-          if (t >= duration && duration > 0) {
-            setIsPlaying(false);
-            return 0;
-          }
-          return t + 0.1;
-        });
       }
-    }, 100);
+    }, 50); // 50ms for smoother playhead movement
     return () => {
       clearInterval(interval);
       if (audio && !audio.paused) audio.pause();
@@ -541,16 +590,16 @@ export default function AudioEditorPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying]);
 
-  // Recording timer — also keep ref in sync for onstop closure
+  // Recording timer — advances playhead + duration + timer in sync
   useEffect(() => {
     if (!isRecording) return;
     recordingTimeRef.current = 0;
     const interval = setInterval(() => {
-      setRecordingTime((t) => {
-        const next = t + 0.1;
-        recordingTimeRef.current = next;
-        return next;
-      });
+      recordingTimeRef.current += 0.1;
+      const t = recordingTimeRef.current;
+      setRecordingTime(t);
+      setCurrentTime(t);   // playhead advances with recording
+      setDuration(t);      // duration grows as we record
     }, 100);
     return () => clearInterval(interval);
   }, [isRecording]);
@@ -565,18 +614,36 @@ export default function AudioEditorPage() {
     }
   }, []);
 
+  // Helper: clean up live audio analysis
+  const cleanupAnalyser = useCallback(() => {
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = 0;
+    }
+    if (liveAudioCtxRef.current) {
+      liveAudioCtxRef.current.close().catch(() => {});
+      liveAudioCtxRef.current = null;
+    }
+    analyserRef.current = null;
+  }, []);
+
   const handleRecord = useCallback(async () => {
     if (isRecording) {
-      // Stop recording
+      // ── Stop recording ──
       console.log("[AudioEditor] Stopping recording...");
+
+      // Stop live visualization first
+      cleanupAnalyser();
+
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
         try { mediaRecorderRef.current.requestData(); } catch { /* ignore */ }
         mediaRecorderRef.current.stop();
       }
       setIsRecording(false);
+      setCurrentTime(0); // reset playhead to start for playback
       showStatus("Recording stopped — processing audio...");
     } else {
-      // Start recording
+      // ── Start recording ──
       try {
         setIsPlaying(false);
         if (audioRef.current && !audioRef.current.paused) audioRef.current.pause();
@@ -594,6 +661,44 @@ export default function AudioEditorPage() {
         });
         mediaStreamRef.current = stream;
         console.log("[AudioEditor] Mic access granted, tracks:", stream.getAudioTracks().length);
+
+        // ── Set up live audio visualization via AnalyserNode ──
+        try {
+          const liveCtx = new AudioContext();
+          const source = liveCtx.createMediaStreamSource(stream);
+          const analyser = liveCtx.createAnalyser();
+          analyser.fftSize = 2048;
+          analyser.smoothingTimeConstant = 0.3;
+          source.connect(analyser);
+          liveAudioCtxRef.current = liveCtx;
+          analyserRef.current = analyser;
+
+          // Start live waveform sampling loop
+          liveWaveformRef.current = [];
+          const dataArray = new Uint8Array(analyser.frequencyBinCount);
+          const sampleLiveLevel = () => {
+            if (!analyserRef.current) return;
+            analyserRef.current.getByteTimeDomainData(dataArray);
+            // Compute RMS level from time-domain data
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+              const v = (dataArray[i] - 128) / 128;
+              sum += v * v;
+            }
+            const rms = Math.sqrt(sum / dataArray.length);
+            const level = Math.min(1, rms * 4); // amplify for visibility
+            liveWaveformRef.current.push(level);
+            // Push to React state every ~3 frames to avoid thrashing
+            if (liveWaveformRef.current.length % 3 === 0) {
+              setWaveformData([...liveWaveformRef.current]);
+            }
+            animFrameRef.current = requestAnimationFrame(sampleLiveLevel);
+          };
+          animFrameRef.current = requestAnimationFrame(sampleLiveLevel);
+          console.log("[AudioEditor] Live audio analyser connected");
+        } catch (err) {
+          console.warn("[AudioEditor] Live visualization setup failed:", err);
+        }
 
         // Find best supported mime type
         const mimeTypes = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"];
@@ -613,12 +718,12 @@ export default function AudioEditorPage() {
         recorder.ondataavailable = (e) => {
           if (e.data.size > 0) {
             recordChunksRef.current.push(e.data);
-            console.log("[AudioEditor] Chunk received:", e.data.size, "bytes, total chunks:", recordChunksRef.current.length);
           }
         };
 
         recorder.onerror = (event) => {
           console.error("[AudioEditor] MediaRecorder error:", event);
+          cleanupAnalyser();
           showStatus("Recording error — microphone may have disconnected");
           stream.getTracks().forEach((t) => t.stop());
           mediaStreamRef.current = null;
@@ -635,12 +740,13 @@ export default function AudioEditorPage() {
             return;
           }
 
-          // Copy chunks and free originals immediately
+          // Snapshot the final recording duration and live waveform
           const chunks = [...recordChunksRef.current];
           const recDuration = recordingTimeRef.current;
+          const liveWaveform = [...liveWaveformRef.current];
           recordChunksRef.current = [];
 
-          // Defer blob creation off the main thread to prevent UI freeze
+          // Defer blob creation to prevent UI freeze
           setTimeout(() => {
             try {
               const blob = new Blob(chunks, { type: mimeType || "audio/webm" });
@@ -648,6 +754,12 @@ export default function AudioEditorPage() {
               const ext = mimeType.includes("mp4") ? "m4a" : "webm";
               const file = new File([blob], `recording-${Date.now()}.${ext}`, { type: blob.type });
               console.log("[AudioEditor] Recording blob created:", blob.size, "bytes, duration ~", recDuration.toFixed(1), "s");
+
+              // Keep the live waveform visible while file loads
+              if (liveWaveform.length > 0) setWaveformData(liveWaveform);
+              // Set duration from recording timer (more reliable than webm metadata)
+              if (recDuration > 0) setDuration(recDuration);
+
               loadAudioFile(file);
               showStatus(`Recording captured (${sizeMB} MB, ${Math.ceil(recDuration)}s) — loaded into editor`);
             } catch (blobErr) {
@@ -657,15 +769,20 @@ export default function AudioEditorPage() {
           }, 50);
         };
 
+        // Reset state for new recording
+        setWaveformData(null);
+        setDuration(0);
+        setCurrentTime(0);
+
         recorder.start(1000);
         setIsRecording(true);
         setRecordingTime(0);
         recordingTimeRef.current = 0;
-        showStatus("Recording... click the red button again to stop");
+        showStatus("Recording... click the red button to stop");
         console.log("[AudioEditor] Recording started, state:", recorder.state);
       } catch (err: unknown) {
         console.error("[AudioEditor] Record failed:", err);
-        // Clean up stream if it was obtained before failure
+        cleanupAnalyser();
         if (mediaStreamRef.current) {
           mediaStreamRef.current.getTracks().forEach((t) => t.stop());
           mediaStreamRef.current = null;
@@ -682,7 +799,7 @@ export default function AudioEditorPage() {
         }
       }
     }
-  }, [isRecording, isPlaying, loadAudioFile, showStatus]);
+  }, [isRecording, isPlaying, loadAudioFile, showStatus, cleanupAnalyser]);
 
   const handlePlayPause = useCallback(() => {
     if (isRecording) return;
@@ -697,6 +814,7 @@ export default function AudioEditorPage() {
   const handleStop = useCallback(() => {
     if (audioRef.current && !audioRef.current.paused) audioRef.current.pause();
     if (isRecording && mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      cleanupAnalyser();
       try { mediaRecorderRef.current.requestData(); } catch { /* ignore */ }
       mediaRecorderRef.current.stop();
     }
@@ -704,13 +822,62 @@ export default function AudioEditorPage() {
     setIsRecording(false);
     setCurrentTime(0);
     if (audioRef.current) audioRef.current.currentTime = 0;
-  }, [isRecording]);
+  }, [isRecording, cleanupAnalyser]);
 
   const handleSeek = useCallback((time: number) => {
     const t = Math.max(0, time);
     setCurrentTime(t);
     if (audioRef.current) audioRef.current.currentTime = t;
   }, []);
+
+  // Load a file from the library into the editor for playback
+  const loadFileFromLibrary = useCallback((file: AudioFile) => {
+    if (!file.blobUrl) return;
+    // Stop any current playback
+    if (audioRef.current && !audioRef.current.paused) audioRef.current.pause();
+    setIsPlaying(false);
+
+    const audio = new Audio(file.blobUrl);
+    audio.preload = "auto";
+    audioRef.current = audio;
+    audioUrlRef.current = file.blobUrl;
+    setCurrentTime(0);
+
+    // Get metadata
+    audio.onloadedmetadata = () => {
+      const dur = isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
+      if (dur > 0) setDuration(dur);
+    };
+
+    // Decode waveform from blob URL
+    fetch(file.blobUrl)
+      .then((r) => r.arrayBuffer())
+      .then((buf) => {
+        const ctx = new AudioContext();
+        return ctx.decodeAudioData(buf).then((decoded) => {
+          const data = decoded.getChannelData(0);
+          const samples = 2000;
+          const blockSize = Math.max(1, Math.floor(data.length / samples));
+          const peaks: number[] = [];
+          for (let i = 0; i < samples; i++) {
+            let max = 0;
+            for (let j = 0; j < blockSize; j++) {
+              const abs = Math.abs(data[i * blockSize + j] || 0);
+              if (abs > max) max = abs;
+            }
+            peaks.push(max);
+          }
+          setWaveformData(peaks);
+          if (decoded.duration > 0) setDuration(decoded.duration);
+          ctx.close();
+        });
+      })
+      .catch(() => {
+        setWaveformData(Array.from({ length: 200 }, () => 0.2 + Math.random() * 0.5));
+      });
+
+    showStatus(`Loaded: ${file.name}`);
+  }, [showStatus]);
 
   const toggleEffect = useCallback((id: string) => {
     setEffects((prev) =>
@@ -956,6 +1123,7 @@ export default function AudioEditorPage() {
                     {audioFiles.map((file) => (
                       <div
                         key={file.id}
+                        onClick={() => loadFileFromLibrary(file)}
                         className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-foreground/[0.04] cursor-pointer group transition-colors"
                       >
                         <GripVertical className="h-3 w-3 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab" />
@@ -1083,8 +1251,8 @@ export default function AudioEditorPage() {
                 onSeek={handleSeek}
                 waveformData={waveformData}
               />
-              {/* Empty state */}
-              {duration === 0 && !isRecording && (
+              {/* Empty state — only show when nothing is loaded */}
+              {!waveformData && audioFiles.length === 0 && !isRecording && duration <= 0 && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
                     <Music className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
