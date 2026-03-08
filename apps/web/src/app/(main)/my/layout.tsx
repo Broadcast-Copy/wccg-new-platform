@@ -24,6 +24,8 @@ import {
   Megaphone,
   Briefcase,
   BarChart3,
+  DollarSign,
+  Receipt,
   Calendar,
   Radio,
   Gift,
@@ -146,9 +148,9 @@ function SidebarContent({ pathname }: { pathname: string }) {
 
             {isSales &&
               [
-                { href: "/my/admin/campaigns", label: "Campaign Builder", icon: Megaphone },
-                { href: "/advertise/portal/clients", label: "Clients", icon: Briefcase },
-                { href: "/my/admin/reports", label: "Reports", icon: BarChart3 },
+                { href: "/my/sales", label: "Sales Dashboard", icon: DollarSign },
+                { href: "/my/sales/campaign-builder", label: "Campaign Builder", icon: Megaphone },
+                { href: "/my/sales/invoices", label: "Invoices", icon: Receipt },
               ].map((item) => {
                 const isActive =
                   pathname === item.href ||

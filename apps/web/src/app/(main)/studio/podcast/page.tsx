@@ -249,22 +249,33 @@ function AudioLevelBar({ level }: { level: number }) {
 
 function VideoTile({
   participant,
-  videoRef,
+  streamRef,
   isLocal,
   large,
 }: {
   participant: Participant;
-  videoRef?: React.RefObject<HTMLVideoElement | null>;
+  streamRef?: React.RefObject<MediaStream | null>;
   isLocal?: boolean;
   large?: boolean;
 }) {
-  const hasStream = isLocal && videoRef;
+  const hasStream = isLocal && streamRef;
+  // Callback ref ensures srcObject is always set when the video element is (re)created
+  const videoCallbackRef = useCallback(
+    (el: HTMLVideoElement | null) => {
+      if (el && streamRef?.current) {
+        el.srcObject = streamRef.current;
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [streamRef?.current]
+  );
+
   return (
     <div className="relative w-full h-full rounded-xl overflow-hidden bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-800 group">
       {hasStream ? (
         /* eslint-disable-next-line jsx-a11y/media-has-caption */
         <video
-          ref={videoRef}
+          ref={videoCallbackRef}
           autoPlay
           muted
           playsInline
@@ -396,7 +407,6 @@ function PodcastStudioContent() {
 
   // Camera
   const [hasCamera, setHasCamera] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   // Recording
@@ -495,10 +505,7 @@ function PodcastStudioContent() {
           return;
         }
         streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          setHasCamera(true);
-        }
+        setHasCamera(true);
 
         // Get device info and set initial IDs
         const audioTrack = stream.getAudioTracks()[0];
@@ -828,10 +835,7 @@ function PodcastStudioContent() {
 
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          setHasCamera(true);
-        }
+        setHasCamera(true);
 
         // Update device info
         const audioTrack = stream.getAudioTracks()[0];
@@ -1008,7 +1012,7 @@ function PodcastStudioContent() {
         <VideoTile
           key="host"
           participant={hostParticipant}
-          videoRef={videoRef}
+          streamRef={streamRef}
           isLocal
           large={layout === "single" || participants.length <= 2}
         />

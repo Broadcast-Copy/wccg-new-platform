@@ -24,7 +24,7 @@ const TOOLS = [
     description: "Record, manage scenes, audio mixing, overlays, and stream live.",
     href: "/studio/podcast",
     color: "from-[#7401df] to-[#4c1d95]",
-    badge: "Live",
+    badge: "New Features",
   },
   {
     icon: Film,
@@ -32,7 +32,7 @@ const TOOLS = [
     description: "Multi-track timeline, effects, transitions, and color grading.",
     href: "/studio/video-editor",
     color: "from-[#f59e0b] to-[#d97706]",
-    badge: "NLE",
+    badge: "New Features",
   },
   {
     icon: AudioLines,
@@ -40,7 +40,7 @@ const TOOLS = [
     description: "Record, edit, and mix audio — waveform editing & effects.",
     href: "/studio/audio-editor",
     color: "from-[#3b82f6] to-[#1d4ed8]",
-    badge: "DAW",
+    badge: "New Features",
   },
 ];
 
