@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
+import { LoginRequired } from "@/components/auth/login-required";
 
 const TOTAL_STEPS = 9;
 
@@ -229,6 +230,7 @@ export default function LiveOnSitePage() {
 
   if (submitted) {
     return (
+      <LoginRequired fullPage message="Sign in to request live & on-site services. Plan your event broadcast with our production team.">
       <div className="space-y-8">
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-red-950/50 to-gray-900 border border-border/30 p-10 text-center">
           <CheckCircle2 className="h-16 w-16 text-[#74ddc7] mx-auto mb-4" />
@@ -248,10 +250,12 @@ export default function LiveOnSitePage() {
           </Button>
         </div>
       </div>
+      </LoginRequired>
     );
   }
 
   return (
+    <LoginRequired fullPage message="Sign in to request live & on-site services. Plan your event broadcast with our production team.">
     <div className="space-y-8">
       {/* Hero */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-red-950/50 to-gray-900 border border-border/30">
@@ -1168,7 +1172,17 @@ export default function LiveOnSitePage() {
                 </Button>
               ) : (
                 <Button
-                  onClick={() => setSubmitted(true)}
+                  onClick={() => {
+                    if (!formData.name.trim() || !formData.email.trim()) {
+                      alert("Please fill in your name and email before submitting.");
+                      return;
+                    }
+                    const submission = { ...formData, submittedAt: new Date().toISOString(), type: 'live-on-site' };
+                    const existing = JSON.parse(localStorage.getItem('wccg-submissions') || '[]');
+                    existing.push(submission);
+                    localStorage.setItem('wccg-submissions', JSON.stringify(existing));
+                    setSubmitted(true);
+                  }}
                   className="bg-gradient-to-r from-[#74ddc7] to-[#0d9488] text-[#0a0a0f] font-bold hover:opacity-90"
                 >
                   Submit Request
@@ -1190,5 +1204,6 @@ export default function LiveOnSitePage() {
         </p>
       </div>
     </div>
+    </LoginRequired>
   );
 }

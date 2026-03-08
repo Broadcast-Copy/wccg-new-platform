@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
+import { LoginRequired } from "@/components/auth/login-required";
 
 const TOTAL_STEPS = 9;
 
@@ -199,6 +200,20 @@ export default function SocialContentPage() {
 
   const progress = Math.round((step / TOTAL_STEPS) * 100);
 
+  const handleSubmit = () => {
+    if (!formData.name.trim() || !formData.email.trim()) {
+      alert("Please fill in your name and email address before submitting.");
+      return;
+    }
+
+    const submission = { ...formData, submittedAt: new Date().toISOString(), type: 'social-content' };
+    const existing = JSON.parse(localStorage.getItem('wccg-submissions') || '[]');
+    existing.push(submission);
+    localStorage.setItem('wccg-submissions', JSON.stringify(existing));
+
+    setSubmitted(true);
+  };
+
   const updateField = (field: string, value: string | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -217,29 +232,32 @@ export default function SocialContentPage() {
 
   if (submitted) {
     return (
-      <div className="space-y-8">
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-pink-950/50 to-gray-900 border border-border/30 p-10 text-center">
-          <CheckCircle2 className="h-16 w-16 text-[#74ddc7] mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-white mb-3">
-            Request Submitted!
-          </h1>
-          <p className="text-white/60 max-w-md mx-auto mb-6">
-            Thank you for your social content creation request. Our creative
-            team will review your submission and contact you within 1-2 business
-            days.
-          </p>
-          <Button
-            asChild
-            className="rounded-full bg-gradient-to-r from-[#ec4899] to-[#be185d] text-white font-semibold px-6"
-          >
-            <Link href="/studio">Back to Studios</Link>
-          </Button>
+      <LoginRequired fullPage message="Sign in to request social content creation. Our team will produce engaging content for your brand.">
+        <div className="space-y-8">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-pink-950/50 to-gray-900 border border-border/30 p-10 text-center">
+            <CheckCircle2 className="h-16 w-16 text-[#74ddc7] mx-auto mb-4" />
+            <h1 className="text-3xl font-bold text-white mb-3">
+              Request Submitted!
+            </h1>
+            <p className="text-white/60 max-w-md mx-auto mb-6">
+              Thank you for your social content creation request. Our creative
+              team will review your submission and contact you within 1-2 business
+              days.
+            </p>
+            <Button
+              asChild
+              className="rounded-full bg-gradient-to-r from-[#ec4899] to-[#be185d] text-white font-semibold px-6"
+            >
+              <Link href="/studio">Back to Studios</Link>
+            </Button>
+          </div>
         </div>
-      </div>
+      </LoginRequired>
     );
   }
 
   return (
+    <LoginRequired fullPage message="Sign in to request social content creation. Our team will produce engaging content for your brand.">
     <div className="space-y-8">
       {/* Hero */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-pink-950/50 to-gray-900 border border-border/30">
@@ -971,7 +989,7 @@ export default function SocialContentPage() {
               </Button>
             ) : (
               <Button
-                onClick={() => setSubmitted(true)}
+                onClick={handleSubmit}
                 className="bg-gradient-to-r from-[#74ddc7] to-[#0d9488] text-[#0a0a0f] font-bold hover:opacity-90"
               >
                 Submit Request
@@ -992,5 +1010,6 @@ export default function SocialContentPage() {
         </p>
       </div>
     </div>
+    </LoginRequired>
   );
 }

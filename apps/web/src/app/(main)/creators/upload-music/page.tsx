@@ -3,6 +3,7 @@
 import { Music, Upload, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { LoginRequired } from "@/components/auth/login-required";
 import { useState } from "react";
 
 const guidelines = [
@@ -20,7 +21,6 @@ export default function UploadMusicPage() {
   const [formData, setFormData] = useState({
     artistName: "",
     email: "",
-    phone: "",
     songTitle: "",
     genre: "",
     link: "",
@@ -30,10 +30,22 @@ export default function UploadMusicPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.artistName.trim() || !formData.email.trim() || !formData.songTitle.trim() || !formData.link.trim()) {
+      alert("Please fill in all required fields: Artist Name, Email, Song Title, and Link to Music.");
+      return;
+    }
+
+    const submission = { ...formData, submittedAt: new Date().toISOString(), type: 'music-submission' };
+    const existing = JSON.parse(localStorage.getItem('wccg-submissions') || '[]');
+    existing.push(submission);
+    localStorage.setItem('wccg-submissions', JSON.stringify(existing));
+
     setSubmitted(true);
   };
 
   return (
+    <LoginRequired fullPage message="Sign in to submit your music for airplay consideration on WCCG 104.5 FM.">
     <div className="space-y-8">
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-purple-950/50 to-gray-900 border border-border/30">
         <div className="relative px-6 py-10 sm:px-10 sm:py-14">
@@ -173,5 +185,6 @@ export default function UploadMusicPage() {
         )}
       </div>
     </div>
+    </LoginRequired>
   );
 }

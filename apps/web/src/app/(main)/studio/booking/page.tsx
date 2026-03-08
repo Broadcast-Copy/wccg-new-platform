@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
+import { LoginRequired } from "@/components/auth/login-required";
 
 const TOTAL_STEPS = 8;
 
@@ -231,34 +232,59 @@ export default function StudioBookingPage() {
   };
 
   const handleSubmit = () => {
+    if (!formData.fullName.trim() || !formData.email.trim()) {
+      alert("Please fill in your name and email before submitting.");
+      return;
+    }
+
+    const submission = {
+      ...formData,
+      submittedAt: new Date().toISOString(),
+      type: "studio-booking",
+    };
+    const existing = JSON.parse(
+      localStorage.getItem("wccg-submissions") || "[]"
+    );
+    existing.push(submission);
+    localStorage.setItem("wccg-submissions", JSON.stringify(existing));
+
     setSubmitted(true);
   };
 
   if (submitted) {
     return (
-      <div className="space-y-8">
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-purple-950/50 to-gray-900 border border-border/30 p-10 text-center">
-          <CheckCircle2 className="h-16 w-16 text-[#74ddc7] mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-white mb-3">
-            Request Submitted!
-          </h1>
-          <p className="text-white/60 max-w-md mx-auto mb-6">
-            Thank you for your studio booking request. Our production team will
-            review your submission and contact you within 1-2 business days to
-            confirm your booking.
-          </p>
-          <Button
-            asChild
-            className="rounded-full bg-gradient-to-r from-[#7401df] to-[#4c1d95] text-white font-semibold px-6"
-          >
-            <Link href="/studio">Back to Studios</Link>
-          </Button>
+      <LoginRequired
+        fullPage
+        message="Sign in to book a studio session. Browse studios, select your preferred space, and submit a booking request."
+      >
+        <div className="space-y-8">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-purple-950/50 to-gray-900 border border-border/30 p-10 text-center">
+            <CheckCircle2 className="h-16 w-16 text-[#74ddc7] mx-auto mb-4" />
+            <h1 className="text-3xl font-bold text-white mb-3">
+              Request Submitted!
+            </h1>
+            <p className="text-white/60 max-w-md mx-auto mb-6">
+              Thank you for your studio booking request. Our production team will
+              review your submission and contact you within 1-2 business days to
+              confirm your booking.
+            </p>
+            <Button
+              asChild
+              className="rounded-full bg-gradient-to-r from-[#7401df] to-[#4c1d95] text-white font-semibold px-6"
+            >
+              <Link href="/studio">Back to Studios</Link>
+            </Button>
+          </div>
         </div>
-      </div>
+      </LoginRequired>
     );
   }
 
   return (
+    <LoginRequired
+      fullPage
+      message="Sign in to book a studio session. Browse studios, select your preferred space, and submit a booking request."
+    >
     <div className="space-y-8">
       {/* Hero */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-purple-950/50 to-gray-900 border border-border/30">
@@ -890,5 +916,6 @@ export default function StudioBookingPage() {
         </p>
       </div>
     </div>
+    </LoginRequired>
   );
 }

@@ -136,6 +136,14 @@ export default function PodcastPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.hostName.trim() || !formData.email.trim()) {
+      alert("Please fill in your name and email before submitting.");
+      return;
+    }
+    const submission = { ...formData, submittedAt: new Date().toISOString(), type: 'podcast-application' };
+    const existing = JSON.parse(localStorage.getItem('wccg-submissions') || '[]');
+    existing.push(submission);
+    localStorage.setItem('wccg-submissions', JSON.stringify(existing));
     setSubmitted(true);
   };
 

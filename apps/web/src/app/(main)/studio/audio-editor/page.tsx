@@ -36,6 +36,7 @@ import {
   Undo2,
   Redo2,
 } from "lucide-react";
+import { LoginRequired } from "@/components/auth/login-required";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -565,6 +566,7 @@ export default function AudioEditorPage() {
   }, []);
 
   return (
+    <LoginRequired fullPage message="Sign in to access the Audio Editor. Record, edit, and mix your audio projects.">
     <div className="flex flex-col h-[calc(100vh-4rem)] -mx-4 sm:-mx-6 lg:-mx-8 -mt-6 overflow-hidden">
       {/* ================================================================= */}
       {/* Top Toolbar                                                       */}
@@ -1084,6 +1086,7 @@ export default function AudioEditorPage() {
         </div>
       </div>
     </div>
+    </LoginRequired>
   );
 }
 
@@ -1255,7 +1258,7 @@ function MixerPanel({ isMuted }: { isMuted: boolean }) {
             </div>
           </div>
           <span className="text-[9px] text-muted-foreground font-mono mb-1.5">
-            {ch.volume > 0 ? `${Math.round((ch.volume / 100) * -60 + 60 - 60)}dB` : "-inf"}
+            {ch.volume > 0 ? `${Math.round((ch.volume / 100) * 60 - 60)}dB` : "-inf"}
           </span>
 
           {/* Mute / Solo */}

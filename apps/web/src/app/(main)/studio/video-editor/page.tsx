@@ -49,6 +49,7 @@ import {
   Save,
   HardDrive,
 } from "lucide-react";
+import { LoginRequired } from "@/components/auth/login-required";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -1258,6 +1259,7 @@ export default function VideoEditorPage() {
   });
 
   return (
+    <LoginRequired fullPage message="Sign in to access the Video Editor. Record, edit, and produce video content.">
     <div ref={editorContainerRef} className="flex flex-col -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 -mb-40 overflow-hidden" style={{ height: editorHeight }} onContextMenu={(e) => e.preventDefault()}>
       {/* ================================================================= */}
       {/* Top Toolbar                                                       */}
@@ -2815,5 +2817,6 @@ export default function VideoEditorPage() {
         </>
       )}
     </div>
+    </LoginRequired>
   );
 }
