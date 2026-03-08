@@ -28,6 +28,7 @@ import {
   Square,
   Grid2x2,
   Rows2,
+  Film,
   Camera,
   Download,
   Maximize2,
@@ -347,19 +348,26 @@ function formatFileSize(bytes: number) {
 // MIME type detection
 // ---------------------------------------------------------------------------
 
-function getSupportedMimeType(): string {
-  const types = [
+function getSupportedMimeType(includeVideo = false): string {
+  if (includeVideo) {
+    const videoTypes = [
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm",
+      "video/mp4",
+    ];
+    for (const type of videoTypes) {
+      if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(type)) return type;
+    }
+  }
+  const audioTypes = [
     "audio/webm;codecs=opus",
     "audio/webm",
     "audio/mp4",
     "audio/ogg;codecs=opus",
   ];
-  for (const type of types) {
-    if (
-      typeof MediaRecorder !== "undefined" &&
-      MediaRecorder.isTypeSupported(type)
-    )
-      return type;
+  for (const type of audioTypes) {
+    if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(type)) return type;
   }
   return "";
 }
@@ -426,6 +434,16 @@ function PodcastStudioContent() {
   const timelineScrollRef = useRef<HTMLDivElement>(null);
   const lastRecordingDuration = useRef(0);
 
+  // Settings & Devices
+  const [showSettings, setShowSettings] = useState(false);
+  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedAudioDeviceId, setSelectedAudioDeviceId] = useState("");
+  const [selectedVideoDeviceId, setSelectedVideoDeviceId] = useState("");
+  const [recordVideoEnabled, setRecordVideoEnabled] = useState(true);
+  const recordingTimeRef = useRef(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
   // ------ Participants ------
   const [participants, setParticipants] = useState<Participant[]>([
     {
@@ -443,6 +461,18 @@ function PodcastStudioContent() {
       totalSize: "0",
     },
   ]);
+
+  // ------ Device enumeration ------
+  const enumerateDevices = useCallback(async () => {
+    try {
+      if (!navigator.mediaDevices?.enumerateDevices) return;
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setAudioDevices(devices.filter((d) => d.kind === "audioinput"));
+      setVideoDevices(devices.filter((d) => d.kind === "videoinput"));
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   // ------ Camera init ------
   useEffect(() => {
@@ -470,9 +500,11 @@ function PodcastStudioContent() {
           setHasCamera(true);
         }
 
-        // Get device name
+        // Get device info and set initial IDs
         const audioTrack = stream.getAudioTracks()[0];
+        const videoTrack = stream.getVideoTracks()[0];
         if (audioTrack) {
+          setSelectedAudioDeviceId(audioTrack.getSettings().deviceId || "");
           setParticipants((prev) =>
             prev.map((p) =>
               p.id === "host"
@@ -481,17 +513,31 @@ function PodcastStudioContent() {
             )
           );
         }
+        if (videoTrack) {
+          setSelectedVideoDeviceId(videoTrack.getSettings().deviceId || "");
+        }
+
+        // Enumerate after permission granted (labels now available)
+        await enumerateDevices();
       } catch {
         console.warn("[PodcastStudio] Camera/mic not available");
+        // Still try to enumerate (may have partial permissions)
+        await enumerateDevices();
       }
     }
 
     startCamera();
+
+    // Listen for device changes
+    const handler = () => enumerateDevices();
+    navigator.mediaDevices?.addEventListener("devicechange", handler);
+
     return () => {
       cancelled = true;
       if (stream) stream.getTracks().forEach((t) => t.stop());
+      navigator.mediaDevices?.removeEventListener("devicechange", handler);
     };
-  }, []);
+  }, [enumerateDevices]);
 
   // ------ Mic toggle ------
   useEffect(() => {
@@ -515,19 +561,19 @@ function PodcastStudioContent() {
     );
   }, [cameraEnabled]);
 
-  // ------ Audio level simulation ------
+  // ------ Audio level monitoring ------
   useEffect(() => {
-    const analyserRef: { current: AnalyserNode | null } = { current: null };
-    const rafRef: { current: number } = { current: 0 };
+    let rafId = 0;
+    let ctx: AudioContext | null = null;
 
     if (streamRef.current && micEnabled) {
       try {
-        const ctx = new AudioContext();
+        ctx = new AudioContext();
+        audioContextRef.current = ctx;
         const source = ctx.createMediaStreamSource(streamRef.current);
         const analyser = ctx.createAnalyser();
         analyser.fftSize = 256;
         source.connect(analyser);
-        analyserRef.current = analyser;
         const data = new Uint8Array(analyser.frequencyBinCount);
 
         const tick = () => {
@@ -540,23 +586,33 @@ function PodcastStudioContent() {
               p.id === "host" ? { ...p, audioLevel: Math.min(1, avg * 3) } : p
             )
           );
-          rafRef.current = requestAnimationFrame(tick);
+          rafId = requestAnimationFrame(tick);
         };
-        rafRef.current = requestAnimationFrame(tick);
+        rafId = requestAnimationFrame(tick);
       } catch {
         /* ignore */
       }
     }
 
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (rafId) cancelAnimationFrame(rafId);
+      if (ctx && ctx.state !== "closed") {
+        ctx.close().catch(() => {});
+      }
+      audioContextRef.current = null;
     };
   }, [micEnabled, hasCamera]);
 
   // ------ Recording timer ------
   useEffect(() => {
     if (!isRecording) return;
-    const iv = setInterval(() => setRecordingTime((p) => p + 1), 1000);
+    const iv = setInterval(() => {
+      setRecordingTime((p) => {
+        const next = p + 1;
+        recordingTimeRef.current = next;
+        return next;
+      });
+    }, 1000);
     return () => clearInterval(iv);
   }, [isRecording]);
 
@@ -608,8 +664,8 @@ function PodcastStudioContent() {
         )
       );
 
-      // Auto-create timeline clip from recording
-      const dur = recordingTime;
+      // Auto-create timeline clip from recording (use ref to avoid stale closure)
+      const dur = recordingTimeRef.current;
       lastRecordingDuration.current = dur;
       if (dur > 0) {
         const trackId = "track-host";
@@ -655,6 +711,7 @@ function PodcastStudioContent() {
         setRecordedUrl(null);
         setRecordingBytes(0);
         setRecordingTime(0);
+        recordingTimeRef.current = 0;
 
         let stream = streamRef.current;
         if (!stream) {
@@ -662,7 +719,9 @@ function PodcastStudioContent() {
           streamRef.current = stream;
         }
 
-        const mimeType = getSupportedMimeType();
+        // Use video MIME when camera is available and video recording is enabled
+        const hasVideoTracks = stream.getVideoTracks().length > 0 && cameraEnabled && recordVideoEnabled;
+        const mimeType = getSupportedMimeType(hasVideoTracks);
         const options: MediaRecorderOptions = {};
         if (mimeType) options.mimeType = mimeType;
 
@@ -740,6 +799,63 @@ function PodcastStudioContent() {
     ]);
     setChatInput("");
   };
+
+  // ------ Device switching ------
+  const switchDevices = useCallback(
+    async (audioId?: string, videoId?: string) => {
+      try {
+        // Don't switch devices while recording
+        if (isRecording) return;
+
+        // Stop current stream
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((t) => t.stop());
+          streamRef.current = null;
+        }
+
+        // Close existing AudioContext to prevent resource leak
+        if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+          audioContextRef.current.close().catch(() => {});
+          audioContextRef.current = null;
+        }
+
+        const constraints: MediaStreamConstraints = {
+          audio: audioId ? { deviceId: { exact: audioId } } : true,
+          video: videoId
+            ? { deviceId: { exact: videoId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+            : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+        };
+
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          setHasCamera(true);
+        }
+
+        // Update device info
+        const audioTrack = stream.getAudioTracks()[0];
+        const videoTrack = stream.getVideoTracks()[0];
+        if (audioTrack) {
+          const devId = audioTrack.getSettings().deviceId || "";
+          setSelectedAudioDeviceId(devId);
+          setParticipants((prev) =>
+            prev.map((p) =>
+              p.id === "host"
+                ? { ...p, device: audioTrack.label || "Default Microphone" }
+                : p
+            )
+          );
+        }
+        if (videoTrack) {
+          setSelectedVideoDeviceId(videoTrack.getSettings().deviceId || "");
+        }
+      } catch (err) {
+        console.error("[PodcastStudio] Device switch failed:", err);
+      }
+    },
+    [isRecording]
+  );
 
   // ------ Timeline handlers ------
 
@@ -1273,7 +1389,7 @@ function PodcastStudioContent() {
                       className="flex items-center justify-center gap-2 bg-[#74ddc7]/10 text-[#74ddc7] border border-[#74ddc7]/30 rounded-xl px-3 py-2.5 text-xs font-semibold hover:bg-[#74ddc7]/20 transition-colors"
                     >
                       <Download className="h-3.5 w-3.5" />
-                      Download Recording
+                      Download Recording ({recordVideoEnabled ? "Video" : "Audio"})
                     </a>
                   )}
 
@@ -1971,7 +2087,12 @@ function PodcastStudioContent() {
         {/* Left: Settings */}
         <div className="flex items-center gap-2">
           <button
-            className="p-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            onClick={() => setShowSettings(true)}
+            className={`p-2.5 rounded-xl transition-colors ${
+              showSettings
+                ? "text-[#74ddc7] bg-[#74ddc7]/10"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+            }`}
             title="Settings"
           >
             <Settings className="h-5 w-5" />
@@ -2077,6 +2198,218 @@ function PodcastStudioContent() {
           </Link>
         </div>
       </div>
+
+      {/* ================================================================= */}
+      {/* Settings Modal                                                    */}
+      {/* ================================================================= */}
+      {showSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowSettings(false)}
+          />
+
+          {/* Modal */}
+          <div className="relative bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl w-[460px] max-h-[80vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#7401df]/20">
+                  <Settings className="h-4 w-4 text-[#7401df]" />
+                </div>
+                <h2 className="text-sm font-bold text-white">Studio Settings</h2>
+              </div>
+              <button
+                onClick={() => setShowSettings(false)}
+                className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-5 space-y-5">
+              {/* Audio Input */}
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold flex items-center gap-1.5">
+                  <Mic className="h-3 w-3" />
+                  Microphone
+                </label>
+                <select
+                  value={selectedAudioDeviceId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setSelectedAudioDeviceId(id);
+                    switchDevices(id, selectedVideoDeviceId || undefined);
+                  }}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#7401df] appearance-none cursor-pointer"
+                >
+                  {audioDevices.length === 0 && (
+                    <option value="">No microphones detected</option>
+                  )}
+                  {audioDevices.map((d) => (
+                    <option key={d.deviceId} value={d.deviceId}>
+                      {d.label || `Microphone ${d.deviceId.slice(0, 8)}…`}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Live audio level preview */}
+                <div className="bg-zinc-800/50 rounded-lg p-2.5 flex items-center gap-3">
+                  <span className="text-[10px] text-zinc-500 shrink-0">Level</span>
+                  <div className="flex-1">
+                    <AudioLevelBar level={participants.find((p) => p.id === "host")?.audioLevel || 0} />
+                  </div>
+                  <span className="text-[10px] text-zinc-600 font-mono shrink-0">
+                    {micEnabled ? "Active" : "Muted"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Video Input */}
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold flex items-center gap-1.5">
+                  <Camera className="h-3 w-3" />
+                  Camera
+                </label>
+                <select
+                  value={selectedVideoDeviceId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setSelectedVideoDeviceId(id);
+                    switchDevices(selectedAudioDeviceId || undefined, id);
+                  }}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#7401df] appearance-none cursor-pointer"
+                >
+                  {videoDevices.length === 0 && (
+                    <option value="">No cameras detected</option>
+                  )}
+                  {videoDevices.map((d) => (
+                    <option key={d.deviceId} value={d.deviceId}>
+                      {d.label || `Camera ${d.deviceId.slice(0, 8)}…`}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Camera preview */}
+                <div className="bg-zinc-800/50 rounded-lg overflow-hidden">
+                  <div className="aspect-video relative bg-zinc-900">
+                    {hasCamera && cameraEnabled ? (
+                      /* eslint-disable-next-line jsx-a11y/media-has-caption */
+                      <video
+                        ref={(el) => {
+                          if (el && streamRef.current) {
+                            el.srcObject = streamRef.current;
+                          }
+                        }}
+                        autoPlay
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center">
+                          <VideoOff className="h-8 w-8 text-zinc-600 mx-auto mb-1" />
+                          <span className="text-[10px] text-zinc-600">
+                            {!hasCamera ? "No camera" : "Camera off"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Recording Format */}
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold flex items-center gap-1.5">
+                  <HardDrive className="h-3 w-3" />
+                  Recording Format
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setRecordVideoEnabled(true)}
+                    className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-medium transition-colors ${
+                      recordVideoEnabled
+                        ? "border-[#7401df] bg-[#7401df]/10 text-[#7401df]"
+                        : "border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-zinc-300"
+                    }`}
+                  >
+                    <Film className="h-3.5 w-3.5" />
+                    Video + Audio
+                  </button>
+                  <button
+                    onClick={() => setRecordVideoEnabled(false)}
+                    className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-medium transition-colors ${
+                      !recordVideoEnabled
+                        ? "border-[#7401df] bg-[#7401df]/10 text-[#7401df]"
+                        : "border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-zinc-300"
+                    }`}
+                  >
+                    <Mic className="h-3.5 w-3.5" />
+                    Audio Only
+                  </button>
+                </div>
+                <p className="text-[10px] text-zinc-600">
+                  {recordVideoEnabled
+                    ? "Records camera feed and microphone as WebM video"
+                    : "Records microphone only as WebM audio"}
+                </p>
+              </div>
+
+              {/* Speaker Output */}
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold flex items-center gap-1.5">
+                  <Volume2 className="h-3 w-3" />
+                  Speaker
+                </label>
+                <div className="bg-zinc-800/50 rounded-lg p-3 flex items-center justify-between">
+                  <span className="text-xs text-zinc-300">
+                    {speakerEnabled ? "System Default" : "Muted"}
+                  </span>
+                  <button
+                    onClick={() => setSpeakerEnabled(!speakerEnabled)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-colors ${
+                      speakerEnabled
+                        ? "bg-green-500/20 text-green-400"
+                        : "bg-red-500/20 text-red-400"
+                    }`}
+                  >
+                    {speakerEnabled ? "ON" : "OFF"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Device info */}
+              <div className="bg-zinc-800/30 rounded-lg p-3 border border-zinc-800/50 space-y-1.5">
+                <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">Device Info</span>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                  <span className="text-[10px] text-zinc-500">Microphones</span>
+                  <span className="text-[10px] text-zinc-400 text-right">{audioDevices.length} found</span>
+                  <span className="text-[10px] text-zinc-500">Cameras</span>
+                  <span className="text-[10px] text-zinc-400 text-right">{videoDevices.length} found</span>
+                  <span className="text-[10px] text-zinc-500">Format</span>
+                  <span className="text-[10px] text-zinc-400 text-right font-mono">
+                    {getSupportedMimeType(recordVideoEnabled).split(";")[0] || "N/A"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-3 border-t border-zinc-800 flex justify-end">
+              <button
+                onClick={() => setShowSettings(false)}
+                className="bg-[#7401df] hover:bg-[#7401df]/80 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
