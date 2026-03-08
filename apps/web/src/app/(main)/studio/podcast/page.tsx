@@ -37,6 +37,21 @@ import {
   HardDrive,
   X,
   Send,
+  MousePointer2,
+  Scissors,
+  ArrowLeftRight,
+  MoveHorizontal,
+  Repeat,
+  SkipBack,
+  SkipForward,
+  Play,
+  Pause,
+  Minus,
+  Plus,
+  Lock,
+  Unlock,
+  PanelBottomOpen,
+  PanelBottomClose,
 } from "lucide-react";
 import { LoginRequired } from "@/components/auth/login-required";
 
@@ -74,6 +89,67 @@ type LayoutPreset =
   | "top-bottom"
   | "pip";
 type SidebarTab = "studio" | "chat" | "participants";
+
+type TimelineTool = "select" | "razor" | "trim" | "slip";
+
+interface TimelineClip {
+  id: string;
+  trackId: string;
+  startTime: number;
+  duration: number;
+  label: string;
+  color: string;
+  waveform: number[];
+}
+
+interface TimelineTrack {
+  id: string;
+  label: string;
+  color: string;
+  muted: boolean;
+  solo: boolean;
+  locked: boolean;
+  height: number;
+}
+
+// ---------------------------------------------------------------------------
+// Timeline constants
+// ---------------------------------------------------------------------------
+
+const PIXELS_PER_SECOND = 40;
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 4;
+const TRACK_HEADER_WIDTH = 144; // w-36
+const MIN_CLIP_DURATION = 0.1;
+
+const TOOL_INFO: { key: TimelineTool; icon: typeof MousePointer2; label: string; shortcut: string }[] = [
+  { key: "select", icon: MousePointer2, label: "Select", shortcut: "V" },
+  { key: "razor", icon: Scissors, label: "Razor", shortcut: "C" },
+  { key: "trim", icon: ArrowLeftRight, label: "Trim", shortcut: "T" },
+  { key: "slip", icon: MoveHorizontal, label: "Slip", shortcut: "Y" },
+];
+
+const TRACK_COLORS = ["#74ddc7", "#a855f7", "#3b82f6", "#f59e0b", "#ef4444", "#22c55e"];
+
+// ---------------------------------------------------------------------------
+// Generate synthetic waveform peaks
+// ---------------------------------------------------------------------------
+
+function generateWaveformPeaks(duration: number, numSamples = 200): number[] {
+  const peaks: number[] = [];
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / numSamples;
+    // Natural-looking waveform with multiple frequencies
+    const v =
+      0.3 +
+      0.25 * Math.sin(t * 47) +
+      0.15 * Math.sin(t * 123 + 1.2) +
+      0.1 * Math.sin(t * 271 + 0.5) +
+      0.08 * Math.cos(t * 67 + 2.1);
+    peaks.push(Math.max(0.05, Math.min(1, Math.abs(v))));
+  }
+  return peaks;
+}
 
 // ---------------------------------------------------------------------------
 // Layout preset icons
@@ -335,6 +411,21 @@ function PodcastStudioContent() {
   const [episodeName, setEpisodeName] = useState("Untitled Episode");
   const [editingName, setEditingName] = useState(false);
 
+  // Timeline
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [timelineTool, setTimelineTool] = useState<TimelineTool>("select");
+  const [timelineZoom, setTimelineZoom] = useState(1);
+  const [timelineTracks, setTimelineTracks] = useState<TimelineTrack[]>([]);
+  const [timelineClips, setTimelineClips] = useState<TimelineClip[]>([]);
+  const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
+  const [timelinePlayhead, setTimelinePlayhead] = useState(0);
+  const [snapEnabled, setSnapEnabled] = useState(true);
+  const [loopEnabled, setLoopEnabled] = useState(false);
+  const [isTimelinePlaying, setIsTimelinePlaying] = useState(false);
+  const [razorPreviewX, setRazorPreviewX] = useState<number | null>(null);
+  const timelineScrollRef = useRef<HTMLDivElement>(null);
+  const lastRecordingDuration = useRef(0);
+
   // ------ Participants ------
   const [participants, setParticipants] = useState<Participant[]>([
     {
@@ -516,6 +607,48 @@ function PodcastStudioContent() {
           p.id === "host" ? { ...p, isRecording: false } : p
         )
       );
+
+      // Auto-create timeline clip from recording
+      const dur = recordingTime;
+      lastRecordingDuration.current = dur;
+      if (dur > 0) {
+        const trackId = "track-host";
+        const existingTrack = timelineTracks.find((t) => t.id === trackId);
+        if (!existingTrack) {
+          setTimelineTracks((prev) => [
+            ...prev,
+            {
+              id: trackId,
+              label: "You (Host)",
+              color: TRACK_COLORS[0],
+              muted: false,
+              solo: false,
+              locked: false,
+              height: 48,
+            },
+          ]);
+        }
+        // Place clip after any existing clips on this track
+        const existingClips = timelineClips.filter((c) => c.trackId === trackId);
+        const maxEnd = existingClips.reduce(
+          (acc, c) => Math.max(acc, c.startTime + c.duration),
+          0
+        );
+        setTimelineClips((prev) => [
+          ...prev,
+          {
+            id: `clip-${Date.now()}`,
+            trackId,
+            startTime: maxEnd,
+            duration: dur,
+            label: `Take ${existingClips.length + 1}`,
+            color: TRACK_COLORS[0],
+            waveform: generateWaveformPeaks(dur),
+          },
+        ]);
+        setShowTimeline(true);
+        setTimelinePlayhead(0);
+      }
     } else {
       // Start
       try {
@@ -607,6 +740,146 @@ function PodcastStudioContent() {
     ]);
     setChatInput("");
   };
+
+  // ------ Timeline handlers ------
+
+  const timelineDuration = useCallback(() => {
+    if (timelineClips.length === 0) return 30; // default 30s view
+    const maxEnd = timelineClips.reduce(
+      (acc, c) => Math.max(acc, c.startTime + c.duration),
+      0
+    );
+    return Math.max(30, maxEnd + 5); // pad 5s after last clip
+  }, [timelineClips]);
+
+  const pxPerSec = PIXELS_PER_SECOND * timelineZoom;
+  const totalTimelineWidth = timelineDuration() * pxPerSec;
+
+  const timeFromX = useCallback(
+    (clientX: number) => {
+      const container = timelineScrollRef.current;
+      if (!container) return 0;
+      const rect = container.getBoundingClientRect();
+      const scrollLeft = container.scrollLeft;
+      const x = clientX - rect.left + scrollLeft;
+      return Math.max(0, x / pxPerSec);
+    },
+    [pxPerSec]
+  );
+
+  const handleRazorSplit = useCallback(
+    (clipId: string, splitTime: number) => {
+      setTimelineClips((prev) => {
+        const clip = prev.find((c) => c.id === clipId);
+        if (!clip) return prev;
+        const relativeTime = splitTime - clip.startTime;
+        if (relativeTime <= MIN_CLIP_DURATION || relativeTime >= clip.duration - MIN_CLIP_DURATION)
+          return prev;
+
+        const splitRatio = relativeTime / clip.duration;
+        const waveformSplit = Math.floor(clip.waveform.length * splitRatio);
+
+        const leftClip: TimelineClip = {
+          ...clip,
+          id: `clip-${Date.now()}-L`,
+          duration: relativeTime,
+          waveform: clip.waveform.slice(0, waveformSplit),
+        };
+        const rightClip: TimelineClip = {
+          ...clip,
+          id: `clip-${Date.now()}-R`,
+          startTime: splitTime,
+          duration: clip.duration - relativeTime,
+          label: `${clip.label} (R)`,
+          waveform: clip.waveform.slice(waveformSplit),
+        };
+        return prev.filter((c) => c.id !== clipId).concat([leftClip, rightClip]);
+      });
+    },
+    []
+  );
+
+  const handleDeleteClip = useCallback(() => {
+    if (!selectedClipId) return;
+    setTimelineClips((prev) => prev.filter((c) => c.id !== selectedClipId));
+    setSelectedClipId(null);
+  }, [selectedClipId]);
+
+  const handleTrimClip = useCallback(
+    (clipId: string, edge: "left" | "right", deltaSeconds: number) => {
+      setTimelineClips((prev) =>
+        prev.map((c) => {
+          if (c.id !== clipId) return c;
+          if (edge === "left") {
+            const newStart = Math.max(0, c.startTime + deltaSeconds);
+            const newDuration = c.duration - (newStart - c.startTime);
+            if (newDuration < MIN_CLIP_DURATION) return c;
+            return { ...c, startTime: newStart, duration: newDuration };
+          } else {
+            const newDuration = Math.max(MIN_CLIP_DURATION, c.duration + deltaSeconds);
+            return { ...c, duration: newDuration };
+          }
+        })
+      );
+    },
+    []
+  );
+
+  // Timeline playback
+  useEffect(() => {
+    if (!isTimelinePlaying) return;
+    const iv = setInterval(() => {
+      setTimelinePlayhead((prev) => {
+        const dur = timelineDuration();
+        if (prev >= dur) {
+          if (loopEnabled) return 0;
+          setIsTimelinePlaying(false);
+          return prev;
+        }
+        return prev + 0.05;
+      });
+    }, 50);
+    return () => clearInterval(iv);
+  }, [isTimelinePlaying, loopEnabled, timelineDuration]);
+
+  // Timeline keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!showTimeline) return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      switch (e.key.toLowerCase()) {
+        case "v":
+          setTimelineTool("select");
+          break;
+        case "c":
+          if (!e.ctrlKey && !e.metaKey) setTimelineTool("razor");
+          break;
+        case "t":
+          if (!e.ctrlKey && !e.metaKey) setTimelineTool("trim");
+          break;
+        case "y":
+          if (!e.ctrlKey && !e.metaKey) setTimelineTool("slip");
+          break;
+        case "delete":
+        case "backspace":
+          if (selectedClipId) {
+            e.preventDefault();
+            handleDeleteClip();
+          }
+          break;
+        case "home":
+          setTimelinePlayhead(0);
+          break;
+        case "end":
+          setTimelinePlayhead(timelineDuration());
+          break;
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [showTimeline, selectedClipId, handleDeleteClip, timelineDuration]);
 
   // ------ Video grid layout ------
   const renderVideoGrid = () => {
@@ -781,6 +1054,22 @@ function PodcastStudioContent() {
 
         {/* Right */}
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowTimeline(!showTimeline)}
+            className={`p-1.5 rounded-lg transition-colors ${
+              showTimeline
+                ? "text-[#74ddc7] bg-[#74ddc7]/10"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+            }`}
+            title="Toggle Timeline"
+          >
+            {showTimeline ? (
+              <PanelBottomClose className="h-4 w-4" />
+            ) : (
+              <PanelBottomOpen className="h-4 w-4" />
+            )}
+          </button>
+
           <button
             onClick={toggleFullscreen}
             className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
@@ -1163,6 +1452,517 @@ function PodcastStudioContent() {
           </div>
         )}
       </div>
+
+      {/* ================================================================= */}
+      {/* Timeline Panel                                                    */}
+      {/* ================================================================= */}
+      {showTimeline && (
+        <div className="shrink-0 bg-zinc-900 border-t border-zinc-800 flex flex-col" style={{ height: 220 }}>
+          {/* Timeline Toolbar */}
+          <div className="flex items-center justify-between px-3 py-1.5 border-b border-zinc-800 shrink-0 gap-4">
+            {/* Left: Editing Tools */}
+            <div className="flex items-center gap-1">
+              {TOOL_INFO.map((tool) => (
+                <button
+                  key={tool.key}
+                  onClick={() => setTimelineTool(tool.key)}
+                  className={`p-1.5 rounded-lg transition-colors ${
+                    timelineTool === tool.key
+                      ? "bg-[#7401df]/20 text-[#7401df]"
+                      : "text-zinc-500 hover:text-white hover:bg-zinc-800"
+                  }`}
+                  title={`${tool.label} (${tool.shortcut})`}
+                >
+                  <tool.icon className="h-4 w-4" />
+                </button>
+              ))}
+            </div>
+
+            {/* Center: Playback Controls */}
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setTimelinePlayhead(0)}
+                className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+                title="Skip to Start (Home)"
+              >
+                <SkipBack className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => setIsTimelinePlaying(!isTimelinePlaying)}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  isTimelinePlaying
+                    ? "bg-[#74ddc7]/20 text-[#74ddc7]"
+                    : "text-zinc-500 hover:text-white hover:bg-zinc-800"
+                }`}
+                title={isTimelinePlaying ? "Pause" : "Play"}
+              >
+                {isTimelinePlaying ? (
+                  <Pause className="h-3.5 w-3.5" />
+                ) : (
+                  <Play className="h-3.5 w-3.5" />
+                )}
+              </button>
+              <button
+                onClick={() => setTimelinePlayhead(timelineDuration())}
+                className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+                title="Skip to End (End)"
+              >
+                <SkipForward className="h-3.5 w-3.5" />
+              </button>
+
+              <span className="text-[11px] font-mono text-zinc-400 min-w-[60px] text-center tabular-nums">
+                {formatTime(Math.floor(timelinePlayhead))}
+              </span>
+
+              <div className="h-4 w-px bg-zinc-700 mx-0.5" />
+
+              <button
+                onClick={() => setLoopEnabled(!loopEnabled)}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  loopEnabled
+                    ? "bg-[#74ddc7]/20 text-[#74ddc7]"
+                    : "text-zinc-500 hover:text-white hover:bg-zinc-800"
+                }`}
+                title="Loop"
+              >
+                <Repeat className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {/* Right: Snap + Zoom */}
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setSnapEnabled(!snapEnabled)}
+                className={`px-2 py-1 rounded-lg text-[9px] font-bold tracking-wider transition-colors ${
+                  snapEnabled
+                    ? "bg-[#74ddc7]/20 text-[#74ddc7]"
+                    : "text-zinc-500 hover:text-white hover:bg-zinc-800"
+                }`}
+                title="Snap to Grid"
+              >
+                SNAP
+              </button>
+
+              <div className="h-4 w-px bg-zinc-700 mx-0.5" />
+
+              <button
+                onClick={() => setTimelineZoom((z) => Math.max(MIN_ZOOM, z - 0.25))}
+                className="p-1 rounded text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+                title="Zoom Out"
+              >
+                <Minus className="h-3 w-3" />
+              </button>
+              <span className="text-[10px] font-mono text-zinc-500 min-w-[32px] text-center">
+                {timelineZoom.toFixed(1)}x
+              </span>
+              <button
+                onClick={() => setTimelineZoom((z) => Math.min(MAX_ZOOM, z + 0.25))}
+                className="p-1 rounded text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+                title="Zoom In"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+
+          {/* Track Area */}
+          <div className="flex flex-1 min-h-0">
+            {/* Track Headers (fixed left) */}
+            <div
+              className="shrink-0 flex flex-col border-r border-zinc-800 bg-zinc-900"
+              style={{ width: TRACK_HEADER_WIDTH }}
+            >
+              <div className="h-6 border-b border-zinc-800 shrink-0 flex items-center px-2">
+                <span className="text-[9px] text-zinc-600 font-semibold uppercase tracking-wider">
+                  Tracks
+                </span>
+              </div>
+              <div className="flex-1 overflow-y-hidden">
+                {timelineTracks.map((track) => (
+                  <div
+                    key={track.id}
+                    className="flex items-center gap-1.5 px-2 border-b border-zinc-800/50"
+                    style={{ height: track.height }}
+                  >
+                    <div
+                      className="h-2 w-2 rounded-full shrink-0"
+                      style={{ backgroundColor: track.color }}
+                    />
+                    <span className="text-[10px] text-zinc-300 font-medium truncate flex-1">
+                      {track.label}
+                    </span>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button
+                        onClick={() =>
+                          setTimelineTracks((prev) =>
+                            prev.map((t) =>
+                              t.id === track.id
+                                ? { ...t, muted: !t.muted }
+                                : t
+                            )
+                          )
+                        }
+                        className={`h-5 w-5 flex items-center justify-center rounded text-[9px] font-bold transition-colors ${
+                          track.muted
+                            ? "bg-red-500/20 text-red-400"
+                            : "text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800"
+                        }`}
+                        title="Mute"
+                      >
+                        M
+                      </button>
+                      <button
+                        onClick={() =>
+                          setTimelineTracks((prev) =>
+                            prev.map((t) =>
+                              t.id === track.id
+                                ? { ...t, solo: !t.solo }
+                                : t
+                            )
+                          )
+                        }
+                        className={`h-5 w-5 flex items-center justify-center rounded text-[9px] font-bold transition-colors ${
+                          track.solo
+                            ? "bg-yellow-500/20 text-yellow-400"
+                            : "text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800"
+                        }`}
+                        title="Solo"
+                      >
+                        S
+                      </button>
+                      <button
+                        onClick={() =>
+                          setTimelineTracks((prev) =>
+                            prev.map((t) =>
+                              t.id === track.id
+                                ? { ...t, locked: !t.locked }
+                                : t
+                            )
+                          )
+                        }
+                        className={`h-5 w-5 flex items-center justify-center rounded transition-colors ${
+                          track.locked
+                            ? "text-zinc-400"
+                            : "text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800"
+                        }`}
+                        title={track.locked ? "Unlock" : "Lock"}
+                      >
+                        {track.locked ? (
+                          <Lock className="h-2.5 w-2.5" />
+                        ) : (
+                          <Unlock className="h-2.5 w-2.5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {timelineTracks.length === 0 && (
+                  <div className="flex items-center justify-center h-full">
+                    <span className="text-[10px] text-zinc-600">No tracks</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Scrollable Timeline */}
+            <div
+              ref={timelineScrollRef}
+              className="flex-1 overflow-x-auto overflow-y-hidden relative"
+              onMouseMove={(e) => {
+                if (timelineTool !== "razor") {
+                  setRazorPreviewX(null);
+                  return;
+                }
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left + e.currentTarget.scrollLeft;
+                setRazorPreviewX(x);
+              }}
+              onMouseLeave={() => setRazorPreviewX(null)}
+              onClick={(e) => {
+                if (timelineTool === "select") {
+                  const tag = (e.target as HTMLElement).closest(
+                    "[data-clip-id]"
+                  );
+                  if (!tag) setSelectedClipId(null);
+                }
+                // Seek on ruler click
+                const rect = e.currentTarget.getBoundingClientRect();
+                const y = e.clientY - rect.top;
+                if (y <= 24) {
+                  const x =
+                    e.clientX - rect.left + e.currentTarget.scrollLeft;
+                  setTimelinePlayhead(Math.max(0, x / pxPerSec));
+                }
+              }}
+            >
+              <div
+                style={{ width: totalTimelineWidth, minHeight: "100%" }}
+                className="relative"
+              >
+                {/* Time Ruler */}
+                <div className="sticky top-0 h-6 bg-zinc-900/90 border-b border-zinc-800 z-10 relative backdrop-blur-sm cursor-pointer">
+                  {(() => {
+                    const step =
+                      pxPerSec >= 160
+                        ? 0.5
+                        : pxPerSec >= 80
+                        ? 1
+                        : pxPerSec >= 40
+                        ? 2
+                        : pxPerSec >= 20
+                        ? 5
+                        : 10;
+                    const ticks = [];
+                    const dur = timelineDuration();
+                    for (let t = 0; t <= dur; t += step) {
+                      const x = t * pxPerSec;
+                      const isMajor = step >= 5 || t % (step * 2) === 0;
+                      const mm = Math.floor(t / 60);
+                      const ss = Math.floor(t) % 60;
+                      ticks.push(
+                        <div
+                          key={t}
+                          className="absolute bottom-0"
+                          style={{ left: x }}
+                        >
+                          <div
+                            className={`w-px ${
+                              isMajor
+                                ? "h-3 bg-zinc-600"
+                                : "h-1.5 bg-zinc-700"
+                            }`}
+                          />
+                          {isMajor && (
+                            <span className="absolute bottom-3 -translate-x-1/2 text-[8px] text-zinc-500 font-mono whitespace-nowrap select-none">
+                              {mm}:{ss.toString().padStart(2, "0")}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    }
+                    return ticks;
+                  })()}
+                </div>
+
+                {/* Track Lanes */}
+                {timelineTracks.map((track) => (
+                  <div
+                    key={track.id}
+                    className="relative border-b border-zinc-800/50"
+                    style={{ height: track.height }}
+                  >
+                    {/* Clips */}
+                    {timelineClips
+                      .filter((c) => c.trackId === track.id)
+                      .map((clip) => {
+                        const clipLeft = clip.startTime * pxPerSec;
+                        const clipWidth = clip.duration * pxPerSec;
+                        const isSelected = selectedClipId === clip.id;
+                        // Downsample waveform to reasonable bar count
+                        const maxBars = Math.max(
+                          1,
+                          Math.floor(clipWidth / 3)
+                        );
+                        const waveStep = Math.max(
+                          1,
+                          Math.floor(clip.waveform.length / maxBars)
+                        );
+                        return (
+                          <div
+                            key={clip.id}
+                            data-clip-id={clip.id}
+                            className={`absolute top-1 bottom-1 rounded-lg overflow-hidden transition-shadow ${
+                              timelineTool === "razor"
+                                ? "cursor-crosshair"
+                                : timelineTool === "trim"
+                                ? "cursor-col-resize"
+                                : "cursor-pointer"
+                            } ${
+                              isSelected
+                                ? "ring-2 ring-[#74ddc7] shadow-[0_0_12px_rgba(116,221,199,0.3)]"
+                                : "hover:ring-1 hover:ring-zinc-500"
+                            }`}
+                            style={{
+                              left: clipLeft,
+                              width: Math.max(clipWidth, 4),
+                              backgroundColor: `${clip.color}30`,
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (timelineTool === "select") {
+                                setSelectedClipId(clip.id);
+                              } else if (timelineTool === "razor") {
+                                const t = timeFromX(e.clientX);
+                                handleRazorSplit(clip.id, t);
+                              }
+                            }}
+                          >
+                            {/* Waveform bars */}
+                            <div className="flex items-center h-full px-0.5 gap-[1px]">
+                              {clip.waveform
+                                .filter(
+                                  (_, wi) => wi % waveStep === 0
+                                )
+                                .map((peak, wi) => (
+                                  <div
+                                    key={wi}
+                                    className="flex-1 min-w-[1px] rounded-full"
+                                    style={{
+                                      height: `${Math.max(
+                                        10,
+                                        peak * 80
+                                      )}%`,
+                                      backgroundColor: clip.color,
+                                      opacity: track.muted ? 0.2 : 0.6,
+                                    }}
+                                  />
+                                ))}
+                            </div>
+
+                            {/* Label */}
+                            {clipWidth > 40 && (
+                              <span
+                                className="absolute top-0.5 left-1.5 text-[9px] font-semibold truncate pointer-events-none select-none"
+                                style={{
+                                  color: clip.color,
+                                  maxWidth: clipWidth - 12,
+                                }}
+                              >
+                                {clip.label}
+                              </span>
+                            )}
+
+                            {/* Trim handles */}
+                            {(isSelected ||
+                              timelineTool === "trim") && (
+                              <>
+                                <div
+                                  className="absolute top-0 bottom-0 left-0 w-1 cursor-col-resize hover:bg-white/30 transition-colors"
+                                  style={{
+                                    backgroundColor: `${clip.color}80`,
+                                  }}
+                                  onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    let lastX = e.clientX;
+                                    const onMove = (
+                                      me: MouseEvent
+                                    ) => {
+                                      const delta =
+                                        (me.clientX - lastX) /
+                                        pxPerSec;
+                                      lastX = me.clientX;
+                                      handleTrimClip(
+                                        clip.id,
+                                        "left",
+                                        delta
+                                      );
+                                    };
+                                    const onUp = () => {
+                                      window.removeEventListener(
+                                        "mousemove",
+                                        onMove
+                                      );
+                                      window.removeEventListener(
+                                        "mouseup",
+                                        onUp
+                                      );
+                                    };
+                                    window.addEventListener(
+                                      "mousemove",
+                                      onMove
+                                    );
+                                    window.addEventListener(
+                                      "mouseup",
+                                      onUp
+                                    );
+                                  }}
+                                />
+                                <div
+                                  className="absolute top-0 bottom-0 right-0 w-1 cursor-col-resize hover:bg-white/30 transition-colors"
+                                  style={{
+                                    backgroundColor: `${clip.color}80`,
+                                  }}
+                                  onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    let lastX = e.clientX;
+                                    const onMove = (
+                                      me: MouseEvent
+                                    ) => {
+                                      const delta =
+                                        (me.clientX - lastX) /
+                                        pxPerSec;
+                                      lastX = me.clientX;
+                                      handleTrimClip(
+                                        clip.id,
+                                        "right",
+                                        delta
+                                      );
+                                    };
+                                    const onUp = () => {
+                                      window.removeEventListener(
+                                        "mousemove",
+                                        onMove
+                                      );
+                                      window.removeEventListener(
+                                        "mouseup",
+                                        onUp
+                                      );
+                                    };
+                                    window.addEventListener(
+                                      "mousemove",
+                                      onMove
+                                    );
+                                    window.addEventListener(
+                                      "mouseup",
+                                      onUp
+                                    );
+                                  }}
+                                />
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                ))}
+
+                {/* Empty state when no tracks */}
+                {timelineTracks.length === 0 && (
+                  <div className="absolute inset-0 top-6 flex flex-col items-center justify-center gap-2 text-zinc-600">
+                    <Scissors className="h-6 w-6" />
+                    <span className="text-xs font-medium">
+                      Start recording to see your timeline
+                    </span>
+                    <span className="text-[10px] text-zinc-700">
+                      Clips will appear here automatically
+                    </span>
+                  </div>
+                )}
+
+                {/* Playhead */}
+                <div
+                  className="absolute top-0 bottom-0 z-20 pointer-events-none"
+                  style={{ left: timelinePlayhead * pxPerSec }}
+                >
+                  <div className="relative w-px h-full bg-red-500">
+                    <div className="absolute -top-0 -translate-x-[4px] w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent border-t-red-500" />
+                  </div>
+                </div>
+
+                {/* Razor preview line */}
+                {timelineTool === "razor" && razorPreviewX !== null && (
+                  <div
+                    className="absolute top-6 bottom-0 w-px bg-yellow-400/60 pointer-events-none z-10"
+                    style={{ left: razorPreviewX }}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ================================================================= */}
       {/* Bottom Transport Bar                                              */}
