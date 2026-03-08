@@ -26,8 +26,6 @@ import {
   Sliders,
   Scissors,
   Trash2,
-  ZoomIn,
-  ZoomOut,
   Download,
   FileAudio,
   Clock,
@@ -41,7 +39,6 @@ import {
   saveAudioFile as dbSave,
   loadAllAudioFiles as dbLoadAll,
   deleteAudioFileFromDB as dbDelete,
-  type StoredAudioFile,
 } from "@/lib/audio-store";
 
 // ---------------------------------------------------------------------------
@@ -79,8 +76,97 @@ function formatTime(seconds: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}.${String(ms).padStart(2, "0")}`;
 }
 
+/** Write an ASCII string into a DataView */
+function wavWriteString(view: DataView, offset: number, str: string) {
+  for (let i = 0; i < str.length; i++) {
+    view.setUint8(offset + i, str.charCodeAt(i));
+  }
+}
+
+/** Encode an AudioBuffer to a WAV ArrayBuffer (PCM 16-bit) */
+function audioBufferToWav(buffer: AudioBuffer): ArrayBuffer {
+  const numCh = buffer.numberOfChannels;
+  const sr = buffer.sampleRate;
+  const bps = 16;
+  const bytesPerSample = bps / 8;
+  const blockAlign = numCh * bytesPerSample;
+  const dataSize = buffer.length * blockAlign;
+  const buf = new ArrayBuffer(44 + dataSize);
+  const v = new DataView(buf);
+
+  wavWriteString(v, 0, "RIFF");
+  v.setUint32(4, 36 + dataSize, true);
+  wavWriteString(v, 8, "WAVE");
+  wavWriteString(v, 12, "fmt ");
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); // PCM
+  v.setUint16(22, numCh, true);
+  v.setUint32(24, sr, true);
+  v.setUint32(28, sr * blockAlign, true);
+  v.setUint16(32, blockAlign, true);
+  v.setUint16(34, bps, true);
+  wavWriteString(v, 36, "data");
+  v.setUint32(40, dataSize, true);
+
+  const channels: Float32Array[] = [];
+  for (let c = 0; c < numCh; c++) channels.push(buffer.getChannelData(c));
+
+  let off = 44;
+  for (let i = 0; i < buffer.length; i++) {
+    for (let c = 0; c < numCh; c++) {
+      const s = Math.max(-1, Math.min(1, channels[c][i]));
+      v.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      off += 2;
+    }
+  }
+  return buf;
+}
+
+/** Snapshot AudioBuffer channel data for undo/redo stack */
+interface BufferSnapshot {
+  data: Float32Array[];
+  sampleRate: number;
+  channels: number;
+}
+
+function snapshotBuffer(buf: AudioBuffer): BufferSnapshot {
+  const data: Float32Array[] = [];
+  for (let c = 0; c < buf.numberOfChannels; c++) {
+    data.push(new Float32Array(buf.getChannelData(c)));
+  }
+  return { data, sampleRate: buf.sampleRate, channels: buf.numberOfChannels };
+}
+
+function bufferFromSnapshot(snap: BufferSnapshot): AudioBuffer {
+  const buf = new AudioBuffer({
+    length: snap.data[0].length,
+    numberOfChannels: snap.channels,
+    sampleRate: snap.sampleRate,
+  });
+  for (let c = 0; c < snap.channels; c++) {
+    buf.getChannelData(c).set(snap.data[c]);
+  }
+  return buf;
+}
+
+/** Downsample an AudioBuffer channel 0 to peak array for waveform display */
+function computeWaveformPeaks(buf: AudioBuffer, numSamples = 2000): number[] {
+  const channelData = buf.getChannelData(0);
+  const blockSize = Math.max(1, Math.floor(channelData.length / numSamples));
+  const peaks: number[] = [];
+  for (let i = 0; i < numSamples; i++) {
+    let max = 0;
+    for (let j = 0; j < blockSize; j++) {
+      const abs = Math.abs(channelData[i * blockSize + j] || 0);
+      if (abs > max) max = abs;
+    }
+    peaks.push(max);
+  }
+  return peaks;
+}
+
 // ---------------------------------------------------------------------------
-// Waveform Visualization (canvas-drawn placeholder)
+// Waveform Visualization (canvas-drawn, supports selection)
 // ---------------------------------------------------------------------------
 
 function WaveformDisplay({
@@ -90,6 +176,9 @@ function WaveformDisplay({
   isRecording,
   onSeek,
   waveformData,
+  selectionStart,
+  selectionEnd,
+  onSelectionChange,
 }: {
   currentTime: number;
   duration: number;
@@ -97,9 +186,15 @@ function WaveformDisplay({
   isRecording: boolean;
   onSeek: (time: number) => void;
   waveformData: number[] | null;
+  selectionStart: number | null;
+  selectionEnd: number | null;
+  onSelectionChange: (start: number | null, end: number | null) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartTimeRef = useRef(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -146,16 +241,25 @@ function WaveformDisplay({
     const bars = Math.floor(w / (barWidth + gap));
     const playheadPos = duration > 0 ? (currentTime / duration) * w : 0;
 
+    // Compute selection pixel range
+    let selX1 = -1, selX2 = -1;
+    if (selectionStart != null && selectionEnd != null && duration > 0) {
+      const s0 = Math.min(selectionStart, selectionEnd);
+      const s1 = Math.max(selectionStart, selectionEnd);
+      if (s1 - s0 > 0.001) {
+        selX1 = (s0 / duration) * w;
+        selX2 = (s1 / duration) * w;
+      }
+    }
+
     for (let i = 0; i < bars; i++) {
       const x = i * (barWidth + gap);
       let amplitude: number;
 
       if (waveformData && waveformData.length > 0) {
-        // Use real waveform data
         const dataIndex = Math.floor((i / bars) * waveformData.length);
         amplitude = waveformData[Math.min(dataIndex, waveformData.length - 1)];
       } else {
-        // Procedural waveform shape as fallback
         const t = i / bars;
         amplitude =
           0.3 +
@@ -166,12 +270,51 @@ function WaveformDisplay({
       }
       const barH = Math.max(2, amplitude * h * 0.8);
 
-      if (x < playheadPos) {
-        ctx.fillStyle = isRecording ? "rgba(220,38,38,0.7)" : "rgba(116,221,199,0.7)";
+      // Color: selected region, played region, or unplayed
+      const inSelection = selX1 >= 0 && x >= selX1 && x <= selX2;
+      if (inSelection) {
+        ctx.fillStyle = isRecording ? "rgba(220,38,38,0.85)" : "rgba(116,221,199,0.9)";
+      } else if (x < playheadPos) {
+        ctx.fillStyle = isRecording ? "rgba(220,38,38,0.5)" : "rgba(116,221,199,0.5)";
       } else {
         ctx.fillStyle = "rgba(255,255,255,0.15)";
       }
       ctx.fillRect(x, (h - barH) / 2, barWidth, barH);
+    }
+
+    // Selection overlay background
+    if (selX1 >= 0 && selX2 > selX1) {
+      ctx.fillStyle = "rgba(116, 221, 199, 0.08)";
+      ctx.fillRect(selX1, 0, selX2 - selX1, h);
+      // Selection edge lines
+      ctx.strokeStyle = "rgba(116, 221, 199, 0.6)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(selX1, 0); ctx.lineTo(selX1, h);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(selX2, 0); ctx.lineTo(selX2, h);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Selection time labels
+      if (selectionStart != null && selectionEnd != null) {
+        const s0 = Math.min(selectionStart, selectionEnd);
+        const s1 = Math.max(selectionStart, selectionEnd);
+        ctx.fillStyle = "rgba(116, 221, 199, 0.8)";
+        ctx.font = "9px monospace";
+        ctx.fillText(formatTime(s0).split(".")[0], selX1 + 2, h - 4);
+        ctx.fillText(formatTime(s1).split(".")[0], selX2 - 28, h - 4);
+        // Duration label centered
+        const selDur = s1 - s0;
+        if (selX2 - selX1 > 60) {
+          const label = `${selDur.toFixed(1)}s`;
+          ctx.fillStyle = "rgba(116, 221, 199, 0.6)";
+          ctx.font = "bold 10px monospace";
+          ctx.fillText(label, (selX1 + selX2) / 2 - 12, 22);
+        }
+      }
     }
 
     // Playhead
@@ -203,20 +346,51 @@ function WaveformDisplay({
         ctx.fillText(formatTime(t).split(".")[0], x + 2, 12);
       }
     }
-  }, [currentTime, duration, isPlaying, isRecording, waveformData]);
+  }, [currentTime, duration, isPlaying, isRecording, waveformData, selectionStart, selectionEnd]);
 
-  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  // Convert mouse event to time
+  const timeFromMouse = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    const ratio = x / rect.width;
-    onSeek(ratio * duration);
+    return Math.max(0, Math.min(duration, (x / rect.width) * duration));
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (duration <= 0 || isRecording) return;
+    e.preventDefault();
+    isDraggingRef.current = true;
+    const t = timeFromMouse(e);
+    dragStartXRef.current = e.clientX;
+    dragStartTimeRef.current = t;
+    onSelectionChange(t, t);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current || duration <= 0) return;
+    const t = timeFromMouse(e);
+    onSelectionChange(dragStartTimeRef.current, t);
+  };
+
+  const handleMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    const distance = Math.abs(e.clientX - dragStartXRef.current);
+    if (distance < 5) {
+      // Click, not drag — seek and clear selection
+      onSelectionChange(null, null);
+      const t = timeFromMouse(e);
+      onSeek(t);
+    }
   };
 
   return (
     <div
       ref={containerRef}
-      className="w-full h-full cursor-crosshair relative"
-      onClick={handleClick}
+      className="w-full h-full cursor-crosshair relative select-none"
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={() => { isDraggingRef.current = false; }}
     >
       <canvas ref={canvasRef} className="w-full h-full" />
     </div>
@@ -351,6 +525,15 @@ export default function AudioEditorPage() {
   const liveWaveformRef = useRef<number[]>([]);
   const durationRef = useRef(180); // stays in sync with duration state
 
+  // ── Editing engine state ──
+  const audioBufferRef = useRef<AudioBuffer | null>(null);
+  const [selectionStart, setSelectionStart] = useState<number | null>(null);
+  const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
+  const undoStackRef = useRef<BufferSnapshot[]>([]);
+  const redoStackRef = useRef<BufferSnapshot[]>([]);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
   // ── Restore persisted files from IndexedDB on mount ──
   useEffect(() => {
     let cancelled = false;
@@ -446,7 +629,16 @@ export default function AudioEditorPage() {
       const arrayBuffer = await file.arrayBuffer();
       const audioCtx = new AudioContext();
       const decoded = await audioCtx.decodeAudioData(arrayBuffer);
-      const channelData = decoded.getChannelData(0);
+
+      // Store decoded buffer for editing
+      audioBufferRef.current = decoded;
+      // Clear undo/redo stacks for new file
+      undoStackRef.current = [];
+      redoStackRef.current = [];
+      setCanUndo(false);
+      setCanRedo(false);
+      setSelectionStart(null);
+      setSelectionEnd(null);
 
       // Use decoded duration as fallback (more reliable than Audio element for webm)
       if (decoded.duration > 0 && isFinite(decoded.duration)) {
@@ -455,19 +647,8 @@ export default function AudioEditorPage() {
         setAudioFiles((prev) => prev.map((f) => f.id === fileId && f.duration === "0:00" ? { ...f, duration: decodedDur } : f));
       }
 
-      // Downsample to ~2000 points for waveform
-      const samples = 2000;
-      const blockSize = Math.max(1, Math.floor(channelData.length / samples));
-      const peaks: number[] = [];
-      for (let i = 0; i < samples; i++) {
-        let max = 0;
-        for (let j = 0; j < blockSize; j++) {
-          const abs = Math.abs(channelData[i * blockSize + j] || 0);
-          if (abs > max) max = abs;
-        }
-        peaks.push(max);
-      }
-      setWaveformData(peaks);
+      // Compute waveform peaks
+      setWaveformData(computeWaveformPeaks(decoded));
       audioCtx.close();
       console.log("[AudioEditor] Waveform decoded:", file.name, "decoded duration:", decoded.duration);
     } catch (waveErr) {
@@ -849,25 +1030,20 @@ export default function AudioEditorPage() {
       if (dur > 0) setDuration(dur);
     };
 
-    // Decode waveform from blob URL
+    // Decode waveform from blob URL + store AudioBuffer for editing
     fetch(file.blobUrl)
       .then((r) => r.arrayBuffer())
       .then((buf) => {
         const ctx = new AudioContext();
         return ctx.decodeAudioData(buf).then((decoded) => {
-          const data = decoded.getChannelData(0);
-          const samples = 2000;
-          const blockSize = Math.max(1, Math.floor(data.length / samples));
-          const peaks: number[] = [];
-          for (let i = 0; i < samples; i++) {
-            let max = 0;
-            for (let j = 0; j < blockSize; j++) {
-              const abs = Math.abs(data[i * blockSize + j] || 0);
-              if (abs > max) max = abs;
-            }
-            peaks.push(max);
-          }
-          setWaveformData(peaks);
+          audioBufferRef.current = decoded;
+          undoStackRef.current = [];
+          redoStackRef.current = [];
+          setCanUndo(false);
+          setCanRedo(false);
+          setSelectionStart(null);
+          setSelectionEnd(null);
+          setWaveformData(computeWaveformPeaks(decoded));
           if (decoded.duration > 0) setDuration(decoded.duration);
           ctx.close();
         });
@@ -884,6 +1060,255 @@ export default function AudioEditorPage() {
       prev.map((e) => (e.id === id ? { ...e, enabled: !e.enabled } : e))
     );
   }, []);
+
+  // ── Selection handler (called by WaveformDisplay) ──
+  const handleSelectionChange = useCallback((start: number | null, end: number | null) => {
+    setSelectionStart(start);
+    setSelectionEnd(end);
+  }, []);
+
+  // ── Rebuild playback + waveform from an AudioBuffer ──
+  const rebuildFromBuffer = useCallback(async (buffer: AudioBuffer) => {
+    audioBufferRef.current = buffer;
+    setDuration(buffer.duration);
+    durationRef.current = buffer.duration;
+    setWaveformData(computeWaveformPeaks(buffer));
+    setSelectionStart(null);
+    setSelectionEnd(null);
+
+    // Render to WAV for playback
+    try {
+      const wav = audioBufferToWav(buffer);
+      const blob = new Blob([wav], { type: "audio/wav" });
+      const url = URL.createObjectURL(blob);
+
+      if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = url;
+      const audio = new Audio(url);
+      audio.preload = "auto";
+      audioRef.current = audio;
+
+      setCurrentTime((prev) => Math.min(prev, buffer.duration));
+    } catch (err) {
+      console.error("[AudioEditor] rebuildFromBuffer failed:", err);
+    }
+  }, []);
+
+  // ── Save current state to undo stack ──
+  const saveToUndoStack = useCallback(() => {
+    const buf = audioBufferRef.current;
+    if (!buf) return;
+    undoStackRef.current.push(snapshotBuffer(buf));
+    redoStackRef.current = [];
+    setCanUndo(true);
+    setCanRedo(false);
+  }, []);
+
+  // ── TRIM: Keep only the selected region ──
+  const handleTrim = useCallback(async () => {
+    const buf = audioBufferRef.current;
+    if (!buf) { showStatus("No audio loaded"); return; }
+    if (selectionStart == null || selectionEnd == null) {
+      showStatus("Select a region first — click and drag on the waveform");
+      return;
+    }
+    const s0 = Math.min(selectionStart, selectionEnd);
+    const s1 = Math.max(selectionStart, selectionEnd);
+    if (s1 - s0 < 0.01) { showStatus("Selection too short"); return; }
+
+    saveToUndoStack();
+    const startSample = Math.floor(s0 * buf.sampleRate);
+    const endSample = Math.min(Math.floor(s1 * buf.sampleRate), buf.length);
+    const newLen = endSample - startSample;
+    if (newLen <= 0) return;
+
+    const newBuf = new AudioBuffer({ length: newLen, numberOfChannels: buf.numberOfChannels, sampleRate: buf.sampleRate });
+    for (let c = 0; c < buf.numberOfChannels; c++) {
+      newBuf.getChannelData(c).set(buf.getChannelData(c).subarray(startSample, endSample));
+    }
+    await rebuildFromBuffer(newBuf);
+    setCurrentTime(0);
+    showStatus(`Trimmed to ${(s1 - s0).toFixed(1)}s`);
+  }, [selectionStart, selectionEnd, saveToUndoStack, rebuildFromBuffer, showStatus]);
+
+  // ── DELETE: Remove the selected region, keep the rest ──
+  const handleDeleteSelection = useCallback(async () => {
+    const buf = audioBufferRef.current;
+    if (!buf) { showStatus("No audio loaded"); return; }
+    if (selectionStart == null || selectionEnd == null) {
+      showStatus("Select a region first — click and drag on the waveform");
+      return;
+    }
+    const s0 = Math.min(selectionStart, selectionEnd);
+    const s1 = Math.max(selectionStart, selectionEnd);
+    if (s1 - s0 < 0.01) { showStatus("Selection too short"); return; }
+
+    saveToUndoStack();
+    const startSample = Math.floor(s0 * buf.sampleRate);
+    const endSample = Math.min(Math.floor(s1 * buf.sampleRate), buf.length);
+    const newLen = buf.length - (endSample - startSample);
+    if (newLen <= 0) { showStatus("Cannot delete entire audio"); return; }
+
+    const newBuf = new AudioBuffer({ length: newLen, numberOfChannels: buf.numberOfChannels, sampleRate: buf.sampleRate });
+    for (let c = 0; c < buf.numberOfChannels; c++) {
+      const oldData = buf.getChannelData(c);
+      const newData = newBuf.getChannelData(c);
+      newData.set(oldData.subarray(0, startSample), 0);
+      newData.set(oldData.subarray(endSample), startSample);
+    }
+    await rebuildFromBuffer(newBuf);
+    setCurrentTime(s0);
+    showStatus(`Deleted ${(s1 - s0).toFixed(1)}s`);
+  }, [selectionStart, selectionEnd, saveToUndoStack, rebuildFromBuffer, showStatus]);
+
+  // ── SPLIT: Trim everything after the playhead (non-destructive marker) ──
+  const handleSplitAtPlayhead = useCallback(async () => {
+    const buf = audioBufferRef.current;
+    if (!buf) { showStatus("No audio loaded"); return; }
+    if (currentTime <= 0 || currentTime >= duration) {
+      showStatus("Move playhead to split position (click on waveform)");
+      return;
+    }
+    // Split = select from start to playhead as a trim (keep left side)
+    saveToUndoStack();
+    const splitSample = Math.floor(currentTime * buf.sampleRate);
+    if (splitSample <= 0 || splitSample >= buf.length) return;
+
+    const newBuf = new AudioBuffer({ length: splitSample, numberOfChannels: buf.numberOfChannels, sampleRate: buf.sampleRate });
+    for (let c = 0; c < buf.numberOfChannels; c++) {
+      newBuf.getChannelData(c).set(buf.getChannelData(c).subarray(0, splitSample));
+    }
+    await rebuildFromBuffer(newBuf);
+    setCurrentTime(0);
+    showStatus(`Split at ${formatTime(currentTime)} — kept first ${currentTime.toFixed(1)}s`);
+  }, [currentTime, duration, saveToUndoStack, rebuildFromBuffer, showStatus]);
+
+  // ── UNDO ──
+  const handleUndo = useCallback(async () => {
+    if (undoStackRef.current.length === 0) return;
+    const cur = audioBufferRef.current;
+    if (cur) {
+      redoStackRef.current.push(snapshotBuffer(cur));
+      setCanRedo(true);
+    }
+    const prev = undoStackRef.current.pop()!;
+    setCanUndo(undoStackRef.current.length > 0);
+    await rebuildFromBuffer(bufferFromSnapshot(prev));
+    showStatus("Undo");
+  }, [rebuildFromBuffer, showStatus]);
+
+  // ── REDO ──
+  const handleRedo = useCallback(async () => {
+    if (redoStackRef.current.length === 0) return;
+    const cur = audioBufferRef.current;
+    if (cur) {
+      undoStackRef.current.push(snapshotBuffer(cur));
+      setCanUndo(true);
+    }
+    const next = redoStackRef.current.pop()!;
+    setCanRedo(redoStackRef.current.length > 0);
+    await rebuildFromBuffer(bufferFromSnapshot(next));
+    showStatus("Redo");
+  }, [rebuildFromBuffer, showStatus]);
+
+  // ── EXPORT: Download edited audio as WAV ──
+  const handleExport = useCallback(() => {
+    const buf = audioBufferRef.current;
+    if (!buf) { showStatus("No audio to export"); return; }
+    try {
+      const wav = audioBufferToWav(buf);
+      const blob = new Blob([wav], { type: "audio/wav" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `wccg-export-${Date.now()}.wav`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showStatus("Exported as WAV");
+    } catch (err) {
+      console.error("[AudioEditor] Export failed:", err);
+      showStatus("Export failed — try again");
+    }
+  }, [showStatus]);
+
+  // ── SELECT ALL ──
+  const handleSelectAll = useCallback(() => {
+    if (duration > 0) {
+      setSelectionStart(0);
+      setSelectionEnd(duration);
+      showStatus("Selected all");
+    }
+  }, [duration, showStatus]);
+
+  // ── Keyboard shortcuts ──
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      const ctrl = e.ctrlKey || e.metaKey;
+
+      // Space = play/pause
+      if (e.code === "Space" && !ctrl) {
+        e.preventDefault();
+        handlePlayPause();
+        return;
+      }
+      // Ctrl+Z = undo
+      if (ctrl && !e.shiftKey && e.key === "z") {
+        e.preventDefault();
+        handleUndo();
+        return;
+      }
+      // Ctrl+Shift+Z or Ctrl+Y = redo
+      if ((ctrl && e.shiftKey && e.key === "z") || (ctrl && e.key === "y")) {
+        e.preventDefault();
+        handleRedo();
+        return;
+      }
+      // Delete or Backspace = delete selection
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        handleDeleteSelection();
+        return;
+      }
+      // Ctrl+T = trim
+      if (ctrl && e.key === "t") {
+        e.preventDefault();
+        handleTrim();
+        return;
+      }
+      // Ctrl+A = select all
+      if (ctrl && e.key === "a") {
+        e.preventDefault();
+        handleSelectAll();
+        return;
+      }
+      // Ctrl+E or Ctrl+Shift+E = export
+      if (ctrl && e.key === "e") {
+        e.preventDefault();
+        handleExport();
+        return;
+      }
+      // S = split at playhead
+      if (!ctrl && e.key === "s") {
+        e.preventDefault();
+        handleSplitAtPlayhead();
+        return;
+      }
+      // Escape = clear selection
+      if (e.key === "Escape") {
+        setSelectionStart(null);
+        setSelectionEnd(null);
+        return;
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [handlePlayPause, handleUndo, handleRedo, handleDeleteSelection, handleTrim, handleSelectAll, handleExport, handleSplitAtPlayhead]);
 
   return (
     <LoginRequired fullPage message="Sign in to access the Audio Editor. Record, edit, and mix your audio projects.">
@@ -939,27 +1364,45 @@ export default function AudioEditorPage() {
         {/* Center: Layout & Edit Controls */}
         <div className="hidden md:flex items-center gap-1">
           <button
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
-            title="Undo"
+            onClick={handleUndo}
+            disabled={!canUndo}
+            className={`p-1.5 rounded-md transition-colors ${
+              canUndo
+                ? "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04]"
+                : "text-muted-foreground/30 cursor-not-allowed"
+            }`}
+            title="Undo (Ctrl+Z)"
           >
             <Undo2 className="h-3.5 w-3.5" />
           </button>
           <button
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
-            title="Redo"
+            onClick={handleRedo}
+            disabled={!canRedo}
+            className={`p-1.5 rounded-md transition-colors ${
+              canRedo
+                ? "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04]"
+                : "text-muted-foreground/30 cursor-not-allowed"
+            }`}
+            title="Redo (Ctrl+Shift+Z)"
           >
             <Redo2 className="h-3.5 w-3.5" />
           </button>
           <div className="h-4 w-px bg-border mx-1" />
           <button
+            onClick={handleSplitAtPlayhead}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
-            title="Split at playhead"
+            title="Split at playhead (S)"
           >
             <Scissors className="h-3.5 w-3.5" />
           </button>
           <button
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
-            title="Delete selection"
+            onClick={handleDeleteSelection}
+            className={`p-1.5 rounded-md transition-colors ${
+              selectionStart != null && selectionEnd != null
+                ? "text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04]"
+            }`}
+            title="Delete selection (Del)"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
@@ -1015,8 +1458,9 @@ export default function AudioEditorPage() {
             )}
           </button>
           <button
+            onClick={handleExport}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
-            title="Export audio"
+            title="Export audio (Ctrl+E)"
           >
             <Download className="h-3.5 w-3.5" />
           </button>
@@ -1217,24 +1661,33 @@ export default function AudioEditorPage() {
                 <span className="text-[10px] text-muted-foreground font-mono">
                   {formatTime(duration)}
                 </span>
+                {selectionStart != null && selectionEnd != null && Math.abs(selectionEnd - selectionStart) > 0.01 && (
+                  <>
+                    <span className="text-[10px] text-muted-foreground/40">|</span>
+                    <span className="text-[10px] text-[#74ddc7] font-mono">
+                      Sel: {formatTime(Math.abs(selectionEnd - selectionStart)).split(".")[0]}
+                    </span>
+                  </>
+                )}
               </div>
               <div className="flex items-center gap-1">
+                {/* Trim button — keep selected region */}
+                {selectionStart != null && selectionEnd != null && (
+                  <button
+                    onClick={handleTrim}
+                    className="p-1 rounded text-[#74ddc7] hover:bg-[#74ddc7]/10 transition-colors"
+                    title="Trim to selection (Ctrl+T)"
+                  >
+                    <span className="text-[10px] font-bold">TRIM</span>
+                  </button>
+                )}
+                {selectionStart != null && selectionEnd != null && (
+                  <div className="h-3 w-px bg-border mx-0.5" />
+                )}
                 <button
+                  onClick={handleSelectAll}
                   className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
-                  title="Zoom in"
-                >
-                  <ZoomIn className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
-                  title="Zoom out"
-                >
-                  <ZoomOut className="h-3.5 w-3.5" />
-                </button>
-                <div className="h-3 w-px bg-border mx-0.5" />
-                <button
-                  className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
-                  title="Zoom to fit"
+                  title="Select all (Ctrl+A)"
                 >
                   <Maximize2 className="h-3 w-3" />
                 </button>
@@ -1250,6 +1703,9 @@ export default function AudioEditorPage() {
                 isRecording={isRecording}
                 onSeek={handleSeek}
                 waveformData={waveformData}
+                selectionStart={selectionStart}
+                selectionEnd={selectionEnd}
+                onSelectionChange={handleSelectionChange}
               />
               {/* Empty state — only show when nothing is loaded */}
               {!waveformData && audioFiles.length === 0 && !isRecording && duration <= 0 && (
