@@ -1268,11 +1268,11 @@ export default function VideoEditorPage() {
         {/* Left: Back + Title */}
         <div className="flex items-center gap-3">
           <Link
-            href="/studio"
+            href="/my/studio"
             className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Studio
+            My Studio
           </Link>
           <div className="h-4 w-px bg-border" />
           <div className="flex items-center gap-2">

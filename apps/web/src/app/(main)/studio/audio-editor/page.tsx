@@ -1343,11 +1343,11 @@ export default function AudioEditorPage() {
         {/* Left: Back + Title */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <Link
-            href="/studio"
+            href="/my/studio"
             className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Studio</span>
+            <span className="hidden sm:inline">My Studio</span>
           </Link>
           <div className="h-4 w-px bg-border shrink-0" />
           {/* Mobile: Library toggle */}
