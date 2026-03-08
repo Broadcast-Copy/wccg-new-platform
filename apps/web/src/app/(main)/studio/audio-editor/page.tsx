@@ -336,50 +336,85 @@ export default function AudioEditorPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const recordChunksRef = useRef<Blob[]>([]);
+  const recordingTimeRef = useRef(0);
 
   // Load audio file and decode waveform
   const loadAudioFile = useCallback(async (file: File) => {
-    try {
-      const url = URL.createObjectURL(file);
-      audioUrlRef.current = url;
+    const fileId = `file-${Date.now()}`;
+    const url = URL.createObjectURL(file);
+    const sizeStr = file.size > 1048576
+      ? `${(file.size / 1048576).toFixed(1)} MB`
+      : `${(file.size / 1024).toFixed(0)} KB`;
 
-      // Create audio element for playback
+    console.log("[AudioEditor] Loading file:", file.name, "size:", file.size, "type:", file.type);
+
+    // Phase 1: Add file to library immediately so it always appears
+    setAudioFiles((prev) => [
+      ...prev,
+      { id: fileId, name: file.name, duration: "...", size: sizeStr, blobUrl: url },
+    ]);
+    // Auto-show library panel so user can see the new file
+    setShowLeftPanel(true);
+    setLeftPanel("library");
+
+    // Phase 2: Create audio element for playback
+    try {
+      audioUrlRef.current = url;
       const audio = new Audio(url);
       audio.preload = "auto";
       audioRef.current = audio;
 
-      // Wait for metadata
-      await new Promise<void>((resolve, reject) => {
-        audio.onloadedmetadata = () => resolve();
-        audio.onerror = () => reject(new Error("Failed to load audio"));
-        setTimeout(() => resolve(), 3000); // fallback
-      });
+      // Wait for metadata — resolve on timeout for webm blobs with no duration header
+      let audioDuration = 0;
+      try {
+        await new Promise<void>((resolve, reject) => {
+          audio.onloadedmetadata = () => resolve();
+          audio.onerror = () => reject(new Error("Audio element failed to load"));
+          setTimeout(() => resolve(), 3000);
+        });
+        audioDuration = audio.duration;
+      } catch {
+        console.warn("[AudioEditor] Audio element couldn't load metadata, using fallback");
+      }
 
-      setDuration(audio.duration || 0);
+      // Handle Infinity/NaN (common with webm recorded by MediaRecorder)
+      if (!isFinite(audioDuration) || isNaN(audioDuration) || audioDuration <= 0) {
+        audioDuration = 0;
+      }
+
+      setDuration(audioDuration || 0);
       setCurrentTime(0);
 
-      // Add to file list
-      const sizeStr = file.size > 1048576
-        ? `${(file.size / 1048576).toFixed(1)} MB`
-        : `${(file.size / 1024).toFixed(0)} KB`;
-      const durStr = audio.duration
-        ? `${Math.floor(audio.duration / 60)}:${String(Math.floor(audio.duration % 60)).padStart(2, "0")}`
+      // Update file entry with duration from audio element
+      const durStr = audioDuration > 0
+        ? `${Math.floor(audioDuration / 60)}:${String(Math.floor(audioDuration % 60)).padStart(2, "0")}`
         : "0:00";
+      setAudioFiles((prev) => prev.map((f) => f.id === fileId ? { ...f, duration: durStr } : f));
 
-      setAudioFiles((prev) => [
-        ...prev,
-        { id: `file-${Date.now()}`, name: file.name, duration: durStr, size: sizeStr, blobUrl: url },
-      ]);
+      showStatus(`Loaded: ${file.name} (${durStr}, ${sizeStr})`);
+      console.log("[AudioEditor] Audio element ready:", file.name, "duration:", audioDuration);
+    } catch (err) {
+      console.error("[AudioEditor] Audio element setup failed:", err);
+      showStatus(`Loaded: ${file.name} (playback may be limited)`);
+    }
 
-      // Decode for waveform
+    // Phase 3: Decode waveform (separate so failure never loses the recording)
+    try {
       const arrayBuffer = await file.arrayBuffer();
       const audioCtx = new AudioContext();
       const decoded = await audioCtx.decodeAudioData(arrayBuffer);
       const channelData = decoded.getChannelData(0);
 
+      // Use decoded duration as fallback (more reliable than Audio element for webm)
+      if (decoded.duration > 0 && isFinite(decoded.duration)) {
+        setDuration((prev) => (prev <= 0 ? decoded.duration : prev));
+        const decodedDur = `${Math.floor(decoded.duration / 60)}:${String(Math.floor(decoded.duration % 60)).padStart(2, "0")}`;
+        setAudioFiles((prev) => prev.map((f) => f.id === fileId && f.duration === "0:00" ? { ...f, duration: decodedDur } : f));
+      }
+
       // Downsample to ~2000 points for waveform
       const samples = 2000;
-      const blockSize = Math.floor(channelData.length / samples);
+      const blockSize = Math.max(1, Math.floor(channelData.length / samples));
       const peaks: number[] = [];
       for (let i = 0; i < samples; i++) {
         let max = 0;
@@ -391,12 +426,11 @@ export default function AudioEditorPage() {
       }
       setWaveformData(peaks);
       audioCtx.close();
-
-      showStatus(`Loaded: ${file.name} (${durStr}, ${sizeStr})`);
-      console.log("[AudioEditor] Loaded:", file.name, "duration:", audio.duration);
-    } catch (err) {
-      console.error("[AudioEditor] Failed to load audio:", err);
-      showStatus("Failed to load audio file — unsupported format?");
+      console.log("[AudioEditor] Waveform decoded:", file.name, "decoded duration:", decoded.duration);
+    } catch (waveErr) {
+      console.warn("[AudioEditor] Waveform decode failed (recording still usable):", waveErr);
+      // Generate placeholder waveform so UI isn't empty
+      setWaveformData(Array.from({ length: 200 }, () => 0.2 + Math.random() * 0.5));
     }
   }, [showStatus]);
 
@@ -507,11 +541,16 @@ export default function AudioEditorPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying]);
 
-  // Recording timer
+  // Recording timer — also keep ref in sync for onstop closure
   useEffect(() => {
     if (!isRecording) return;
+    recordingTimeRef.current = 0;
     const interval = setInterval(() => {
-      setRecordingTime((t) => t + 0.1);
+      setRecordingTime((t) => {
+        const next = t + 0.1;
+        recordingTimeRef.current = next;
+        return next;
+      });
     }, 100);
     return () => clearInterval(interval);
   }, [isRecording]);
@@ -529,8 +568,9 @@ export default function AudioEditorPage() {
   const handleRecord = useCallback(async () => {
     if (isRecording) {
       // Stop recording
+      console.log("[AudioEditor] Stopping recording...");
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        mediaRecorderRef.current.requestData();
+        try { mediaRecorderRef.current.requestData(); } catch { /* ignore */ }
         mediaRecorderRef.current.stop();
       }
       setIsRecording(false);
@@ -542,19 +582,26 @@ export default function AudioEditorPage() {
         if (audioRef.current && !audioRef.current.paused) audioRef.current.pause();
 
         if (!navigator.mediaDevices?.getUserMedia) {
-          showStatus("Recording not supported in this browser");
+          showStatus("Recording not supported in this browser — requires HTTPS");
           return;
         }
 
         showStatus("Requesting microphone access...");
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaStreamRef.current = stream;
+        console.log("[AudioEditor] Requesting mic access...");
 
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        });
+        mediaStreamRef.current = stream;
+        console.log("[AudioEditor] Mic access granted, tracks:", stream.getAudioTracks().length);
+
+        // Find best supported mime type
         const mimeTypes = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"];
         let mimeType = "";
         for (const mt of mimeTypes) {
           if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
         }
+        console.log("[AudioEditor] Using mime type:", mimeType || "(browser default)");
 
         const opts: MediaRecorderOptions = { audioBitsPerSecond: 128_000 };
         if (mimeType) opts.mimeType = mimeType;
@@ -564,42 +611,72 @@ export default function AudioEditorPage() {
         recordChunksRef.current = [];
 
         recorder.ondataavailable = (e) => {
-          if (e.data.size > 0) recordChunksRef.current.push(e.data);
+          if (e.data.size > 0) {
+            recordChunksRef.current.push(e.data);
+            console.log("[AudioEditor] Chunk received:", e.data.size, "bytes, total chunks:", recordChunksRef.current.length);
+          }
+        };
+
+        recorder.onerror = (event) => {
+          console.error("[AudioEditor] MediaRecorder error:", event);
+          showStatus("Recording error — microphone may have disconnected");
+          stream.getTracks().forEach((t) => t.stop());
+          mediaStreamRef.current = null;
+          setIsRecording(false);
         };
 
         recorder.onstop = () => {
+          console.log("[AudioEditor] recorder.onstop fired, chunks:", recordChunksRef.current.length);
           stream.getTracks().forEach((t) => t.stop());
           mediaStreamRef.current = null;
+
           if (recordChunksRef.current.length === 0) {
             showStatus("Recording was empty — no audio captured");
             return;
           }
 
-          // Defer blob creation off the main thread to prevent UI freeze
+          // Copy chunks and free originals immediately
           const chunks = [...recordChunksRef.current];
-          recordChunksRef.current = []; // Free chunk memory immediately
+          const recDuration = recordingTimeRef.current;
+          recordChunksRef.current = [];
+
+          // Defer blob creation off the main thread to prevent UI freeze
           setTimeout(() => {
-            const blob = new Blob(chunks, { type: mimeType || "audio/webm" });
-            const sizeMB = (blob.size / (1024 * 1024)).toFixed(1);
-            const file = new File([blob], `recording-${Date.now()}.webm`, { type: blob.type });
-            loadAudioFile(file);
-            showStatus(`Recording captured (${sizeMB} MB) — loaded into editor`);
-            console.log("[AudioEditor] Recording captured, size:", blob.size);
+            try {
+              const blob = new Blob(chunks, { type: mimeType || "audio/webm" });
+              const sizeMB = (blob.size / (1024 * 1024)).toFixed(1);
+              const ext = mimeType.includes("mp4") ? "m4a" : "webm";
+              const file = new File([blob], `recording-${Date.now()}.${ext}`, { type: blob.type });
+              console.log("[AudioEditor] Recording blob created:", blob.size, "bytes, duration ~", recDuration.toFixed(1), "s");
+              loadAudioFile(file);
+              showStatus(`Recording captured (${sizeMB} MB, ${Math.ceil(recDuration)}s) — loaded into editor`);
+            } catch (blobErr) {
+              console.error("[AudioEditor] Failed to create recording blob:", blobErr);
+              showStatus("Failed to process recording — please try again");
+            }
           }, 50);
         };
 
         recorder.start(1000);
         setIsRecording(true);
         setRecordingTime(0);
+        recordingTimeRef.current = 0;
         showStatus("Recording... click the red button again to stop");
-        console.log("[AudioEditor] Recording started");
+        console.log("[AudioEditor] Recording started, state:", recorder.state);
       } catch (err: unknown) {
         console.error("[AudioEditor] Record failed:", err);
+        // Clean up stream if it was obtained before failure
+        if (mediaStreamRef.current) {
+          mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+          mediaStreamRef.current = null;
+        }
         const msg = err instanceof DOMException ? err.message : String(err);
         if (msg.includes("Permission denied") || msg.includes("NotAllowed")) {
           showStatus("Microphone access denied — please allow microphone in your browser settings and try again");
         } else if (msg.includes("NotFound") || msg.includes("Requested device not found")) {
           showStatus("No microphone found — please connect a microphone and try again");
+        } else if (msg.includes("NotReadableError") || msg.includes("Could not start")) {
+          showStatus("Microphone is in use by another app — close other apps using the mic and try again");
         } else {
           showStatus(`Recording failed: ${msg}`);
         }
@@ -620,6 +697,7 @@ export default function AudioEditorPage() {
   const handleStop = useCallback(() => {
     if (audioRef.current && !audioRef.current.paused) audioRef.current.pause();
     if (isRecording && mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try { mediaRecorderRef.current.requestData(); } catch { /* ignore */ }
       mediaRecorderRef.current.stop();
     }
     setIsPlaying(false);
