@@ -15,6 +15,7 @@ import {
   Building2,
   Mic,
   Music,
+  FolderOpen,
   Menu,
   X,
   User,
@@ -40,7 +41,7 @@ const sidebarItems = [
   { href: "/my/events", label: "My Events", icon: CalendarDays },
   { href: "/my/directory", label: "My Listings", icon: Building2 },
   { href: "/my/studio", label: "My Studio", icon: Clapperboard },
-  { href: "/my/mixes", label: "My Mixshows", icon: Music },
+  { href: "/my/mixes", label: "My Media", icon: FolderOpen },
 ];
 
 function SidebarContent({ pathname }: { pathname: string }) {
