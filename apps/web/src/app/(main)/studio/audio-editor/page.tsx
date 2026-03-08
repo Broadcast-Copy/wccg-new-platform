@@ -296,6 +296,14 @@ export default function AudioEditorPage() {
   const [bottomPanel, setBottomPanel] = useState<BottomPanel>("timeline");
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Auto-collapse panels on small screens
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setShowLeftPanel(false);
+      setShowBottomPanel(false);
+    }
+  }, []);
+
   // Transport / recording state
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -640,29 +648,41 @@ export default function AudioEditorPage() {
       {/* ================================================================= */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-card/80 backdrop-blur-sm shrink-0">
         {/* Left: Back + Title */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <Link
             href="/studio"
-            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Studio
+            <span className="hidden sm:inline">Studio</span>
           </Link>
-          <div className="h-4 w-px bg-border" />
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#74ddc7]/20">
+          <div className="h-4 w-px bg-border shrink-0" />
+          {/* Mobile: Library toggle */}
+          <button
+            onClick={() => setShowLeftPanel(!showLeftPanel)}
+            className={`md:hidden p-1.5 rounded-md text-xs transition-colors shrink-0 ${
+              showLeftPanel
+                ? "text-foreground bg-foreground/[0.08]"
+                : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04]"
+            }`}
+            title="Toggle library"
+          >
+            <FileAudio className="h-3.5 w-3.5" />
+          </button>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="hidden sm:flex h-6 w-6 items-center justify-center rounded-md bg-[#74ddc7]/20 shrink-0">
               <Music className="h-3.5 w-3.5 text-[#74ddc7]" />
             </div>
-            <span className="text-sm font-semibold text-foreground">
+            <span className="hidden sm:inline text-sm font-semibold text-foreground truncate">
               Audio Editor
             </span>
-            <span className="hidden sm:inline text-[10px] text-muted-foreground bg-foreground/[0.06] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider">
+            <span className="hidden lg:inline text-[10px] text-muted-foreground bg-foreground/[0.06] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider shrink-0">
               Beta
             </span>
           </div>
           {/* Recording indicator */}
           {isRecording && (
-            <div className="flex items-center gap-1.5 ml-2 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20">
+            <div className="flex items-center gap-1.5 ml-1 sm:ml-2 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 shrink-0">
               <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
               <span className="text-[10px] font-medium text-red-400 uppercase tracking-wider">
                 REC {formatTime(recordingTime).split(".")[0]}
@@ -732,28 +752,44 @@ export default function AudioEditorPage() {
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 sm:gap-1">
+          {/* Mobile: Bottom panel toggle */}
+          <button
+            onClick={() => setShowBottomPanel(!showBottomPanel)}
+            className={`md:hidden p-1.5 rounded-md text-xs transition-colors ${
+              showBottomPanel
+                ? "text-foreground bg-foreground/[0.08]"
+                : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04]"
+            }`}
+            title="Toggle timeline"
+          >
+            {showBottomPanel ? (
+              <PanelBottomClose className="h-3.5 w-3.5" />
+            ) : (
+              <PanelBottomOpen className="h-3.5 w-3.5" />
+            )}
+          </button>
           <button
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
             title="Export audio"
           >
             <Download className="h-3.5 w-3.5" />
           </button>
-          <div className="h-4 w-px bg-border mx-0.5" />
+          <div className="hidden sm:block h-4 w-px bg-border mx-0.5" />
           <button
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
+            className="hidden sm:inline-flex p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
             title="Keyboard shortcuts"
           >
             <Keyboard className="h-3.5 w-3.5" />
           </button>
           <button
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
+            className="hidden sm:inline-flex p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
             title="Help"
           >
             <HelpCircle className="h-3.5 w-3.5" />
           </button>
           <button
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
+            className="hidden sm:inline-flex p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
             title="Settings"
           >
             <Settings className="h-3.5 w-3.5" />
@@ -776,10 +812,10 @@ export default function AudioEditorPage() {
       {/* ================================================================= */}
       {/* Main Content Area                                                 */}
       {/* ================================================================= */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden relative">
         {/* ── Left Panel: Library / Effects ── */}
         {showLeftPanel && (
-          <div className="w-64 xl:w-72 border-r border-border bg-card/50 flex flex-col shrink-0 overflow-hidden">
+          <div className="absolute inset-y-0 left-0 z-20 md:relative md:z-auto w-64 xl:w-72 border-r border-border bg-card flex flex-col shrink-0 overflow-hidden shadow-xl md:shadow-none">
             {/* Panel Tabs */}
             <div className="flex border-b border-border shrink-0">
               <button
@@ -984,10 +1020,10 @@ export default function AudioEditorPage() {
           </div>
 
           {/* Recording Controls */}
-          <div className="border-t border-border bg-card/60 px-4 py-3 shrink-0">
-            <div className="flex items-center justify-between gap-4">
-              {/* Left: Input controls */}
-              <div className="flex items-center gap-3 min-w-0">
+          <div className="border-t border-border bg-card/60 px-2 sm:px-4 py-2 sm:py-3 shrink-0">
+            <div className="flex items-center justify-center sm:justify-between gap-2 sm:gap-4">
+              {/* Left: Input controls — hidden on small screens */}
+              <div className="hidden sm:flex items-center gap-3 min-w-0">
                 {/* Input source */}
                 <div className="flex items-center gap-1.5">
                   <Mic className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -1069,8 +1105,8 @@ export default function AudioEditorPage() {
                 </button>
               </div>
 
-              {/* Right: Levels + Timer */}
-              <div className="flex items-center gap-3 min-w-0">
+              {/* Right: Levels + Timer — hidden on very small screens */}
+              <div className="hidden sm:flex items-center gap-3 min-w-0">
                 {/* Recording timer */}
                 {isRecording && (
                   <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-md bg-red-500/10 border border-red-500/20">
@@ -1105,8 +1141,9 @@ export default function AudioEditorPage() {
           {/* ── Bottom Panel: Timeline / Mixer ── */}
           {showBottomPanel && (
             <div
-              className="border-t border-border bg-card/50 shrink-0"
-              style={{ height: bottomPanel === "timeline" ? "220px" : "240px" }}
+              className={`border-t border-border bg-card/50 shrink-0 ${
+                bottomPanel === "timeline" ? "h-[160px] sm:h-[220px]" : "h-[180px] sm:h-[240px]"
+              }`}
             >
               {/* Panel Tabs */}
               <div className="flex border-b border-border shrink-0">
@@ -1148,9 +1185,9 @@ export default function AudioEditorPage() {
       {/* ================================================================= */}
       {/* Status Bar                                                        */}
       {/* ================================================================= */}
-      <div className="flex items-center justify-between px-3 py-1 border-t border-border bg-card/80 text-[10px] text-muted-foreground shrink-0">
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1">
+      <div className="flex items-center justify-between px-2 sm:px-3 py-1 border-t border-border bg-card/80 text-[10px] text-muted-foreground shrink-0 overflow-hidden">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <span className="flex items-center gap-1 shrink-0">
             <span
               className={`h-1.5 w-1.5 rounded-full ${
                 isRecording ? "bg-red-500 animate-pulse" : "bg-green-500"
@@ -1159,22 +1196,22 @@ export default function AudioEditorPage() {
             {isRecording ? "Recording" : "Ready"}
           </span>
           {statusMessage ? (
-            <span className="text-[#74ddc7] truncate max-w-[400px]">{statusMessage}</span>
+            <span className="text-[#74ddc7] truncate max-w-[200px] sm:max-w-[400px]">{statusMessage}</span>
           ) : (
             <>
-              <span>48kHz / 24-bit</span>
-              <span>{outputFormat}</span>
+              <span className="hidden sm:inline">48kHz / 24-bit</span>
+              <span className="hidden sm:inline">{outputFormat}</span>
             </>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {isRecording && (
             <span className="text-red-400">
               REC {formatTime(recordingTime).split(".")[0]}
             </span>
           )}
-          <span>Disk: 45.2 GB free</span>
-          <span className="text-muted-foreground/60">v1.0.0-beta</span>
+          <span className="hidden sm:inline">Disk: 45.2 GB free</span>
+          <span className="hidden sm:inline text-muted-foreground/60">v1.0.0-beta</span>
         </div>
       </div>
     </div>
