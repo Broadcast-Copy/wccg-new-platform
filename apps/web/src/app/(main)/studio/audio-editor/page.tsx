@@ -434,35 +434,22 @@ function VUMeter({ level, isActive }: { level: number; isActive: boolean }) {
 // Stereo VU Meter
 // ---------------------------------------------------------------------------
 
-function StereoVUMeter({ isActive }: { isActive: boolean }) {
-  const [levels, setLevels] = useState({ left: 0, right: 0 });
-
-  useEffect(() => {
-    if (!isActive) {
-      setLevels({ left: 0, right: 0 });
-      return;
-    }
-    const interval = setInterval(() => {
-      setLevels({
-        left: 40 + Math.random() * 45,
-        right: 38 + Math.random() * 47,
-      });
-    }, 80);
-    return () => clearInterval(interval);
-  }, [isActive]);
+function StereoVUMeter({ isActive, level }: { isActive: boolean; level: number }) {
+  // level: 0–1 from actual audio analysis
+  const displayLevel = isActive ? level * 90 : 0;
 
   return (
     <div className="flex items-center gap-2 h-full">
       <div className="flex flex-col items-center gap-1 h-full">
         <span className="text-[8px] text-muted-foreground uppercase">L</span>
         <div className="flex-1">
-          <VUMeter level={levels.left} isActive={isActive} />
+          <VUMeter level={displayLevel} isActive={isActive} />
         </div>
       </div>
       <div className="flex flex-col items-center gap-1 h-full">
         <span className="text-[8px] text-muted-foreground uppercase">R</span>
         <div className="flex-1">
-          <VUMeter level={levels.right} isActive={isActive} />
+          <VUMeter level={displayLevel * 0.95} isActive={isActive} />
         </div>
       </div>
     </div>
@@ -493,7 +480,7 @@ export default function AudioEditorPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(180); // 3 min placeholder
+  const [duration, setDuration] = useState(0);
   const [recordingTime, setRecordingTime] = useState(0);
 
   // Status message
@@ -528,7 +515,7 @@ export default function AudioEditorPage() {
   const liveAudioCtxRef = useRef<AudioContext | null>(null);
   const animFrameRef = useRef<number>(0);
   const liveWaveformRef = useRef<number[]>([]);
-  const durationRef = useRef(180); // stays in sync with duration state
+  const durationRef = useRef(0);
 
   // ── Editing engine state ──
   const audioBufferRef = useRef<AudioBuffer | null>(null);
@@ -538,6 +525,35 @@ export default function AudioEditorPage() {
   const redoStackRef = useRef<BufferSnapshot[]>([]);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [vuLevel, setVuLevel] = useState(0);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
+
+  // ── Enumerate real audio input devices on mount ──
+  useEffect(() => {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    navigator.mediaDevices.enumerateDevices()
+      .then((devices) => {
+        const inputs = devices.filter((d) => d.kind === "audioinput");
+        setAudioDevices(inputs);
+      })
+      .catch(() => {});
+  }, []);
+
+  // ── Update VU level from waveform data at playhead ──
+  useEffect(() => {
+    if (!waveformData || waveformData.length === 0 || duration <= 0) {
+      if (!isRecording) setVuLevel(0);
+      return;
+    }
+    if (isPlaying) {
+      const idx = Math.floor((currentTime / duration) * waveformData.length);
+      const val = waveformData[Math.min(idx, waveformData.length - 1)] || 0;
+      setVuLevel(val);
+    } else if (!isRecording) {
+      setVuLevel(0);
+    }
+  }, [currentTime, duration, waveformData, isPlaying, isRecording]);
 
   // ── Restore persisted files from IndexedDB on mount ──
   useEffect(() => {
@@ -659,7 +675,7 @@ export default function AudioEditorPage() {
     } catch (waveErr) {
       console.warn("[AudioEditor] Waveform decode failed (recording still usable):", waveErr);
       // Generate placeholder waveform so UI isn't empty
-      setWaveformData(Array.from({ length: 200 }, () => 0.2 + Math.random() * 0.5));
+      setWaveformData(Array.from({ length: 200 }, () => 0.15));
     }
   }, [showStatus]);
 
@@ -737,9 +753,9 @@ export default function AudioEditorPage() {
 
   const [effects, setEffects] = useState<Effect[]>([
     { id: "eq", name: "Equalizer", description: "3-band parametric EQ", enabled: false },
-    { id: "comp", name: "Compressor", description: "Dynamic range compression", enabled: true },
+    { id: "comp", name: "Compressor", description: "Dynamic range compression", enabled: false },
     { id: "reverb", name: "Reverb", description: "Room / hall reverb", enabled: false },
-    { id: "gate", name: "Noise Gate", description: "Remove background noise", enabled: true },
+    { id: "gate", name: "Noise Gate", description: "Remove background noise", enabled: false },
     { id: "deesser", name: "De-esser", description: "Reduce sibilance", enabled: false },
     { id: "limiter", name: "Limiter", description: "Brick-wall output limiter", enabled: false },
   ]);
@@ -873,6 +889,7 @@ export default function AudioEditorPage() {
             }
             const rms = Math.sqrt(sum / dataArray.length);
             const level = Math.min(1, rms * 4); // amplify for visibility
+            setVuLevel(level); // drive VU meter from real mic input
             liveWaveformRef.current.push(level);
             // Push to React state every ~3 frames to avoid thrashing
             if (liveWaveformRef.current.length % 3 === 0) {
@@ -1054,7 +1071,7 @@ export default function AudioEditorPage() {
         });
       })
       .catch(() => {
-        setWaveformData(Array.from({ length: 200 }, () => 0.2 + Math.random() * 0.5));
+        setWaveformData(Array.from({ length: 200 }, () => 0.15));
       });
 
     showStatus(`Loaded: ${file.name}`);
@@ -1304,8 +1321,9 @@ export default function AudioEditorPage() {
         handleSplitAtPlayhead();
         return;
       }
-      // Escape = clear selection
+      // Escape = close context menu / clear selection
       if (e.key === "Escape") {
+        setContextMenu(null);
         setSelectionStart(null);
         setSelectionEnd(null);
         return;
@@ -1583,7 +1601,7 @@ export default function AudioEditorPage() {
                               key={i}
                               className="w-0.5 bg-[#74ddc7]/50 rounded-full"
                               style={{
-                                height: `${20 + Math.sin(i * 0.8) * 40 + Math.random() * 30}%`,
+                                height: `${25 + Math.sin(i * 0.9) * 35 + Math.cos(i * 1.4) * 15}%`,
                               }}
                             />
                           ))}
@@ -1631,10 +1649,12 @@ export default function AudioEditorPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-foreground">{effect.name}</p>
                         <p className="text-[10px] text-muted-foreground">{effect.description}</p>
+                        <p className="text-[8px] text-amber-500/60 uppercase tracking-wider mt-0.5">Coming Soon</p>
                       </div>
                       <button
                         onClick={() => toggleEffect(effect.id)}
-                        className={`ml-2 relative w-8 h-4 rounded-full transition-colors shrink-0 ${
+                        disabled
+                        className={`ml-2 relative w-8 h-4 rounded-full transition-colors shrink-0 opacity-40 cursor-not-allowed ${
                           effect.enabled ? "bg-[#74ddc7]" : "bg-foreground/[0.12]"
                         }`}
                       >
@@ -1700,7 +1720,13 @@ export default function AudioEditorPage() {
             </div>
 
             {/* Waveform canvas */}
-            <div className="flex-1 min-h-0 bg-black/20 relative">
+            <div
+              className="flex-1 min-h-0 bg-black/20 relative"
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setContextMenu({ x: e.clientX, y: e.clientY });
+              }}
+            >
               <WaveformDisplay
                 currentTime={currentTime}
                 duration={duration}
@@ -1737,12 +1763,14 @@ export default function AudioEditorPage() {
                   <select
                     value={inputSource}
                     onChange={(e) => setInputSource(e.target.value)}
-                    className="text-xs bg-foreground/[0.06] border border-border rounded-md px-2 py-1 text-foreground appearance-none cursor-pointer pr-6 focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/50"
+                    className="text-xs bg-foreground/[0.06] border border-border rounded-md px-2 py-1 text-foreground appearance-none cursor-pointer pr-6 focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/50 max-w-[180px]"
                   >
                     <option value="default">Default Microphone</option>
-                    <option value="usb">USB Audio Interface</option>
-                    <option value="built-in">Built-in Microphone</option>
-                    <option value="virtual">Virtual Audio Cable</option>
+                    {audioDevices.map((d) => (
+                      <option key={d.deviceId} value={d.deviceId}>
+                        {d.label || `Mic (${d.deviceId.slice(0, 8)})`}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 {/* Format selector */}
@@ -1826,7 +1854,7 @@ export default function AudioEditorPage() {
 
                 {/* VU Meter */}
                 <div className="h-8 hidden lg:block">
-                  <StereoVUMeter isActive={isPlaying || isRecording} />
+                  <StereoVUMeter isActive={isPlaying || isRecording} level={vuLevel} />
                 </div>
 
                 {/* Mute toggle */}
@@ -1890,13 +1918,107 @@ export default function AudioEditorPage() {
                     hasAudio={!!audioBufferRef.current}
                   />
                 ) : (
-                  <MixerPanel isMuted={isMuted} />
+                  <MixerPanel isMuted={isMuted} vuLevel={vuLevel} hasAudio={!!audioBufferRef.current} isActive={isPlaying || isRecording} />
                 )}
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* ================================================================= */}
+      {/* Right-click Context Menu                                          */}
+      {/* ================================================================= */}
+      {contextMenu && (
+        <>
+          {/* Click-away overlay */}
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setContextMenu(null)}
+            onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }}
+          />
+          {/* Menu */}
+          <div
+            className="fixed z-50 min-w-[180px] bg-card border border-border rounded-lg shadow-xl py-1 text-xs"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            <button
+              onClick={() => { handlePlayPause(); setContextMenu(null); }}
+              className="w-full px-3 py-1.5 text-left hover:bg-foreground/[0.06] flex items-center gap-2 text-foreground"
+            >
+              {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+              {isPlaying ? "Pause" : "Play"}
+              <span className="ml-auto text-muted-foreground text-[10px]">Space</span>
+            </button>
+            <div className="h-px bg-border my-1" />
+            <button
+              onClick={() => { handleSelectAll(); setContextMenu(null); }}
+              disabled={duration <= 0}
+              className="w-full px-3 py-1.5 text-left hover:bg-foreground/[0.06] flex items-center gap-2 text-foreground disabled:opacity-30"
+            >
+              <Maximize2 className="h-3 w-3" />
+              Select All
+              <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+A</span>
+            </button>
+            <button
+              onClick={() => { handleTrim(); setContextMenu(null); }}
+              disabled={selectionStart == null || selectionEnd == null}
+              className="w-full px-3 py-1.5 text-left hover:bg-foreground/[0.06] flex items-center gap-2 text-foreground disabled:opacity-30"
+            >
+              <Scissors className="h-3 w-3" />
+              Trim to Selection
+              <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+T</span>
+            </button>
+            <button
+              onClick={() => { handleDeleteSelection(); setContextMenu(null); }}
+              disabled={selectionStart == null || selectionEnd == null}
+              className="w-full px-3 py-1.5 text-left hover:bg-foreground/[0.06] flex items-center gap-2 text-red-400 disabled:opacity-30"
+            >
+              <Trash2 className="h-3 w-3" />
+              Delete Selection
+              <span className="ml-auto text-muted-foreground text-[10px]">Del</span>
+            </button>
+            <button
+              onClick={() => { handleSplitAtPlayhead(); setContextMenu(null); }}
+              disabled={!audioBufferRef.current || currentTime <= 0}
+              className="w-full px-3 py-1.5 text-left hover:bg-foreground/[0.06] flex items-center gap-2 text-foreground disabled:opacity-30"
+            >
+              <Scissors className="h-3 w-3" />
+              Split at Playhead
+              <span className="ml-auto text-muted-foreground text-[10px]">S</span>
+            </button>
+            <div className="h-px bg-border my-1" />
+            <button
+              onClick={() => { handleUndo(); setContextMenu(null); }}
+              disabled={!canUndo}
+              className="w-full px-3 py-1.5 text-left hover:bg-foreground/[0.06] flex items-center gap-2 text-foreground disabled:opacity-30"
+            >
+              <Undo2 className="h-3 w-3" />
+              Undo
+              <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+Z</span>
+            </button>
+            <button
+              onClick={() => { handleRedo(); setContextMenu(null); }}
+              disabled={!canRedo}
+              className="w-full px-3 py-1.5 text-left hover:bg-foreground/[0.06] flex items-center gap-2 text-foreground disabled:opacity-30"
+            >
+              <Redo2 className="h-3 w-3" />
+              Redo
+              <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+Shift+Z</span>
+            </button>
+            <div className="h-px bg-border my-1" />
+            <button
+              onClick={() => { handleExport(); setContextMenu(null); }}
+              disabled={!audioBufferRef.current}
+              className="w-full px-3 py-1.5 text-left hover:bg-foreground/[0.06] flex items-center gap-2 text-foreground disabled:opacity-30"
+            >
+              <Download className="h-3 w-3" />
+              Export as WAV
+              <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+E</span>
+            </button>
+          </div>
+        </>
+      )}
 
       {/* ================================================================= */}
       {/* Status Bar                                                        */}
@@ -1926,8 +2048,7 @@ export default function AudioEditorPage() {
               REC {formatTime(recordingTime).split(".")[0]}
             </span>
           )}
-          <span className="hidden sm:inline">Disk: 45.2 GB free</span>
-          <span className="hidden sm:inline text-muted-foreground/60">v1.0.0-beta</span>
+          <span className="hidden sm:inline text-muted-foreground/60">v1.0</span>
         </div>
       </div>
     </div>
@@ -2134,113 +2255,69 @@ function TimelinePanel({
 // Mixer Panel (inline)
 // ---------------------------------------------------------------------------
 
-function MixerPanel({ isMuted }: { isMuted: boolean }) {
-  const channels = [
-    { id: 1, name: "Track 1", color: "#74ddc7", volume: 75, pan: 0, muted: false, solo: false },
-    { id: 2, name: "Track 2", color: "#7401df", volume: 60, pan: -20, muted: false, solo: false },
-    { id: 3, name: "Track 3", color: "#ec4899", volume: 0, pan: 0, muted: true, solo: false },
-    { id: 4, name: "Track 4", color: "#f59e0b", volume: 0, pan: 0, muted: true, solo: false },
-  ];
+function MixerPanel({ isMuted, vuLevel, hasAudio, isActive }: { isMuted: boolean; vuLevel: number; hasAudio: boolean; isActive: boolean }) {
+  const meterHeight = isMuted ? 0 : (isActive ? vuLevel * 80 : 0);
 
   return (
     <div className="flex h-full">
-      {/* Channel strips */}
-      {channels.map((ch) => (
-        <div
-          key={ch.id}
-          className="flex-1 border-r border-border flex flex-col items-center px-2 py-2 max-w-[120px]"
-        >
-          {/* Channel name */}
-          <div className="flex items-center gap-1 mb-1.5">
-            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ch.color }} />
-            <span className="text-[10px] text-foreground font-medium">{ch.name}</span>
-          </div>
+      {/* Audio channel strip */}
+      <div className="flex-1 border-r border-border flex flex-col items-center px-3 py-2 max-w-[120px]">
+        <div className="flex items-center gap-1 mb-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#74ddc7]" />
+          <span className="text-[10px] text-foreground font-medium">Audio</span>
+        </div>
 
-          {/* Pan knob (visual) */}
-          <div className="relative w-6 h-6 rounded-full border border-border bg-foreground/[0.04] mb-1.5">
+        {/* Pan knob */}
+        <div className="relative w-6 h-6 rounded-full border border-border bg-foreground/[0.04] mb-1.5">
+          <div className="absolute w-0.5 h-2 bg-foreground/40 rounded-full left-1/2 -translate-x-1/2" style={{ top: "2px" }} />
+        </div>
+        <span className="text-[8px] text-muted-foreground mb-1">C</span>
+
+        {/* Volume fader */}
+        <div className="flex-1 w-full flex items-center justify-center mb-1.5">
+          <div className="relative w-1.5 h-full bg-foreground/[0.06] rounded-full overflow-hidden">
             <div
-              className="absolute w-0.5 h-2 bg-foreground/40 rounded-full left-1/2 -translate-x-1/2 origin-bottom"
-              style={{
-                transform: `translateX(-50%) rotate(${ch.pan * 1.35}deg)`,
-                top: "2px",
-              }}
+              className="absolute bottom-0 w-full rounded-full bg-[#74ddc7]/60 transition-all duration-100"
+              style={{ height: hasAudio ? (isMuted ? "0%" : "75%") : "0%" }}
             />
           </div>
-          <span className="text-[8px] text-muted-foreground mb-1">
-            {ch.pan === 0 ? "C" : ch.pan < 0 ? `L${Math.abs(ch.pan)}` : `R${ch.pan}`}
-          </span>
+        </div>
+        <span className="text-[9px] text-muted-foreground font-mono mb-1.5">
+          {hasAudio ? (isMuted ? "-inf" : "0.0dB") : "-inf"}
+        </span>
+      </div>
 
-          {/* Volume fader */}
+      {/* Empty slots */}
+      {[2, 3].map((id) => (
+        <div key={id} className="flex-1 border-r border-border flex flex-col items-center px-3 py-2 max-w-[120px] opacity-30">
+          <span className="text-[10px] text-muted-foreground font-medium mb-1.5">Track {id}</span>
           <div className="flex-1 w-full flex items-center justify-center mb-1.5">
-            <div className="relative w-1.5 h-full bg-foreground/[0.06] rounded-full overflow-hidden">
-              <div
-                className="absolute bottom-0 w-full rounded-full transition-all"
-                style={{
-                  height: `${ch.volume}%`,
-                  backgroundColor: ch.muted ? "rgba(255,255,255,0.1)" : ch.color,
-                  opacity: ch.muted ? 0.3 : 0.6,
-                }}
-              />
-            </div>
+            <div className="relative w-1.5 h-full bg-foreground/[0.06] rounded-full overflow-hidden" />
           </div>
-          <span className="text-[9px] text-muted-foreground font-mono mb-1.5">
-            {ch.volume > 0 ? `${Math.round((ch.volume / 100) * 60 - 60)}dB` : "-inf"}
-          </span>
-
-          {/* Mute / Solo */}
-          <div className="flex items-center gap-1">
-            <button
-              className={`text-[8px] px-1.5 py-0.5 rounded font-medium transition-colors ${
-                ch.muted
-                  ? "bg-red-500/20 text-red-400"
-                  : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06]"
-              }`}
-            >
-              M
-            </button>
-            <button
-              className={`text-[8px] px-1.5 py-0.5 rounded font-medium transition-colors ${
-                ch.solo
-                  ? "bg-yellow-500/20 text-yellow-400"
-                  : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06]"
-              }`}
-            >
-              S
-            </button>
-          </div>
+          <span className="text-[9px] text-muted-foreground font-mono mb-1.5">-inf</span>
         </div>
       ))}
 
       {/* Master channel */}
       <div className="w-24 flex flex-col items-center px-2 py-2 bg-foreground/[0.02] border-l border-border">
         <span className="text-[10px] text-foreground font-semibold mb-2">Master</span>
-        {/* Master meter */}
         <div className="flex-1 w-full flex items-center justify-center gap-1 mb-1.5">
           <div className="relative w-1.5 h-full bg-foreground/[0.06] rounded-full overflow-hidden">
             <div
-              className="absolute bottom-0 w-full rounded-full bg-[#74ddc7]/60"
-              style={{ height: isMuted ? "0%" : "70%" }}
+              className="absolute bottom-0 w-full rounded-full bg-[#74ddc7]/60 transition-all duration-100"
+              style={{ height: `${meterHeight}%` }}
             />
           </div>
           <div className="relative w-1.5 h-full bg-foreground/[0.06] rounded-full overflow-hidden">
             <div
-              className="absolute bottom-0 w-full rounded-full bg-[#74ddc7]/60"
-              style={{ height: isMuted ? "0%" : "68%" }}
+              className="absolute bottom-0 w-full rounded-full bg-[#74ddc7]/60 transition-all duration-100"
+              style={{ height: `${meterHeight * 0.95}%` }}
             />
           </div>
         </div>
         <span className="text-[9px] text-muted-foreground font-mono mb-1.5">
           {isMuted ? "-inf" : "0.0dB"}
         </span>
-        <button
-          className={`text-[8px] px-2 py-0.5 rounded font-medium transition-colors ${
-            isMuted
-              ? "bg-red-500/20 text-red-400"
-              : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06]"
-          }`}
-        >
-          M
-        </button>
       </div>
     </div>
   );
