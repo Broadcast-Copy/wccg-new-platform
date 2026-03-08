@@ -50,6 +50,7 @@ interface AudioFile {
   name: string;
   duration: string;
   size: string;
+  blobUrl?: string;
 }
 
 interface Effect {
@@ -331,9 +332,6 @@ export default function AudioEditorPage() {
   // Load audio file and decode waveform
   const loadAudioFile = useCallback(async (file: File) => {
     try {
-      // Revoke previous URL
-      if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
-
       const url = URL.createObjectURL(file);
       audioUrlRef.current = url;
 
@@ -362,7 +360,7 @@ export default function AudioEditorPage() {
 
       setAudioFiles((prev) => [
         ...prev,
-        { id: `file-${Date.now()}`, name: file.name, duration: durStr, size: sizeStr },
+        { id: `file-${Date.now()}`, name: file.name, duration: durStr, size: sizeStr, blobUrl: url },
       ]);
 
       // Decode for waveform
@@ -421,6 +419,43 @@ export default function AudioEditorPage() {
       if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach((t) => t.stop());
     };
   }, []);
+
+  // Download an audio file from the library
+  const downloadAudioFile = useCallback((file: AudioFile) => {
+    if (!file.blobUrl) {
+      showStatus("No downloadable audio for this file");
+      return;
+    }
+    const a = document.createElement("a");
+    a.href = file.blobUrl;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showStatus(`Downloading: ${file.name}`);
+  }, [showStatus]);
+
+  // Delete an audio file from the library
+  const deleteAudioFile = useCallback((fileId: string) => {
+    setAudioFiles((prev) => {
+      const file = prev.find((f) => f.id === fileId);
+      if (file?.blobUrl) {
+        // If this is the currently active audio, clear playback state
+        if (audioUrlRef.current === file.blobUrl) {
+          if (audioRef.current && !audioRef.current.paused) audioRef.current.pause();
+          audioUrlRef.current = null;
+          audioRef.current = null;
+          setWaveformData(null);
+          setDuration(0);
+          setCurrentTime(0);
+          setIsPlaying(false);
+        }
+        URL.revokeObjectURL(file.blobUrl);
+      }
+      return prev.filter((f) => f.id !== fileId);
+    });
+    showStatus("File removed from library");
+  }, [showStatus]);
 
   const [effects, setEffects] = useState<Effect[]>([
     { id: "eq", name: "Equalizer", description: "3-band parametric EQ", enabled: false },
@@ -513,7 +548,7 @@ export default function AudioEditorPage() {
           if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
         }
 
-        const opts: MediaRecorderOptions = {};
+        const opts: MediaRecorderOptions = { audioBitsPerSecond: 128_000 };
         if (mimeType) opts.mimeType = mimeType;
 
         const recorder = new MediaRecorder(stream, opts);
@@ -532,12 +567,17 @@ export default function AudioEditorPage() {
             return;
           }
 
-          const blob = new Blob(recordChunksRef.current, { type: mimeType || "audio/webm" });
-          const sizeMB = (blob.size / (1024 * 1024)).toFixed(1);
-          const file = new File([blob], `recording-${Date.now()}.webm`, { type: blob.type });
-          loadAudioFile(file);
-          showStatus(`Recording captured (${sizeMB} MB) — loaded into editor`);
-          console.log("[AudioEditor] Recording captured, size:", blob.size);
+          // Defer blob creation off the main thread to prevent UI freeze
+          const chunks = [...recordChunksRef.current];
+          recordChunksRef.current = []; // Free chunk memory immediately
+          setTimeout(() => {
+            const blob = new Blob(chunks, { type: mimeType || "audio/webm" });
+            const sizeMB = (blob.size / (1024 * 1024)).toFixed(1);
+            const file = new File([blob], `recording-${Date.now()}.webm`, { type: blob.type });
+            loadAudioFile(file);
+            showStatus(`Recording captured (${sizeMB} MB) — loaded into editor`);
+            console.log("[AudioEditor] Recording captured, size:", blob.size);
+          }, 50);
         };
 
         recorder.start(1000);
@@ -822,6 +862,25 @@ export default function AudioEditorPage() {
                           <p className="text-[10px] text-muted-foreground">
                             {file.duration} &middot; {file.size}
                           </p>
+                        </div>
+                        {/* Download & Delete buttons */}
+                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                          {file.blobUrl && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); downloadAudioFile(file); }}
+                              className="p-1 rounded text-muted-foreground hover:text-[#74ddc7] hover:bg-[#74ddc7]/10 transition-colors"
+                              title="Download"
+                            >
+                              <Download className="h-3 w-3" />
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteAudioFile(file.id); }}
+                            className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
                         </div>
                       </div>
                     ))}
