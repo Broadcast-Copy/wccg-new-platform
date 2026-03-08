@@ -233,28 +233,25 @@ export default function MyStudioPage() {
         </Button>
       </div>
 
-      {/* Studio Projects — primary content */}
-      <StudioProjects />
+      {/* Quick Links — right below header */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        {QUICK_LINKS.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 transition-all hover:border-[#74ddc7]/30 hover:bg-foreground/[0.02]"
+          >
+            <link.icon className="h-5 w-5 text-muted-foreground group-hover:text-[#74ddc7] transition-colors" />
+            <span className="text-sm font-medium text-foreground group-hover:text-[#74ddc7] transition-colors">
+              {link.label}
+            </span>
+            <ArrowRight className="ml-auto h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-[#74ddc7] transition-colors" />
+          </Link>
+        ))}
+      </div>
 
-      {/* Quick Links */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-bold text-foreground">Quick Links</h2>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {QUICK_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 transition-all hover:border-[#74ddc7]/30 hover:bg-foreground/[0.02]"
-            >
-              <link.icon className="h-5 w-5 text-muted-foreground group-hover:text-[#74ddc7] transition-colors" />
-              <span className="text-sm font-medium text-foreground group-hover:text-[#74ddc7] transition-colors">
-                {link.label}
-              </span>
-              <ArrowRight className="ml-auto h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-[#74ddc7] transition-colors" />
-            </Link>
-          ))}
-        </div>
-      </section>
+      {/* My Projects */}
+      <StudioProjects />
 
       {/* CTA to full services */}
       <div className="rounded-xl border border-border bg-gradient-to-r from-[#7401df]/5 to-[#74ddc7]/5 p-6 flex flex-col sm:flex-row items-center gap-4">

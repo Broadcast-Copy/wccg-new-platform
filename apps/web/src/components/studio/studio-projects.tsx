@@ -154,17 +154,17 @@ export function StudioProjects() {
       <section className="space-y-4">
         <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
           <FolderOpen className="h-5 w-5 text-[#7401df]" />
-          My Studio Projects
+          My Projects
         </h2>
         <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-foreground/[0.02] py-10">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#7401df]/10">
             <FolderOpen className="h-6 w-6 text-[#7401df]" />
           </div>
           <p className="text-sm text-muted-foreground">
-            No studio projects yet
+            No projects yet
           </p>
           <p className="text-xs text-muted-foreground max-w-sm text-center">
-            Open a creator tool above to automatically start a new project.
+            Click &quot;New Project&quot; to create your first project.
           </p>
         </div>
       </section>
@@ -176,7 +176,7 @@ export function StudioProjects() {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
           <FolderOpen className="h-5 w-5 text-[#7401df]" />
-          My Studio Projects
+          My Projects
         </h2>
         <Button
           size="sm"
