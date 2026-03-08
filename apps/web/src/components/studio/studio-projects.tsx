@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
-  Mic,
+  Podcast,
+  Film,
+  AudioLines,
   Clock,
   ArrowRight,
   FolderOpen,
@@ -15,27 +17,99 @@ import { Button } from "@/components/ui/button";
 // Types
 // ---------------------------------------------------------------------------
 
-interface PodcastSeries {
+type ProjectType = "podcast" | "video" | "audio";
+
+interface StudioProject {
   id: string;
   title: string;
   description?: string;
   category?: string;
-  coverImage?: string;
+  type: ProjectType;
   createdAt?: string;
   updatedAt?: string;
 }
 
 // ---------------------------------------------------------------------------
-// LocalStorage key (must match the one in /my/podcasts/page.tsx)
+// Tool config — colors match the creator tools
 // ---------------------------------------------------------------------------
 
-const LOCAL_KEY = "wccg_podcast_series";
+const TOOL_CONFIG: Record<
+  ProjectType,
+  {
+    icon: typeof Podcast;
+    label: string;
+    gradient: string;
+    accentColor: string;
+    borderHover: string;
+    shadowColor: string;
+    href: string;
+  }
+> = {
+  podcast: {
+    icon: Podcast,
+    label: "Podcast",
+    gradient: "from-[#7401df] to-[#4c1d95]",
+    accentColor: "#7401df",
+    borderHover: "hover:border-[#7401df]/40",
+    shadowColor: "hover:shadow-purple-500/5",
+    href: "/studio/podcast",
+  },
+  video: {
+    icon: Film,
+    label: "Video",
+    gradient: "from-[#f59e0b] to-[#d97706]",
+    accentColor: "#f59e0b",
+    borderHover: "hover:border-[#f59e0b]/40",
+    shadowColor: "hover:shadow-orange-500/5",
+    href: "/studio/video-editor",
+  },
+  audio: {
+    icon: AudioLines,
+    label: "Audio",
+    gradient: "from-[#3b82f6] to-[#1d4ed8]",
+    accentColor: "#3b82f6",
+    borderHover: "hover:border-[#3b82f6]/40",
+    shadowColor: "hover:shadow-blue-500/5",
+    href: "/studio/audio-editor",
+  },
+};
 
-function loadLocalSeries(): PodcastSeries[] {
+// ---------------------------------------------------------------------------
+// LocalStorage keys
+// ---------------------------------------------------------------------------
+
+const PROJECTS_KEY = "wccg_studio_projects";
+const PODCAST_SERIES_KEY = "wccg_podcast_series"; // Legacy key for backward compat
+
+interface LegacyPodcastSeries {
+  id: string;
+  title: string;
+  description?: string;
+  category?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+function loadProjects(): StudioProject[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(LOCAL_KEY);
-    return raw ? (JSON.parse(raw) as PodcastSeries[]) : [];
+    // Try loading from unified key first
+    const raw = localStorage.getItem(PROJECTS_KEY);
+    if (raw) {
+      return JSON.parse(raw) as StudioProject[];
+    }
+
+    // Fall back to legacy podcast series key
+    const legacyRaw = localStorage.getItem(PODCAST_SERIES_KEY);
+    if (legacyRaw) {
+      const legacy = JSON.parse(legacyRaw) as LegacyPodcastSeries[];
+      return legacy.map((s) => ({
+        ...s,
+        type: "podcast" as ProjectType,
+      }));
+    }
+
+    return [];
   } catch {
     return [];
   }
@@ -63,12 +137,12 @@ function timeAgo(dateStr?: string): string {
 // ---------------------------------------------------------------------------
 
 export function StudioProjects() {
-  const [projects, setProjects] = useState<PodcastSeries[]>([]);
+  const [projects, setProjects] = useState<StudioProject[]>([]);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    setProjects(loadLocalSeries());
+    setProjects(loadProjects());
   }, []);
 
   // Don't render until client-side hydration to avoid mismatch
@@ -84,17 +158,14 @@ export function StudioProjects() {
         </h2>
         <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-foreground/[0.02] py-10">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#7401df]/10">
-            <Mic className="h-6 w-6 text-[#7401df]" />
+            <FolderOpen className="h-6 w-6 text-[#7401df]" />
           </div>
           <p className="text-sm text-muted-foreground">
             No studio projects yet
           </p>
-          <Button size="sm" asChild className="rounded-lg bg-[#7401df] hover:bg-[#7401df]/90 text-white">
-            <Link href="/my/podcasts">
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Create Your First Podcast
-            </Link>
-          </Button>
+          <p className="text-xs text-muted-foreground max-w-sm text-center">
+            Open a creator tool above to automatically start a new project.
+          </p>
         </div>
       </section>
     );
@@ -113,7 +184,7 @@ export function StudioProjects() {
           asChild
           className="rounded-lg text-xs"
         >
-          <Link href="/my/podcasts">
+          <Link href="/studio/podcast">
             <Plus className="mr-1.5 h-3.5 w-3.5" />
             New Project
           </Link>
@@ -121,51 +192,76 @@ export function StudioProjects() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {projects.map((project) => (
-          <Link
-            key={project.id}
-            href="/studio/podcast"
-            className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card p-4 transition-all hover:border-[#7401df]/40 hover:shadow-lg hover:shadow-purple-500/5"
-          >
-            {/* Icon + Info */}
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#7401df] to-[#4c1d95]">
-                <Mic className="h-5 w-5 text-white" />
+        {projects.map((project) => {
+          const config = TOOL_CONFIG[project.type] || TOOL_CONFIG.podcast;
+          const ToolIcon = config.icon;
+          return (
+            <Link
+              key={project.id}
+              href={config.href}
+              className={`group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card p-4 transition-all ${config.borderHover} hover:shadow-lg ${config.shadowColor}`}
+            >
+              {/* Icon + Info */}
+              <div className="flex items-start gap-3">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${config.gradient}`}
+                >
+                  <ToolIcon className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors truncate">
+                    {project.title || "Untitled Project"}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span
+                      className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded"
+                      style={{
+                        color: config.accentColor,
+                        backgroundColor: `${config.accentColor}15`,
+                      }}
+                    >
+                      {config.label}
+                    </span>
+                    {project.category && (
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                        {project.category}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors truncate">
-                  {project.title || "Untitled Podcast"}
-                </h3>
-                {project.category && (
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                    {project.category}
+
+              {/* Description */}
+              {project.description && (
+                <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
+                  {project.description}
+                </p>
+              )}
+
+              {/* Footer */}
+              <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+                {project.createdAt && (
+                  <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    {timeAgo(project.updatedAt || project.createdAt)}
                   </span>
                 )}
-              </div>
-            </div>
-
-            {/* Description */}
-            {project.description && (
-              <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
-                {project.description}
-              </p>
-            )}
-
-            {/* Footer */}
-            <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-              {project.createdAt && (
-                <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                  <Clock className="h-3 w-3" />
-                  {timeAgo(project.updatedAt || project.createdAt)}
+                <span
+                  className="flex items-center gap-1 text-xs font-medium group-hover:text-[#74ddc7] transition-colors"
+                  style={{ color: config.accentColor }}
+                >
+                  Open
+                  <ArrowRight className="h-3 w-3" />
                 </span>
-              )}
-              <span className="flex items-center gap-1 text-xs text-[#7401df] group-hover:text-[#74ddc7] transition-colors font-medium">
-                Open Studio
-                <ArrowRight className="h-3 w-3" />
-              </span>
-            </div>
-          </Link>
-        ))}
+              </div>
+
+              {/* Color accent glow on hover */}
+              <div
+                className={`pointer-events-none absolute -inset-1 bg-gradient-to-br ${config.gradient} opacity-0 group-hover:opacity-[0.03] rounded-xl transition-opacity`}
+              />
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

@@ -36,10 +36,9 @@ const sidebarItems = [
   { href: "/my/tickets", label: "My Tickets", icon: Ticket },
   { href: "/my/history", label: "Listening History", icon: Clock, dividerAfter: true },
   { href: "/my/events", label: "My Events", icon: CalendarDays },
-  { href: "/my/directory", label: "My Directory", icon: Building2 },
+  { href: "/my/directory", label: "My Listings", icon: Building2 },
   { href: "/my/studio", label: "My Studio", icon: Clapperboard },
-  { href: "/my/podcasts", label: "My Podcasts", icon: Mic },
-  { href: "/my/mixes", label: "My Mixes", icon: Music },
+  { href: "/my/mixes", label: "My Mixshows", icon: Music },
 ];
 
 function SidebarContent({ pathname }: { pathname: string }) {
