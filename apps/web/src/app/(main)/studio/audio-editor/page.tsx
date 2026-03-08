@@ -302,6 +302,15 @@ export default function AudioEditorPage() {
   const [duration, setDuration] = useState(180); // 3 min placeholder
   const [recordingTime, setRecordingTime] = useState(0);
 
+  // Status message
+  const [statusMessage, setStatusMessage] = useState("");
+  const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showStatus = useCallback((msg: string) => {
+    setStatusMessage(msg);
+    if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
+    statusTimerRef.current = setTimeout(() => setStatusMessage(""), 5000);
+  }, []);
+
   // Audio settings
   const [inputSource, setInputSource] = useState("default");
   const [outputFormat, setOutputFormat] = useState<"WAV" | "MP3" | "FLAC">("WAV");
@@ -377,11 +386,13 @@ export default function AudioEditorPage() {
       setWaveformData(peaks);
       audioCtx.close();
 
+      showStatus(`Loaded: ${file.name} (${durStr}, ${sizeStr})`);
       console.log("[AudioEditor] Loaded:", file.name, "duration:", audio.duration);
     } catch (err) {
       console.error("[AudioEditor] Failed to load audio:", err);
+      showStatus("Failed to load audio file — unsupported format?");
     }
-  }, []);
+  }, [showStatus]);
 
   // Handle file input change
   const handleFileSelect = useCallback(
@@ -480,6 +491,7 @@ export default function AudioEditorPage() {
         mediaRecorderRef.current.stop();
       }
       setIsRecording(false);
+      showStatus("Recording stopped — processing audio...");
     } else {
       // Start recording
       try {
@@ -487,10 +499,11 @@ export default function AudioEditorPage() {
         if (audioRef.current && !audioRef.current.paused) audioRef.current.pause();
 
         if (!navigator.mediaDevices?.getUserMedia) {
-          console.error("[AudioEditor] getUserMedia not supported");
+          showStatus("Recording not supported in this browser");
           return;
         }
 
+        showStatus("Requesting microphone access...");
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaStreamRef.current = stream;
 
@@ -514,23 +527,37 @@ export default function AudioEditorPage() {
         recorder.onstop = () => {
           stream.getTracks().forEach((t) => t.stop());
           mediaStreamRef.current = null;
-          if (recordChunksRef.current.length === 0) return;
+          if (recordChunksRef.current.length === 0) {
+            showStatus("Recording was empty — no audio captured");
+            return;
+          }
 
           const blob = new Blob(recordChunksRef.current, { type: mimeType || "audio/webm" });
+          const sizeMB = (blob.size / (1024 * 1024)).toFixed(1);
           const file = new File([blob], `recording-${Date.now()}.webm`, { type: blob.type });
           loadAudioFile(file);
+          showStatus(`Recording captured (${sizeMB} MB) — loaded into editor`);
           console.log("[AudioEditor] Recording captured, size:", blob.size);
         };
 
         recorder.start(1000);
         setIsRecording(true);
         setRecordingTime(0);
+        showStatus("Recording... click the red button again to stop");
         console.log("[AudioEditor] Recording started");
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("[AudioEditor] Record failed:", err);
+        const msg = err instanceof DOMException ? err.message : String(err);
+        if (msg.includes("Permission denied") || msg.includes("NotAllowed")) {
+          showStatus("Microphone access denied — please allow microphone in your browser settings and try again");
+        } else if (msg.includes("NotFound") || msg.includes("Requested device not found")) {
+          showStatus("No microphone found — please connect a microphone and try again");
+        } else {
+          showStatus(`Recording failed: ${msg}`);
+        }
       }
     }
-  }, [isRecording, isPlaying, loadAudioFile]);
+  }, [isRecording, isPlaying, loadAudioFile, showStatus]);
 
   const handlePlayPause = useCallback(() => {
     if (isRecording) return;
@@ -1072,8 +1099,14 @@ export default function AudioEditorPage() {
             />
             {isRecording ? "Recording" : "Ready"}
           </span>
-          <span>48kHz / 24-bit</span>
-          <span>{outputFormat}</span>
+          {statusMessage ? (
+            <span className="text-[#74ddc7] truncate max-w-[400px]">{statusMessage}</span>
+          ) : (
+            <>
+              <span>48kHz / 24-bit</span>
+              <span>{outputFormat}</span>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-3">
           {isRecording && (
