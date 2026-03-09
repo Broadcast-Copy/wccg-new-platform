@@ -23,6 +23,7 @@ import {
   Trophy,
   ChevronDown,
   ArrowDownRight,
+  ShoppingCart,
 } from "lucide-react";
 
 // Desktop nav: Home, Discover, [Streaming mega], Support
@@ -242,6 +243,13 @@ export default function MainLayout({
             </button>
             <ThemeToggle />
             <NotificationBell />
+            <Link
+              href="/marketplace"
+              className="hidden sm:flex h-8 w-8 items-center justify-center rounded-full text-foreground/40 hover:text-foreground/70 hover:bg-foreground/[0.06] transition-colors relative"
+              aria-label="Shopping Cart"
+            >
+              <ShoppingCart className="h-4 w-4" />
+            </Link>
             <UserMenu />
             <MobileNav navLinks={mobileNavLinks} />
           </div>

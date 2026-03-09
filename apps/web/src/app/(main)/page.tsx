@@ -164,6 +164,7 @@ function UpcomingEventsSection() {
 export default function HomePage() {
   const [subscribing, setSubscribing] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
+  const [activeCta, setActiveCta] = useState(0); // 0 = newsletter, 1 = community
 
   function handleSubscribe(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -232,8 +233,24 @@ export default function HomePage() {
       {/* Upcoming Events — client-side fetched */}
       <UpcomingEventsSection />
 
-      {/* Email Subscription CTA — matches wccg1045fm.com red banner */}
-      <section className="relative overflow-hidden rounded-2xl bg-[#dc2626] p-8 md:p-12">
+      {/* CTA Toggle — show one at a time */}
+      <div className="relative">
+        {/* Dot indicators */}
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <button
+            onClick={() => setActiveCta(0)}
+            className={`h-2 rounded-full transition-all ${activeCta === 0 ? "w-6 bg-[#dc2626]" : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"}`}
+            aria-label="Show newsletter"
+          />
+          <button
+            onClick={() => setActiveCta(1)}
+            className={`h-2 rounded-full transition-all ${activeCta === 1 ? "w-6 bg-[#7401df]" : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"}`}
+            aria-label="Show community"
+          />
+        </div>
+
+      {/* Email Subscription CTA */}
+      <section className={`relative overflow-hidden rounded-2xl bg-[#dc2626] p-8 md:p-12 transition-all duration-500 ${activeCta === 0 ? "block" : "hidden"}`}>
         <div className="absolute inset-0 opacity-[0.08]">
           <div className="absolute inset-0" style={{
             backgroundImage: "radial-gradient(circle at 30% 40%, rgba(255,255,255,0.4) 0%, transparent 50%), radial-gradient(circle at 70% 70%, rgba(0,0,0,0.2) 0%, transparent 40%)"
@@ -285,8 +302,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA Banner */}
-      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#7401df] to-[#3b82f6] p-8 md:p-12">
+      {/* Community CTA */}
+      <section className={`relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#7401df] to-[#3b82f6] p-8 md:p-12 transition-all duration-500 ${activeCta === 1 ? "block" : "hidden"}`}>
         <div className="absolute inset-0 opacity-10">
           <div className="absolute inset-0" style={{
             backgroundImage: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.2) 0%, transparent 40%)"
@@ -323,6 +340,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      </div>
     </div>
   );
 }

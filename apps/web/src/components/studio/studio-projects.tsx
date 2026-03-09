@@ -90,13 +90,37 @@ interface LegacyPodcastSeries {
   updatedAt?: string;
 }
 
+// Map tool title → type key (handles old projects saved with tool name)
+function normalizeToolToType(tool?: string): ProjectType {
+  if (!tool) return "podcast";
+  const map: Record<string, ProjectType> = {
+    "Podcasts": "podcast",
+    "Video Editor": "video",
+    "Audio Editor": "audio",
+    "podcast": "podcast",
+    "video": "video",
+    "audio": "audio",
+  };
+  return map[tool] || "podcast";
+}
+
 function loadProjects(): StudioProject[] {
   if (typeof window === "undefined") return [];
   try {
     // Try loading from unified key first
     const raw = localStorage.getItem(PROJECTS_KEY);
     if (raw) {
-      return JSON.parse(raw) as StudioProject[];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const parsed = JSON.parse(raw) as any[];
+      return parsed.map((p) => ({
+        id: p.id,
+        title: p.title || p.name || "Untitled Project",
+        description: p.description,
+        category: p.category,
+        type: p.type ? normalizeToolToType(p.type) : normalizeToolToType(p.tool),
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+      }));
     }
 
     // Fall back to legacy podcast series key

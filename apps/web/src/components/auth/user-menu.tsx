@@ -15,11 +15,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   CalendarDays,
+  Clapperboard,
   Heart,
   LayoutDashboard,
   LogOut,
   MapPin,
+  Megaphone,
   Mic,
+  Settings,
   ShieldCheck,
   Star,
   Ticket,
@@ -28,7 +31,7 @@ import { toast } from "sonner";
 
 export function UserMenu() {
   const { user, signOut, isLoading } = useAuth();
-  const { isAdmin, isHost } = useUserRoles();
+  const { isAdmin, isHost, isSales, isManagement } = useUserRoles();
   const router = useRouter();
 
   if (isLoading) {
@@ -127,6 +130,20 @@ export function UserMenu() {
             My Listings
           </Link>
         </DropdownMenuItem>
+        {(isSales || isManagement) && (
+          <DropdownMenuItem asChild>
+            <Link href="/my/sales/campaign-builder">
+              <Megaphone className="mr-2 h-4 w-4" />
+              My Campaigns
+            </Link>
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem asChild>
+          <Link href="/my/studio">
+            <Clapperboard className="mr-2 h-4 w-4" />
+            Broadcast Studio
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/my/favorites">
@@ -141,6 +158,12 @@ export function UserMenu() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/my/settings">
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
           Sign Out

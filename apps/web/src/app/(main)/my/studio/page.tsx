@@ -54,7 +54,6 @@ const TOOLS = [
 const QUICK_LINKS = [
   { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
   { href: "/studio/booking", label: "Book a Studio", icon: Calendar },
-  { href: "/studio", label: "All Studio Services", icon: Clapperboard },
 ];
 
 // ---------------------------------------------------------------------------
@@ -77,9 +76,16 @@ function NewProjectModal({ open, onClose }: { open: boolean; onClose: () => void
     // Save project to localStorage
     const key = "wccg_studio_projects";
     const existing = JSON.parse(localStorage.getItem(key) || "[]");
+    // Map tool title → project type key for consistent color mapping
+    const toolTypeMap: Record<string, string> = {
+      "Podcasts": "podcast",
+      "Video Editor": "video",
+      "Audio Editor": "audio",
+    };
     const newProject = {
       id: `proj_${Date.now()}`,
-      name: projectName.trim(),
+      title: projectName.trim(),
+      type: toolTypeMap[tool.title] || "podcast",
       tool: tool.title,
       toolHref: tool.href,
       createdAt: new Date().toISOString(),
