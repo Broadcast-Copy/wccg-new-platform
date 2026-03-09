@@ -17,6 +17,15 @@ import {
   Palette,
   Megaphone,
   Headphones,
+  DollarSign,
+  ShoppingBag,
+  Receipt,
+  Radio,
+  Gift,
+  FolderOpen,
+  Calendar,
+  Briefcase,
+  type LucideIcon,
 } from "lucide-react";
 import {
   Card,
@@ -42,6 +51,14 @@ interface DashboardStats {
     reason: string;
     createdAt: string;
   }>;
+}
+
+interface QuickAction {
+  href: string;
+  label: string;
+  desc: string;
+  icon: LucideIcon;
+  color: string;
 }
 
 // --- Helpers ---
@@ -74,57 +91,154 @@ function reasonLabel(reason: string) {
   }
 }
 
-function getEmployeeCards(
-  department: string | null,
-  isSales: boolean,
-  isProduction: boolean,
-  isManagement: boolean,
-  isPromotions: boolean,
-) {
-  if (isSales) {
-    return [
-      { href: "/my/admin/campaigns", label: "Campaign Builder", desc: "Create & manage ad campaigns", icon: Megaphone, color: "#7401df" },
-      { href: "/advertise/portal/clients", label: "Client Manager", desc: "Manage advertiser accounts", icon: Headphones, color: "#74ddc7" },
-      { href: "/my/admin/reports", label: "Sales Reports", desc: "Revenue & performance data", icon: TrendingUp, color: "#7401df" },
-    ];
+// ---------------------------------------------------------------------------
+// Role-specific dashboard configuration
+// ---------------------------------------------------------------------------
+function getRoleDashboardConfig(flags: {
+  isSales: boolean;
+  isProduction: boolean;
+  isManagement: boolean;
+  isPromotions: boolean;
+  isCreator: boolean;
+  isHost: boolean;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+  department: string | null;
+}): {
+  title: string;
+  subtitle: string;
+  badge: { label: string; color: string } | null;
+  quickActions: QuickAction[];
+} {
+  const {
+    isSales,
+    isProduction,
+    isManagement,
+    isPromotions,
+    isCreator,
+    isHost,
+    isAdmin,
+    isSuperAdmin,
+  } = flags;
+
+  if (isSuperAdmin || isAdmin) {
+    return {
+      title: "Admin Dashboard",
+      subtitle: "Station management & controls",
+      badge: { label: "Admin", color: "#dc2626" },
+      quickActions: [
+        { href: "/my/admin", label: "Station Control", desc: "Manage station settings", icon: Radio, color: "#dc2626" },
+        { href: "/my/admin/campaigns", label: "Campaigns", desc: "Ad campaigns & scheduling", icon: Megaphone, color: "#7401df" },
+        { href: "/my/admin/reports", label: "Reports", desc: "Station analytics & data", icon: TrendingUp, color: "#74ddc7" },
+        { href: "/my/admin/programming", label: "Programming", desc: "Schedule & show management", icon: Music, color: "#7401df" },
+        { href: "/my/studio", label: "Broadcast Studio", desc: "Podcasts, video & audio", icon: Clapperboard, color: "#74ddc7" },
+        { href: "/my/mixes", label: "Media Manager", desc: "Browse media assets", icon: FolderOpen, color: "#7401df" },
+      ],
+    };
   }
-  if (isProduction) {
-    return [
-      { href: "/my/admin/production", label: "Production Queue", desc: "Manage production tasks", icon: Clapperboard, color: "#7401df" },
-      { href: "/studio/booking", label: "Studio Booking", desc: "Reserve studio time", icon: CalendarDays, color: "#74ddc7" },
-      { href: "/studio", label: "Content Library", desc: "Browse media assets", icon: Music, color: "#7401df" },
-    ];
-  }
+
   if (isManagement) {
-    return [
-      { href: "/my/admin/campaigns", label: "Campaign Builder", desc: "Ad campaigns & scheduling", icon: Megaphone, color: "#7401df" },
-      { href: "/my/admin/reports", label: "Reports", desc: "Station analytics & reports", icon: TrendingUp, color: "#74ddc7" },
-      { href: "/my/admin/programming", label: "Programming", desc: "Schedule & show management", icon: Music, color: "#7401df" },
-    ];
+    return {
+      title: "Management Dashboard",
+      subtitle: "Station oversight & analytics",
+      badge: { label: "Management", color: "#74ddc7" },
+      quickActions: [
+        { href: "/my/admin/campaigns", label: "Campaigns", desc: "Ad campaigns & scheduling", icon: Megaphone, color: "#7401df" },
+        { href: "/my/admin/reports", label: "Reports", desc: "Station analytics & reports", icon: TrendingUp, color: "#74ddc7" },
+        { href: "/my/admin/programming", label: "Programming", desc: "Schedule & show management", icon: Music, color: "#7401df" },
+        { href: "/my/events", label: "Events Manager", desc: "Create & manage events", icon: CalendarDays, color: "#74ddc7" },
+      ],
+    };
   }
+
+  if (isSales) {
+    return {
+      title: "Sales Dashboard",
+      subtitle: "Campaigns, clients & revenue",
+      badge: { label: "Sales", color: "#74ddc7" },
+      quickActions: [
+        { href: "/my/sales", label: "Sales Overview", desc: "Revenue & performance", icon: DollarSign, color: "#74ddc7" },
+        { href: "/my/sales/campaign-builder", label: "Campaign Builder", desc: "Create ad campaigns", icon: Megaphone, color: "#7401df" },
+        { href: "/my/sales/spot-shop", label: "Spot Shop", desc: "Purchase ad spots", icon: ShoppingBag, color: "#74ddc7" },
+        { href: "/my/sales/invoices", label: "Invoices", desc: "Billing & payments", icon: Receipt, color: "#7401df" },
+        { href: "/my/admin/campaigns", label: "My Campaigns", desc: "Manage active campaigns", icon: Briefcase, color: "#74ddc7" },
+      ],
+    };
+  }
+
+  if (isProduction) {
+    return {
+      title: "Production Dashboard",
+      subtitle: "Studio & content production",
+      badge: { label: "Production", color: "#7401df" },
+      quickActions: [
+        { href: "/my/admin/production", label: "Production Queue", desc: "Manage production tasks", icon: Clapperboard, color: "#7401df" },
+        { href: "/studio/booking", label: "Studio Booking", desc: "Reserve studio time", icon: Calendar, color: "#74ddc7" },
+        { href: "/my/studio", label: "Broadcast Studio", desc: "Podcasts, video & audio", icon: Mic, color: "#7401df" },
+        { href: "/my/mixes", label: "Media Manager", desc: "Browse media assets", icon: FolderOpen, color: "#74ddc7" },
+      ],
+    };
+  }
+
   if (isPromotions) {
-    return [
-      { href: "/events/create", label: "Events Manager", desc: "Create & manage events", icon: CalendarDays, color: "#7401df" },
-      { href: "/contests", label: "Contests", desc: "Run listener contests", icon: Star, color: "#74ddc7" },
-      { href: "/community", label: "Community", desc: "Engage with listeners", icon: Palette, color: "#7401df" },
-    ];
+    return {
+      title: "Promotions Dashboard",
+      subtitle: "Events, contests & engagement",
+      badge: { label: "Promotions", color: "#f59e0b" },
+      quickActions: [
+        { href: "/events/create", label: "Events Manager", desc: "Create & manage events", icon: CalendarDays, color: "#7401df" },
+        { href: "/contests", label: "Contests", desc: "Run listener contests", icon: Gift, color: "#f59e0b" },
+        { href: "/community", label: "Community", desc: "Engage with listeners", icon: Palette, color: "#74ddc7" },
+        { href: "/my/events", label: "My Events", desc: "Events & tickets", icon: CalendarDays, color: "#7401df" },
+      ],
+    };
   }
-  return [];
+
+  if (isCreator || isHost) {
+    return {
+      title: isHost ? "Host Dashboard" : "Creator Dashboard",
+      subtitle: isHost ? "Shows, studio & content tools" : "Create, upload & manage content",
+      badge: { label: isHost ? "Host" : "Creator", color: "#7401df" },
+      quickActions: [
+        { href: "/my/studio", label: "Broadcast Studio", desc: "Podcasts, video & audio tools", icon: Clapperboard, color: "#7401df" },
+        { href: "/my/mixes", label: "Media Manager", desc: "Upload & manage DJ mixes", icon: Music, color: "#74ddc7" },
+        { href: "/studio", label: "Studio Tools", desc: "OBS, audio/video editors", icon: Mic, color: "#7401df" },
+        { href: "/creators", label: "Creator Hub", desc: "Resources & support", icon: Palette, color: "#74ddc7" },
+      ],
+    };
+  }
+
+  // Default: Listener
+  return {
+    title: "Dashboard",
+    subtitle: "Welcome back — your WCCG activity at a glance",
+    badge: null,
+    quickActions: [
+      { href: "/my/history", label: "Listening History", desc: "Track what you heard", icon: Clock, color: "#74ddc7" },
+      { href: "/my/studio", label: "Broadcast Studio", desc: "Podcasts, video & audio", icon: Clapperboard, color: "#7401df" },
+      { href: "/my/events", label: "My Events", desc: "Events & tickets", icon: CalendarDays, color: "#7401df" },
+      { href: "/my/directory", label: "My Listings", desc: "Business listings", icon: Building2, color: "#74ddc7" },
+    ],
+  };
 }
 
 // --- Component ---
 
 export default function UserDashboardPage() {
   const { user } = useAuth();
+  const roles = useUserRoles();
   const {
-    isCreator,
-    isEmployee,
     isSales,
     isProduction,
     isManagement,
     isPromotions,
+    isCreator,
+    isHost,
+    isAdmin,
+    isSuperAdmin,
     department,
-  } = useUserRoles();
+  } = roles;
+
   const [stats, setStats] = useState<DashboardStats>({
     pointsBalance: 0,
     favoritesCount: 0,
@@ -179,7 +293,7 @@ export default function UserDashboardPage() {
               : [],
         });
       } catch {
-        // Silently fail — stats will show defaults
+        // Silently fail
       } finally {
         setLoading(false);
       }
@@ -205,21 +319,38 @@ export default function UserDashboardPage() {
     );
   }
 
-  const employeeCards = getEmployeeCards(
-    department,
+  const config = getRoleDashboardConfig({
     isSales,
     isProduction,
     isManagement,
     isPromotions,
-  );
+    isCreator,
+    isHost,
+    isAdmin,
+    isSuperAdmin,
+    department,
+  });
 
   return (
     <div className="space-y-8">
+      {/* ═══ Header ═══ */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back &mdash; your WCCG activity at a glance
-        </p>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight">{config.title}</h1>
+          {config.badge && (
+            <Badge
+              className="text-[10px]"
+              style={{
+                borderColor: `${config.badge.color}40`,
+                backgroundColor: `${config.badge.color}15`,
+                color: config.badge.color,
+              }}
+            >
+              {config.badge.label}
+            </Badge>
+          )}
+        </div>
+        <p className="text-muted-foreground">{config.subtitle}</p>
       </div>
 
       {/* ═══ My Activity stat cards ═══ */}
@@ -229,9 +360,7 @@ export default function UserDashboardPage() {
           <Link href="/my/points">
             <Card className="transition-colors hover:bg-muted/50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Points Balance
-                </CardTitle>
+                <CardTitle className="text-sm font-medium">Points Balance</CardTitle>
                 <Star className="h-4 w-4 text-yellow-500" />
               </CardHeader>
               <CardContent>
@@ -246,18 +375,14 @@ export default function UserDashboardPage() {
           <Link href="/my/tickets">
             <Card className="transition-colors hover:bg-muted/50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Event Tickets
-                </CardTitle>
+                <CardTitle className="text-sm font-medium">Event Tickets</CardTitle>
                 <Ticket className="h-4 w-4 text-blue-500" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
                   {loading ? "--" : stats.ticketsCount}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Active registrations
-                </p>
+                <p className="text-xs text-muted-foreground">Active registrations</p>
               </CardContent>
             </Card>
           </Link>
@@ -265,18 +390,14 @@ export default function UserDashboardPage() {
           <Link href="/my/favorites">
             <Card className="transition-colors hover:bg-muted/50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Favorites
-                </CardTitle>
+                <CardTitle className="text-sm font-medium">Favorites</CardTitle>
                 <Heart className="h-4 w-4 text-red-500" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
                   {loading ? "--" : stats.favoritesCount}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Saved shows &amp; streams
-                </p>
+                <p className="text-xs text-muted-foreground">Saved shows &amp; streams</p>
               </CardContent>
             </Card>
           </Link>
@@ -289,9 +410,7 @@ export default function UserDashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-lg">Recent Points Activity</CardTitle>
-              <CardDescription>
-                Your latest points transactions
-              </CardDescription>
+              <CardDescription>Your latest points transactions</CardDescription>
             </div>
             <Link
               href="/my/points"
@@ -309,8 +428,7 @@ export default function UserDashboardPage() {
             <div className="flex flex-col items-center gap-2 py-6 text-center">
               <TrendingUp className="h-8 w-8 text-muted-foreground/50" />
               <p className="text-sm text-muted-foreground">
-                No points activity yet. Listen to streams and attend events to
-                start earning!
+                No points activity yet. Listen to streams and attend events to start earning!
               </p>
             </div>
           ) : (
@@ -331,12 +449,8 @@ export default function UserDashboardPage() {
                       <Star className="h-4 w-4" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">
-                        {reasonLabel(tx.reason)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(tx.createdAt)}
-                      </p>
+                      <p className="text-sm font-medium">{reasonLabel(tx.reason)}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(tx.createdAt)}</p>
                     </div>
                   </div>
                   <Badge
@@ -357,107 +471,27 @@ export default function UserDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* ═══ Creator Dashboard ═══ */}
-      {isCreator && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Mic className="h-4 w-4 text-[#7401df]" />
-            <h2 className="text-lg font-semibold">Creator Dashboard</h2>
-            <Badge className="border-[#7401df]/30 bg-[#7401df]/10 text-[#7401df] text-[10px]">
-              Creator
-            </Badge>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { href: "/my/studio", label: "My Studio", desc: "Podcasts, video & audio tools", icon: Clapperboard, color: "#7401df" },
-              { href: "/mixes", label: "My Mixshows", desc: "Upload & manage DJ mixes", icon: Music, color: "#74ddc7" },
-              { href: "/studio", label: "Studio Tools", desc: "OBS, audio/video editors", icon: Clapperboard, color: "#7401df" },
-              { href: "/creators", label: "Creator Hub", desc: "Resources & support", icon: Palette, color: "#74ddc7" },
-            ].map((item) => (
-              <Link key={item.href} href={item.href}>
-                <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
-                  <CardContent className="flex items-center gap-3 p-4">
-                    <div
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors"
-                      style={{ backgroundColor: `${item.color}15` }}
-                    >
-                      <item.icon className="h-5 w-5" style={{ color: item.color }} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{item.label}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">
-                        {item.desc}
-                      </p>
-                    </div>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground/60 transition-colors" />
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ═══ Back Office ═══ */}
-      {isEmployee && employeeCards.length > 0 && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-[#74ddc7]" />
-            <h2 className="text-lg font-semibold">Back Office</h2>
-            {department && (
-              <Badge className="border-[#74ddc7]/30 bg-[#74ddc7]/10 text-[#74ddc7] text-[10px] capitalize">
-                {department}
-              </Badge>
-            )}
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {employeeCards.map((item) => (
-              <Link key={item.href + item.label} href={item.href}>
-                <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
-                  <CardContent className="flex items-center gap-3 p-4">
-                    <div
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors"
-                      style={{ backgroundColor: `${item.color}15` }}
-                    >
-                      <item.icon className="h-5 w-5" style={{ color: item.color }} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{item.label}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">
-                        {item.desc}
-                      </p>
-                    </div>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground/60 transition-colors" />
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ═══ Quick Links ═══ */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Quick Links</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { href: "/my/history", label: "Listening History", desc: "Track what you heard", icon: Clock, color: "#74ddc7" },
-            { href: "/my/studio", label: "Broadcast Studio", desc: "Podcasts, video & audio", icon: Clapperboard, color: "#7401df" },
-            { href: "/my/events", label: "My Events", desc: "Events & tickets", icon: CalendarDays, color: "#7401df" },
-            { href: "/my/directory", label: "My Listings", desc: "Business listings", icon: Building2, color: "#74ddc7" },
-          ].map((item) => (
-            <Link key={item.href} href={item.href}>
+      {/* ═══ Role-specific Quick Actions ═══ */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold">
+          {config.badge ? `${config.badge.label} Tools` : "Quick Links"}
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {config.quickActions.map((item) => (
+            <Link key={item.href + item.label} href={item.href}>
               <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
                 <CardContent className="flex items-center gap-3 p-4">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors" style={{ backgroundColor: `${item.color}15` }}>
-                    <item.icon className="h-4 w-4" style={{ color: item.color }} />
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors"
+                    style={{ backgroundColor: `${item.color}15` }}
+                  >
+                    <item.icon className="h-5 w-5" style={{ color: item.color }} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{item.label}</p>
                     <p className="text-[11px] text-muted-foreground truncate">{item.desc}</p>
                   </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground/60 transition-colors" />
                 </CardContent>
               </Card>
             </Link>
