@@ -413,10 +413,15 @@ export default function MyDashboardLayout({
               className="fixed inset-0 z-40 bg-black/60"
               onClick={() => setMobileOpen(false)}
             />
-            <aside className="fixed left-0 top-14 bottom-14 z-50 w-[260px] overflow-y-auto bg-sidebar border-r border-border shadow-2xl">
-              <div onClick={() => setMobileOpen(false)}>
-                <SidebarContent pathname={pathname} />
-              </div>
+            <aside
+              className="fixed left-0 top-14 bottom-14 z-50 w-[260px] overflow-y-auto bg-sidebar border-r border-border shadow-2xl"
+              onClick={(e) => {
+                // Only close sidebar when a link is clicked, not selects/buttons
+                const target = e.target as HTMLElement;
+                if (target.closest("a")) setMobileOpen(false);
+              }}
+            >
+              <SidebarContent pathname={pathname} />
             </aside>
           </>
         )}
