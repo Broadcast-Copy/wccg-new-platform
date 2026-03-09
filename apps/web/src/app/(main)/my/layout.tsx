@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 import {
   LayoutDashboard,
   Star,
@@ -12,6 +13,7 @@ import {
   BarChart3,
   Menu,
   X,
+  User,
   type LucideIcon,
 } from "lucide-react";
 
@@ -64,12 +66,34 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
 // SidebarContent — listener items only
 // ---------------------------------------------------------------------------
 function SidebarContent({ pathname }: { pathname: string }) {
+  const { user } = useAuth();
+
   return (
-    <nav className="flex flex-col gap-0.5 p-2">
-      {listenerItems.map((item) => (
-        <NavLink key={item.href} item={item} pathname={pathname} />
-      ))}
-    </nav>
+    <>
+      {/* User info */}
+      <div className="border-b border-border px-4 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#74ddc7]/30 to-[#7401df]/30 border border-border">
+            <User className="h-4 w-4 text-foreground/70" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {user?.user_metadata?.display_name || user?.email?.split("@")[0] || "My Account"}
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {user?.email || ""}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex flex-col gap-0.5 p-2">
+        {listenerItems.map((item) => (
+          <NavLink key={item.href} item={item} pathname={pathname} />
+        ))}
+      </nav>
+    </>
   );
 }
 
