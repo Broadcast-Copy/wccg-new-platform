@@ -9,9 +9,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { X, Minimize2, Maximize2, Radio } from "lucide-react";
+import { X, Minimize2 } from "lucide-react";
 import { useListeningTracker } from "@/hooks/use-listening-tracker";
-import { useNowPlaying } from "@/hooks/use-now-playing";
 
 // ---------------------------------------------------------------------------
 // SecureNet Player URL — the hosted Cirrus player for WCCG
@@ -125,15 +124,7 @@ export function StreamPlayerProvider({ children }: { children: ReactNode }) {
     setMounted(false);
   }, [mode]);
 
-  // ── Now-playing for minimized bar ────────────────────────────────────────
-  const { data: nowPlaying } = useNowPlaying(iframeMounted);
-  const nowPlayingLabel =
-    nowPlaying?.artist && nowPlaying?.title
-      ? `${nowPlaying.artist} — ${nowPlaying.title}`
-      : nowPlaying?.title || "WCCG 104.5 FM";
-
   const isExpanded = mode === "expanded";
-  const isMinimized = mode === "minimized";
 
   return (
     <StreamPlayerContext.Provider value={{ isOpen: mode !== "closed", open, close, toggle }}>
@@ -224,50 +215,6 @@ export function StreamPlayerProvider({ children }: { children: ReactNode }) {
             </div>
           </div>
 
-          {/* ─── Minimized floating bar ─── */}
-          <div
-            className={`fixed z-[70] bottom-[68px] right-3 left-3 sm:left-auto sm:right-4 sm:w-[360px] transition-all duration-300 ease-out ${
-              isMinimized
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-4 pointer-events-none"
-            }`}
-            aria-hidden={!isMinimized}
-          >
-            <div className="flex items-center gap-3 rounded-2xl bg-[#1a1a2e] border border-border px-4 py-2.5 shadow-2xl">
-              {/* Live dot + now playing */}
-              <button
-                onClick={() => setMode("expanded")}
-                className="flex items-center gap-2.5 min-w-0 flex-1 text-left"
-              >
-                <span className="relative flex h-2.5 w-2.5 shrink-0">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#dc2626] opacity-75" />
-                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#dc2626]" />
-                </span>
-                <Radio className="h-4 w-4 shrink-0 text-[#74ddc7]" />
-                <span className="truncate text-sm font-semibold text-foreground">
-                  {nowPlayingLabel}
-                </span>
-              </button>
-
-              {/* Controls */}
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={() => setMode("expanded")}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
-                  aria-label="Expand player"
-                >
-                  <Maximize2 className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  onClick={stop}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
-                  aria-label="Stop and close player"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
         </>
       )}
     </StreamPlayerContext.Provider>
