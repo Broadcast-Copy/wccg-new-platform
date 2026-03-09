@@ -33,7 +33,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles } from "@/hooks/use-user-roles";
@@ -173,11 +172,6 @@ export default function UserDashboardPage() {
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
-
-  function switchTab(tab: string) {
-    setActiveTab(tab);
-    window.history.replaceState(null, "", `/my#${tab}`);
-  }
 
   useEffect(() => {
     if (!user) {
@@ -539,24 +533,24 @@ export default function UserDashboardPage() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════
-          USER: Personal Stats — Tabbed Dashboard
+          USER: Personal Stats — driven by sidebar hash links
           ═══════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
-        <Tabs value={activeTab} onValueChange={switchTab}>
-          <TabsList className="w-full justify-start overflow-x-auto">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="points">Points</TabsTrigger>
-            <TabsTrigger value="favorites">Favorites</TabsTrigger>
-            <TabsTrigger value="tickets">Tickets</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
-          </TabsList>
+        {activeTab === "points" && <PointsHistory />}
 
-          <TabsContent value="overview" className="space-y-8 mt-6">
+        {activeTab === "favorites" && <FavoritesList />}
+
+        {activeTab === "tickets" && <TicketsList />}
+
+        {activeTab === "history" && <ListeningHistory />}
+
+        {activeTab === "overview" && (
+          <div className="space-y-8">
             {/* ═══ My Activity stat cards ═══ */}
             <div>
               <h2 className="text-lg font-semibold mb-4">My Activity</h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <button onClick={() => switchTab("points")} className="text-left">
+                <Link href="/my#points">
                   <Card className="transition-colors hover:bg-muted/50">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium">
@@ -571,9 +565,9 @@ export default function UserDashboardPage() {
                       <p className="text-xs text-muted-foreground">WCCG Points</p>
                     </CardContent>
                   </Card>
-                </button>
+                </Link>
 
-                <button onClick={() => switchTab("tickets")} className="text-left">
+                <Link href="/my#tickets">
                   <Card className="transition-colors hover:bg-muted/50">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium">
@@ -590,9 +584,9 @@ export default function UserDashboardPage() {
                       </p>
                     </CardContent>
                   </Card>
-                </button>
+                </Link>
 
-                <button onClick={() => switchTab("favorites")} className="text-left">
+                <Link href="/my#favorites">
                   <Card className="transition-colors hover:bg-muted/50">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium">
@@ -609,7 +603,7 @@ export default function UserDashboardPage() {
                       </p>
                     </CardContent>
                   </Card>
-                </button>
+                </Link>
               </div>
             </div>
 
@@ -623,13 +617,13 @@ export default function UserDashboardPage() {
                       Your latest points transactions
                     </CardDescription>
                   </div>
-                  <button
-                    onClick={() => switchTab("points")}
+                  <Link
+                    href="/my#points"
                     className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
                   >
                     View all
                     <ChevronRight className="h-4 w-4" />
-                  </button>
+                  </Link>
                 </div>
               </CardHeader>
               <CardContent>
@@ -691,36 +685,12 @@ export default function UserDashboardPage() {
             <div className="space-y-3">
               <h2 className="text-lg font-semibold">Quick Links</h2>
               <div className="space-y-4">
-                {/* ── Row 1: Listening History ── */}
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   {[
-                    { href: "/my/history", label: "Listening History", desc: "Track what you heard", icon: Clock, color: "#74ddc7" },
-                  ].map((item) => (
-                    <Link key={item.href} href={item.href}>
-                      <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
-                        <CardContent className="flex items-center gap-3 p-4">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors" style={{ backgroundColor: `${item.color}15` }}>
-                            <item.icon className="h-4 w-4" style={{ color: item.color }} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate">{item.label}</p>
-                            <p className="text-[11px] text-muted-foreground truncate">{item.desc}</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  ))}
-                </div>
-
-                <div className="border-t border-border" />
-
-                {/* ── Row 2: Podcasts, Events, Directory ── */}
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  {[
+                    { href: "/my#history", label: "Listening History", desc: "Track what you heard", icon: Clock, color: "#74ddc7" },
                     { href: "/my/studio", label: "Broadcast Studio", desc: "Podcasts, video & audio", icon: Clapperboard, color: "#7401df" },
                     { href: "/my/events", label: "My Events", desc: "Events & tickets", icon: CalendarDays, color: "#7401df" },
                     { href: "/my/directory", label: "My Listings", desc: "Business listings", icon: Building2, color: "#74ddc7" },
-                    { href: "/my/sales/campaign-builder", label: "My Campaigns", desc: "Ad campaigns & sales", icon: Megaphone, color: "#7401df" },
                   ].map((item) => (
                     <Link key={item.href} href={item.href}>
                       <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
@@ -740,13 +710,12 @@ export default function UserDashboardPage() {
 
                 <div className="border-t border-border" />
 
-                {/* ── Row 3: Mixes, Browse, Rewards, Schedule ── */}
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   {[
+                    { href: "/my/sales/campaign-builder", label: "My Campaigns", desc: "Ad campaigns & sales", icon: Megaphone, color: "#7401df" },
                     { href: "/my/mixes", label: "Media Manager", desc: "Manage your media files", icon: Music, color: "#74ddc7" },
                     { href: "/events", label: "Browse Events", desc: "Upcoming events", icon: Ticket, color: "#7401df" },
                     { href: "/rewards", label: "Rewards Catalog", desc: "Redeem points", icon: Star, color: "#dc2626" },
-                    { href: "/schedule", label: "Schedule", desc: "What\u2019s on today", icon: ListMusic, color: "#7401df" },
                   ].map((item) => (
                     <Link key={item.href} href={item.href}>
                       <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
@@ -765,24 +734,8 @@ export default function UserDashboardPage() {
                 </div>
               </div>
             </div>
-          </TabsContent>
-
-          <TabsContent value="points" className="mt-6">
-            <PointsHistory />
-          </TabsContent>
-
-          <TabsContent value="favorites" className="mt-6">
-            <FavoritesList />
-          </TabsContent>
-
-          <TabsContent value="tickets" className="mt-6">
-            <TicketsList />
-          </TabsContent>
-
-          <TabsContent value="history" className="mt-6">
-            <ListeningHistory />
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
       </section>
     </div>
   );
