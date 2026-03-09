@@ -36,6 +36,7 @@ const EMPLOYEE_ROLES: UserRole[] = [
 ];
 
 const ROLE_OVERRIDE_KEY = "wccg_role_override";
+const ROLE_CHANGE_EVENT = "wccg-role-override-change";
 
 interface UseUserRolesReturn {
   roles: UserRole[];
@@ -149,9 +150,23 @@ export function useUserRoles(): UseUserRolesReturn {
           localStorage.removeItem(ROLE_OVERRIDE_KEY);
         }
       } catch { /* noop */ }
+      // Notify ALL hook instances in this tab so every component re-renders
+      window.dispatchEvent(
+        new CustomEvent(ROLE_CHANGE_EVENT, { detail: { role } }),
+      );
     },
     [],
   );
+
+  // Sync override state across all hook instances in this tab
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const role = (e as CustomEvent).detail?.role as UserRole | null;
+      setRoleOverrideState(role);
+    };
+    window.addEventListener(ROLE_CHANGE_EVENT, handler);
+    return () => window.removeEventListener(ROLE_CHANGE_EVENT, handler);
+  }, []);
 
   // Effective roles: use override if set, otherwise use API roles
   const isOverrideActive = roleOverride !== null;

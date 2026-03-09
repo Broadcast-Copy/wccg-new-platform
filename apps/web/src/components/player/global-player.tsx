@@ -4,12 +4,16 @@ import { useEffect, useState } from "react";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { useNowPlaying } from "@/hooks/use-now-playing";
 import { useListeningPoints } from "@/hooks/use-listening-points";
+import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, Volume2, VolumeX, Radio, Music2 } from "lucide-react";
 
 export function GlobalPlayer() {
   const { isPlaying, pause, resume, volume, setVolume, metadata, currentStream, updateMetadata } =
     useAudioPlayer();
+
+  // Hide this player when the StreamPlayer iframe is active (avoid dual bars)
+  const { isOpen: streamPlayerOpen } = useStreamPlayer();
 
   // Poll for now-playing metadata while stream is active
   const { data: nowPlaying } = useNowPlaying(isPlaying);
@@ -43,7 +47,8 @@ export function GlobalPlayer() {
     }
   }, [metadata.title, prevTitle]);
 
-  if (!currentStream) {
+  // Don't render if no stream, or if the iframe-based StreamPlayer is active
+  if (!currentStream || streamPlayerOpen) {
     return null;
   }
 

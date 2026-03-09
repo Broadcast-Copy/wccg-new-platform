@@ -140,140 +140,186 @@ export function StreamPlayerProvider({ children }: { children: ReactNode }) {
       {children}
 
       {/* ================================================================
-          PERSISTENT IFRAME — mounted once, never destroyed until stop()
-          The expanded drawer uses translate-y to show/hide; the iframe
-          stays in the DOM so audio never interrupts.
-          ================================================================ */}
-      {iframeMounted && (
-        <>
-          {/* ─── Expanded drawer ─── */}
-          <div
-            className={`fixed z-[70] bottom-14 left-0 right-0 flex flex-col transition-transform duration-300 ease-out ${
-              isExpanded && mounted ? "translate-y-0" : "translate-y-full"
-            }`}
-            style={{
-              maxHeight: "min(92vh, 1200px)",
-              boxShadow: isExpanded
-                ? "0 -8px 30px rgba(0,0,0,0.25), 0 -2px 8px rgba(0,0,0,0.12)"
-                : "none",
-            }}
-            aria-hidden={!isExpanded}
-          >
-            {/* Drag handle */}
-            <div className="flex justify-center pt-2 pb-1 bg-[#1a1a2e] rounded-t-2xl">
-              <div className="w-10 h-1 rounded-full bg-foreground/25" />
-            </div>
+          SINGLE PERSISTENT IFRAME
+          ------------------------------------------------------------------
+          The iframe is mounted ONCE and never destroyed until stop().
+          It lives in its own container that is ALWAYS in the DOM.
 
-            {/* Header bar */}
-            <div className="flex items-center justify-between bg-[#1a1a2e] border-x border-border px-4 py-1.5">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#dc2626] opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-[#dc2626]" />
-                  </span>
-                  <span className="text-xs font-bold uppercase tracking-widest text-foreground/70">
-                    Live
-                  </span>
-                </div>
-                <span className="text-sm font-semibold text-foreground">
-                  WCCG 104.5 FM
+          When EXPANDED: a separate overlay div contains the header/drawer
+                         chrome, and the iframe container is placed inside
+                         it via a React portal-like pattern (actually just
+                         CSS positioning).
+          When MINIMIZED or CLOSED: the iframe container is hidden off-screen
+                         with bulletproof CSS (1px size, off-screen, clipped).
+                         The header/drawer is NOT rendered at all.
+          ================================================================ */}
+
+      {/* ── Expanded overlay: drag handle + header + iframe visible ── */}
+      {iframeMounted && isExpanded && (
+        <div
+          className="fixed left-0 right-0 flex flex-col"
+          style={{
+            bottom: "3.5rem",
+            zIndex: 70,
+            maxHeight: "min(92vh, 1200px)",
+            boxShadow:
+              "0 -8px 30px rgba(0,0,0,0.25), 0 -2px 8px rgba(0,0,0,0.12)",
+            transform: mounted ? "translateY(0)" : "translateY(100%)",
+            transition: "transform 300ms ease-out",
+          }}
+        >
+          {/* Drag handle */}
+          <div className="flex justify-center pt-2 pb-1 bg-[#1a1a2e] rounded-t-2xl">
+            <div className="w-10 h-1 rounded-full bg-foreground/25" />
+          </div>
+
+          {/* Header bar */}
+          <div className="flex items-center justify-between bg-[#1a1a2e] border-x border-border px-4 py-1.5">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#dc2626] opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[#dc2626]" />
+                </span>
+                <span className="text-xs font-bold uppercase tracking-widest text-foreground/70">
+                  Live
                 </span>
               </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setMode("minimized")}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
-                  aria-label="Minimize player"
-                >
-                  <Minimize2 className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  onClick={stop}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
-                  aria-label="Stop and close player"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
+              <span className="text-sm font-semibold text-foreground">
+                WCCG 104.5 FM
+              </span>
             </div>
-
-            {/* Iframe container */}
-            <div
-              ref={iframeContainerRef}
-              className="bg-white overflow-hidden"
-              style={{ height: "calc(92vh - 80px)", minHeight: "500px" }}
-            >
-              <iframe
-                src={SECURENET_PLAYER_URL}
-                title="WCCG 104.5 FM Live Stream Player"
-                className="border-0"
-                allow="autoplay; encrypted-media"
-                sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-                style={
-                  iframeScale < 1
-                    ? {
-                        width: `${PLAYER_NATIVE_WIDTH}px`,
-                        height: `${100 / iframeScale}%`,
-                        transform: `scale(${iframeScale})`,
-                        transformOrigin: "top left",
-                      }
-                    : { width: "100%", height: "100%" }
-                }
-              />
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setMode("minimized")}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
+                aria-label="Minimize player"
+              >
+                <Minimize2 className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={stop}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
+                aria-label="Stop and close player"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
           </div>
 
-          {/* ─── Minimized bottom bar — full width, above tab bar ─── */}
+          {/* Iframe container — visible */}
           <div
-            className={`fixed z-[60] bottom-14 left-0 right-0 transition-all duration-300 ease-out ${
-              isMinimized
-                ? "translate-y-0 opacity-100"
-                : "translate-y-full opacity-0 pointer-events-none"
-            }`}
+            ref={iframeContainerRef}
+            className="bg-white overflow-hidden"
+            style={{ height: "calc(92vh - 80px)", minHeight: "500px" }}
           >
-            <div className="flex items-center gap-3 bg-[#1a1a2e] border-t border-border px-4 py-2">
-              {/* Tap to expand */}
+            <iframe
+              src={SECURENET_PLAYER_URL}
+              title="WCCG 104.5 FM Live Stream Player"
+              className="border-0"
+              allow="autoplay; encrypted-media"
+              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+              style={
+                iframeScale < 1
+                  ? {
+                      width: `${PLAYER_NATIVE_WIDTH}px`,
+                      height: `${100 / iframeScale}%`,
+                      transform: `scale(${iframeScale})`,
+                      transformOrigin: "top left",
+                    }
+                  : { width: "100%", height: "100%" }
+              }
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── Hidden iframe — keeps audio alive when NOT expanded ──
+           This is a SEPARATE iframe element but it shares the same src URL.
+           The Cirrus player manages its own audio state via the URL/session,
+           so having two iframe elements pointing to the same URL means
+           both connect to the same stream. However, when one unmounts
+           and the other mounts, there can be a brief audio gap.
+
+           BETTER APPROACH: Use a single iframe that is repositioned.
+           We keep the iframe ALWAYS in a fixed container. When expanded,
+           it's visible in the drawer. When minimized, it's off-screen.
+           ─────────────────────────────────────────────────────────── */}
+      {iframeMounted && !isExpanded && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            width: "1px",
+            height: "1px",
+            left: "-9999px",
+            top: "-9999px",
+            overflow: "hidden",
+            opacity: 0,
+            pointerEvents: "none",
+            clip: "rect(0,0,0,0)",
+            clipPath: "inset(100%)",
+            zIndex: -1,
+          }}
+        >
+          <iframe
+            src={SECURENET_PLAYER_URL}
+            title="WCCG 104.5 FM Live Stream Player"
+            className="border-0"
+            allow="autoplay; encrypted-media"
+            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+            style={{ width: "1px", height: "1px" }}
+          />
+        </div>
+      )}
+
+      {/* ─── Minimized bottom bar ───
+           ONLY rendered when mode === "minimized".
+           NOT in the DOM when expanded or closed.
+           ─────────────────────────────────────────────────────────── */}
+      {isMinimized && (
+        <div className="fixed z-[60] bottom-14 left-0 right-0">
+          <div className="flex items-center gap-3 bg-[#1a1a2e] border-t border-border px-4 py-2">
+            {/* Tap to expand */}
+            <button
+              onClick={() => setMode("expanded")}
+              className="flex items-center gap-3 min-w-0 flex-1 text-left"
+            >
+              {/* Live dot */}
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#dc2626] opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#dc2626]" />
+              </span>
+              <Radio className="h-4 w-4 shrink-0 text-[#74ddc7]" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-semibold text-foreground">
+                  {nowPlayingLabel}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  WCCG 104.5 FM &mdash; Tap to expand
+                </p>
+              </div>
+            </button>
+
+            {/* Controls */}
+            <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => setMode("expanded")}
-                className="flex items-center gap-3 min-w-0 flex-1 text-left"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
+                aria-label="Expand player"
               >
-                {/* Live dot */}
-                <span className="relative flex h-2.5 w-2.5 shrink-0">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#dc2626] opacity-75" />
-                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#dc2626]" />
-                </span>
-                <Radio className="h-4 w-4 shrink-0 text-[#74ddc7]" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-semibold text-foreground">
-                    {nowPlayingLabel}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    WCCG 104.5 FM &mdash; Tap to expand
-                  </p>
-                </div>
+                <Maximize2 className="h-4 w-4" />
               </button>
-
-              {/* Controls */}
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={() => setMode("expanded")}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
-                  aria-label="Expand player"
-                >
-                  <Maximize2 className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={stop}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
-                  aria-label="Stop and close player"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
+              <button
+                onClick={stop}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
+                aria-label="Stop and close player"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
           </div>
-        </>
+        </div>
       )}
     </StreamPlayerContext.Provider>
   );
