@@ -66,7 +66,7 @@ function StepIndicator({ current }: { current: number }) {
             <div
               className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
                 isCompleted
-                  ? "bg-[#74ddc7] text-black"
+                  ? "bg-[#74ddc7] text-[#0a0a0f]"
                   : isActive
                     ? "bg-foreground text-background"
                     : "bg-muted text-muted-foreground"

@@ -242,7 +242,7 @@ export default function ProductionPage() {
     <div className="space-y-8">
       {/* Status Message Bar */}
       {statusMsg && (
-        <div className="fixed top-4 right-4 z-50 rounded-lg bg-[#74ddc7] px-4 py-2 text-sm font-medium text-black shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="fixed top-4 right-4 z-50 rounded-lg bg-[#74ddc7] px-4 py-2 text-sm font-medium text-[#0a0a0f] shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4" />
             {statusMsg}
@@ -267,7 +267,7 @@ export default function ProductionPage() {
           <Button
             size="sm"
             onClick={() => setShowNewForm(!showNewForm)}
-            className="bg-[#74ddc7] text-black hover:bg-[#5ec4af] transition-colors"
+            className="bg-[#74ddc7] text-[#0a0a0f] hover:bg-[#5ec4af] transition-colors"
           >
             {showNewForm ? <X className="h-4 w-4 mr-1.5" /> : <Plus className="h-4 w-4 mr-1.5" />}
             {showNewForm ? "Cancel" : "New Job"}
@@ -326,7 +326,7 @@ export default function ProductionPage() {
             </div>
           </div>
           <div className="flex justify-end">
-            <Button onClick={handleAddJob} className="bg-[#74ddc7] text-black hover:bg-[#5ec4af]">
+            <Button onClick={handleAddJob} className="bg-[#74ddc7] text-[#0a0a0f] hover:bg-[#5ec4af]">
               <Plus className="h-4 w-4 mr-1.5" />
               Create Job
             </Button>
@@ -353,7 +353,7 @@ export default function ProductionPage() {
               onClick={() => setStatusFilter(opt)}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                 statusFilter === opt
-                  ? "bg-[#74ddc7] text-black"
+                  ? "bg-[#74ddc7] text-[#0a0a0f]"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
@@ -470,7 +470,7 @@ export default function ProductionPage() {
                   studio.status === "Booked"
                     ? "bg-[#dc2626] text-white hover:bg-[#b91c1c] w-full"
                     : studio.status === "Available"
-                    ? "bg-[#74ddc7] text-black hover:bg-[#5ec4af] w-full"
+                    ? "bg-[#74ddc7] text-[#0a0a0f] hover:bg-[#5ec4af] w-full"
                     : "w-full"
                 }
               >

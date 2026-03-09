@@ -705,7 +705,7 @@ function ConverterModal({
                 setTimeout(onClose, 800);
               }, 1500);
             }}
-            className="flex-1 bg-[#74ddc7] text-background hover:bg-[#74ddc7]/90 font-bold"
+            className="flex-1 bg-[#74ddc7] text-[#0a0a0f] hover:bg-[#74ddc7]/90 font-bold"
           >
             <ArrowLeftRight className="mr-1.5 h-3.5 w-3.5" />
             Convert to {targetFormat.toUpperCase()}
@@ -787,7 +787,7 @@ function DJBRenameModal({
           <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
           <Button
             onClick={() => onApply(file, preview, cartNumber)}
-            className="flex-1 bg-amber-500 text-background hover:bg-amber-500/90 font-bold"
+            className="flex-1 bg-amber-500 text-[#0a0a0f] hover:bg-amber-500/90 font-bold"
           >
             <Tag className="mr-1.5 h-3.5 w-3.5" />
             Apply Rename
@@ -890,7 +890,7 @@ function FTPSettingsModal({
               setSaved(true);
               setTimeout(() => { setSaved(false); onClose(); }, 800);
             }}
-            className="flex-1 bg-[#74ddc7] text-background hover:bg-[#74ddc7]/90 font-bold"
+            className="flex-1 bg-[#74ddc7] text-[#0a0a0f] hover:bg-[#74ddc7]/90 font-bold"
           >
             <Server className="mr-1.5 h-3.5 w-3.5" />
             Save

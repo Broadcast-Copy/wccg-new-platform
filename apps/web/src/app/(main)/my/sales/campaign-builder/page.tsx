@@ -608,7 +608,7 @@ export default function CampaignBuilderPage() {
                   <button
                     onClick={saveNewClient}
                     disabled={!newClient.businessName.trim()}
-                    className="flex items-center gap-1.5 rounded-lg bg-[#74ddc7] px-4 py-2 text-xs font-semibold text-background hover:bg-[#74ddc7]/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="flex items-center gap-1.5 rounded-lg bg-[#74ddc7] px-4 py-2 text-xs font-semibold text-[#0a0a0f] hover:bg-[#74ddc7]/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Check className="h-3.5 w-3.5" />
                     Add Client
@@ -691,7 +691,7 @@ export default function CampaignBuilderPage() {
                 <div className="flex items-center gap-2 pt-1">
                   <button
                     onClick={saveClientEdits}
-                    className="flex items-center gap-1.5 rounded-lg bg-[#74ddc7] px-4 py-2 text-xs font-semibold text-background hover:bg-[#74ddc7]/90 transition-colors"
+                    className="flex items-center gap-1.5 rounded-lg bg-[#74ddc7] px-4 py-2 text-xs font-semibold text-[#0a0a0f] hover:bg-[#74ddc7]/90 transition-colors"
                   >
                     <Check className="h-3.5 w-3.5" />
                     Save Changes
@@ -802,7 +802,7 @@ export default function CampaignBuilderPage() {
               onClick={() => setOrderType("non_specific")}
               className={`px-4 py-2 text-xs font-semibold transition-colors ${
                 orderType === "non_specific"
-                  ? "bg-[#74ddc7] text-background"
+                  ? "bg-[#74ddc7] text-[#0a0a0f]"
                   : "bg-background text-muted-foreground hover:bg-foreground/[0.04]"
               }`}
             >
@@ -812,7 +812,7 @@ export default function CampaignBuilderPage() {
               onClick={() => setOrderType("specific")}
               className={`px-4 py-2 text-xs font-semibold transition-colors border-l border-border ${
                 orderType === "specific"
-                  ? "bg-[#74ddc7] text-background"
+                  ? "bg-[#74ddc7] text-[#0a0a0f]"
                   : "bg-background text-muted-foreground hover:bg-foreground/[0.04]"
               }`}
             >
@@ -949,7 +949,7 @@ export default function CampaignBuilderPage() {
                                 onClick={() => toggleSlot(dpId, slot.hour, "break18")}
                                 className={`h-6 w-6 rounded border transition-all ${
                                   slot.break18
-                                    ? "bg-[#74ddc7] border-[#74ddc7] text-background"
+                                    ? "bg-[#74ddc7] border-[#74ddc7] text-[#0a0a0f]"
                                     : "border-border bg-background hover:border-foreground/30"
                                 }`}
                               >
@@ -961,7 +961,7 @@ export default function CampaignBuilderPage() {
                                 onClick={() => toggleSlot(dpId, slot.hour, "break48")}
                                 className={`h-6 w-6 rounded border transition-all ${
                                   slot.break48
-                                    ? "bg-[#74ddc7] border-[#74ddc7] text-background"
+                                    ? "bg-[#74ddc7] border-[#74ddc7] text-[#0a0a0f]"
                                     : "border-border bg-background hover:border-foreground/30"
                                 }`}
                               >
@@ -1089,7 +1089,7 @@ export default function CampaignBuilderPage() {
           <button
             onClick={() => saveCampaign(true)}
             disabled={!canSave || saving}
-            className="flex items-center gap-1.5 rounded-lg bg-[#74ddc7] px-5 py-2.5 text-sm font-semibold text-background hover:bg-[#74ddc7]/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 rounded-lg bg-[#74ddc7] px-5 py-2.5 text-sm font-semibold text-[#0a0a0f] hover:bg-[#74ddc7]/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Receipt className="h-4 w-4" />
             Generate Invoice

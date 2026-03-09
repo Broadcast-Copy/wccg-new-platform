@@ -177,7 +177,7 @@ function NewProjectModal({ open, onClose }: { open: boolean; onClose: () => void
                   </div>
                   {isSelected && (
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#74ddc7]">
-                      <Check className="h-3.5 w-3.5 text-background" />
+                      <Check className="h-3.5 w-3.5 text-[#0a0a0f]" />
                     </div>
                   )}
                 </button>
@@ -195,7 +195,7 @@ function NewProjectModal({ open, onClose }: { open: boolean; onClose: () => void
             size="sm"
             disabled={!canCreate}
             onClick={handleCreate}
-            className="bg-[#74ddc7] hover:bg-[#74ddc7]/90 text-background disabled:opacity-40"
+            className="bg-[#74ddc7] hover:bg-[#74ddc7]/90 text-[#0a0a0f] disabled:opacity-40"
           >
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             Create Project
@@ -232,7 +232,7 @@ export default function MyStudioPage() {
         <Button
           size="sm"
           onClick={() => setShowNewProject(true)}
-          className="bg-[#74ddc7] hover:bg-[#74ddc7]/90 text-background rounded-lg"
+          className="bg-[#74ddc7] hover:bg-[#74ddc7]/90 text-[#0a0a0f] rounded-lg"
         >
           <Plus className="h-4 w-4 mr-1.5" />
           New Project

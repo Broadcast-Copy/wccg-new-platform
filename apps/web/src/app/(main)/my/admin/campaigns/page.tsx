@@ -737,7 +737,7 @@ export default function CampaignBuilderPage() {
             </div>
             <Button
               size="sm"
-              className="bg-[#74ddc7] hover:bg-[#74ddc7]/90 text-black font-semibold"
+              className="bg-[#74ddc7] hover:bg-[#74ddc7]/90 text-[#0a0a0f] font-semibold"
               onClick={() => {
                 setWizard(emptyWizard());
                 setWizardStep(0);
@@ -1025,7 +1025,7 @@ export default function CampaignBuilderPage() {
                     i === wizardStep
                       ? "bg-[#7401df] text-white"
                       : i < wizardStep
-                        ? "bg-[#74ddc7] text-black"
+                        ? "bg-[#74ddc7] text-[#0a0a0f]"
                         : "bg-muted text-muted-foreground"
                   }`}
                 >
@@ -1295,7 +1295,7 @@ export default function CampaignBuilderPage() {
                                 : "border-muted-foreground/30"
                             }`}
                           >
-                            {active && <Check className="h-3 w-3 text-black" />}
+                            {active && <Check className="h-3 w-3 text-[#0a0a0f]" />}
                           </div>
                           {geo}
                         </button>
@@ -1373,7 +1373,7 @@ export default function CampaignBuilderPage() {
                                 : "border-muted-foreground/30"
                             }`}
                           >
-                            {active && <Check className="h-3 w-3 text-black" />}
+                            {active && <Check className="h-3 w-3 text-[#0a0a0f]" />}
                           </div>
                           {st}
                         </button>
@@ -1601,7 +1601,7 @@ export default function CampaignBuilderPage() {
                 </div>
 
                 <Button
-                  className="w-full bg-[#74ddc7] hover:bg-[#74ddc7]/90 text-black font-semibold"
+                  className="w-full bg-[#74ddc7] hover:bg-[#74ddc7]/90 text-[#0a0a0f] font-semibold"
                   onClick={handleWizardSubmit}
                 >
                   <Check className="h-4 w-4" />
@@ -1654,7 +1654,7 @@ export default function CampaignBuilderPage() {
             </div>
             <Button
               size="sm"
-              className="bg-[#74ddc7] hover:bg-[#74ddc7]/90 text-black font-semibold"
+              className="bg-[#74ddc7] hover:bg-[#74ddc7]/90 text-[#0a0a0f] font-semibold"
               onClick={() => setShowAddClient((p) => !p)}
             >
               <Plus className="h-4 w-4" />
@@ -1704,7 +1704,7 @@ export default function CampaignBuilderPage() {
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
-                  className="bg-[#74ddc7] hover:bg-[#74ddc7]/90 text-black font-semibold"
+                  className="bg-[#74ddc7] hover:bg-[#74ddc7]/90 text-[#0a0a0f] font-semibold"
                   onClick={() => {
                     if (!newClient.company.trim()) {
                       toast.error("Company name is required.");

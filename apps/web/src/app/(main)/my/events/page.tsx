@@ -347,7 +347,7 @@ export default function MyEventsPage() {
                   </p>
                 </div>
                 <Link href="/events">
-                  <Button className="gap-2 bg-[#74ddc7] text-black hover:bg-[#74ddc7]/90">
+                  <Button className="gap-2 bg-[#74ddc7] text-[#0a0a0f] hover:bg-[#74ddc7]/90">
                     <CalendarDays className="h-4 w-4" />
                     Browse Events
                   </Button>

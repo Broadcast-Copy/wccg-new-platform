@@ -276,7 +276,7 @@ export default function InvoicesPage() {
         </div>
         <Link
           href="/my/sales/campaign-builder"
-          className="flex items-center gap-1.5 rounded-lg bg-[#74ddc7] px-4 py-2 text-xs font-semibold text-background hover:bg-[#74ddc7]/90 transition-colors"
+          className="flex items-center gap-1.5 rounded-lg bg-[#74ddc7] px-4 py-2 text-xs font-semibold text-[#0a0a0f] hover:bg-[#74ddc7]/90 transition-colors"
         >
           <Megaphone className="h-3.5 w-3.5" />
           New Campaign

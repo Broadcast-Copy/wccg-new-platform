@@ -195,7 +195,7 @@ const entryMethodLabels: Record<EntryMethod, { label: string; icon: typeof Phone
 
 const statusConfig: Record<ContestStatus, { label: string; color: string; icon: typeof Flame }> = {
   active: { label: "Live Now", color: "bg-[#22c55e] text-white", icon: Flame },
-  upcoming: { label: "Coming Soon", color: "bg-[#f59e0b] text-black", icon: Timer },
+  upcoming: { label: "Coming Soon", color: "bg-[#f59e0b] text-[#0a0a0f]", icon: Timer },
   ended: { label: "Ended", color: "bg-white/10 text-muted-foreground", icon: CheckCircle2 },
 };
 
@@ -528,7 +528,7 @@ export default function ContestsPage() {
               onClick={() => setFilter(cat.id)}
               className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
                 filter === cat.id
-                  ? "bg-[#74ddc7] text-black"
+                  ? "bg-[#74ddc7] text-[#0a0a0f]"
                   : "bg-white/5 text-muted-foreground hover:bg-foreground/10 border border-border"
               }`}
             >

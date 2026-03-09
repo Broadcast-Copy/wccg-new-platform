@@ -303,7 +303,7 @@ function MediaGridItem({
         {/* Hover "Add to Timeline" */}
         {hovered && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
-            <span className="rounded-md bg-[#74ddc7] px-2 py-1 text-[10px] font-semibold text-black shadow-lg">
+            <span className="rounded-md bg-[#74ddc7] px-2 py-1 text-[10px] font-semibold text-[#0a0a0f] shadow-lg">
               Add to Timeline
             </span>
           </div>
@@ -394,7 +394,7 @@ function MediaListItem({
 
       {/* Add to timeline on hover */}
       {hovered && (
-        <span className="shrink-0 rounded bg-[#74ddc7] px-2 py-0.5 text-[9px] font-semibold text-black">
+        <span className="shrink-0 rounded bg-[#74ddc7] px-2 py-0.5 text-[9px] font-semibold text-[#0a0a0f]">
           + Timeline
         </span>
       )}

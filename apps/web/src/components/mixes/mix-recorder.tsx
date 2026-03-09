@@ -875,7 +875,7 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
             {isStopped && recordedBlob && (
               <Button
                 size="sm"
-                className="bg-[#74ddc7] text-black hover:bg-[#74ddc7]/80"
+                className="bg-[#74ddc7] text-[#0a0a0f] hover:bg-[#74ddc7]/80"
                 onClick={handleSave}
                 disabled={!saveTitle.trim()}
               >

@@ -315,7 +315,7 @@ export default function MyDashboardLayout({
         {/* Toggle button */}
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="fixed bottom-20 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-[#74ddc7] text-background shadow-lg"
+          className="fixed bottom-20 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-[#74ddc7] text-[#0a0a0f] shadow-lg"
           aria-label="Toggle dashboard menu"
         >
           {mobileOpen ? (

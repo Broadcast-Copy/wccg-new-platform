@@ -391,7 +391,7 @@ export default function ListeningHistoryPage() {
             {historyEntries.length === 0 ? (
               <Button
                 size="sm"
-                className="gap-1.5 bg-[#74ddc7] text-background hover:bg-[#74ddc7]/80"
+                className="gap-1.5 bg-[#74ddc7] text-[#0a0a0f] hover:bg-[#74ddc7]/80"
                 onClick={openStreamPlayer}
               >
                 <Radio className="h-3.5 w-3.5" />
