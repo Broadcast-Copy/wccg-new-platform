@@ -195,11 +195,23 @@ function StreamingMegaMenu() {
 function ListenLiveButton() {
   const { open } = useStreamPlayer();
   const { data: nowPlaying } = useNowPlaying(true);
+  const [showingSong, setShowingSong] = useState(false);
+  const prevTrackRef = useRef<string | null>(null);
 
   const marqueeText =
     nowPlaying?.artist && nowPlaying?.title
       ? `${nowPlaying.artist} — ${nowPlaying.title}`
       : nowPlaying?.title || null;
+
+  // Trigger scroll when the track changes
+  useEffect(() => {
+    if (!marqueeText) return;
+    // Only trigger if the track actually changed (not on first load)
+    if (prevTrackRef.current !== null && prevTrackRef.current !== marqueeText) {
+      setShowingSong(true);
+    }
+    prevTrackRef.current = marqueeText;
+  }, [marqueeText]);
 
   return (
     <button
@@ -213,10 +225,14 @@ function ListenLiveButton() {
         <span className="relative inline-flex h-2 w-2 rounded-full bg-[#dc2626]" />
       </span>
       <Radio className="h-3.5 w-3.5 shrink-0" />
-      {marqueeText ? (
+      {showingSong && marqueeText ? (
         <span className="hidden sm:block overflow-hidden whitespace-nowrap min-w-0">
-          <span className="inline-block animate-marquee" style={{ animationDuration: "12s" }}>
-            {marqueeText}&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp;&nbsp;{marqueeText}&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp;&nbsp;
+          <span
+            key={marqueeText}
+            className="inline-block animate-now-playing"
+            onAnimationEnd={() => setShowingSong(false)}
+          >
+            {marqueeText}
           </span>
         </span>
       ) : (

@@ -166,6 +166,17 @@
   animation: marquee 30s linear infinite;
 }
 
+/* Now-playing scroll — slides in, pauses, slides out, then done */
+@keyframes now-playing-scroll {
+  0%   { transform: translateX(100%); }
+  12%  { transform: translateX(0); }
+  82%  { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+.animate-now-playing {
+  animation: now-playing-scroll 6s ease-in-out forwards;
+}
+
 /* Gradient text (Riverside-inspired metallic) */
 .gradient-text {
   background: radial-gradient(ellipse at 30% 50%, #1a1a2e 0%, #64748b 100%);
