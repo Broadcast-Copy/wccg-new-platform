@@ -25,6 +25,12 @@ import {
   FolderOpen,
   Calendar,
   Briefcase,
+  Eye,
+  Users,
+  FileText,
+  BarChart3,
+  Settings,
+  Shield,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -51,6 +57,15 @@ interface DashboardStats {
     reason: string;
     createdAt: string;
   }>;
+}
+
+interface StatCard {
+  label: string;
+  value: string;
+  sub: string;
+  icon: LucideIcon;
+  color: string;
+  live?: boolean;
 }
 
 interface QuickAction {
@@ -103,12 +118,13 @@ function getRoleDashboardConfig(flags: {
   isHost: boolean;
   isAdmin: boolean;
   isSuperAdmin: boolean;
-  department: string | null;
 }): {
   title: string;
   subtitle: string;
   badge: { label: string; color: string } | null;
+  stats: StatCard[];
   quickActions: QuickAction[];
+  isListener: boolean;
 } {
   const {
     isSales,
@@ -126,6 +142,13 @@ function getRoleDashboardConfig(flags: {
       title: "Admin Dashboard",
       subtitle: "Station management & controls",
       badge: { label: "Admin", color: "#dc2626" },
+      isListener: false,
+      stats: [
+        { label: "Stream Status", value: "LIVE", sub: "WCCG 104.5 FM — On Air", icon: Radio, color: "#74ddc7", live: true },
+        { label: "Active Listeners", value: "--", sub: "Current sessions", icon: Headphones, color: "#7401df" },
+        { label: "Page Views", value: "--", sub: "Today", icon: Eye, color: "#3b82f6" },
+        { label: "Total Users", value: "--", sub: "Registered accounts", icon: Users, color: "#74ddc7" },
+      ],
       quickActions: [
         { href: "/my/admin", label: "Station Control", desc: "Manage station settings", icon: Radio, color: "#dc2626" },
         { href: "/my/admin/campaigns", label: "Campaigns", desc: "Ad campaigns & scheduling", icon: Megaphone, color: "#7401df" },
@@ -142,6 +165,13 @@ function getRoleDashboardConfig(flags: {
       title: "Management Dashboard",
       subtitle: "Station oversight & analytics",
       badge: { label: "Management", color: "#74ddc7" },
+      isListener: false,
+      stats: [
+        { label: "Stream Status", value: "LIVE", sub: "WCCG 104.5 FM — On Air", icon: Radio, color: "#74ddc7", live: true },
+        { label: "Active Listeners", value: "--", sub: "Current sessions", icon: Headphones, color: "#7401df" },
+        { label: "Active Campaigns", value: "--", sub: "Running ads", icon: Megaphone, color: "#f59e0b" },
+        { label: "Total Users", value: "--", sub: "Registered accounts", icon: Users, color: "#74ddc7" },
+      ],
       quickActions: [
         { href: "/my/admin/campaigns", label: "Campaigns", desc: "Ad campaigns & scheduling", icon: Megaphone, color: "#7401df" },
         { href: "/my/admin/reports", label: "Reports", desc: "Station analytics & reports", icon: TrendingUp, color: "#74ddc7" },
@@ -156,6 +186,13 @@ function getRoleDashboardConfig(flags: {
       title: "Sales Dashboard",
       subtitle: "Campaigns, clients & revenue",
       badge: { label: "Sales", color: "#74ddc7" },
+      isListener: false,
+      stats: [
+        { label: "Active Campaigns", value: "--", sub: "Currently running", icon: Megaphone, color: "#7401df" },
+        { label: "Monthly Revenue", value: "--", sub: "This month", icon: DollarSign, color: "#74ddc7" },
+        { label: "Total Clients", value: "--", sub: "Active accounts", icon: Users, color: "#3b82f6" },
+        { label: "Pending Invoices", value: "--", sub: "Awaiting payment", icon: ShoppingBag, color: "#f59e0b" },
+      ],
       quickActions: [
         { href: "/my/sales", label: "Sales Overview", desc: "Revenue & performance", icon: DollarSign, color: "#74ddc7" },
         { href: "/my/sales/campaign-builder", label: "Campaign Builder", desc: "Create ad campaigns", icon: Megaphone, color: "#7401df" },
@@ -171,6 +208,13 @@ function getRoleDashboardConfig(flags: {
       title: "Production Dashboard",
       subtitle: "Studio & content production",
       badge: { label: "Production", color: "#7401df" },
+      isListener: false,
+      stats: [
+        { label: "Production Queue", value: "--", sub: "Pending tasks", icon: Clapperboard, color: "#7401df" },
+        { label: "Studio Bookings", value: "--", sub: "This week", icon: Calendar, color: "#74ddc7" },
+        { label: "Media Assets", value: "--", sub: "Total files", icon: FolderOpen, color: "#3b82f6" },
+        { label: "Stream Status", value: "LIVE", sub: "WCCG 104.5 FM — On Air", icon: Radio, color: "#74ddc7", live: true },
+      ],
       quickActions: [
         { href: "/my/admin/production", label: "Production Queue", desc: "Manage production tasks", icon: Clapperboard, color: "#7401df" },
         { href: "/studio/booking", label: "Studio Booking", desc: "Reserve studio time", icon: Calendar, color: "#74ddc7" },
@@ -185,6 +229,13 @@ function getRoleDashboardConfig(flags: {
       title: "Promotions Dashboard",
       subtitle: "Events, contests & engagement",
       badge: { label: "Promotions", color: "#f59e0b" },
+      isListener: false,
+      stats: [
+        { label: "Active Events", value: "--", sub: "Currently live", icon: CalendarDays, color: "#7401df" },
+        { label: "Active Contests", value: "--", sub: "Running now", icon: Gift, color: "#f59e0b" },
+        { label: "Registrations", value: "--", sub: "This month", icon: Users, color: "#74ddc7" },
+        { label: "Engagement", value: "--", sub: "Social interactions", icon: Palette, color: "#3b82f6" },
+      ],
       quickActions: [
         { href: "/events/create", label: "Events Manager", desc: "Create & manage events", icon: CalendarDays, color: "#7401df" },
         { href: "/contests", label: "Contests", desc: "Run listener contests", icon: Gift, color: "#f59e0b" },
@@ -199,6 +250,13 @@ function getRoleDashboardConfig(flags: {
       title: isHost ? "Host Dashboard" : "Creator Dashboard",
       subtitle: isHost ? "Shows, studio & content tools" : "Create, upload & manage content",
       badge: { label: isHost ? "Host" : "Creator", color: "#7401df" },
+      isListener: false,
+      stats: [
+        { label: "Total Content", value: "--", sub: "Published items", icon: Music, color: "#7401df" },
+        { label: "Listeners", value: "--", sub: "Total plays", icon: Headphones, color: "#74ddc7" },
+        { label: "Favorites", value: "--", sub: "Saved by users", icon: Heart, color: "#dc2626" },
+        { label: "Stream Status", value: "LIVE", sub: "WCCG 104.5 FM — On Air", icon: Radio, color: "#74ddc7", live: true },
+      ],
       quickActions: [
         { href: "/my/studio", label: "Broadcast Studio", desc: "Podcasts, video & audio tools", icon: Clapperboard, color: "#7401df" },
         { href: "/my/mixes", label: "Media Manager", desc: "Upload & manage DJ mixes", icon: Music, color: "#74ddc7" },
@@ -208,11 +266,13 @@ function getRoleDashboardConfig(flags: {
     };
   }
 
-  // Default: Listener
+  // Default: Listener (base dashboard)
   return {
     title: "Dashboard",
     subtitle: "Welcome back — your WCCG activity at a glance",
     badge: null,
+    isListener: true,
+    stats: [], // listener uses the dynamic stat cards below
     quickActions: [
       { href: "/my/history", label: "Listening History", desc: "Track what you heard", icon: Clock, color: "#74ddc7" },
       { href: "/my/studio", label: "Broadcast Studio", desc: "Podcasts, video & audio", icon: Clapperboard, color: "#7401df" },
@@ -236,7 +296,6 @@ export default function UserDashboardPage() {
     isHost,
     isAdmin,
     isSuperAdmin,
-    department,
   } = roles;
 
   const [stats, setStats] = useState<DashboardStats>({
@@ -328,7 +387,6 @@ export default function UserDashboardPage() {
     isHost,
     isAdmin,
     isSuperAdmin,
-    department,
   });
 
   return (
@@ -353,7 +411,75 @@ export default function UserDashboardPage() {
         <p className="text-muted-foreground">{config.subtitle}</p>
       </div>
 
-      {/* ═══ My Activity stat cards ═══ */}
+      {/* ═══ Role-specific stat cards (non-listener roles) ═══ */}
+      {!config.isListener && config.stats.length > 0 && (
+        <section className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {config.stats.map((stat) => (
+              <Card key={stat.label} className="border-border">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{stat.label}</CardTitle>
+                  <stat.icon className="h-4 w-4" style={{ color: stat.color }} />
+                </CardHeader>
+                <CardContent>
+                  {stat.live ? (
+                    <div className="flex items-center gap-2">
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span
+                          className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+                          style={{ backgroundColor: stat.color }}
+                        />
+                        <span
+                          className="relative inline-flex h-2.5 w-2.5 rounded-full"
+                          style={{ backgroundColor: stat.color }}
+                        />
+                      </span>
+                      <span className="text-lg font-bold" style={{ color: stat.color }}>
+                        {stat.value}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="text-2xl font-bold">{stat.value}</div>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">{stat.sub}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ═══ Role-specific Quick Actions (non-listener roles) ═══ */}
+      {!config.isListener && (
+        <section className="space-y-4">
+          <h2 className="text-lg font-semibold">
+            {config.badge ? `${config.badge.label} Tools` : "Quick Actions"}
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {config.quickActions.map((item) => (
+              <Link key={item.href + item.label} href={item.href}>
+                <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors"
+                      style={{ backgroundColor: `${item.color}15` }}
+                    >
+                      <item.icon className="h-5 w-5" style={{ color: item.color }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{item.label}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{item.desc}</p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground/60 transition-colors" />
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ═══ Listener Base: My Activity stat cards ═══ */}
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">My Activity</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -471,33 +597,33 @@ export default function UserDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* ═══ Role-specific Quick Actions ═══ */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold">
-          {config.badge ? `${config.badge.label} Tools` : "Quick Links"}
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {config.quickActions.map((item) => (
-            <Link key={item.href + item.label} href={item.href}>
-              <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
-                <CardContent className="flex items-center gap-3 p-4">
-                  <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors"
-                    style={{ backgroundColor: `${item.color}15` }}
-                  >
-                    <item.icon className="h-5 w-5" style={{ color: item.color }} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{item.label}</p>
-                    <p className="text-[11px] text-muted-foreground truncate">{item.desc}</p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground/60 transition-colors" />
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      </section>
+      {/* ═══ Listener Quick Links (only for listener role) ═══ */}
+      {config.isListener && (
+        <section className="space-y-4">
+          <h2 className="text-lg font-semibold">Quick Links</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {config.quickActions.map((item) => (
+              <Link key={item.href + item.label} href={item.href}>
+                <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors"
+                      style={{ backgroundColor: `${item.color}15` }}
+                    >
+                      <item.icon className="h-5 w-5" style={{ color: item.color }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{item.label}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{item.desc}</p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground/60 transition-colors" />
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

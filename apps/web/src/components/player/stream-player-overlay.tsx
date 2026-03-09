@@ -4,47 +4,15 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
-  useRef,
-  useState,
   type ReactNode,
 } from "react";
-import { X, Minimize2, Maximize2, Radio } from "lucide-react";
+import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { useListeningTracker } from "@/hooks/use-listening-tracker";
-import { useNowPlaying } from "@/hooks/use-now-playing";
 
 // ---------------------------------------------------------------------------
-// SecureNet Player URL — the hosted Cirrus player for WCCG
+// WCCG Icecast stream URL — native HTML5 audio
 // ---------------------------------------------------------------------------
-export const SECURENET_PLAYER_URL =
-  "https://streamdb7web.securenetsystems.net/cirruscontent/WCCG";
-
-// The native design-width of the Cirrus player page.
-const PLAYER_NATIVE_WIDTH = 500;
-
-// ---------------------------------------------------------------------------
-// CSS for hiding the iframe container when not expanded.
-// Uses every known hiding technique simultaneously so the header/drag-handle
-// that live in the same container are completely invisible.
-// ---------------------------------------------------------------------------
-const HIDDEN_STYLES: React.CSSProperties = {
-  position: "fixed",
-  width: "1px",
-  height: "1px",
-  left: "-9999px",
-  top: "-9999px",
-  overflow: "hidden",
-  opacity: 0,
-  pointerEvents: "none",
-  clip: "rect(0,0,0,0)",
-  clipPath: "inset(100%)",
-  zIndex: -1,
-};
-
-// ---------------------------------------------------------------------------
-// Player modes
-// ---------------------------------------------------------------------------
-type PlayerMode = "closed" | "minimized" | "expanded";
+const WCCG_STREAM_URL = "https://ice66.securenetsystems.net/WCCG";
 
 // ---------------------------------------------------------------------------
 // Context
@@ -69,242 +37,38 @@ export function useStreamPlayer(): StreamPlayerContextValue {
 }
 
 // ---------------------------------------------------------------------------
-// Provider + Persistent Player
+// Provider — thin wrapper that starts native audio via AudioProvider
 // ---------------------------------------------------------------------------
 export function StreamPlayerProvider({ children }: { children: ReactNode }) {
-  // Once true the iframe stays mounted — audio keeps playing across pages
-  const [iframeMounted, setIframeMounted] = useState(false);
-  const [mode, setMode] = useState<PlayerMode>("closed");
+  const { play, pause, resume, isPlaying, currentStream } = useAudioPlayer();
 
-  // ── Actions ──────────────────────────────────────────────────────────────
+  // The player is "open" whenever a stream is loaded (playing or paused)
+  const isOpen = currentStream !== null;
+
   const open = useCallback(() => {
-    setIframeMounted(true);
-    setMode("expanded");
-  }, []);
+    play(WCCG_STREAM_URL, { streamName: "WCCG 104.5 FM" });
+  }, [play]);
 
-  // "Close" from expanded → minimize (keeps playing)
   const close = useCallback(() => {
-    setMode("minimized");
-  }, []);
-
-  // Actually stop & destroy the iframe
-  const stop = useCallback(() => {
-    setMode("closed");
-    setIframeMounted(false);
-  }, []);
+    pause();
+  }, [pause]);
 
   const toggle = useCallback(() => {
-    setMode((prev) => {
-      if (prev === "expanded") return "minimized";
-      setIframeMounted(true);
-      return "expanded";
-    });
-  }, []);
-
-  // Escape: expanded → minimize
-  useEffect(() => {
-    if (mode !== "expanded") return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMode("minimized");
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [mode]);
-
-  // Track listening sessions
-  useListeningTracker(iframeMounted);
-
-  // ── Responsive iframe scaling ────────────────────────────────────────────
-  const iframeContainerRef = useRef<HTMLDivElement>(null);
-  const [iframeScale, setIframeScale] = useState(1);
-
-  useEffect(() => {
-    if (mode !== "expanded") return;
-    const el = iframeContainerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) => {
-      const w = entry.contentRect.width;
-      setIframeScale(w < PLAYER_NATIVE_WIDTH ? w / PLAYER_NATIVE_WIDTH : 1);
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [mode]);
-
-  // ── Slide-up animation ───────────────────────────────────────────────────
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    if (mode === "expanded") {
-      const raf = requestAnimationFrame(() => setMounted(true));
-      return () => {
-        cancelAnimationFrame(raf);
-        setMounted(false);
-      };
+    if (isPlaying) {
+      pause();
+    } else if (currentStream) {
+      resume();
+    } else {
+      play(WCCG_STREAM_URL, { streamName: "WCCG 104.5 FM" });
     }
-    setMounted(false);
-  }, [mode]);
+  }, [isPlaying, currentStream, play, pause, resume]);
 
-  const isExpanded = mode === "expanded";
-  const isMinimized = mode === "minimized";
-
-  // Now-playing for the minimized bar
-  const { data: nowPlaying } = useNowPlaying(iframeMounted);
-  const nowPlayingLabel =
-    nowPlaying?.artist && nowPlaying?.title
-      ? `${nowPlaying.artist} — ${nowPlaying.title}`
-      : nowPlaying?.title || "WCCG 104.5 FM";
+  // Track listening sessions for history
+  useListeningTracker(isPlaying);
 
   return (
-    <StreamPlayerContext.Provider value={{ isOpen: mode !== "closed", open, close, toggle }}>
+    <StreamPlayerContext.Provider value={{ isOpen, open, close, toggle }}>
       {children}
-
-      {/* ================================================================
-          SINGLE PERSISTENT CONTAINER
-          ------------------------------------------------------------------
-          ONE container holds the drag handle, header bar, AND the iframe.
-          The entire container is mounted once and never destroyed until
-          stop() is called.
-
-          - When EXPANDED: container is fixed at the bottom of the viewport,
-            visible as a slide-up drawer.
-          - When NOT EXPANDED (minimized or closed but still mounted):
-            container is hidden off-screen using HIDDEN_STYLES — the iframe
-            stays alive so audio keeps playing. The header/drag handle are
-            inside the container too, but they're invisible because the
-            container is 1px clipped off-screen.
-          ================================================================ */}
-      {iframeMounted && (
-        <div
-          className={isExpanded ? "fixed left-0 right-0 flex flex-col" : undefined}
-          aria-hidden={!isExpanded}
-          style={
-            isExpanded
-              ? {
-                  bottom: "3.5rem",
-                  zIndex: 70,
-                  maxHeight: "min(92vh, 1200px)",
-                  boxShadow:
-                    "0 -8px 30px rgba(0,0,0,0.25), 0 -2px 8px rgba(0,0,0,0.12)",
-                  transform: mounted ? "translateY(0)" : "translateY(100%)",
-                  transition: "transform 300ms ease-out",
-                }
-              : HIDDEN_STYLES
-          }
-        >
-          {/* Drag handle */}
-          <div className="flex justify-center pt-2 pb-1 bg-[#1a1a2e] rounded-t-2xl">
-            <div className="w-10 h-1 rounded-full bg-foreground/25" />
-          </div>
-
-          {/* Header bar */}
-          <div className="flex items-center justify-between bg-[#1a1a2e] border-x border-border px-4 py-1.5">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#dc2626] opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[#dc2626]" />
-                </span>
-                <span className="text-xs font-bold uppercase tracking-widest text-foreground/70">
-                  Live
-                </span>
-              </div>
-              <span className="text-sm font-semibold text-foreground">
-                WCCG 104.5 FM
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setMode("minimized")}
-                className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
-                aria-label="Minimize player"
-              >
-                <Minimize2 className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={stop}
-                className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
-                aria-label="Stop and close player"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Iframe container — the SINGLE iframe lives here always */}
-          <div
-            ref={iframeContainerRef}
-            className="bg-white overflow-hidden"
-            style={{ height: "calc(92vh - 80px)", minHeight: "500px" }}
-          >
-            <iframe
-              src={SECURENET_PLAYER_URL}
-              title="WCCG 104.5 FM Live Stream Player"
-              className="border-0"
-              allow="autoplay; encrypted-media"
-              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-              style={
-                isExpanded && iframeScale < 1
-                  ? {
-                      width: `${PLAYER_NATIVE_WIDTH}px`,
-                      height: `${100 / iframeScale}%`,
-                      transform: `scale(${iframeScale})`,
-                      transformOrigin: "top left",
-                    }
-                  : { width: "100%", height: "100%" }
-              }
-            />
-          </div>
-        </div>
-      )}
-
-      {/* ─── Minimized bottom bar ───
-           ONLY rendered when mode === "minimized".
-           NOT in the DOM when expanded or closed.
-           ─────────────────────────────────────────────────────────── */}
-      {isMinimized && (
-        <div className="fixed z-[60] bottom-14 left-0 right-0">
-          <div className="flex items-center gap-3 bg-[#1a1a2e] border-t border-border px-4 py-2">
-            {/* Tap to expand */}
-            <button
-              onClick={() => setMode("expanded")}
-              className="flex items-center gap-3 min-w-0 flex-1 text-left"
-            >
-              {/* Live dot */}
-              <span className="relative flex h-2.5 w-2.5 shrink-0">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#dc2626] opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#dc2626]" />
-              </span>
-              <Radio className="h-4 w-4 shrink-0 text-[#74ddc7]" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-semibold text-foreground">
-                  {nowPlayingLabel}
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  WCCG 104.5 FM &mdash; Tap to expand
-                </p>
-              </div>
-            </button>
-
-            {/* Controls */}
-            <div className="flex items-center gap-1 shrink-0">
-              <button
-                onClick={() => setMode("expanded")}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
-                aria-label="Expand player"
-              >
-                <Maximize2 className="h-4 w-4" />
-              </button>
-              <button
-                onClick={stop}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
-                aria-label="Stop and close player"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </StreamPlayerContext.Provider>
   );
 }
