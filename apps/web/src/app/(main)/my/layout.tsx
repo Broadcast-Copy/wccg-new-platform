@@ -30,6 +30,7 @@ import {
   Calendar,
   Radio,
   Gift,
+  ShoppingBag,
 } from "lucide-react";
 
 const sidebarItems = [
@@ -151,6 +152,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
               [
                 { href: "/my/sales", label: "Sales Dashboard", icon: DollarSign },
                 { href: "/my/sales/campaign-builder", label: "Campaign Builder", icon: Megaphone },
+                { href: "/my/sales/spot-shop", label: "Spot Shop", icon: ShoppingBag },
                 { href: "/my/sales/invoices", label: "Invoices", icon: Receipt },
                 { href: "/my/admin/campaigns", label: "My Campaigns", icon: Briefcase },
               ].map((item) => {

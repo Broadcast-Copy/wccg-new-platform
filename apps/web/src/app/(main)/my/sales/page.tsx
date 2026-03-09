@@ -13,6 +13,7 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  ShoppingBag,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -167,6 +168,7 @@ export default function SalesDashboardPage() {
   const quickActions = [
     { href: "/my/sales/campaign-builder", label: "New Campaign", description: "Build a commercial campaign for a client", icon: Megaphone, bg: "bg-[#74ddc7]/10", color: "text-[#74ddc7]" },
     { href: "/my/sales/invoices", label: "View Invoices", description: "Manage invoices and billing", icon: Receipt, bg: "bg-yellow-500/10", color: "text-yellow-400" },
+    { href: "/my/sales/spot-shop", label: "Spot Shop", description: "Browse and purchase ad spots quickly", icon: ShoppingBag, bg: "bg-purple-500/10", color: "text-purple-400" },
     { href: "/my/sales/campaign-builder", label: "Manage Clients", description: "Search and edit client accounts", icon: Users, bg: "bg-blue-500/10", color: "text-blue-400" },
   ];
 
