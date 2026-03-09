@@ -33,10 +33,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles } from "@/hooks/use-user-roles";
 import { apiClient } from "@/lib/api-client";
+import { PointsHistory } from "@/components/points/points-history";
+import { FavoritesList } from "@/components/favorites/favorites-list";
+import { TicketsList } from "@/components/tickets/tickets-list";
+import { ListeningHistory } from "@/components/history/listening-history";
 
 // ─── Types ──────────────────────────────────────────────────────────────
 
@@ -150,6 +155,29 @@ export default function UserDashboardPage() {
     recentPoints: [],
   });
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("overview");
+
+  // Hash-based tab sync
+  useEffect(() => {
+    const hash = window.location.hash.replace("#", "");
+    if (["overview", "points", "favorites", "tickets", "history"].includes(hash)) {
+      setActiveTab(hash);
+    }
+
+    function onHashChange() {
+      const h = window.location.hash.replace("#", "");
+      if (["overview", "points", "favorites", "tickets", "history"].includes(h)) {
+        setActiveTab(h);
+      }
+    }
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  function switchTab(tab: string) {
+    setActiveTab(tab);
+    window.history.replaceState(null, "", `/my#${tab}`);
+  }
 
   useEffect(() => {
     if (!user) {
@@ -511,224 +539,250 @@ export default function UserDashboardPage() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════
-          USER: Personal Stats
+          USER: Personal Stats — Tabbed Dashboard
           ═══════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">My Activity</h2>
+        <Tabs value={activeTab} onValueChange={switchTab}>
+          <TabsList className="w-full justify-start overflow-x-auto">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="points">Points</TabsTrigger>
+            <TabsTrigger value="favorites">Favorites</TabsTrigger>
+            <TabsTrigger value="tickets">Tickets</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
+          </TabsList>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Link href="/my/points">
-            <Card className="transition-colors hover:bg-muted/50">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Points Balance
-                </CardTitle>
-                <Star className="h-4 w-4 text-yellow-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {loading ? "--" : stats.pointsBalance.toLocaleString()}
-                </div>
-                <p className="text-xs text-muted-foreground">WCCG Points</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/my/tickets">
-            <Card className="transition-colors hover:bg-muted/50">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Event Tickets
-                </CardTitle>
-                <Ticket className="h-4 w-4 text-blue-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {loading ? "--" : stats.ticketsCount}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Active registrations
-                </p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/my/favorites">
-            <Card className="transition-colors hover:bg-muted/50">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Favorites
-                </CardTitle>
-                <Heart className="h-4 w-4 text-red-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {loading ? "--" : stats.favoritesCount}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Saved shows &amp; streams
-                </p>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          Recent Points Activity
-          ═══════════════════════════════════════════════════════════════════ */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+          <TabsContent value="overview" className="space-y-8 mt-6">
+            {/* ═══ My Activity stat cards ═══ */}
             <div>
-              <CardTitle className="text-lg">Recent Points Activity</CardTitle>
-              <CardDescription>
-                Your latest points transactions
-              </CardDescription>
-            </div>
-            <Link
-              href="/my/points"
-              className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-            >
-              View all
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : stats.recentPoints.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-6 text-center">
-              <TrendingUp className="h-8 w-8 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">
-                No points activity yet. Listen to streams and attend events to
-                start earning!
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {stats.recentPoints.map((tx) => (
-                <div
-                  key={tx.id}
-                  className="flex items-center justify-between rounded-lg border p-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                        tx.amount > 0
-                          ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                          : "bg-red-500/10 text-red-600 dark:text-red-400"
-                      }`}
-                    >
-                      <Star className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">
-                        {reasonLabel(tx.reason)}
-                      </p>
+              <h2 className="text-lg font-semibold mb-4">My Activity</h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <button onClick={() => switchTab("points")} className="text-left">
+                  <Card className="transition-colors hover:bg-muted/50">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">
+                        Points Balance
+                      </CardTitle>
+                      <Star className="h-4 w-4 text-yellow-500" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        {loading ? "--" : stats.pointsBalance.toLocaleString()}
+                      </div>
+                      <p className="text-xs text-muted-foreground">WCCG Points</p>
+                    </CardContent>
+                  </Card>
+                </button>
+
+                <button onClick={() => switchTab("tickets")} className="text-left">
+                  <Card className="transition-colors hover:bg-muted/50">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">
+                        Event Tickets
+                      </CardTitle>
+                      <Ticket className="h-4 w-4 text-blue-500" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        {loading ? "--" : stats.ticketsCount}
+                      </div>
                       <p className="text-xs text-muted-foreground">
-                        {formatDate(tx.createdAt)}
+                        Active registrations
                       </p>
-                    </div>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className={
-                      tx.amount > 0
-                        ? "border-green-500/30 text-green-600 dark:text-green-400"
-                        : "border-red-500/30 text-red-600 dark:text-red-400"
-                    }
-                  >
-                    {tx.amount > 0 ? "+" : ""}
-                    {tx.amount}
-                  </Badge>
-                </div>
-              ))}
+                    </CardContent>
+                  </Card>
+                </button>
+
+                <button onClick={() => switchTab("favorites")} className="text-left">
+                  <Card className="transition-colors hover:bg-muted/50">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">
+                        Favorites
+                      </CardTitle>
+                      <Heart className="h-4 w-4 text-red-500" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        {loading ? "--" : stats.favoritesCount}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Saved shows &amp; streams
+                      </p>
+                    </CardContent>
+                  </Card>
+                </button>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          Quick Links
-          ═══════════════════════════════════════════════════════════════════ */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Quick Links</h2>
-        <div className="space-y-4">
-          {/* ── Row 1: Listening History ── */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { href: "/my/history", label: "Listening History", desc: "Track what you heard", icon: Clock, color: "#74ddc7" },
-            ].map((item) => (
-              <Link key={item.href} href={item.href}>
-                <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
-                  <CardContent className="flex items-center gap-3 p-4">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors" style={{ backgroundColor: `${item.color}15` }}>
-                      <item.icon className="h-4 w-4" style={{ color: item.color }} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{item.label}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">{item.desc}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
+            {/* ═══ Recent Points Activity ═══ */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">Recent Points Activity</CardTitle>
+                    <CardDescription>
+                      Your latest points transactions
+                    </CardDescription>
+                  </div>
+                  <button
+                    onClick={() => switchTab("points")}
+                    className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    View all
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <p className="text-sm text-muted-foreground">Loading...</p>
+                ) : stats.recentPoints.length === 0 ? (
+                  <div className="flex flex-col items-center gap-2 py-6 text-center">
+                    <TrendingUp className="h-8 w-8 text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">
+                      No points activity yet. Listen to streams and attend events to
+                      start earning!
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {stats.recentPoints.map((tx) => (
+                      <div
+                        key={tx.id}
+                        className="flex items-center justify-between rounded-lg border p-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                              tx.amount > 0
+                                ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                                : "bg-red-500/10 text-red-600 dark:text-red-400"
+                            }`}
+                          >
+                            <Star className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">
+                              {reasonLabel(tx.reason)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDate(tx.createdAt)}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={
+                            tx.amount > 0
+                              ? "border-green-500/30 text-green-600 dark:text-green-400"
+                              : "border-red-500/30 text-red-600 dark:text-red-400"
+                          }
+                        >
+                          {tx.amount > 0 ? "+" : ""}
+                          {tx.amount}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-          <div className="border-t border-border" />
+            {/* ═══ Quick Links ═══ */}
+            <div className="space-y-3">
+              <h2 className="text-lg font-semibold">Quick Links</h2>
+              <div className="space-y-4">
+                {/* ── Row 1: Listening History ── */}
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {[
+                    { href: "/my/history", label: "Listening History", desc: "Track what you heard", icon: Clock, color: "#74ddc7" },
+                  ].map((item) => (
+                    <Link key={item.href} href={item.href}>
+                      <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
+                        <CardContent className="flex items-center gap-3 p-4">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors" style={{ backgroundColor: `${item.color}15` }}>
+                            <item.icon className="h-4 w-4" style={{ color: item.color }} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{item.label}</p>
+                            <p className="text-[11px] text-muted-foreground truncate">{item.desc}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
 
-          {/* ── Row 2: Podcasts, Events, Directory ── */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { href: "/my/studio", label: "Broadcast Studio", desc: "Podcasts, video & audio", icon: Clapperboard, color: "#7401df" },
-              { href: "/my/events", label: "My Events", desc: "Events & tickets", icon: CalendarDays, color: "#7401df" },
-              { href: "/my/directory", label: "My Listings", desc: "Business listings", icon: Building2, color: "#74ddc7" },
-              { href: "/my/sales/campaign-builder", label: "My Campaigns", desc: "Ad campaigns & sales", icon: Megaphone, color: "#7401df" },
-            ].map((item) => (
-              <Link key={item.href} href={item.href}>
-                <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
-                  <CardContent className="flex items-center gap-3 p-4">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors" style={{ backgroundColor: `${item.color}15` }}>
-                      <item.icon className="h-4 w-4" style={{ color: item.color }} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{item.label}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">{item.desc}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
+                <div className="border-t border-border" />
 
-          <div className="border-t border-border" />
+                {/* ── Row 2: Podcasts, Events, Directory ── */}
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {[
+                    { href: "/my/studio", label: "Broadcast Studio", desc: "Podcasts, video & audio", icon: Clapperboard, color: "#7401df" },
+                    { href: "/my/events", label: "My Events", desc: "Events & tickets", icon: CalendarDays, color: "#7401df" },
+                    { href: "/my/directory", label: "My Listings", desc: "Business listings", icon: Building2, color: "#74ddc7" },
+                    { href: "/my/sales/campaign-builder", label: "My Campaigns", desc: "Ad campaigns & sales", icon: Megaphone, color: "#7401df" },
+                  ].map((item) => (
+                    <Link key={item.href} href={item.href}>
+                      <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
+                        <CardContent className="flex items-center gap-3 p-4">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors" style={{ backgroundColor: `${item.color}15` }}>
+                            <item.icon className="h-4 w-4" style={{ color: item.color }} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{item.label}</p>
+                            <p className="text-[11px] text-muted-foreground truncate">{item.desc}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
 
-          {/* ── Row 3: Mixes, Browse, Rewards, Schedule ── */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { href: "/my/mixes", label: "Media Manager", desc: "Manage your media files", icon: Music, color: "#74ddc7" },
-              { href: "/events", label: "Browse Events", desc: "Upcoming events", icon: Ticket, color: "#7401df" },
-              { href: "/rewards", label: "Rewards Catalog", desc: "Redeem points", icon: Star, color: "#dc2626" },
-              { href: "/schedule", label: "Schedule", desc: "What\u2019s on today", icon: ListMusic, color: "#7401df" },
-            ].map((item) => (
-              <Link key={item.href} href={item.href}>
-                <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
-                  <CardContent className="flex items-center gap-3 p-4">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors" style={{ backgroundColor: `${item.color}15` }}>
-                      <item.icon className="h-4 w-4" style={{ color: item.color }} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{item.label}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">{item.desc}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
+                <div className="border-t border-border" />
+
+                {/* ── Row 3: Mixes, Browse, Rewards, Schedule ── */}
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {[
+                    { href: "/my/mixes", label: "Media Manager", desc: "Manage your media files", icon: Music, color: "#74ddc7" },
+                    { href: "/events", label: "Browse Events", desc: "Upcoming events", icon: Ticket, color: "#7401df" },
+                    { href: "/rewards", label: "Rewards Catalog", desc: "Redeem points", icon: Star, color: "#dc2626" },
+                    { href: "/schedule", label: "Schedule", desc: "What\u2019s on today", icon: ListMusic, color: "#7401df" },
+                  ].map((item) => (
+                    <Link key={item.href} href={item.href}>
+                      <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
+                        <CardContent className="flex items-center gap-3 p-4">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors" style={{ backgroundColor: `${item.color}15` }}>
+                            <item.icon className="h-4 w-4" style={{ color: item.color }} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{item.label}</p>
+                            <p className="text-[11px] text-muted-foreground truncate">{item.desc}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="points" className="mt-6">
+            <PointsHistory />
+          </TabsContent>
+
+          <TabsContent value="favorites" className="mt-6">
+            <FavoritesList />
+          </TabsContent>
+
+          <TabsContent value="tickets" className="mt-6">
+            <TicketsList />
+          </TabsContent>
+
+          <TabsContent value="history" className="mt-6">
+            <ListeningHistory />
+          </TabsContent>
+        </Tabs>
       </section>
     </div>
   );

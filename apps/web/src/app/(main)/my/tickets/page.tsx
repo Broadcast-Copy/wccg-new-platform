@@ -1,4 +1,4 @@
-import { TicketsList } from "./tickets-list";
+import { TicketsList } from "@/components/tickets/tickets-list";
 
 export const metadata = {
   title: "My Tickets | WCCG 104.5 FM",

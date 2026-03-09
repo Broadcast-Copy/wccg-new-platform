@@ -11,6 +11,7 @@ import { ThemeLogo } from "@/components/theme-logo";
 import { AppImage as Image } from "@/components/ui/app-image";
 import { SpotCartProvider } from "@/components/providers/spot-cart-provider";
 import { SpotCartDrawer } from "@/components/sales/spot-cart-drawer";
+import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 import {
   Compass,
   CalendarDays,
@@ -191,17 +192,16 @@ function StreamingMegaMenu() {
 }
 
 function ListenLiveButton() {
+  const { open } = useStreamPlayer();
   return (
-    <a
-      href="https://streamdb7web.securenetsystems.net/cirruscontent/WCCG"
-      target="_blank"
-      rel="noopener noreferrer"
+    <button
+      onClick={open}
       className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold transition-all bg-[#74ddc7]/10 text-[#74ddc7] border border-[#74ddc7]/20 hover:bg-[#74ddc7]/20"
       aria-label="Listen live"
     >
       <Radio className="h-3.5 w-3.5" />
       <span className="hidden sm:inline">Listen Live</span>
-    </a>
+    </button>
   );
 }
 
