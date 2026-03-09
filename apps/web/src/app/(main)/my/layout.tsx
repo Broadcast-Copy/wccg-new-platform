@@ -157,15 +157,10 @@ function getRoleItems(flags: {
     };
   }
 
-  // Default: listener
+  // Default: listener — no role-specific items
   return {
-    label: "My Stuff",
-    items: [
-      { href: "/my/events", label: "My Events", icon: CalendarDays },
-      { href: "/my/directory", label: "My Listings", icon: Building2 },
-      { href: "/my/studio", label: "Broadcast Studio", icon: Clapperboard },
-      { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
-    ],
+    label: "",
+    items: [],
   };
 }
 
@@ -318,14 +313,20 @@ function SidebarContent({ pathname }: { pathname: string }) {
           <NavLink key={item.href} item={item} pathname={pathname} />
         ))}
 
-        {/* ── Divider + Role-specific section ── */}
-        <div className="my-2 border-t border-border" />
-        <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-          {roleSection.label}
-        </p>
-        {roleSection.items.map((item) => (
-          <NavLink key={item.href + item.label} item={item} pathname={pathname} />
-        ))}
+        {/* ── Divider + Role-specific section (hidden for listener) ── */}
+        {roleSection.items.length > 0 && (
+          <>
+            <div className="my-2 border-t border-border" />
+            {roleSection.label && (
+              <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                {roleSection.label}
+              </p>
+            )}
+            {roleSection.items.map((item) => (
+              <NavLink key={item.href + item.label} item={item} pathname={pathname} />
+            ))}
+          </>
+        )}
 
         {/* ── Station Control (always at bottom) ── */}
         <div className="my-2 border-t border-border" />

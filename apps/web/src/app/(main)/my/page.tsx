@@ -266,19 +266,14 @@ function getRoleDashboardConfig(flags: {
     };
   }
 
-  // Default: Listener (base dashboard)
+  // Default: Listener (base dashboard) — no role-specific tools
   return {
     title: "Dashboard",
     subtitle: "Welcome back — your WCCG activity at a glance",
     badge: null,
     isListener: true,
-    stats: [], // listener uses the dynamic stat cards below
-    quickActions: [
-      { href: "/my/history", label: "Listening History", desc: "Track what you heard", icon: Clock, color: "#74ddc7" },
-      { href: "/my/studio", label: "Broadcast Studio", desc: "Podcasts, video & audio", icon: Clapperboard, color: "#7401df" },
-      { href: "/my/events", label: "My Events", desc: "Events & tickets", icon: CalendarDays, color: "#7401df" },
-      { href: "/my/directory", label: "My Listings", desc: "Business listings", icon: Building2, color: "#74ddc7" },
-    ],
+    stats: [],
+    quickActions: [],
   };
 }
 

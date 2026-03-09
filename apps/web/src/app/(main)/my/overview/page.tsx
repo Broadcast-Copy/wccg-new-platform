@@ -210,7 +210,7 @@ function getOverviewConfig(flags: {
     };
   }
 
-  // Default: Listener
+  // Default: Listener — no role-specific tools, just activity stats
   return {
     title: "Overview",
     subtitle: "Your WCCG activity & platform highlights",
@@ -221,12 +221,7 @@ function getOverviewConfig(flags: {
       { label: "Favorites", value: "--", sub: "Saved shows & streams", icon: Heart, color: "#dc2626" },
       { label: "Tickets", value: "--", sub: "Active registrations", icon: Ticket, color: "#3b82f6" },
     ],
-    actions: [
-      { href: "/my/history", label: "Listening History", desc: "Track what you heard", icon: Clock, color: "#74ddc7" },
-      { href: "/my/events", label: "My Events", desc: "Events & tickets", icon: CalendarDays, color: "#7401df" },
-      { href: "/my/directory", label: "My Listings", desc: "Business listings", icon: Building2, color: "#74ddc7" },
-      { href: "/my/studio", label: "Broadcast Studio", desc: "Podcasts, video & audio", icon: Clapperboard, color: "#7401df" },
-    ],
+    actions: [],
   };
 }
 
@@ -314,31 +309,33 @@ export default function OverviewPage() {
         </div>
       </section>
 
-      {/* Quick actions */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Quick Actions</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {config.actions.map((item) => (
-            <Link key={item.href + item.label} href={item.href}>
-              <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
-                <CardContent className="flex items-center gap-3 pt-6">
-                  <div
-                    className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors"
-                    style={{ backgroundColor: `${item.color}15` }}
-                  >
-                    <item.icon className="h-5 w-5" style={{ color: item.color }} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">{item.label}</p>
-                    <p className="text-xs text-muted-foreground">{item.desc}</p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground/60 transition-colors" />
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      </section>
+      {/* Quick actions (hidden when empty, e.g. listener) */}
+      {config.actions.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="text-lg font-semibold">Quick Actions</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {config.actions.map((item) => (
+              <Link key={item.href + item.label} href={item.href}>
+                <Card className="group border-border transition-all hover:border-input hover:bg-foreground/[0.02]">
+                  <CardContent className="flex items-center gap-3 pt-6">
+                    <div
+                      className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors"
+                      style={{ backgroundColor: `${item.color}15` }}
+                    >
+                      <item.icon className="h-5 w-5" style={{ color: item.color }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">{item.label}</p>
+                      <p className="text-xs text-muted-foreground">{item.desc}</p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground/60 transition-colors" />
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
