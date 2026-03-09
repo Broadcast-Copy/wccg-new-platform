@@ -110,11 +110,11 @@ function SidebarContent({ pathname }: { pathname: string }) {
                     e.target.value = "";
                   }}
                 >
-                  <option value="" disabled>
+                  <option value="" disabled style={{ color: "#888", backgroundColor: "#1a1a2e" }}>
                     View as role…
                   </option>
                   {VIEWABLE_ROLES.map((r) => (
-                    <option key={r.value} value={r.value}>
+                    <option key={r.value} value={r.value} style={{ color: "#e0e0e0", backgroundColor: "#1a1a2e" }}>
                       {r.label}
                     </option>
                   ))}
