@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useUserRoles } from "@/hooks/use-user-roles";
+import { useUserRoles, type UserRole } from "@/hooks/use-user-roles";
 import {
   LayoutDashboard,
   Star,
@@ -31,6 +31,9 @@ import {
   Radio,
   Gift,
   ShoppingBag,
+  Eye,
+  ChevronDown,
+  RotateCcw,
 } from "lucide-react";
 
 const sidebarItems = [
@@ -45,6 +48,16 @@ const sidebarItems = [
   { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
 ];
 
+const VIEWABLE_ROLES = [
+  { value: "listener", label: "Listener" },
+  { value: "sales", label: "Sales" },
+  { value: "production", label: "Production" },
+  { value: "management", label: "Management" },
+  { value: "promotions", label: "Promotions" },
+  { value: "content_creator", label: "Content Creator" },
+  { value: "host", label: "Host" },
+];
+
 function SidebarContent({ pathname }: { pathname: string }) {
   const { user } = useAuth();
   const {
@@ -55,7 +68,14 @@ function SidebarContent({ pathname }: { pathname: string }) {
     isProduction,
     isManagement,
     isPromotions,
+    isAdmin,
+    realRoles,
+    roleOverride,
+    isOverrideActive,
+    setRoleOverride,
   } = useUserRoles();
+
+  const isRealAdmin = realRoles.includes("admin") || realRoles.includes("super_admin");
 
   const [hash, setHash] = useState("");
 
@@ -71,18 +91,66 @@ function SidebarContent({ pathname }: { pathname: string }) {
   return (
     <>
       {/* User info */}
-      <div className="flex items-center gap-3 border-b border-border px-4 py-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#74ddc7]/30 to-[#7401df]/30 border border-border">
-          <User className="h-4 w-4 text-foreground/70" />
+      <div className="border-b border-border px-4 py-4 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#74ddc7]/30 to-[#7401df]/30 border border-border">
+            <User className="h-4 w-4 text-foreground/70" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {user?.email?.split("@")[0] || "My Account"}
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {user?.email || ""}
+            </p>
+          </div>
         </div>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-foreground">
-            {user?.email?.split("@")[0] || "My Account"}
-          </p>
-          <p className="truncate text-[11px] text-muted-foreground">
-            {user?.email || ""}
-          </p>
-        </div>
+
+        {/* Role switcher — admin only */}
+        {isRealAdmin && (
+          <div className="space-y-2">
+            {!isOverrideActive ? (
+              <div className="relative">
+                <select
+                  className="w-full appearance-none rounded-lg border border-border bg-muted/50 px-3 py-1.5 pr-8 text-[12px] font-medium text-muted-foreground cursor-pointer hover:bg-muted transition-colors focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/50"
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setRoleOverride(e.target.value as UserRole);
+                    }
+                    e.target.value = "";
+                  }}
+                >
+                  <option value="" disabled>
+                    View as role…
+                  </option>
+                  {VIEWABLE_ROLES.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+                <Eye className="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-2 rounded-lg border border-[#f59e0b]/30 bg-[#f59e0b]/10 px-3 py-1.5">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Eye className="h-3 w-3 shrink-0 text-[#f59e0b]" />
+                  <span className="truncate text-[11px] font-semibold text-[#f59e0b] capitalize">
+                    {roleOverride?.replace("_", " ")}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setRoleOverride(null)}
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[#f59e0b] hover:bg-[#f59e0b]/20 transition-colors"
+                  aria-label="Reset role override"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Nav items */}

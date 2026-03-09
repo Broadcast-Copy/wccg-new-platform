@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useUserRoles, type UserRole } from "@/hooks/use-user-roles";
+import { useUserRoles } from "@/hooks/use-user-roles";
 import Link from "next/link";
 import {
   Shield,
@@ -26,17 +26,9 @@ import {
   Clock,
   X,
   CheckCircle2,
-  Eye,
-  ChevronDown,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
@@ -215,15 +207,6 @@ const ACTIVITY_ICONS: Record<ActivityItem["type"], LucideIcon> = {
   broadcast: Radio,
 };
 
-const VIEWABLE_ROLES = [
-  { value: "listener", label: "Listener" },
-  { value: "sales", label: "Sales" },
-  { value: "production", label: "Production" },
-  { value: "management", label: "Management" },
-  { value: "promotions", label: "Promotions" },
-  { value: "content_creator", label: "Content Creator" },
-  { value: "host", label: "Host" },
-];
 
 // ---------------------------------------------------------------------------
 // Component
@@ -238,10 +221,6 @@ export default function StationControlPage() {
     isAdmin,
     isSuperAdmin,
     isPromotions,
-    roleOverride,
-    isOverrideActive,
-    setRoleOverride,
-    realRoles,
   } = useUserRoles();
 
   const [selectedStat, setSelectedStat] = useState<QuickStat | null>(null);
@@ -250,8 +229,6 @@ export default function StationControlPage() {
     user?.user_metadata?.display_name ||
     user?.email?.split("@")[0] ||
     "Admin";
-
-  const isRealAdmin = realRoles.includes("admin") || realRoles.includes("super_admin");
 
   const modules = getModulesForRole({
     isSales,
@@ -337,7 +314,7 @@ export default function StationControlPage() {
             </p>
           </div>
         </div>
-        {/* Right: user info + badge + role switcher */}
+        {/* Right: user info + badge */}
         <div className="flex items-center gap-3">
           <div className="text-right hidden sm:block">
             <p className="text-sm font-semibold text-foreground">{displayName}</p>
@@ -346,42 +323,8 @@ export default function StationControlPage() {
           <span className="rounded-full bg-[#dc2626]/10 border border-[#dc2626]/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#dc2626]">
             {isSuperAdmin ? "Super Admin" : "Admin"}
           </span>
-          {/* View As dropdown - only for real admins when no override active */}
-          {isRealAdmin && !isOverrideActive && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline" className="text-xs gap-1.5">
-                  <Eye className="h-3.5 w-3.5" />
-                  View As
-                  <ChevronDown className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {VIEWABLE_ROLES.map((r) => (
-                  <DropdownMenuItem key={r.value} onClick={() => setRoleOverride(r.value as UserRole)}>
-                    {r.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
         </div>
       </div>
-
-      {/* Override banner */}
-      {isOverrideActive && (
-        <div className="rounded-xl border border-[#f59e0b]/30 bg-[#f59e0b]/10 p-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Eye className="h-4 w-4 text-[#f59e0b]" />
-            <p className="text-sm font-medium text-[#f59e0b]">
-              Viewing as: <span className="font-bold capitalize">{roleOverride?.replace("_", " ")}</span>
-            </p>
-          </div>
-          <Button size="sm" variant="outline" className="text-xs border-[#f59e0b]/30 text-[#f59e0b] hover:bg-[#f59e0b]/10" onClick={() => setRoleOverride(null)}>
-            Reset
-          </Button>
-        </div>
-      )}
 
       {/* Quick Stats (clickable) */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
