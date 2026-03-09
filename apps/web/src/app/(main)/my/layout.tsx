@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles, type UserRole } from "@/hooks/use-user-roles";
 import {
@@ -32,6 +32,7 @@ import {
   ShoppingBag,
   Eye,
   RotateCcw,
+  ChevronDown,
   type LucideIcon,
 } from "lucide-react";
 
@@ -232,6 +233,21 @@ function SidebarContent({ pathname }: { pathname: string }) {
     setRoleOverride,
   } = useUserRoles();
 
+  // Custom dropdown state (replaces native <select> for Tesla browser compat)
+  const [roleSwitcherOpen, setRoleSwitcherOpen] = useState(false);
+  const roleSwitcherRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!roleSwitcherOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (roleSwitcherRef.current && !roleSwitcherRef.current.contains(e.target as Node)) {
+        setRoleSwitcherOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [roleSwitcherOpen]);
+
   const roleSection = getRoleItems({
     isSales,
     isProduction,
@@ -261,30 +277,39 @@ function SidebarContent({ pathname }: { pathname: string }) {
           </div>
         </div>
 
-        {/* Role switcher */}
+        {/* Role switcher — custom dropdown (no native <select>) */}
         <div className="space-y-2">
           {!isOverrideActive ? (
-            <div className="relative">
-              <select
-                className="w-full appearance-none rounded-lg border border-border bg-muted/50 px-3 py-1.5 pr-8 text-[12px] font-medium text-muted-foreground cursor-pointer hover:bg-muted transition-colors focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/50"
-                defaultValue=""
-                onChange={(e) => {
-                  if (e.target.value) {
-                    setRoleOverride(e.target.value as UserRole);
-                  }
-                  e.target.value = "";
-                }}
+            <div className="relative" ref={roleSwitcherRef}>
+              <button
+                type="button"
+                onClick={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
+                className="flex w-full items-center justify-between rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-[12px] font-medium text-muted-foreground cursor-pointer hover:bg-muted transition-colors focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/50"
               >
-                <option value="" disabled style={{ color: "#888", backgroundColor: "#1a1a2e" }}>
+                <span className="flex items-center gap-1.5">
+                  <Eye className="h-3 w-3 shrink-0" />
                   View as role…
-                </option>
-                {VIEWABLE_ROLES.map((r) => (
-                  <option key={r.value} value={r.value} style={{ color: "#e0e0e0", backgroundColor: "#1a1a2e" }}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-              <Eye className="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+                </span>
+                <ChevronDown className={`h-3 w-3 shrink-0 transition-transform ${roleSwitcherOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {roleSwitcherOpen && (
+                <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-lg border border-border bg-card shadow-xl overflow-hidden">
+                  {VIEWABLE_ROLES.map((r) => (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => {
+                        setRoleOverride(r.value as UserRole);
+                        setRoleSwitcherOpen(false);
+                      }}
+                      className="flex w-full items-center px-3 py-2 text-[12px] font-medium text-foreground/80 hover:bg-foreground/[0.06] hover:text-foreground transition-colors text-left"
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex items-center justify-between gap-2 rounded-lg border border-[#f59e0b]/30 bg-[#f59e0b]/10 px-3 py-1.5">
