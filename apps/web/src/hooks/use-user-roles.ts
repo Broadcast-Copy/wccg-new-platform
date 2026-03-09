@@ -138,10 +138,9 @@ export function useUserRoles(): UseUserRolesReturn {
     [apiRoles],
   );
 
-  // Set role override (admin only)
+  // Set role override — available to all users for dashboard preview
   const setRoleOverride = useCallback(
     (role: UserRole | null) => {
-      if (!isRealAdmin) return;
       setRoleOverrideState(role);
       try {
         if (role) {
@@ -151,11 +150,11 @@ export function useUserRoles(): UseUserRolesReturn {
         }
       } catch { /* noop */ }
     },
-    [isRealAdmin],
+    [],
   );
 
-  // Effective roles: use override if admin has set one, otherwise use API roles
-  const isOverrideActive = isRealAdmin && roleOverride !== null;
+  // Effective roles: use override if set, otherwise use API roles
+  const isOverrideActive = roleOverride !== null;
   const effectiveRoles = useMemo(() => {
     if (isOverrideActive && roleOverride) {
       return [roleOverride] as UserRole[];

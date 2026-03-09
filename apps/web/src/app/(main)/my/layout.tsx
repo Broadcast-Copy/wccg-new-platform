@@ -106,10 +106,9 @@ function SidebarContent({ pathname }: { pathname: string }) {
           </div>
         </div>
 
-        {/* Role switcher — admin only */}
-        {isRealAdmin && (
-          <div className="space-y-2">
-            {!isOverrideActive ? (
+        {/* Role switcher */}
+        <div className="space-y-2">
+          {!isOverrideActive ? (
               <div className="relative">
                 <select
                   className="w-full appearance-none rounded-lg border border-border bg-muted/50 px-3 py-1.5 pr-8 text-[12px] font-medium text-muted-foreground cursor-pointer hover:bg-muted transition-colors focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/50"
@@ -150,7 +149,6 @@ function SidebarContent({ pathname }: { pathname: string }) {
               </div>
             )}
           </div>
-        )}
       </div>
 
       {/* Nav items */}
