@@ -182,7 +182,7 @@ export function StreamPlayerProvider({ children }: { children: ReactNode }) {
                 mounted ? "translate-y-0" : "translate-y-full"
               }`}
               style={{
-                maxHeight: "min(70vh, 600px)",
+                maxHeight: "min(85vh, 900px)",
                 /* Subtle top shadow instead of a full backdrop */
                 boxShadow: "0 -8px 30px rgba(0,0,0,0.25), 0 -2px 8px rgba(0,0,0,0.12)",
               }}
