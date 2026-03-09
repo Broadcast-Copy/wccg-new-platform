@@ -147,6 +147,7 @@ export function ListeningHistory() {
     totalSessions: 0,
     totalTracks: 0,
     topArtist: "—",
+    activeSessions: 0,
   });
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -158,12 +159,12 @@ export function ListeningHistory() {
     setStats(getListeningStats());
   }, [refreshKey]);
 
-  // Refresh history every 30 seconds to pick up active session changes
+  // Refresh history every 10 seconds for real-time updates
   useEffect(() => {
     const interval = setInterval(() => {
       setHistoryEntries(getHistoryEntries());
       setStats(getListeningStats());
-    }, 30_000);
+    }, 10_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -192,21 +193,33 @@ export function ListeningHistory() {
     return entries;
   }, [contentType, dateRange, searchQuery, historyEntries]);
 
-  // Group entries by date
+  // Separate active entries from completed ones
+  const activeEntries = useMemo(
+    () => filteredEntries.filter((e) => e.isActive),
+    [filteredEntries],
+  );
+  const completedEntries = useMemo(
+    () => filteredEntries.filter((e) => !e.isActive),
+    [filteredEntries],
+  );
+
+  // Group completed entries by date
   const groupedEntries = useMemo(() => {
     const groups: Record<string, HistoryEntry[]> = {};
-    for (const entry of filteredEntries) {
+    for (const entry of completedEntries) {
       if (!groups[entry.dateGroup]) {
         groups[entry.dateGroup] = [];
       }
       groups[entry.dateGroup].push(entry);
     }
     return groups;
-  }, [filteredEntries]);
+  }, [completedEntries]);
 
   const orderedGroups = DATE_GROUP_ORDER.filter(
     (group) => groupedEntries[group] && groupedEntries[group].length > 0
   );
+
+  const hasAnyEntries = activeEntries.length > 0 || orderedGroups.length > 0;
 
   const handleClearHistory = () => {
     if (window.confirm("Are you sure you want to clear all listening history? This cannot be undone.")) {
@@ -254,6 +267,11 @@ export function ListeningHistory() {
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
               Across {stats.totalSessions} session{stats.totalSessions !== 1 ? "s" : ""}
+              {stats.activeSessions > 0 && (
+                <span className="text-[#74ddc7] ml-1">
+                  ({stats.activeSessions} live now)
+                </span>
+              )}
             </p>
           </CardContent>
         </Card>
@@ -362,8 +380,31 @@ export function ListeningHistory() {
         </CardContent>
       </Card>
 
+      {/* ─── Active Sessions (Now Playing) ────────────────────────────── */}
+      {activeEntries.length > 0 && (
+        <div>
+          <div className="sticky top-0 z-10 -mx-1 mb-3 bg-background/95 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#74ddc7] opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#74ddc7]" />
+              </span>
+              <h2 className="text-sm font-semibold text-[#74ddc7] uppercase tracking-wider">
+                Listening Now
+              </h2>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {activeEntries.map((entry) => (
+              <HistoryItem key={entry.id} entry={entry} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ─── History List ────────────────────────────────────────────── */}
-      {orderedGroups.length === 0 ? (
+      {!hasAnyEntries ? (
         /* Empty State */
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
@@ -408,7 +449,7 @@ export function ListeningHistory() {
             )}
           </CardContent>
         </Card>
-      ) : (
+      ) : orderedGroups.length > 0 ? (
         <div className="space-y-6">
           {orderedGroups.map((group) => (
             <div key={group}>
@@ -435,12 +476,17 @@ export function ListeningHistory() {
             </div>
           ))}
         </div>
-      )}
+      ) : null}
 
       {/* ─── Summary Footer ──────────────────────────────────────────── */}
-      {orderedGroups.length > 0 && (
+      {hasAnyEntries && (
         <div className="text-center text-sm text-muted-foreground">
           Showing {filteredEntries.length} of {historyEntries.length} sessions
+          {stats.activeSessions > 0 && (
+            <span className="text-[#74ddc7] ml-1">
+              ({stats.activeSessions} active)
+            </span>
+          )}
         </div>
       )}
     </>
@@ -462,26 +508,45 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
   const isComplete = progressPercent === 100;
 
   return (
-    <Card className="transition-colors hover:bg-accent/50">
+    <Card
+      className={`transition-colors hover:bg-accent/50 ${
+        entry.isActive
+          ? "border-[#74ddc7]/30 bg-[#74ddc7]/5"
+          : ""
+      }`}
+    >
       <CardContent className="flex items-center gap-4 py-3">
         {/* Content Type Icon */}
         <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${getContentBgColor(
-            entry.type
-          )}`}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+            entry.isActive ? "bg-[#74ddc7]/15" : getContentBgColor(entry.type)
+          }`}
         >
-          <span className={getContentColor(entry.type)}>
-            {getContentIcon(entry.type)}
-          </span>
+          {entry.isActive ? (
+            <span className="relative flex h-4 w-4 items-center justify-center">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#74ddc7] opacity-50" />
+              <Radio className="relative h-4 w-4 text-[#74ddc7]" />
+            </span>
+          ) : (
+            <span className={getContentColor(entry.type)}>
+              {getContentIcon(entry.type)}
+            </span>
+          )}
         </div>
 
         {/* Main Info */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="truncate text-sm font-semibold">{entry.title}</h3>
-            <Badge className={`shrink-0 text-[10px] ${getContentBadgeStyle(entry.type)}`}>
-              {getContentLabel(entry.type)}
-            </Badge>
+            {entry.isActive ? (
+              <Badge className="shrink-0 text-[10px] border-[#74ddc7]/30 bg-[#74ddc7]/10 text-[#74ddc7] animate-pulse">
+                LIVE
+              </Badge>
+            ) : (
+              <Badge className={`shrink-0 text-[10px] ${getContentBadgeStyle(entry.type)}`}>
+                {getContentLabel(entry.type)}
+              </Badge>
+            )}
           </div>
 
           <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
@@ -489,6 +554,9 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {entry.listenedDuration}
+              {entry.isActive && (
+                <span className="text-[#74ddc7]"> (listening)</span>
+              )}
               {hasProgress && !isComplete && (
                 <span className="text-muted-foreground/60">
                   {" "}
@@ -497,6 +565,11 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
               )}
             </span>
             <span>{entry.timestamp}</span>
+            {entry.isActive && entry.tracks.length > 0 && (
+              <span className="text-[#74ddc7]">
+                {entry.tracks.length} track{entry.tracks.length !== 1 ? "s" : ""} heard
+              </span>
+            )}
           </div>
 
           {/* Progress Bar (for partially listened content) */}
@@ -521,16 +594,26 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
           )}
         </div>
 
-        {/* Play Again Button */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="shrink-0 gap-1.5"
-          onClick={openStreamPlayer}
-        >
-          <Play className="h-3 w-3" />
-          <span className="hidden sm:inline">Listen</span>
-        </Button>
+        {/* Play Again Button / Listening Indicator */}
+        {entry.isActive ? (
+          <div className="flex items-center gap-1 shrink-0 text-[#74ddc7]">
+            <div className="flex gap-0.5">
+              <span className="inline-block w-0.5 h-3 bg-[#74ddc7] rounded-full animate-[bounce_1s_ease-in-out_infinite]" />
+              <span className="inline-block w-0.5 h-3 bg-[#74ddc7] rounded-full animate-[bounce_1s_ease-in-out_0.2s_infinite]" />
+              <span className="inline-block w-0.5 h-3 bg-[#74ddc7] rounded-full animate-[bounce_1s_ease-in-out_0.4s_infinite]" />
+            </div>
+          </div>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0 gap-1.5"
+            onClick={openStreamPlayer}
+          >
+            <Play className="h-3 w-3" />
+            <span className="hidden sm:inline">Listen</span>
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

@@ -40,7 +40,7 @@ export function useStreamPlayer(): StreamPlayerContextValue {
 // Provider — thin wrapper that starts native audio via AudioProvider
 // ---------------------------------------------------------------------------
 export function StreamPlayerProvider({ children }: { children: ReactNode }) {
-  const { play, pause, resume, isPlaying, currentStream } = useAudioPlayer();
+  const { play, pause, resume, stop, isPlaying, currentStream } = useAudioPlayer();
 
   // The player is "open" whenever a stream is loaded (playing or paused)
   const isOpen = currentStream !== null;
@@ -50,8 +50,8 @@ export function StreamPlayerProvider({ children }: { children: ReactNode }) {
   }, [play]);
 
   const close = useCallback(() => {
-    pause();
-  }, [pause]);
+    stop(); // Fully stop + clear saved state so player goes away
+  }, [stop]);
 
   const toggle = useCallback(() => {
     if (isPlaying) {

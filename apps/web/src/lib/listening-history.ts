@@ -4,6 +4,9 @@
  * Tracks user listening sessions from the SecureNet stream overlay.
  * Sessions record start/end times, duration, and the tracks that
  * were playing (from the now-playing API).
+ *
+ * Active (live) sessions are included in getHistoryEntries() with
+ * real-time duration calculations so the history page updates live.
  */
 
 // ---------------------------------------------------------------------------
@@ -41,6 +44,10 @@ export interface HistoryEntry {
   timestamp: string; // e.g. "8:00 AM" or "Feb 14, 8:00 PM"
   date: string; // YYYY-MM-DD
   dateGroup: "Today" | "Yesterday" | "This Week" | "Earlier This Month" | "Older";
+  /** Whether this session is currently active (live listening right now) */
+  isActive: boolean;
+  /** Tracks heard during this session */
+  tracks: TrackEntry[];
 }
 
 // ---------------------------------------------------------------------------
@@ -49,6 +56,8 @@ export interface HistoryEntry {
 
 const STORAGE_KEY = "wccg_listening_history";
 const MAX_SESSIONS = 500; // Keep at most 500 sessions in localStorage
+// Sessions older than 24h with endedAt === null are considered orphaned
+const ORPHAN_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -159,6 +168,9 @@ function saveSessions(sessions: ListeningSession[]): void {
 
 /** Create and store a new session, returns the session */
 export function startSession(): ListeningSession {
+  // End any orphaned active sessions first
+  endOrphanedSessions();
+
   const session: ListeningSession = {
     id: generateId(),
     type: "live",
@@ -240,46 +252,90 @@ export function endSession(sessionId: string): void {
   saveSessions(sessions);
 }
 
-/** Convert sessions into HistoryEntry[] for the history page */
+/**
+ * End orphaned sessions — sessions that are still marked as active
+ * but have been running for over 24 hours (likely from a crash/close).
+ */
+export function endOrphanedSessions(): void {
+  const sessions = getSessions();
+  const now = Date.now();
+  let changed = false;
+
+  for (const session of sessions) {
+    if (session.endedAt === null) {
+      const startTime = new Date(session.startedAt).getTime();
+      if (now - startTime > ORPHAN_THRESHOLD_MS) {
+        session.endedAt = new Date(startTime + (session.durationSeconds * 1000) || now).toISOString();
+        if (session.durationSeconds === 0) {
+          session.durationSeconds = Math.floor((now - startTime) / 1000);
+        }
+        changed = true;
+      }
+    }
+  }
+
+  if (changed) {
+    saveSessions(sessions);
+  }
+}
+
+/**
+ * Convert sessions into HistoryEntry[] for the history page.
+ *
+ * Includes ACTIVE sessions (endedAt === null) with live-calculated duration
+ * so the history page shows real-time listening data.
+ */
 export function getHistoryEntries(): HistoryEntry[] {
   const sessions = getSessions();
+  const now = Date.now();
 
   return sessions
-    .filter((s) => s.endedAt !== null) // Only completed sessions
-    .filter((s) => s.durationSeconds >= 10) // Skip accidental opens
+    .filter((s) => {
+      // Include active sessions
+      if (s.endedAt === null) return true;
+      // Only include completed sessions with >=10 seconds
+      return s.durationSeconds >= 10;
+    })
     .map((s) => {
-      const minutes = Math.max(1, Math.round(s.durationSeconds / 60));
+      const isActive = s.endedAt === null;
+      // For active sessions, calculate live duration from startedAt to now
+      const durationSeconds = isActive
+        ? Math.floor((now - new Date(s.startedAt).getTime()) / 1000)
+        : s.durationSeconds;
+      const minutes = Math.max(1, Math.round(durationSeconds / 60));
+
       return {
         id: s.id,
         type: s.type,
         title: s.title,
         artist: s.artist,
-        listenedDuration: formatDurationFromSeconds(s.durationSeconds),
+        listenedDuration: formatDurationFromSeconds(durationSeconds),
         totalDuration: null, // Live streams have no total duration
         listenedMinutes: minutes,
         totalMinutes: null,
         timestamp: formatTimestamp(s.startedAt),
         date: toDateString(s.startedAt),
         dateGroup: getDateGroup(s.startedAt),
+        isActive,
+        tracks: s.tracks,
       };
     });
 }
 
-/** Get aggregate stats */
+/** Get aggregate stats (includes active sessions) */
 export function getListeningStats() {
   const entries = getHistoryEntries();
   const totalMinutes = entries.reduce((sum, e) => sum + e.listenedMinutes, 0);
   const totalHours = Math.floor(totalMinutes / 60);
   const remainingMinutes = totalMinutes % 60;
 
-  // Count unique tracks across all sessions
-  const sessions = getSessions().filter((s) => s.endedAt !== null);
-  const totalTracks = sessions.reduce((sum, s) => sum + s.tracks.length, 0);
+  // Count tracks across all sessions (including active)
+  const totalTracks = entries.reduce((sum, e) => sum + e.tracks.length, 0);
 
   // Most-listened artist
   const artistCount: Record<string, number> = {};
-  for (const session of sessions) {
-    for (const track of session.tracks) {
+  for (const entry of entries) {
+    for (const track of entry.tracks) {
       const artist = track.artist || "Unknown";
       artistCount[artist] = (artistCount[artist] || 0) + 1;
     }
@@ -287,12 +343,16 @@ export function getListeningStats() {
   const topArtist =
     Object.entries(artistCount).sort(([, a], [, b]) => b - a)[0]?.[0] || "—";
 
+  // Count active sessions
+  const activeSessions = entries.filter((e) => e.isActive).length;
+
   return {
     totalHours,
     remainingMinutes,
     totalSessions: entries.length,
     totalTracks,
     topArtist,
+    activeSessions,
   };
 }
 

@@ -5,10 +5,10 @@ import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { useNowPlaying } from "@/hooks/use-now-playing";
 import { useListeningPoints } from "@/hooks/use-listening-points";
 import { Button } from "@/components/ui/button";
-import { Pause, Play, Volume2, VolumeX, Radio, Music2 } from "lucide-react";
+import { Pause, Play, Volume2, VolumeX, Radio, Music2, X } from "lucide-react";
 
 export function GlobalPlayer() {
-  const { isPlaying, pause, resume, volume, setVolume, metadata, currentStream, updateMetadata } =
+  const { isPlaying, pause, resume, stop, volume, setVolume, metadata, currentStream, updateMetadata } =
     useAudioPlayer();
 
   // Poll for now-playing metadata while stream is active
@@ -182,6 +182,17 @@ export function GlobalPlayer() {
             aria-label="Volume"
           />
         </div>
+
+        {/* Close / Stop Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={stop}
+          aria-label="Close player"
+          className="h-7 w-7 shrink-0 rounded-full text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
+        >
+          <X className="h-3.5 w-3.5" />
+        </Button>
       </div>
     </div>
   );

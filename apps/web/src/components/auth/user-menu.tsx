@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/hooks/use-auth";
-import { useUserRoles } from "@/hooks/use-user-roles";
+import { useUserRoles, type UserRole } from "@/hooks/use-user-roles";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,29 +9,183 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
+  DropdownMenuGroup,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  BarChart3,
+  Briefcase,
+  Calendar,
   CalendarDays,
   Clapperboard,
+  Clock,
+  DollarSign,
+  Eye,
+  FolderOpen,
+  Gift,
   Heart,
   LayoutDashboard,
   LogOut,
-  MapPin,
   Megaphone,
   Mic,
+  Palette,
+  Radio,
+  Receipt,
+  RotateCcw,
   Settings,
-  ShieldCheck,
+  Shield,
+  ShoppingBag,
   Star,
   Ticket,
 } from "lucide-react";
 import { toast } from "sonner";
 
+// ---------------------------------------------------------------------------
+// Role-specific menu items
+// ---------------------------------------------------------------------------
+
+interface RoleSection {
+  label: string;
+  items: { href: string; label: string; icon: React.ReactNode }[];
+}
+
+function getRoleSection(flags: {
+  isSales: boolean;
+  isProduction: boolean;
+  isManagement: boolean;
+  isPromotions: boolean;
+  isCreator: boolean;
+  isHost: boolean;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+}): RoleSection {
+  const {
+    isSales,
+    isProduction,
+    isManagement,
+    isPromotions,
+    isCreator,
+    isHost,
+    isAdmin,
+    isSuperAdmin,
+  } = flags;
+
+  if (isSuperAdmin || isAdmin) {
+    return {
+      label: "Administration",
+      items: [
+        { href: "/my/admin/campaigns", label: "Campaigns", icon: <Megaphone className="mr-2 h-4 w-4" /> },
+        { href: "/my/admin/reports", label: "Reports", icon: <BarChart3 className="mr-2 h-4 w-4" /> },
+        { href: "/my/admin/programming", label: "Programming", icon: <Radio className="mr-2 h-4 w-4" /> },
+        { href: "/my/events", label: "Events Manager", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
+        { href: "/my/studio", label: "Broadcast Studio", icon: <Clapperboard className="mr-2 h-4 w-4" /> },
+        { href: "/my/mixes", label: "Media Manager", icon: <FolderOpen className="mr-2 h-4 w-4" /> },
+      ],
+    };
+  }
+
+  if (isManagement) {
+    return {
+      label: "Management",
+      items: [
+        { href: "/my/admin/campaigns", label: "Campaigns", icon: <Megaphone className="mr-2 h-4 w-4" /> },
+        { href: "/my/admin/reports", label: "Reports", icon: <BarChart3 className="mr-2 h-4 w-4" /> },
+        { href: "/my/admin/programming", label: "Programming", icon: <Radio className="mr-2 h-4 w-4" /> },
+        { href: "/my/events", label: "Events Manager", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
+        { href: "/my/studio", label: "Broadcast Studio", icon: <Clapperboard className="mr-2 h-4 w-4" /> },
+      ],
+    };
+  }
+
+  if (isSales) {
+    return {
+      label: "Sales",
+      items: [
+        { href: "/my/sales", label: "Sales Dashboard", icon: <DollarSign className="mr-2 h-4 w-4" /> },
+        { href: "/my/sales/campaign-builder", label: "Campaign Builder", icon: <Megaphone className="mr-2 h-4 w-4" /> },
+        { href: "/my/sales/spot-shop", label: "Spot Shop", icon: <ShoppingBag className="mr-2 h-4 w-4" /> },
+        { href: "/my/sales/invoices", label: "Invoices", icon: <Receipt className="mr-2 h-4 w-4" /> },
+        { href: "/my/admin/campaigns", label: "My Campaigns", icon: <Briefcase className="mr-2 h-4 w-4" /> },
+      ],
+    };
+  }
+
+  if (isProduction) {
+    return {
+      label: "Production",
+      items: [
+        { href: "/my/admin/production", label: "Production Queue", icon: <Clapperboard className="mr-2 h-4 w-4" /> },
+        { href: "/studio/booking", label: "Studio Booking", icon: <Calendar className="mr-2 h-4 w-4" /> },
+        { href: "/my/studio", label: "Broadcast Studio", icon: <Mic className="mr-2 h-4 w-4" /> },
+        { href: "/my/mixes", label: "Media Manager", icon: <FolderOpen className="mr-2 h-4 w-4" /> },
+      ],
+    };
+  }
+
+  if (isPromotions) {
+    return {
+      label: "Promotions",
+      items: [
+        { href: "/events/create", label: "Events Manager", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
+        { href: "/contests", label: "Contests", icon: <Gift className="mr-2 h-4 w-4" /> },
+        { href: "/my/events", label: "My Events", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
+      ],
+    };
+  }
+
+  if (isCreator || isHost) {
+    return {
+      label: isHost ? "Host Tools" : "Creator Tools",
+      items: [
+        { href: "/my/studio", label: "Broadcast Studio", icon: <Clapperboard className="mr-2 h-4 w-4" /> },
+        { href: "/my/mixes", label: "Media Manager", icon: <FolderOpen className="mr-2 h-4 w-4" /> },
+        { href: "/studio", label: "Studio Tools", icon: <Mic className="mr-2 h-4 w-4" /> },
+        { href: "/creators", label: "Creator Hub", icon: <Palette className="mr-2 h-4 w-4" /> },
+      ],
+    };
+  }
+
+  return { label: "", items: [] };
+}
+
+// ---------------------------------------------------------------------------
+// Role switcher options
+// ---------------------------------------------------------------------------
+const VIEWABLE_ROLES: { value: UserRole; label: string }[] = [
+  { value: "listener", label: "Listener" },
+  { value: "sales", label: "Sales" },
+  { value: "production", label: "Production" },
+  { value: "management", label: "Management" },
+  { value: "promotions", label: "Promotions" },
+  { value: "content_creator", label: "Content Creator" },
+  { value: "host", label: "Host" },
+];
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export function UserMenu() {
   const { user, signOut, isLoading } = useAuth();
-  const { isAdmin, isHost, isSales, isManagement } = useUserRoles();
+  const {
+    isAdmin,
+    isSuperAdmin,
+    isHost,
+    isSales,
+    isManagement,
+    isProduction,
+    isPromotions,
+    isCreator,
+    roleOverride,
+    isOverrideActive,
+    setRoleOverride,
+  } = useUserRoles();
   const router = useRouter();
 
   if (isLoading) {
@@ -67,6 +221,17 @@ export function UserMenu() {
     router.refresh();
   };
 
+  const roleSection = getRoleSection({
+    isSales,
+    isProduction,
+    isManagement,
+    isPromotions,
+    isCreator,
+    isHost,
+    isAdmin,
+    isSuperAdmin,
+  });
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -78,7 +243,8 @@ export function UserMenu() {
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end">
+      <DropdownMenuContent className="w-60" align="end">
+        {/* User info */}
         <div className="flex items-center gap-2 px-2 py-1.5">
           <div className="flex flex-col space-y-0.5">
             <p className="text-sm font-medium">{displayName}</p>
@@ -87,77 +253,120 @@ export function UserMenu() {
         </div>
         <DropdownMenuSeparator />
 
-        {/* Role-based dashboard links */}
-        {isAdmin && (
-          <DropdownMenuItem asChild>
-            <Link href="/my/admin">
-              <ShieldCheck className="mr-2 h-4 w-4" />
-              Station Control
-            </Link>
-          </DropdownMenuItem>
-        )}
-        {isHost && (
+        {/* Base navigation */}
+        <DropdownMenuGroup>
           <DropdownMenuItem asChild>
             <Link href="/my">
-              <Mic className="mr-2 h-4 w-4" />
-              Host Dashboard
+              <LayoutDashboard className="mr-2 h-4 w-4" />
+              Dashboard
             </Link>
           </DropdownMenuItem>
-        )}
-        {(isAdmin || isHost) && <DropdownMenuSeparator />}
-
-        <DropdownMenuItem asChild>
-          <Link href="/my">
-            <LayoutDashboard className="mr-2 h-4 w-4" />
-            My Dashboard
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/my/events">
-            <CalendarDays className="mr-2 h-4 w-4" />
-            My Events
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/my/tickets">
-            <Ticket className="mr-2 h-4 w-4" />
-            My Tickets
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/my/directory">
-            <MapPin className="mr-2 h-4 w-4" />
-            My Listings
-          </Link>
-        </DropdownMenuItem>
-        {(isSales || isManagement) && (
           <DropdownMenuItem asChild>
-            <Link href="/my/sales/campaign-builder">
-              <Megaphone className="mr-2 h-4 w-4" />
-              My Campaigns
+            <Link href="/my/overview">
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Overview
             </Link>
           </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/my/points">
+              <Star className="mr-2 h-4 w-4" />
+              Points & Rewards
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/my/favorites">
+              <Heart className="mr-2 h-4 w-4" />
+              Favorites
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/my/tickets">
+              <Ticket className="mr-2 h-4 w-4" />
+              My Tickets
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/my/history">
+              <Clock className="mr-2 h-4 w-4" />
+              Listening History
+            </Link>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+
+        {/* Role-specific section */}
+        {roleSection.items.length > 0 && (
+          <>
+            <DropdownMenuSeparator />
+            {roleSection.label && (
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground/60">
+                {roleSection.label}
+              </DropdownMenuLabel>
+            )}
+            <DropdownMenuGroup>
+              {roleSection.items.map((item) => (
+                <DropdownMenuItem key={item.href + item.label} asChild>
+                  <Link href={item.href}>
+                    {item.icon}
+                    {item.label}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+          </>
         )}
-        <DropdownMenuItem asChild>
-          <Link href="/my/studio">
-            <Clapperboard className="mr-2 h-4 w-4" />
-            Broadcast Studio
-          </Link>
-        </DropdownMenuItem>
+
+        {/* Station Control (admin) */}
+        {(isAdmin || isSuperAdmin) && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/my/admin" className="text-[#dc2626]">
+                <Shield className="mr-2 h-4 w-4" />
+                Station Control
+              </Link>
+            </DropdownMenuItem>
+          </>
+        )}
+
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/my/favorites">
-            <Heart className="mr-2 h-4 w-4" />
-            My Favorites
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/my/points">
-            <Star className="mr-2 h-4 w-4" />
-            My Points
-          </Link>
-        </DropdownMenuItem>
+
+        {/* Role switcher */}
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Eye className="mr-2 h-4 w-4" />
+            {isOverrideActive ? (
+              <span className="capitalize text-[#f59e0b]">
+                {roleOverride?.replace("_", " ")}
+              </span>
+            ) : (
+              "View as role\u2026"
+            )}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            {isOverrideActive && (
+              <>
+                <DropdownMenuItem onClick={() => setRoleOverride(null)}>
+                  <RotateCcw className="mr-2 h-4 w-4 text-[#f59e0b]" />
+                  Reset to default
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            {VIEWABLE_ROLES.map((r) => (
+              <DropdownMenuItem
+                key={r.value}
+                onClick={() => setRoleOverride(r.value)}
+                className={roleOverride === r.value ? "bg-accent" : ""}
+              >
+                {r.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+
         <DropdownMenuSeparator />
+
+        {/* Settings & Sign Out */}
         <DropdownMenuItem asChild>
           <Link href="/my/settings">
             <Settings className="mr-2 h-4 w-4" />
