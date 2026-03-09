@@ -38,10 +38,11 @@ import {
 
 const sidebarItems = [
   { href: "/my", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/my#points", label: "Points & Rewards", icon: Star },
-  { href: "/my#favorites", label: "Favorites", icon: Heart },
-  { href: "/my#tickets", label: "My Tickets", icon: Ticket },
-  { href: "/my#history", label: "Listening History", icon: Clock, dividerAfter: true },
+  { href: "/my/overview", label: "Overview", icon: BarChart3 },
+  { href: "/my/points", label: "Points & Rewards", icon: Star },
+  { href: "/my/favorites", label: "Favorites", icon: Heart },
+  { href: "/my/tickets", label: "My Tickets", icon: Ticket },
+  { href: "/my/history", label: "Listening History", icon: Clock, dividerAfter: true },
   { href: "/my/events", label: "My Events", icon: CalendarDays },
   { href: "/my/directory", label: "My Listings", icon: Building2 },
   { href: "/my/studio", label: "Broadcast Studio", icon: Clapperboard },
@@ -76,17 +77,6 @@ function SidebarContent({ pathname }: { pathname: string }) {
   } = useUserRoles();
 
   const isRealAdmin = realRoles.includes("admin") || realRoles.includes("super_admin");
-
-  const [hash, setHash] = useState("");
-
-  useEffect(() => {
-    setHash(window.location.hash);
-    function onHashChange() {
-      setHash(window.location.hash);
-    }
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
-  }, []);
 
   return (
     <>
@@ -155,10 +145,8 @@ function SidebarContent({ pathname }: { pathname: string }) {
       <nav className="flex flex-col gap-0.5 p-2">
         {sidebarItems.map((item) => {
           const isActive = item.exact
-            ? pathname === item.href && !hash
-            : item.href.includes("#")
-              ? pathname === "/my" && hash === item.href.split("/my")[1]
-              : pathname === item.href || pathname.startsWith(item.href + "/");
+            ? pathname === item.href
+            : pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <div key={item.href}>
               <Link

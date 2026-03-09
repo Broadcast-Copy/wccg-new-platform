@@ -12,6 +12,7 @@ import { AppImage as Image } from "@/components/ui/app-image";
 import { SpotCartProvider } from "@/components/providers/spot-cart-provider";
 import { SpotCartDrawer } from "@/components/sales/spot-cart-drawer";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
+import { useNowPlaying } from "@/hooks/use-now-playing";
 import {
   Compass,
   CalendarDays,
@@ -193,14 +194,34 @@ function StreamingMegaMenu() {
 
 function ListenLiveButton() {
   const { open } = useStreamPlayer();
+  const { data: nowPlaying } = useNowPlaying(true);
+
+  const marqueeText =
+    nowPlaying?.artist && nowPlaying?.title
+      ? `${nowPlaying.artist} — ${nowPlaying.title}`
+      : nowPlaying?.title || null;
+
   return (
     <button
       onClick={open}
-      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold transition-all bg-[#74ddc7]/10 text-[#74ddc7] border border-[#74ddc7]/20 hover:bg-[#74ddc7]/20"
+      className="inline-flex items-center gap-1.5 rounded-full py-1.5 text-[12px] font-bold transition-all bg-[#74ddc7]/10 text-[#74ddc7] border border-[#74ddc7]/20 hover:bg-[#74ddc7]/20 pl-3 pr-3 max-w-[280px] sm:max-w-[320px] overflow-hidden"
       aria-label="Listen live"
     >
-      <Radio className="h-3.5 w-3.5" />
-      <span className="hidden sm:inline">Listen Live</span>
+      {/* Pulsing live dot */}
+      <span className="relative flex h-2 w-2 shrink-0">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#dc2626] opacity-75" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-[#dc2626]" />
+      </span>
+      <Radio className="h-3.5 w-3.5 shrink-0" />
+      {marqueeText ? (
+        <span className="hidden sm:block overflow-hidden whitespace-nowrap min-w-0">
+          <span className="inline-block animate-marquee" style={{ animationDuration: "12s" }}>
+            {marqueeText}&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp;&nbsp;{marqueeText}&nbsp;&nbsp;&nbsp;&bull;&nbsp;&nbsp;&nbsp;
+          </span>
+        </span>
+      ) : (
+        <span className="hidden sm:inline">Listen Live</span>
+      )}
     </button>
   );
 }
