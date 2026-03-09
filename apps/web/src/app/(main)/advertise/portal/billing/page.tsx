@@ -168,7 +168,7 @@ function SpendChart({ campaigns }: { campaigns: Campaign[] }) {
                     d.isCurrent
                       ? "bg-red-500"
                       : d.spend > 0
-                        ? "bg-white/[0.12]"
+                        ? "bg-foreground/[0.12]"
                         : "bg-foreground/[0.04]"
                   }`}
                   style={{
@@ -261,7 +261,7 @@ export default function BillingPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-red-950/50 to-gray-900 border border-border/30">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-background via-red-950/20 to-background border border-border/30">
         <div className="relative px-6 py-10 sm:px-10 sm:py-14">
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-red-700 shadow-xl">
@@ -532,7 +532,7 @@ export default function BillingPage() {
                     return (
                       <TableRow
                         key={invoice.id}
-                        className="border-border hover:bg-white/[0.02]"
+                        className="border-border hover:bg-foreground/[0.02]"
                       >
                         <TableCell>
                           <div className="flex items-center gap-2">

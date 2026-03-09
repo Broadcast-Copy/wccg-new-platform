@@ -90,7 +90,7 @@ function StatusToast({ message }: { message: string | null }) {
   if (!message) return null;
   return (
     <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
-      <div className="rounded-lg border border-white/10 bg-[#1a1a2e] px-4 py-3 text-sm text-foreground shadow-lg">
+      <div className="rounded-lg border border-border bg-popover px-4 py-3 text-sm text-foreground shadow-lg">
         <div className="flex items-center gap-2">
           <CheckCircle className="size-4 text-[#74ddc7]" />
           {message}
@@ -120,7 +120,7 @@ export default function ShowsPage() {
   if (!role) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="size-8 animate-spin rounded-full border-2 border-white/20 border-t-[#74ddc7]" />
+        <div className="size-8 animate-spin rounded-full border-2 border-border border-t-[#74ddc7]" />
       </div>
     );
   }
@@ -147,7 +147,7 @@ export default function ShowsPage() {
       live: "border-[#ef4444]/30 bg-[#ef4444]/10 text-[#ef4444]",
       upcoming: "border-[#10b981]/30 bg-[#10b981]/10 text-[#10b981]",
       recorded: "border-[#3b82f6]/30 bg-[#3b82f6]/10 text-[#3b82f6]",
-      "off-air": "border-white/20 bg-white/5 text-muted-foreground",
+      "off-air": "border-border bg-foreground/5 text-muted-foreground",
     };
     return colors[status] || "";
   };
@@ -189,7 +189,7 @@ export default function ShowsPage() {
           {role === "dj" && (
             <Button
               variant="outline"
-              className="border-white/10 text-muted-foreground hover:text-foreground"
+              className="border-border text-muted-foreground hover:text-foreground"
               onClick={() => showMessage("Opening upload dialog...")}
             >
               <Upload className="mr-2 size-4" />
@@ -218,7 +218,7 @@ export default function ShowsPage() {
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-4">
-        <Card className="border-white/10 bg-[#12121a]">
+        <Card className="border-border bg-card">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -231,7 +231,7 @@ export default function ShowsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-white/10 bg-[#12121a]">
+        <Card className="border-border bg-card">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -244,7 +244,7 @@ export default function ShowsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-white/10 bg-[#12121a]">
+        <Card className="border-border bg-card">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -257,7 +257,7 @@ export default function ShowsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-white/10 bg-[#12121a]">
+        <Card className="border-border bg-card">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -273,7 +273,7 @@ export default function ShowsPage() {
       </div>
 
       {/* Search and Filter */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardContent className="pt-6">
           <div className="flex flex-col gap-4 sm:flex-row">
             <div className="relative flex-1">
@@ -282,13 +282,13 @@ export default function ShowsPage() {
                 placeholder="Search shows by name, host, or genre..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="border-white/10 bg-white/5 pl-10 text-foreground placeholder:text-muted-foreground"
+                className="border-border bg-foreground/5 pl-10 text-foreground placeholder:text-muted-foreground"
               />
             </div>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground"
+              className="rounded-md border border-border bg-foreground/5 px-3 py-2 text-sm text-foreground"
             >
               <option value="all">All Status</option>
               <option value="live">Live</option>
@@ -301,11 +301,11 @@ export default function ShowsPage() {
       </Card>
 
       {/* Shows Table */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-foreground">Shows</CardTitle>
-            <Badge variant="outline" className="border-white/20 text-muted-foreground">
+            <Badge variant="outline" className="border-border text-muted-foreground">
               {filteredShows.length} results
             </Badge>
           </div>
@@ -313,7 +313,7 @@ export default function ShowsPage() {
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow className="border-white/10 hover:bg-transparent">
+              <TableRow className="border-border hover:bg-transparent">
                 <TableHead className="text-muted-foreground">Show</TableHead>
                 {role !== "dj" && (
                   <TableHead className="text-muted-foreground">Host</TableHead>
@@ -330,7 +330,7 @@ export default function ShowsPage() {
               {filteredShows.map((show) => (
                 <TableRow
                   key={show.id}
-                  className="cursor-pointer border-white/5 transition-colors hover:bg-white/5"
+                  className="cursor-pointer border-border transition-colors hover:bg-foreground/5"
                   onClick={() => showMessage(`Viewing show: ${show.name}`)}
                 >
                   <TableCell>

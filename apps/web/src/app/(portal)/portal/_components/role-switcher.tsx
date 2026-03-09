@@ -27,7 +27,7 @@ export default function RoleSwitcher({ currentRole, onRoleChange }: RoleSwitcher
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="w-full justify-between gap-2 border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground hover:bg-foreground/10"
+          className="w-full justify-between gap-2 border border-border bg-foreground/5 px-3 py-2 text-sm text-foreground hover:bg-foreground/10"
         >
           <span className="flex items-center gap-2">
             <span
@@ -43,7 +43,7 @@ export default function RoleSwitcher({ currentRole, onRoleChange }: RoleSwitcher
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        className="w-56 border-white/10 bg-[#1a1a2e]"
+        className="w-56 border-border bg-popover"
       >
         {ROLE_IDS.map((roleId) => {
           const role = ROLE_CONFIGS[roleId];
@@ -53,7 +53,7 @@ export default function RoleSwitcher({ currentRole, onRoleChange }: RoleSwitcher
             <DropdownMenuItem
               key={roleId}
               onClick={() => onRoleChange(roleId)}
-              className={`flex items-center gap-2 ${isActive ? "bg-white/10" : "hover:bg-white/5"}`}
+              className={`flex items-center gap-2 ${isActive ? "bg-foreground/10" : "hover:bg-foreground/5"}`}
             >
               <span
                 className="flex size-5 items-center justify-center rounded-full"
@@ -73,10 +73,10 @@ export default function RoleSwitcher({ currentRole, onRoleChange }: RoleSwitcher
             </DropdownMenuItem>
           );
         })}
-        <DropdownMenuSeparator className="bg-white/10" />
+        <DropdownMenuSeparator className="bg-foreground/10" />
         <DropdownMenuItem
           onClick={() => router.push("/portal")}
-          className="flex items-center gap-2 text-muted-foreground hover:bg-white/5"
+          className="flex items-center gap-2 text-muted-foreground hover:bg-foreground/5"
         >
           <LogOut className="size-4" />
           Change Role

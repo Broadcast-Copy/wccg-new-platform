@@ -94,7 +94,7 @@ function StatusToast({ message }: { message: string | null }) {
   if (!message) return null;
   return (
     <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
-      <div className="rounded-lg border border-white/10 bg-[#1a1a2e] px-4 py-3 text-sm text-foreground shadow-lg">
+      <div className="rounded-lg border border-border bg-popover px-4 py-3 text-sm text-foreground shadow-lg">
         <div className="flex items-center gap-2">
           <CheckCircle className="size-4 text-[#74ddc7]" />
           {message}
@@ -125,7 +125,7 @@ export default function ContentPage() {
   if (!role) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="size-8 animate-spin rounded-full border-2 border-white/20 border-t-[#74ddc7]" />
+        <div className="size-8 animate-spin rounded-full border-2 border-border border-t-[#74ddc7]" />
       </div>
     );
   }
@@ -142,7 +142,7 @@ export default function ContentPage() {
   const statusBadge = (status: string) => {
     const colors: Record<string, string> = {
       published: "border-[#10b981]/30 bg-[#10b981]/10 text-[#10b981]",
-      draft: "border-white/20 bg-white/5 text-muted-foreground",
+      draft: "border-border bg-foreground/5 text-muted-foreground",
       review: "border-[#f97316]/30 bg-[#f97316]/10 text-[#f97316]",
       scheduled: "border-[#3b82f6]/30 bg-[#3b82f6]/10 text-[#3b82f6]",
     };
@@ -203,7 +203,7 @@ export default function ContentPage() {
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            className="border-white/10 text-muted-foreground hover:text-foreground"
+            className="border-border text-muted-foreground hover:text-foreground"
             onClick={() => showMessage("Exporting content data...")}
           >
             <Download className="mr-2 size-4" />
@@ -222,7 +222,7 @@ export default function ContentPage() {
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-4">
-        <Card className="border-white/10 bg-[#12121a]">
+        <Card className="border-border bg-card">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -235,7 +235,7 @@ export default function ContentPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-white/10 bg-[#12121a]">
+        <Card className="border-border bg-card">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -248,7 +248,7 @@ export default function ContentPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-white/10 bg-[#12121a]">
+        <Card className="border-border bg-card">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -261,7 +261,7 @@ export default function ContentPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-white/10 bg-[#12121a]">
+        <Card className="border-border bg-card">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -277,7 +277,7 @@ export default function ContentPage() {
       </div>
 
       {/* Quick Actions */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Create New</CardTitle>
           <CardDescription>Choose a content type to create</CardDescription>
@@ -295,7 +295,7 @@ export default function ContentPage() {
                 <Button
                   key={action.label}
                   variant="outline"
-                  className="justify-start border-white/10 bg-white/5 transition-all hover:bg-white/8"
+                  className="justify-start border-border bg-foreground/5 transition-all hover:bg-foreground/8"
                   style={{
                     // @ts-expect-error -- custom css property
                     "--hover-border": action.color,
@@ -312,7 +312,7 @@ export default function ContentPage() {
       </Card>
 
       {/* Search and Filter */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardContent className="pt-6">
           <div className="flex flex-col gap-4 sm:flex-row">
             <div className="relative flex-1">
@@ -321,14 +321,14 @@ export default function ContentPage() {
                 placeholder="Search content by title..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="border-white/10 bg-white/5 pl-10 text-foreground placeholder:text-muted-foreground"
+                className="border-border bg-foreground/5 pl-10 text-foreground placeholder:text-muted-foreground"
               />
             </div>
             <div className="flex gap-2">
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground"
+                className="rounded-md border border-border bg-foreground/5 px-3 py-2 text-sm text-foreground"
               >
                 <option value="all">All Types</option>
                 <option value="podcast">Podcast</option>
@@ -339,7 +339,7 @@ export default function ContentPage() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground"
+                className="rounded-md border border-border bg-foreground/5 px-3 py-2 text-sm text-foreground"
               >
                 <option value="all">All Status</option>
                 <option value="published">Published</option>
@@ -353,11 +353,11 @@ export default function ContentPage() {
       </Card>
 
       {/* Content Table */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-foreground">All Content</CardTitle>
-            <Badge variant="outline" className="border-white/20 text-muted-foreground">
+            <Badge variant="outline" className="border-border text-muted-foreground">
               {filteredContent.length} items
             </Badge>
           </div>
@@ -365,7 +365,7 @@ export default function ContentPage() {
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow className="border-white/10 hover:bg-transparent">
+              <TableRow className="border-border hover:bg-transparent">
                 <TableHead className="text-muted-foreground">Title</TableHead>
                 <TableHead className="text-muted-foreground">Type</TableHead>
                 <TableHead className="text-muted-foreground">Status</TableHead>
@@ -380,12 +380,12 @@ export default function ContentPage() {
               {filteredContent.map((item) => (
                 <TableRow
                   key={item.id}
-                  className="cursor-pointer border-white/5 transition-colors hover:bg-white/5"
+                  className="cursor-pointer border-border transition-colors hover:bg-foreground/5"
                   onClick={() => showMessage(`Opening: ${item.title}`)}
                 >
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="flex size-9 items-center justify-center rounded-lg bg-white/5">
+                      <div className="flex size-9 items-center justify-center rounded-lg bg-foreground/5">
                         <TypeIcon type={item.type} />
                       </div>
                       <p className="text-sm font-medium text-foreground">{item.title}</p>

@@ -68,7 +68,7 @@ function SidebarNav({ role }: { role: RoleId }) {
               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
               isActive
                 ? `${config.accentBg} ${config.accentText} border ${config.accentBorder}`
-                : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
             )}
           >
             <Icon className="size-4" />
@@ -120,7 +120,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
   if (!mounted) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="size-8 animate-spin rounded-full border-2 border-white/20 border-t-[#74ddc7]" />
+        <div className="size-8 animate-spin rounded-full border-2 border-border border-t-[#74ddc7]" />
       </div>
     );
   }
@@ -143,8 +143,8 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
     <DemoRoleContext.Provider value={{ role, setRole }}>
       <div className="flex min-h-screen bg-background">
         {/* Desktop Sidebar */}
-        <aside className="hidden w-64 shrink-0 border-r border-white/10 bg-[#0d0d14] md:block">
-          <div className="flex h-16 items-center gap-2 border-b border-white/10 px-6">
+        <aside className="hidden w-64 shrink-0 border-r border-border bg-card md:block">
+          <div className="flex h-16 items-center gap-2 border-b border-border px-6">
             <RoleIcon className="size-5" style={{ color: config.accentColor }} />
             <Link href="/portal/overview" className="text-lg font-bold text-foreground">
               {config.shortLabel}{" "}
@@ -152,7 +152,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
             </Link>
             <Badge
               variant="outline"
-              className="ml-auto border-white/20 text-[10px] text-muted-foreground"
+              className="ml-auto border-border text-[10px] text-muted-foreground"
             >
               Demo
             </Badge>
@@ -161,7 +161,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
             <SidebarNav role={role} />
 
             {/* Role switcher */}
-            <div className="border-t border-white/10 p-4">
+            <div className="border-t border-border p-4">
               <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                 Logged in as
               </p>
@@ -169,7 +169,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
             </div>
 
             {/* Back to site */}
-            <div className="border-t border-white/10 p-4">
+            <div className="border-t border-border p-4">
               <Link
                 href="/"
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
@@ -183,7 +183,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
 
         {/* Main Content */}
         <div className="flex-1">
-          <header className="flex h-16 items-center gap-4 border-b border-white/10 bg-[#0d0d14]/80 px-6 backdrop-blur-sm">
+          <header className="flex h-16 items-center gap-4 border-b border-border bg-card/80 px-6 backdrop-blur-sm">
             {/* Mobile menu */}
             <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
               <SheetTrigger asChild>
@@ -194,9 +194,9 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
               </SheetTrigger>
               <SheetContent
                 side="left"
-                className="w-64 border-white/10 bg-[#0d0d14] p-0"
+                className="w-64 border-border bg-card p-0"
               >
-                <SheetHeader className="border-b border-white/10 px-6 py-4">
+                <SheetHeader className="border-b border-border px-6 py-4">
                   <SheetTitle className="flex items-center gap-2 text-foreground">
                     <RoleIcon
                       className="size-5"
@@ -209,10 +209,10 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
                 <div onClick={() => setSheetOpen(false)}>
                   <SidebarNav role={role} />
                 </div>
-                <div className="border-t border-white/10 p-4">
+                <div className="border-t border-border p-4">
                   <RoleSwitcher currentRole={role} onRoleChange={(r) => { handleRoleSwitch(r); setSheetOpen(false); }} />
                 </div>
-                <div className="border-t border-white/10 p-4">
+                <div className="border-t border-border p-4">
                   <Link
                     href="/"
                     className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
@@ -236,7 +236,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
               </h2>
               <Badge
                 variant="outline"
-                className="border-white/20 text-[10px] text-muted-foreground"
+                className="border-border text-[10px] text-muted-foreground"
               >
                 Demo
               </Badge>

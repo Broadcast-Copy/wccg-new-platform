@@ -157,7 +157,7 @@ function SignInView() {
           <Button
             asChild
             variant="outline"
-            className="rounded-full border-white/20 text-foreground hover:bg-white/5 px-6"
+            className="rounded-full border-border text-foreground hover:bg-foreground/5 px-6"
           >
             <Link href="/advertise">Become an Advertiser</Link>
           </Button>
@@ -408,7 +408,7 @@ function DashboardView({ account }: { account: AdvertiserAccount }) {
               {campaigns.slice(0, 5).map((campaign) => (
                 <TableRow
                   key={campaign.id}
-                  className="border-border hover:bg-white/[0.02]"
+                  className="border-border hover:bg-foreground/[0.02]"
                 >
                   <TableCell className="text-foreground font-medium">
                     {campaign.name}
@@ -501,7 +501,7 @@ export default function AdvertiserPortalPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-red-950/50 to-gray-900 border border-border/30">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-background via-red-950/20 to-background border border-border/30">
         <div className="relative px-6 py-10 sm:px-10 sm:py-14">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -582,7 +582,7 @@ export default function AdvertiserPortalPage() {
             <Button
               asChild
               variant="outline"
-              className="rounded-full border-white/20 text-foreground hover:bg-white/5 px-6"
+              className="rounded-full border-border text-foreground hover:bg-foreground/5 px-6"
             >
               <Link href="/contact">Contact Us</Link>
             </Button>

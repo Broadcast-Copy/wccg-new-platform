@@ -539,10 +539,10 @@ function CollapsibleModule({ module, accentColor }: { module: ServiceModule; acc
   const Icon = module.icon;
 
   return (
-    <Card className="border-white/10 bg-[#12121a]">
+    <Card className="border-border bg-card">
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-3 px-6 py-4 text-left hover:bg-white/5"
+        className="flex w-full items-center gap-3 px-6 py-4 text-left hover:bg-foreground/5"
       >
         <div
           className="flex size-9 shrink-0 items-center justify-center rounded-lg"
@@ -554,7 +554,7 @@ function CollapsibleModule({ module, accentColor }: { module: ServiceModule; acc
           <h4 className="font-semibold text-foreground">{module.name}</h4>
           <p className="text-xs text-muted-foreground">{module.description}</p>
         </div>
-        <Badge variant="outline" className="mr-2 border-white/20 text-muted-foreground">
+        <Badge variant="outline" className="mr-2 border-border text-muted-foreground">
           {module.features.length} features
         </Badge>
         {open ? (
@@ -564,7 +564,7 @@ function CollapsibleModule({ module, accentColor }: { module: ServiceModule; acc
         )}
       </button>
       {open && (
-        <CardContent className="border-t border-white/5 pt-4">
+        <CardContent className="border-t border-border pt-4">
           <div className="space-y-3">
             {module.features.map((feature) => {
               const FIcon = feature.icon;
@@ -574,7 +574,7 @@ function CollapsibleModule({ module, accentColor }: { module: ServiceModule; acc
               return (
                 <div
                   key={feature.name}
-                  className="rounded-lg border border-white/5 bg-white/[0.02] p-3"
+                  className="rounded-lg border border-border bg-foreground/[0.02] p-3"
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <FIcon className="size-4 text-muted-foreground" />
@@ -677,13 +677,13 @@ export default function PortalPRDPage() {
 
       {/* Summary Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <Card className="border-white/10 bg-[#12121a]">
+        <Card className="border-border bg-card">
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">Total Features</p>
             <p className="text-3xl font-bold text-foreground">{totalFeatures}</p>
           </CardContent>
         </Card>
-        <Card className="border-white/10 bg-[#12121a]">
+        <Card className="border-border bg-card">
           <CardContent className="flex items-center gap-3 pt-6">
             <CheckCircle2 className="size-5 text-green-400" />
             <div>
@@ -692,7 +692,7 @@ export default function PortalPRDPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-white/10 bg-[#12121a]">
+        <Card className="border-border bg-card">
           <CardContent className="flex items-center gap-3 pt-6">
             <Clock className="size-5 text-yellow-400" />
             <div>
@@ -701,7 +701,7 @@ export default function PortalPRDPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-white/10 bg-[#12121a]">
+        <Card className="border-border bg-card">
           <CardContent className="flex items-center gap-3 pt-6">
             <CalendarDays className="size-5 text-blue-400" />
             <div>
@@ -710,7 +710,7 @@ export default function PortalPRDPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-white/10 bg-[#12121a]">
+        <Card className="border-border bg-card">
           <CardContent className="flex items-center gap-3 pt-6">
             <AlertCircle className="size-5 text-muted-foreground" />
             <div>
@@ -726,7 +726,7 @@ export default function PortalPRDPage() {
         <Button
           variant={activeRole === null ? "default" : "outline"}
           size="sm"
-          className={activeRole === null ? "" : "border-white/10 text-muted-foreground hover:text-foreground"}
+          className={activeRole === null ? "" : "border-border text-muted-foreground hover:text-foreground"}
           onClick={() => setActiveRole(null)}
         >
           All Roles
@@ -743,7 +743,7 @@ export default function PortalPRDPage() {
                 "gap-1.5",
                 isActive
                   ? "border-transparent text-foreground"
-                  : "border-white/10 text-muted-foreground hover:text-foreground"
+                  : "border-border text-muted-foreground hover:text-foreground"
               )}
               style={isActive ? { backgroundColor: `${r.accentColor}30`, borderColor: `${r.accentColor}50` } : undefined}
               onClick={() => setActiveRole(isActive ? null : r.roleId)}
@@ -767,7 +767,7 @@ export default function PortalPRDPage() {
         return (
           <div key={rolePrd.roleId} className="space-y-4">
             {/* Role Header */}
-            <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+            <div className="flex items-center gap-3 border-b border-border pb-4">
               <div
                 className="flex size-10 items-center justify-center rounded-xl"
                 style={{ backgroundColor: `${rolePrd.accentColor}20` }}
@@ -782,7 +782,7 @@ export default function PortalPRDPage() {
                 <p className="text-sm text-muted-foreground">
                   {roleShipped}/{roleFeatureCount} shipped
                 </p>
-                <div className="mt-1 h-2 w-24 overflow-hidden rounded-full bg-white/10">
+                <div className="mt-1 h-2 w-24 overflow-hidden rounded-full bg-foreground/10">
                   <div
                     className="h-full rounded-full transition-all"
                     style={{
@@ -809,7 +809,7 @@ export default function PortalPRDPage() {
       })}
 
       {/* Footer */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardContent className="pt-6 text-center">
           <p className="text-sm text-muted-foreground">
             WCCG 104.5 FM Digital Platform PRD — {PRD_DATA.length} roles, {PRD_DATA.reduce((s, r) => s + r.modules.length, 0)} service modules, {totalFeatures} features

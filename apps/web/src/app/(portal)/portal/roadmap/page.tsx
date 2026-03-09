@@ -115,7 +115,7 @@ const effortConfig: Record<string, { label: string; color: string }> = {
 const phaseStatusConfig: Record<PhaseStatus, { label: string; color: string; border: string }> = {
   complete: { label: "Complete", color: "bg-green-500", border: "border-green-500/50" },
   active: { label: "Active", color: "bg-yellow-500", border: "border-yellow-500/50" },
-  upcoming: { label: "Upcoming", color: "bg-gray-600", border: "border-white/10" },
+  upcoming: { label: "Upcoming", color: "bg-gray-600", border: "border-border" },
 };
 
 // ---------------------------------------------------------------------------
@@ -412,7 +412,7 @@ function PhaseCard({ phase }: { phase: Phase }) {
   const pct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
   return (
-    <Card className={cn("border-white/10 bg-[#12121a] transition-all", psCfg.border)}>
+    <Card className={cn("border-border bg-card transition-all", psCfg.border)}>
       {/* Phase header */}
       <button
         onClick={() => setOpen(!open)}
@@ -443,7 +443,7 @@ function PhaseCard({ phase }: { phase: Phase }) {
           <p className="text-sm font-medium text-foreground">
             {doneTasks}/{totalTasks}
           </p>
-          <div className="mt-1 h-2 w-24 overflow-hidden rounded-full bg-white/10">
+          <div className="mt-1 h-2 w-24 overflow-hidden rounded-full bg-foreground/10">
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{ width: `${pct}%`, backgroundColor: phase.color }}
@@ -461,7 +461,7 @@ function PhaseCard({ phase }: { phase: Phase }) {
 
       {/* Tasks list */}
       {open && (
-        <CardContent className="border-t border-white/5 pt-4">
+        <CardContent className="border-t border-border pt-4">
           <div className="space-y-2">
             {phase.tasks.map((task) => {
               const TIcon = task.icon;
@@ -472,7 +472,7 @@ function PhaseCard({ phase }: { phase: Phase }) {
                 <div
                   key={task.id}
                   className={cn(
-                    "rounded-lg border border-white/5 p-3 transition-colors hover:bg-white/[0.03]",
+                    "rounded-lg border border-border p-3 transition-colors hover:bg-foreground/[0.03]",
                     task.status === "done" && "opacity-60"
                   )}
                 >
@@ -485,7 +485,7 @@ function PhaseCard({ phase }: { phase: Phase }) {
                       {task.effort}
                     </Badge>
                     {task.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" className="border-white/10 text-[10px] text-muted-foreground">
+                      <Badge key={tag} variant="outline" className="border-border text-[10px] text-muted-foreground">
                         {tag}
                       </Badge>
                     ))}
@@ -551,7 +551,7 @@ export default function PortalRoadmapPage() {
       </div>
 
       {/* Overall progress bar */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div>
@@ -581,7 +581,7 @@ export default function PortalRoadmapPage() {
               </div>
             </div>
           </div>
-          <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-white/10">
+          <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-foreground/10">
             <div className="flex h-full">
               <div
                 className="h-full bg-green-500 transition-all"
@@ -619,7 +619,7 @@ export default function PortalRoadmapPage() {
       </div>
 
       {/* Footer */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
           <div>
             <p className="text-sm text-muted-foreground">
@@ -629,7 +629,7 @@ export default function PortalRoadmapPage() {
               Last updated: February 24, 2026 &middot; Estimated timeline: 13 weeks
             </p>
           </div>
-          <Button variant="outline" size="sm" className="border-white/10 text-muted-foreground" asChild>
+          <Button variant="outline" size="sm" className="border-border text-muted-foreground" asChild>
             <Link href="/portal/prd">View Full PRD</Link>
           </Button>
         </CardContent>

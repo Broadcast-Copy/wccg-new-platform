@@ -182,7 +182,7 @@ function UploadCreativeDialog({
           Upload Creative
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-[#1a1a2e] border-border text-foreground sm:max-w-lg">
+      <DialogContent className="bg-popover border-border text-foreground sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-foreground">Upload Creative</DialogTitle>
           <DialogDescription className="text-muted-foreground">
@@ -200,7 +200,7 @@ function UploadCreativeDialog({
               <SelectTrigger className="w-full bg-foreground/[0.04] border-border text-foreground">
                 <SelectValue placeholder="Select a campaign" />
               </SelectTrigger>
-              <SelectContent className="bg-[#1a1a2e] border-border">
+              <SelectContent className="bg-popover border-border">
                 {campaigns.length === 0 ? (
                   <SelectItem value="__none" disabled className="text-muted-foreground">
                     No campaigns available
@@ -241,7 +241,7 @@ function UploadCreativeDialog({
               <SelectTrigger className="w-full bg-foreground/[0.04] border-border text-foreground">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
-              <SelectContent className="bg-[#1a1a2e] border-border">
+              <SelectContent className="bg-popover border-border">
                 {CREATIVE_TYPES.map((type) => (
                   <SelectItem
                     key={type.value}
@@ -329,7 +329,7 @@ function CreativeCard({ creative }: { creative: Creative }) {
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden transition-all hover:border-input group">
       {/* Preview Placeholder */}
-      <div className="aspect-[16/9] bg-white/[0.02] flex items-center justify-center border-b border-border relative">
+      <div className="aspect-[16/9] bg-foreground/[0.02] flex items-center justify-center border-b border-border relative">
         <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${colors.bg}`}>
           <TypeIcon className={`h-7 w-7 ${colors.text}`} />
         </div>
@@ -450,7 +450,7 @@ export default function CreativesPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-red-950/50 to-gray-900 border border-border/30">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-background via-red-950/20 to-background border border-border/30">
         <div className="relative px-6 py-10 sm:px-10 sm:py-14">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -539,7 +539,7 @@ export default function CreativesPage() {
                 <SelectTrigger className="w-auto bg-card border-border text-foreground text-xs">
                   <SelectValue placeholder="All Types" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1a1a2e] border-border">
+                <SelectContent className="bg-popover border-border">
                   <SelectItem value="ALL" className="text-foreground">
                     All Types
                   </SelectItem>
@@ -563,7 +563,7 @@ export default function CreativesPage() {
                 <SelectTrigger className="w-auto bg-card border-border text-foreground text-xs">
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1a1a2e] border-border">
+                <SelectContent className="bg-popover border-border">
                   <SelectItem value="ALL" className="text-foreground">
                     All Statuses
                   </SelectItem>

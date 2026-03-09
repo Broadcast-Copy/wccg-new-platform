@@ -53,7 +53,7 @@ function StatusToast({ message }: { message: string | null }) {
   if (!message) return null;
   return (
     <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
-      <div className="rounded-lg border border-white/10 bg-[#1a1a2e] px-4 py-3 text-sm text-foreground shadow-lg">
+      <div className="rounded-lg border border-border bg-popover px-4 py-3 text-sm text-foreground shadow-lg">
         <div className="flex items-center gap-2">
           <CheckCircle className="size-4 text-[#74ddc7]" />
           {message}
@@ -83,7 +83,7 @@ function AdminDashboard() {
           return (
             <Card
               key={stat.title}
-              className="group cursor-pointer border-white/10 bg-[#12121a] transition-all duration-200 hover:border-[#10b981]/30 hover:shadow-lg hover:shadow-[#10b981]/5"
+              className="group cursor-pointer border-border bg-card transition-all duration-200 hover:border-[#10b981]/30 hover:shadow-lg hover:shadow-[#10b981]/5"
               onClick={() => showMessage(`Viewing ${stat.title} details`)}
             >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -116,7 +116,7 @@ function AdminDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Quick Actions</CardTitle>
           <CardDescription>Jump to common admin tasks</CardDescription>
@@ -129,7 +129,7 @@ function AdminDashboard() {
                 <Button
                   key={action.label}
                   variant="outline"
-                  className="justify-start border-white/10 bg-white/5 transition-all hover:border-[#10b981]/30 hover:bg-[#10b981]/10"
+                  className="justify-start border-border bg-foreground/5 transition-all hover:border-[#10b981]/30 hover:bg-[#10b981]/10"
                   asChild
                 >
                   <Link href={action.href}>
@@ -144,7 +144,7 @@ function AdminDashboard() {
       </Card>
 
       {/* System Health */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">System Health</CardTitle>
           <CardDescription>Real-time platform status indicators</CardDescription>
@@ -168,7 +168,7 @@ function AdminDashboard() {
               return (
                 <div
                   key={item.label}
-                  className="cursor-pointer rounded-lg border border-white/5 bg-white/5 p-4 transition-all hover:border-white/15 hover:bg-white/8"
+                  className="cursor-pointer rounded-lg border border-border bg-foreground/5 p-4 transition-all hover:border-border hover:bg-foreground/8"
                   onClick={() => showMessage(`${item.label}: ${item.value}`)}
                 >
                   <div className="flex items-center justify-between">
@@ -187,14 +187,14 @@ function AdminDashboard() {
       </Card>
 
       {/* Recent Activity */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-foreground">Recent Activity</CardTitle>
               <CardDescription>Latest platform events</CardDescription>
             </div>
-            <Badge variant="outline" className="border-white/20 text-muted-foreground">
+            <Badge variant="outline" className="border-border text-muted-foreground">
               {data.activity.length} items
             </Badge>
           </div>
@@ -206,7 +206,7 @@ function AdminDashboard() {
               return (
                 <div
                   key={item.id}
-                  className="flex cursor-pointer items-start gap-4 rounded-lg border border-white/5 bg-white/5 p-3 transition-all hover:border-[#10b981]/20 hover:bg-white/8"
+                  className="flex cursor-pointer items-start gap-4 rounded-lg border border-border bg-foreground/5 p-3 transition-all hover:border-[#10b981]/20 hover:bg-foreground/8"
                   onClick={() => showMessage(`Opening: ${item.text}`)}
                 >
                   <div
@@ -244,7 +244,7 @@ function SalesDashboard() {
       active: "border-[#10b981]/30 bg-[#10b981]/10 text-[#10b981]",
       pending: "border-[#f97316]/30 bg-[#f97316]/10 text-[#f97316]",
       completed: "border-[#3b82f6]/30 bg-[#3b82f6]/10 text-[#3b82f6]",
-      paused: "border-white/20 bg-white/5 text-muted-foreground",
+      paused: "border-border bg-foreground/5 text-muted-foreground",
     };
     return colors[status] || colors.paused;
   };
@@ -260,7 +260,7 @@ function SalesDashboard() {
           return (
             <Card
               key={stat.title}
-              className="group cursor-pointer border-white/10 bg-[#12121a] transition-all duration-200 hover:border-[#f97316]/30 hover:shadow-lg hover:shadow-[#f97316]/5"
+              className="group cursor-pointer border-border bg-card transition-all duration-200 hover:border-[#f97316]/30 hover:shadow-lg hover:shadow-[#f97316]/5"
               onClick={() => showMessage(`Viewing ${stat.title} breakdown`)}
             >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -286,7 +286,7 @@ function SalesDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Quick Actions</CardTitle>
           <CardDescription>Common sales tasks</CardDescription>
@@ -299,7 +299,7 @@ function SalesDashboard() {
                 <Button
                   key={action.label}
                   variant="outline"
-                  className="justify-start border-white/10 bg-white/5 transition-all hover:border-[#f97316]/30 hover:bg-[#f97316]/10"
+                  className="justify-start border-border bg-foreground/5 transition-all hover:border-[#f97316]/30 hover:bg-[#f97316]/10"
                   asChild
                 >
                   <Link href={action.href}>
@@ -314,7 +314,7 @@ function SalesDashboard() {
       </Card>
 
       {/* Campaign List */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -324,7 +324,7 @@ function SalesDashboard() {
             <Button
               variant="outline"
               size="sm"
-              className="border-white/10 text-muted-foreground hover:text-foreground"
+              className="border-border text-muted-foreground hover:text-foreground"
               asChild
             >
               <Link href="/portal/campaigns">View All</Link>
@@ -336,7 +336,7 @@ function SalesDashboard() {
             {data.campaigns?.slice(0, 4).map((campaign) => (
               <div
                 key={campaign.id}
-                className="flex cursor-pointer items-center gap-4 rounded-lg border border-white/5 bg-white/5 p-4 transition-all hover:border-[#f97316]/20 hover:bg-white/8"
+                className="flex cursor-pointer items-center gap-4 rounded-lg border border-border bg-foreground/5 p-4 transition-all hover:border-[#f97316]/20 hover:bg-foreground/8"
                 onClick={() => showMessage(`Opening campaign: ${campaign.name}`)}
               >
                 <div className="min-w-0 flex-1">
@@ -360,7 +360,7 @@ function SalesDashboard() {
       </Card>
 
       {/* Revenue Placeholder */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Revenue Trend</CardTitle>
           <CardDescription>Monthly revenue over the past 6 months</CardDescription>
@@ -388,7 +388,7 @@ function SalesDashboard() {
       </Card>
 
       {/* Activity */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Recent Activity</CardTitle>
           <CardDescription>Latest sales events</CardDescription>
@@ -400,7 +400,7 @@ function SalesDashboard() {
               return (
                 <div
                   key={item.id}
-                  className="flex cursor-pointer items-start gap-4 rounded-lg border border-white/5 bg-white/5 p-3 transition-all hover:border-[#f97316]/20 hover:bg-white/8"
+                  className="flex cursor-pointer items-start gap-4 rounded-lg border border-border bg-foreground/5 p-3 transition-all hover:border-[#f97316]/20 hover:bg-foreground/8"
                   onClick={() => showMessage(`Opening: ${item.text}`)}
                 >
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#f97316]/10">
@@ -449,7 +449,7 @@ function DjDashboard() {
           return (
             <Card
               key={stat.title}
-              className="group cursor-pointer border-white/10 bg-[#12121a] transition-all duration-200 hover:border-[#74ddc7]/30 hover:shadow-lg hover:shadow-[#74ddc7]/5"
+              className="group cursor-pointer border-border bg-card transition-all duration-200 hover:border-[#74ddc7]/30 hover:shadow-lg hover:shadow-[#74ddc7]/5"
               onClick={() => showMessage(`Viewing ${stat.title}`)}
             >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -475,7 +475,7 @@ function DjDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Quick Actions</CardTitle>
           <CardDescription>Jump to common DJ tasks</CardDescription>
@@ -488,7 +488,7 @@ function DjDashboard() {
                 <Button
                   key={action.label}
                   variant="outline"
-                  className="justify-start border-white/10 bg-white/5 transition-all hover:border-[#74ddc7]/30 hover:bg-[#74ddc7]/10"
+                  className="justify-start border-border bg-foreground/5 transition-all hover:border-[#74ddc7]/30 hover:bg-[#74ddc7]/10"
                   asChild
                 >
                   <Link href={action.href}>
@@ -503,7 +503,7 @@ function DjDashboard() {
       </Card>
 
       {/* Upcoming Shows */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -513,7 +513,7 @@ function DjDashboard() {
             <Button
               variant="outline"
               size="sm"
-              className="border-white/10 text-muted-foreground hover:text-foreground"
+              className="border-border text-muted-foreground hover:text-foreground"
               asChild
             >
               <Link href="/portal/shows">Manage Shows</Link>
@@ -525,7 +525,7 @@ function DjDashboard() {
             {data.shows?.map((show) => (
               <div
                 key={show.id}
-                className="flex cursor-pointer items-center gap-4 rounded-lg border border-white/5 bg-white/5 p-4 transition-all hover:border-[#74ddc7]/20 hover:bg-white/8"
+                className="flex cursor-pointer items-center gap-4 rounded-lg border border-border bg-foreground/5 p-4 transition-all hover:border-[#74ddc7]/20 hover:bg-foreground/8"
                 onClick={() => showMessage(`Opening show: ${show.name}`)}
               >
                 <div className="flex size-10 items-center justify-center rounded-lg bg-[#74ddc7]/10">
@@ -554,7 +554,7 @@ function DjDashboard() {
       </Card>
 
       {/* Recent Episodes */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Recent Episodes</CardTitle>
           <CardDescription>Your latest uploaded mixes and recordings</CardDescription>
@@ -564,7 +564,7 @@ function DjDashboard() {
             {data.episodes?.map((episode) => (
               <div
                 key={episode.id}
-                className="flex cursor-pointer items-center gap-4 rounded-lg border border-white/5 bg-white/5 p-3 transition-all hover:border-[#74ddc7]/20 hover:bg-white/8"
+                className="flex cursor-pointer items-center gap-4 rounded-lg border border-border bg-foreground/5 p-3 transition-all hover:border-[#74ddc7]/20 hover:bg-foreground/8"
                 onClick={() => showMessage(`Playing: ${episode.title}`)}
               >
                 <div className="flex size-9 items-center justify-center rounded-lg bg-[#7401df]/10">
@@ -582,7 +582,7 @@ function DjDashboard() {
       </Card>
 
       {/* Activity */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Recent Activity</CardTitle>
           <CardDescription>Latest updates</CardDescription>
@@ -594,7 +594,7 @@ function DjDashboard() {
               return (
                 <div
                   key={item.id}
-                  className="flex items-start gap-4 rounded-lg border border-white/5 bg-white/5 p-3 transition-colors hover:bg-white/8"
+                  className="flex items-start gap-4 rounded-lg border border-border bg-foreground/5 p-3 transition-colors hover:bg-foreground/8"
                 >
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#74ddc7]/10">
                     <Icon className={cn("size-4", item.color)} />
@@ -634,7 +634,7 @@ function CreatorDashboard() {
   const contentStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
       published: "border-[#10b981]/30 bg-[#10b981]/10 text-[#10b981]",
-      draft: "border-white/20 bg-white/5 text-muted-foreground",
+      draft: "border-border bg-foreground/5 text-muted-foreground",
       review: "border-[#f97316]/30 bg-[#f97316]/10 text-[#f97316]",
     };
     return colors[status] || "";
@@ -657,7 +657,7 @@ function CreatorDashboard() {
           return (
             <Card
               key={stat.title}
-              className="group cursor-pointer border-white/10 bg-[#12121a] transition-all duration-200 hover:border-[#7401df]/30 hover:shadow-lg hover:shadow-[#7401df]/5"
+              className="group cursor-pointer border-border bg-card transition-all duration-200 hover:border-[#7401df]/30 hover:shadow-lg hover:shadow-[#7401df]/5"
               onClick={() => showMessage(`Viewing ${stat.title}`)}
             >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -683,7 +683,7 @@ function CreatorDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Quick Actions</CardTitle>
           <CardDescription>Create and manage content</CardDescription>
@@ -696,7 +696,7 @@ function CreatorDashboard() {
                 <Button
                   key={action.label}
                   variant="outline"
-                  className="justify-start border-white/10 bg-white/5 transition-all hover:border-[#7401df]/30 hover:bg-[#7401df]/10"
+                  className="justify-start border-border bg-foreground/5 transition-all hover:border-[#7401df]/30 hover:bg-[#7401df]/10"
                   asChild
                 >
                   <Link href={action.href}>
@@ -711,7 +711,7 @@ function CreatorDashboard() {
       </Card>
 
       {/* Recent Content */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -721,7 +721,7 @@ function CreatorDashboard() {
             <Button
               variant="outline"
               size="sm"
-              className="border-white/10 text-muted-foreground hover:text-foreground"
+              className="border-border text-muted-foreground hover:text-foreground"
               asChild
             >
               <Link href="/portal/content">View All</Link>
@@ -733,10 +733,10 @@ function CreatorDashboard() {
             {data.contentItems?.slice(0, 5).map((item) => (
               <div
                 key={item.id}
-                className="flex cursor-pointer items-center gap-4 rounded-lg border border-white/5 bg-white/5 p-3 transition-all hover:border-[#7401df]/20 hover:bg-white/8"
+                className="flex cursor-pointer items-center gap-4 rounded-lg border border-border bg-foreground/5 p-3 transition-all hover:border-[#7401df]/20 hover:bg-foreground/8"
                 onClick={() => showMessage(`Opening: ${item.title}`)}
               >
-                <div className="flex size-9 items-center justify-center rounded-lg bg-white/5">
+                <div className="flex size-9 items-center justify-center rounded-lg bg-foreground/5">
                   <TypeIcon type={item.type} />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -761,7 +761,7 @@ function CreatorDashboard() {
       </Card>
 
       {/* Activity */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Recent Activity</CardTitle>
           <CardDescription>Latest updates</CardDescription>
@@ -773,7 +773,7 @@ function CreatorDashboard() {
               return (
                 <div
                   key={item.id}
-                  className="flex items-start gap-4 rounded-lg border border-white/5 bg-white/5 p-3 transition-colors hover:bg-white/8"
+                  className="flex items-start gap-4 rounded-lg border border-border bg-foreground/5 p-3 transition-colors hover:bg-foreground/8"
                 >
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#7401df]/10">
                     <Icon className={cn("size-4", item.color)} />
@@ -806,7 +806,7 @@ function AdvertiserDashboard() {
       active: "border-[#10b981]/30 bg-[#10b981]/10 text-[#10b981]",
       pending: "border-[#f97316]/30 bg-[#f97316]/10 text-[#f97316]",
       completed: "border-[#3b82f6]/30 bg-[#3b82f6]/10 text-[#3b82f6]",
-      paused: "border-white/20 bg-white/5 text-muted-foreground",
+      paused: "border-border bg-foreground/5 text-muted-foreground",
     };
     return colors[status] || colors.paused;
   };
@@ -822,7 +822,7 @@ function AdvertiserDashboard() {
           return (
             <Card
               key={stat.title}
-              className="group cursor-pointer border-white/10 bg-[#12121a] transition-all duration-200 hover:border-[#ef4444]/30 hover:shadow-lg hover:shadow-[#ef4444]/5"
+              className="group cursor-pointer border-border bg-card transition-all duration-200 hover:border-[#ef4444]/30 hover:shadow-lg hover:shadow-[#ef4444]/5"
               onClick={() => showMessage(`Viewing ${stat.title}`)}
             >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -848,7 +848,7 @@ function AdvertiserDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Quick Actions</CardTitle>
           <CardDescription>Manage your advertising</CardDescription>
@@ -861,7 +861,7 @@ function AdvertiserDashboard() {
                 <Button
                   key={action.label}
                   variant="outline"
-                  className="justify-start border-white/10 bg-white/5 transition-all hover:border-[#ef4444]/30 hover:bg-[#ef4444]/10"
+                  className="justify-start border-border bg-foreground/5 transition-all hover:border-[#ef4444]/30 hover:bg-[#ef4444]/10"
                   asChild
                 >
                   <Link href={action.href}>
@@ -876,7 +876,7 @@ function AdvertiserDashboard() {
       </Card>
 
       {/* Active Campaigns */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -886,7 +886,7 @@ function AdvertiserDashboard() {
             <Button
               variant="outline"
               size="sm"
-              className="border-white/10 text-muted-foreground hover:text-foreground"
+              className="border-border text-muted-foreground hover:text-foreground"
               asChild
             >
               <Link href="/portal/campaigns">View All</Link>
@@ -898,7 +898,7 @@ function AdvertiserDashboard() {
             {data.campaigns?.map((campaign) => (
               <div
                 key={campaign.id}
-                className="flex cursor-pointer items-center gap-4 rounded-lg border border-white/5 bg-white/5 p-4 transition-all hover:border-[#ef4444]/20 hover:bg-white/8"
+                className="flex cursor-pointer items-center gap-4 rounded-lg border border-border bg-foreground/5 p-4 transition-all hover:border-[#ef4444]/20 hover:bg-foreground/8"
                 onClick={() => showMessage(`Viewing campaign: ${campaign.name}`)}
               >
                 <div className="min-w-0 flex-1">
@@ -924,7 +924,7 @@ function AdvertiserDashboard() {
       </Card>
 
       {/* Activity */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Recent Activity</CardTitle>
           <CardDescription>Latest ad events</CardDescription>
@@ -936,7 +936,7 @@ function AdvertiserDashboard() {
               return (
                 <div
                   key={item.id}
-                  className="flex items-start gap-4 rounded-lg border border-white/5 bg-white/5 p-3 transition-colors hover:bg-white/8"
+                  className="flex items-start gap-4 rounded-lg border border-border bg-foreground/5 p-3 transition-colors hover:bg-foreground/8"
                 >
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#ef4444]/10">
                     <Icon className={cn("size-4", item.color)} />
@@ -984,7 +984,7 @@ function ListenerDashboard() {
           return (
             <Card
               key={stat.title}
-              className="group cursor-pointer border-white/10 bg-[#12121a] transition-all duration-200 hover:border-[#3b82f6]/30 hover:shadow-lg hover:shadow-[#3b82f6]/5"
+              className="group cursor-pointer border-border bg-card transition-all duration-200 hover:border-[#3b82f6]/30 hover:shadow-lg hover:shadow-[#3b82f6]/5"
               onClick={() => showMessage(`Viewing ${stat.title}`)}
             >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -1010,7 +1010,7 @@ function ListenerDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Quick Actions</CardTitle>
           <CardDescription>Explore and engage</CardDescription>
@@ -1023,7 +1023,7 @@ function ListenerDashboard() {
                 <Button
                   key={action.label}
                   variant="outline"
-                  className="justify-start border-white/10 bg-white/5 transition-all hover:border-[#3b82f6]/30 hover:bg-[#3b82f6]/10"
+                  className="justify-start border-border bg-foreground/5 transition-all hover:border-[#3b82f6]/30 hover:bg-[#3b82f6]/10"
                   asChild
                 >
                   <Link href={action.href}>
@@ -1038,7 +1038,7 @@ function ListenerDashboard() {
       </Card>
 
       {/* Recent Listening History */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Recent Listening</CardTitle>
           <CardDescription>Your listening history</CardDescription>
@@ -1048,7 +1048,7 @@ function ListenerDashboard() {
             {data.listeningHistory?.map((item) => (
               <div
                 key={item.id}
-                className="flex cursor-pointer items-center gap-4 rounded-lg border border-white/5 bg-white/5 p-3 transition-all hover:border-[#3b82f6]/20 hover:bg-white/8"
+                className="flex cursor-pointer items-center gap-4 rounded-lg border border-border bg-foreground/5 p-3 transition-all hover:border-[#3b82f6]/20 hover:bg-foreground/8"
                 onClick={() => showMessage(`Playing: ${item.show}`)}
               >
                 <div className="flex size-9 items-center justify-center rounded-lg bg-[#3b82f6]/10">
@@ -1068,7 +1068,7 @@ function ListenerDashboard() {
       </Card>
 
       {/* Upcoming Events */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Upcoming Events</CardTitle>
           <CardDescription>Events and tickets</CardDescription>
@@ -1078,7 +1078,7 @@ function ListenerDashboard() {
             {data.events?.map((event) => (
               <div
                 key={event.id}
-                className="flex cursor-pointer items-center gap-4 rounded-lg border border-white/5 bg-white/5 p-4 transition-all hover:border-[#3b82f6]/20 hover:bg-white/8"
+                className="flex cursor-pointer items-center gap-4 rounded-lg border border-border bg-foreground/5 p-4 transition-all hover:border-[#3b82f6]/20 hover:bg-foreground/8"
                 onClick={() =>
                   showMessage(
                     event.ticketStatus === "confirmed"
@@ -1111,7 +1111,7 @@ function ListenerDashboard() {
       </Card>
 
       {/* Activity */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Recent Activity</CardTitle>
           <CardDescription>Your latest engagement</CardDescription>
@@ -1123,7 +1123,7 @@ function ListenerDashboard() {
               return (
                 <div
                   key={item.id}
-                  className="flex items-start gap-4 rounded-lg border border-white/5 bg-white/5 p-3 transition-colors hover:bg-white/8"
+                  className="flex items-start gap-4 rounded-lg border border-border bg-foreground/5 p-3 transition-colors hover:bg-foreground/8"
                 >
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#3b82f6]/10">
                     <Icon className={cn("size-4", item.color)} />
@@ -1160,7 +1160,7 @@ export default function PortalOverviewPage() {
   if (!role) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="size-8 animate-spin rounded-full border-2 border-white/20 border-t-[#74ddc7]" />
+        <div className="size-8 animate-spin rounded-full border-2 border-border border-t-[#74ddc7]" />
       </div>
     );
   }
@@ -1191,7 +1191,7 @@ export default function PortalOverviewPage() {
       {role === "listener" && <ListenerDashboard />}
 
       {/* Role Info Card */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardContent className="flex items-center gap-4 pt-6">
           <div
             className="flex size-12 items-center justify-center rounded-xl"
@@ -1214,7 +1214,7 @@ export default function PortalOverviewPage() {
           <Button
             variant="outline"
             size="sm"
-            className="border-white/10 text-muted-foreground hover:text-foreground"
+            className="border-border text-muted-foreground hover:text-foreground"
             asChild
           >
             <Link href="/portal">Change Role</Link>

@@ -31,7 +31,7 @@ export default function PortalRoleSelectPage() {
         </p>
         <Badge
           variant="outline"
-          className="mt-3 border-white/20 text-muted-foreground"
+          className="mt-3 border-border text-muted-foreground"
         >
           Demo Mode — No real data is affected
         </Badge>
@@ -48,7 +48,7 @@ export default function PortalRoleSelectPage() {
               onClick={() => handleSelect(roleId)}
               className="group text-left"
             >
-              <Card className="border-white/10 bg-[#12121a] transition-all duration-200 hover:border-transparent hover:shadow-lg group-focus-visible:ring-2 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-[#0a0a0f]"
+              <Card className="border-border bg-card transition-all duration-200 hover:border-transparent hover:shadow-lg group-focus-visible:ring-2 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background"
                 style={{
                   // @ts-expect-error -- custom css property
                   "--hover-border": config.accentColor,

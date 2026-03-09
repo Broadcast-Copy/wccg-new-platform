@@ -233,7 +233,7 @@ function CreateCampaignDialog({
           Create Campaign
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-[#1a1a2e] border-border text-foreground max-h-[90vh] overflow-y-auto sm:max-w-xl">
+      <DialogContent className="bg-popover border-border text-foreground max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="text-foreground">Create New Campaign</DialogTitle>
           <DialogDescription className="text-muted-foreground">
@@ -308,7 +308,7 @@ function CreateCampaignDialog({
                 onChange={(e) =>
                   setForm({ ...form, startDate: e.target.value })
                 }
-                className="bg-foreground/[0.04] border-border text-foreground [color-scheme:dark]"
+                className="bg-foreground/[0.04] border-border text-foreground"
               />
             </div>
             <div className="space-y-1.5">
@@ -317,7 +317,7 @@ function CreateCampaignDialog({
                 type="date"
                 value={form.endDate}
                 onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                className="bg-foreground/[0.04] border-border text-foreground [color-scheme:dark]"
+                className="bg-foreground/[0.04] border-border text-foreground"
               />
             </div>
           </div>
@@ -334,7 +334,7 @@ function CreateCampaignDialog({
                   className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                     form.targetGeo.includes(geo)
                       ? "bg-red-500/20 border-red-500/40 text-red-300"
-                      : "bg-foreground/[0.04] border-border text-muted-foreground hover:border-white/[0.16]"
+                      : "bg-foreground/[0.04] border-border text-muted-foreground hover:border-foreground/[0.16]"
                   }`}
                 >
                   {geo}
@@ -355,7 +355,7 @@ function CreateCampaignDialog({
                   className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                     form.targetDayparts.includes(dp)
                       ? "bg-blue-500/20 border-blue-500/40 text-blue-300"
-                      : "bg-foreground/[0.04] border-border text-muted-foreground hover:border-white/[0.16]"
+                      : "bg-foreground/[0.04] border-border text-muted-foreground hover:border-foreground/[0.16]"
                   }`}
                 >
                   {dp}
@@ -442,7 +442,7 @@ function CampaignRow({
 
   return (
     <>
-      <TableRow className="border-border hover:bg-white/[0.02]">
+      <TableRow className="border-border hover:bg-foreground/[0.02]">
         <TableCell>
           <button
             onClick={() => setExpanded(!expanded)}
@@ -502,7 +502,7 @@ function CampaignRow({
 
       {/* Expanded Creatives */}
       {expanded && (
-        <TableRow className="border-border bg-white/[0.01]">
+        <TableRow className="border-border bg-foreground/[0.01]">
           <TableCell colSpan={7} className="p-0">
             <div className="px-8 py-4 space-y-3">
               {/* Campaign Details */}
@@ -552,7 +552,7 @@ function CampaignRow({
                     {creatives.map((creative) => (
                       <div
                         key={creative.id}
-                        className="flex items-center gap-3 rounded-lg bg-white/[0.02] border border-border p-3"
+                        className="flex items-center gap-3 rounded-lg bg-foreground/[0.02] border border-border p-3"
                       >
                         <div className="flex h-8 w-8 items-center justify-center rounded bg-foreground/[0.04] shrink-0">
                           <ImageIcon className="h-4 w-4 text-muted-foreground/70" />
@@ -648,7 +648,7 @@ export default function CampaignsPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-red-950/50 to-gray-900 border border-border/30">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-background via-red-950/20 to-background border border-border/30">
         <div className="relative px-6 py-10 sm:px-10 sm:py-14">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">

@@ -92,7 +92,7 @@ function StatusToast({ message }: { message: string | null }) {
   if (!message) return null;
   return (
     <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
-      <div className="rounded-lg border border-white/10 bg-[#1a1a2e] px-4 py-3 text-sm text-foreground shadow-lg">
+      <div className="rounded-lg border border-border bg-popover px-4 py-3 text-sm text-foreground shadow-lg">
         <div className="flex items-center gap-2">
           <CheckCircle className="size-4 text-[#74ddc7]" />
           {message}
@@ -123,7 +123,7 @@ export default function CampaignsPage() {
   if (!role) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="size-8 animate-spin rounded-full border-2 border-white/20 border-t-[#74ddc7]" />
+        <div className="size-8 animate-spin rounded-full border-2 border-border border-t-[#74ddc7]" />
       </div>
     );
   }
@@ -150,7 +150,7 @@ export default function CampaignsPage() {
       active: "border-[#10b981]/30 bg-[#10b981]/10 text-[#10b981]",
       pending: "border-[#f97316]/30 bg-[#f97316]/10 text-[#f97316]",
       completed: "border-[#3b82f6]/30 bg-[#3b82f6]/10 text-[#3b82f6]",
-      paused: "border-white/20 bg-white/5 text-muted-foreground",
+      paused: "border-border bg-foreground/5 text-muted-foreground",
     };
     return colors[status] || colors.paused;
   };
@@ -208,7 +208,7 @@ export default function CampaignsPage() {
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            className="border-white/10 text-muted-foreground hover:text-foreground"
+            className="border-border text-muted-foreground hover:text-foreground"
             onClick={() => showMessage("Exporting campaign data...")}
           >
             <Download className="mr-2 size-4" />
@@ -227,7 +227,7 @@ export default function CampaignsPage() {
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-4">
-        <Card className="border-white/10 bg-[#12121a]">
+        <Card className="border-border bg-card">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -240,7 +240,7 @@ export default function CampaignsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-white/10 bg-[#12121a]">
+        <Card className="border-border bg-card">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -253,7 +253,7 @@ export default function CampaignsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-white/10 bg-[#12121a]">
+        <Card className="border-border bg-card">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -266,7 +266,7 @@ export default function CampaignsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-white/10 bg-[#12121a]">
+        <Card className="border-border bg-card">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -282,7 +282,7 @@ export default function CampaignsPage() {
       </div>
 
       {/* Search and Filter */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardContent className="pt-6">
           <div className="flex flex-col gap-4 sm:flex-row">
             <div className="relative flex-1">
@@ -291,14 +291,14 @@ export default function CampaignsPage() {
                 placeholder="Search campaigns..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="border-white/10 bg-white/5 pl-10 text-foreground placeholder:text-muted-foreground"
+                className="border-border bg-foreground/5 pl-10 text-foreground placeholder:text-muted-foreground"
               />
             </div>
             <div className="flex gap-2">
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground"
+                className="rounded-md border border-border bg-foreground/5 px-3 py-2 text-sm text-foreground"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -309,7 +309,7 @@ export default function CampaignsPage() {
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground"
+                className="rounded-md border border-border bg-foreground/5 px-3 py-2 text-sm text-foreground"
               >
                 <option value="all">All Types</option>
                 <option value="audio">Audio</option>
@@ -323,11 +323,11 @@ export default function CampaignsPage() {
       </Card>
 
       {/* Campaigns Table */}
-      <Card className="border-white/10 bg-[#12121a]">
+      <Card className="border-border bg-card">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-foreground">Campaigns</CardTitle>
-            <Badge variant="outline" className="border-white/20 text-muted-foreground">
+            <Badge variant="outline" className="border-border text-muted-foreground">
               {filteredCampaigns.length} results
             </Badge>
           </div>
@@ -335,7 +335,7 @@ export default function CampaignsPage() {
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow className="border-white/10 hover:bg-transparent">
+              <TableRow className="border-border hover:bg-transparent">
                 <TableHead className="text-muted-foreground">Campaign</TableHead>
                 {role !== "advertiser" && (
                   <TableHead className="text-muted-foreground">Client</TableHead>
@@ -353,7 +353,7 @@ export default function CampaignsPage() {
               {filteredCampaigns.map((campaign) => (
                 <TableRow
                   key={campaign.id}
-                  className="cursor-pointer border-white/5 transition-colors hover:bg-white/5"
+                  className="cursor-pointer border-border transition-colors hover:bg-foreground/5"
                   onClick={() => showMessage(`Viewing campaign: ${campaign.name}`)}
                 >
                   <TableCell>

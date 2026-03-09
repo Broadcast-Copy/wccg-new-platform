@@ -511,7 +511,7 @@ const STAGE_STYLES: Record<PipelineStage, string> = {
 };
 
 const PIPELINE_COLORS: Record<PipelineStage, string> = {
-  Lead: "bg-white/20",
+  Lead: "bg-foreground/20",
   Contacted: "bg-blue-500",
   Proposal: "bg-yellow-500",
   Negotiation: "bg-orange-500",
@@ -1131,7 +1131,7 @@ export default function ClientProfilesPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-red-950/50 to-gray-900 border border-border/30">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-background via-red-950/20 to-background border border-border/30">
         <div className="relative px-6 py-10 sm:px-10 sm:py-14">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -1331,7 +1331,7 @@ export default function ClientProfilesPage() {
                 {filteredClients.map((client) => (
                   <TableRow
                     key={client.id}
-                    className="border-border hover:bg-white/[0.02] cursor-pointer"
+                    className="border-border hover:bg-foreground/[0.02] cursor-pointer"
                     onClick={() => openDetail(client)}
                   >
                     <TableCell>
