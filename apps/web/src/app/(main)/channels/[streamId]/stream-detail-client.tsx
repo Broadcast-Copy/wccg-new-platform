@@ -131,6 +131,61 @@ function getShowImage(show: ShowData): string | null {
   return hostWithImage?.imageUrl ?? null;
 }
 
+/** Parse a 12-hour time string like "6:00 AM" into minutes since midnight */
+function parseTime12h(timeStr: string): number {
+  const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return -1;
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const period = match[3].toUpperCase();
+  if (period === "AM" && hours === 12) hours = 0;
+  if (period === "PM" && hours !== 12) hours += 12;
+  return hours * 60 + minutes;
+}
+
+/** Determine if a show is currently airing based on its timeSlot and days */
+function getCurrentShow(shows: ShowData[]): ShowData | null {
+  const now = new Date();
+  const dayIndex = now.getDay(); // 0=Sun, 1=Mon, ... 6=Sat
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const currentDay = dayNames[dayIndex];
+
+  for (const show of shows) {
+    // Check if the show airs on the current day
+    let matchesDay = false;
+    if (show.days === "Every Day") {
+      matchesDay = true;
+    } else if (show.days === "Monday - Friday") {
+      matchesDay = dayIndex >= 1 && dayIndex <= 5;
+    } else if (show.days === "Saturday") {
+      matchesDay = dayIndex === 6;
+    } else if (show.days === "Sunday") {
+      matchesDay = dayIndex === 0;
+    } else if (show.days === currentDay) {
+      matchesDay = true;
+    }
+    if (!matchesDay) continue;
+
+    // Check if the current time falls within the show's time slot
+    if (!show.timeSlot) continue;
+    const parts = show.timeSlot.split(" - ");
+    if (parts.length !== 2) continue;
+    const startMin = parseTime12h(parts[0]);
+    const endMin = parseTime12h(parts[1]);
+    if (startMin < 0 || endMin < 0) continue;
+
+    // Handle overnight shows (e.g. "10:00 PM - 12:00 AM")
+    if (endMin <= startMin) {
+      if (currentMinutes >= startMin || currentMinutes < endMin) return show;
+    } else {
+      if (currentMinutes >= startMin && currentMinutes < endMin) return show;
+    }
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Program Tile — wide tile matching reference layout
 // ---------------------------------------------------------------------------
@@ -339,6 +394,10 @@ export default function StreamDetailPage() {
     return ALL_SHOWS.filter((s) => s.streamId === streamId && s.isActive);
   }, [streamId]);
 
+  // Determine the currently airing show (if any)
+  const currentShow = useMemo(() => getCurrentShow(channelShows), [channelShows]);
+  const currentShowImage = currentShow ? getShowImage(currentShow) : null;
+
   // Filter shows by day
   const filteredShows = useMemo(() => {
     if (dayFilter === "all") return channelShows;
@@ -471,23 +530,58 @@ export default function StreamDetailPage() {
         {/* Hero Content */}
         <div className="relative px-6 py-10 sm:px-10 sm:py-14">
           <div className="flex flex-col sm:flex-row items-start gap-6">
-            {/* Channel Logo — Large */}
-            <div className={`relative flex-shrink-0 h-28 w-28 sm:h-36 sm:w-36 rounded-2xl overflow-hidden bg-black/30 ring-2 ring-white/20 shadow-2xl ${colors.glow} backdrop-blur-sm`}>
-              {logo ? (
-                <Image
-                  src={logo}
-                  alt={stream.name}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 640px) 112px, 144px"
-                  priority
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center">
-                  <Radio className="h-12 w-12 text-foreground/60" />
+            {/* Channel Logo / Currently Airing Show Image */}
+            {currentShowImage ? (
+              <div className="relative flex-shrink-0">
+                {/* Currently airing show image */}
+                <div className={`relative h-28 w-28 sm:h-36 sm:w-36 rounded-2xl overflow-hidden bg-black/30 ring-2 ring-white/20 shadow-2xl ${colors.glow} backdrop-blur-sm`}>
+                  <Image
+                    src={currentShowImage}
+                    alt={currentShow?.name ?? stream.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 112px, 144px"
+                    priority
+                  />
+                  {/* NOW LIVE overlay badge */}
+                  <div className="absolute top-1.5 left-1.5 z-10">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-red-600/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg backdrop-blur-sm">
+                      <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                      Now Live
+                    </span>
+                  </div>
                 </div>
-              )}
-            </div>
+                {/* Small channel logo overlay in bottom-right corner */}
+                {logo && (
+                  <div className="absolute -bottom-2 -right-2 z-10 h-10 w-10 sm:h-12 sm:w-12 rounded-lg overflow-hidden bg-black/60 ring-2 ring-white/30 shadow-lg backdrop-blur-sm">
+                    <Image
+                      src={logo}
+                      alt={stream.name}
+                      fill
+                      className="object-cover"
+                      sizes="48px"
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className={`relative flex-shrink-0 h-28 w-28 sm:h-36 sm:w-36 rounded-2xl overflow-hidden bg-black/30 ring-2 ring-white/20 shadow-2xl ${colors.glow} backdrop-blur-sm`}>
+                {logo ? (
+                  <Image
+                    src={logo}
+                    alt={stream.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 112px, 144px"
+                    priority
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Radio className="h-12 w-12 text-foreground/60" />
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Info */}
             <div className="flex-1 space-y-3">

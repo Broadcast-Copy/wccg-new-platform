@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { useNowPlaying } from "@/hooks/use-now-playing";
+import { useListeningPoints } from "@/hooks/use-listening-points";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, Volume2, VolumeX, Radio, Music2 } from "lucide-react";
 
@@ -12,6 +13,9 @@ export function GlobalPlayer() {
 
   // Poll for now-playing metadata while stream is active
   const { data: nowPlaying } = useNowPlaying(isPlaying);
+
+  // Track listening time for points rewards
+  useListeningPoints(isPlaying);
 
   // Track title change animation
   const [titlePop, setTitlePop] = useState(false);

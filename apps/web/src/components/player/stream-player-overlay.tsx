@@ -46,7 +46,7 @@ export function useStreamPlayer(): StreamPlayerContextValue {
 }
 
 // ---------------------------------------------------------------------------
-// Provider + Overlay
+// Provider + Bottom Drawer
 // ---------------------------------------------------------------------------
 export function StreamPlayerProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -99,97 +99,158 @@ export function StreamPlayerProvider({ children }: { children: ReactNode }) {
     return () => ro.disconnect();
   }, [isOpen, isMinimized]);
 
+  // ---------------------------------------------------------------------------
+  // Mount animation — slide up after first render frame
+  // ---------------------------------------------------------------------------
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && !isMinimized) {
+      // Delay one frame so the translate-y-full is applied first, then we
+      // transition to translate-y-0.
+      const raf = requestAnimationFrame(() => setMounted(true));
+      return () => {
+        cancelAnimationFrame(raf);
+        setMounted(false);
+      };
+    }
+    setMounted(false);
+  }, [isOpen, isMinimized]);
+
   return (
     <StreamPlayerContext.Provider value={{ isOpen, open, close, toggle }}>
       {children}
 
-      {/* Overlay */}
+      {/* Bottom Drawer */}
       {isOpen && (
         <>
-          {/* Backdrop — only show when NOT minimized */}
-          {!isMinimized && (
-            <div
-              className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm transition-opacity"
-              onClick={close}
-            />
-          )}
-
-          {/* Player Panel */}
-          <div
-            className={`fixed z-[70] transition-all duration-300 ease-out ${
-              isMinimized
-                ? // Minimized: small floating pill at bottom-right
-                  "bottom-20 right-4 w-[320px] h-[100px] rounded-2xl shadow-2xl"
-                : // Full: full-screen on mobile, centered modal on sm+
-                  "inset-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[540px] sm:max-w-[95vw] sm:h-[85vh] sm:max-h-[760px] sm:rounded-2xl shadow-2xl"
-            }`}
-          >
-            {/* Header bar */}
-            <div className="flex items-center justify-between bg-[#1a1a2e] border border-border rounded-t-2xl px-4 py-2.5">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#dc2626] opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-[#dc2626]" />
-                  </span>
-                  <span className="text-xs font-bold uppercase tracking-widest text-foreground/70">
-                    Live
+          {/* Minimized: floating pill at bottom-right, above global player */}
+          {isMinimized ? (
+            <div className="fixed z-[70] bottom-20 right-4 w-[320px] rounded-2xl shadow-2xl transition-all duration-300 ease-out">
+              {/* Header bar */}
+              <div className="flex items-center justify-between bg-[#1a1a2e] border border-border rounded-t-2xl px-4 py-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#dc2626] opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-[#dc2626]" />
+                    </span>
+                    <span className="text-xs font-bold uppercase tracking-widest text-foreground/70">
+                      Live
+                    </span>
+                  </div>
+                  <span className="text-sm font-semibold text-foreground">
+                    WCCG 104.5 FM
                   </span>
                 </div>
-                <span className="text-sm font-semibold text-foreground">
-                  WCCG 104.5 FM
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setIsMinimized(!isMinimized)}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
-                  aria-label={isMinimized ? "Expand player" : "Minimize player"}
-                >
-                  {isMinimized ? (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setIsMinimized(false)}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
+                    aria-label="Expand player"
+                  >
                     <Maximize2 className="h-3.5 w-3.5" />
-                  ) : (
-                    <Minimize2 className="h-3.5 w-3.5" />
-                  )}
-                </button>
-                <button
-                  onClick={close}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
-                  aria-label="Close player"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                  </button>
+                  <button
+                    onClick={close}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
+                    aria-label="Close player"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Minimized iframe strip */}
+              <div className="h-[56px] bg-white overflow-hidden rounded-b-2xl">
+                <iframe
+                  src={SECURENET_PLAYER_URL}
+                  title="WCCG 104.5 FM Live Stream Player"
+                  className="border-0"
+                  allow="autoplay; encrypted-media"
+                  sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                  style={{ width: "100%", height: "100%" }}
+                />
               </div>
             </div>
-
-            {/* iframe container — fills remaining height, scales on narrow viewports */}
+          ) : (
+            /* ----------------------------------------------------------- */
+            /* Expanded: bottom slide-up drawer, no full backdrop           */
+            /* ----------------------------------------------------------- */
             <div
-              ref={iframeContainerRef}
-              className={`bg-white overflow-hidden transition-all duration-300 ${
-                isMinimized
-                  ? "h-[56px] rounded-b-2xl"
-                  : "h-[calc(100%-44px)] rounded-b-2xl"
+              className={`fixed z-[70] bottom-14 left-0 right-0 flex flex-col transition-transform duration-300 ease-out ${
+                mounted ? "translate-y-0" : "translate-y-full"
               }`}
+              style={{
+                maxHeight: "min(70vh, 600px)",
+                /* Subtle top shadow instead of a full backdrop */
+                boxShadow: "0 -8px 30px rgba(0,0,0,0.25), 0 -2px 8px rgba(0,0,0,0.12)",
+              }}
             >
-              <iframe
-                src={SECURENET_PLAYER_URL}
-                title="WCCG 104.5 FM Live Stream Player"
-                className="border-0"
-                allow="autoplay; encrypted-media"
-                sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-                style={
-                  iframeScale < 1
-                    ? {
-                        width: `${PLAYER_NATIVE_WIDTH}px`,
-                        height: `${100 / iframeScale}%`,
-                        transform: `scale(${iframeScale})`,
-                        transformOrigin: "top left",
-                      }
-                    : { width: "100%", height: "100%" }
-                }
-              />
+              {/* Drag handle visual affordance */}
+              <div className="flex justify-center pt-2 pb-1 bg-[#1a1a2e] rounded-t-2xl">
+                <div className="w-10 h-1 rounded-full bg-foreground/25" />
+              </div>
+
+              {/* Header bar */}
+              <div className="flex items-center justify-between bg-[#1a1a2e] border-x border-border px-4 py-1.5">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#dc2626] opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-[#dc2626]" />
+                    </span>
+                    <span className="text-xs font-bold uppercase tracking-widest text-foreground/70">
+                      Live
+                    </span>
+                  </div>
+                  <span className="text-sm font-semibold text-foreground">
+                    WCCG 104.5 FM
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setIsMinimized(true)}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
+                    aria-label="Minimize player"
+                  >
+                    <Minimize2 className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={close}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.08] transition-colors"
+                    aria-label="Close player"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* iframe container — fills remaining height, scales on narrow viewports */}
+              <div
+                ref={iframeContainerRef}
+                className="flex-1 min-h-0 bg-white overflow-hidden"
+              >
+                <iframe
+                  src={SECURENET_PLAYER_URL}
+                  title="WCCG 104.5 FM Live Stream Player"
+                  className="border-0"
+                  allow="autoplay; encrypted-media"
+                  sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                  style={
+                    iframeScale < 1
+                      ? {
+                          width: `${PLAYER_NATIVE_WIDTH}px`,
+                          height: `${100 / iframeScale}%`,
+                          transform: `scale(${iframeScale})`,
+                          transformOrigin: "top left",
+                        }
+                      : { width: "100%", height: "100%" }
+                  }
+                />
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
     </StreamPlayerContext.Provider>
