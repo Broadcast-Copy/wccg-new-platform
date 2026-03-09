@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useUserRoles, type UserRole } from "@/hooks/use-user-roles";
 import {
   LayoutDashboard,
   Star,
@@ -14,11 +15,27 @@ import {
   Menu,
   X,
   User,
+  Eye,
+  ChevronDown,
+  RotateCcw,
+  CalendarDays,
+  Clapperboard,
+  FolderOpen,
+  Megaphone,
+  Radio,
+  DollarSign,
+  ShoppingBag,
+  Receipt,
+  Briefcase,
+  Calendar,
+  Mic,
+  Gift,
+  Palette,
   type LucideIcon,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
-// Listener nav items
+// Navigation item type
 // ---------------------------------------------------------------------------
 interface NavItem {
   href: string;
@@ -27,6 +44,9 @@ interface NavItem {
   exact?: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Listener nav items — always shown
+// ---------------------------------------------------------------------------
 const listenerItems: NavItem[] = [
   { href: "/my", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/my/overview", label: "Overview", icon: BarChart3 },
@@ -37,9 +57,133 @@ const listenerItems: NavItem[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Role-specific nav items
+// ---------------------------------------------------------------------------
+function getRoleItems(flags: {
+  isSales: boolean;
+  isProduction: boolean;
+  isManagement: boolean;
+  isPromotions: boolean;
+  isCreator: boolean;
+  isHost: boolean;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+}): { label: string; items: NavItem[] } {
+  const {
+    isSales,
+    isProduction,
+    isManagement,
+    isPromotions,
+    isCreator,
+    isHost,
+    isAdmin,
+    isSuperAdmin,
+  } = flags;
+
+  if (isSuperAdmin || isAdmin) {
+    return {
+      label: "Administration",
+      items: [
+        { href: "/my/admin/campaigns", label: "Campaigns", icon: Megaphone },
+        { href: "/my/admin/reports", label: "Reports", icon: BarChart3 },
+        { href: "/my/admin/programming", label: "Programming", icon: Radio },
+        { href: "/my/events", label: "Events Manager", icon: CalendarDays },
+        { href: "/my/studio", label: "Broadcast Studio", icon: Clapperboard },
+        { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
+      ],
+    };
+  }
+
+  if (isManagement) {
+    return {
+      label: "Management",
+      items: [
+        { href: "/my/admin/campaigns", label: "Campaigns", icon: Megaphone },
+        { href: "/my/admin/reports", label: "Reports", icon: BarChart3 },
+        { href: "/my/admin/programming", label: "Programming", icon: Radio },
+        { href: "/my/events", label: "Events Manager", icon: CalendarDays },
+        { href: "/my/studio", label: "Broadcast Studio", icon: Clapperboard },
+      ],
+    };
+  }
+
+  if (isSales) {
+    return {
+      label: "Sales",
+      items: [
+        { href: "/my/sales", label: "Sales Dashboard", icon: DollarSign },
+        { href: "/my/sales/campaign-builder", label: "Campaign Builder", icon: Megaphone },
+        { href: "/my/sales/spot-shop", label: "Spot Shop", icon: ShoppingBag },
+        { href: "/my/sales/invoices", label: "Invoices", icon: Receipt },
+        { href: "/my/admin/campaigns", label: "My Campaigns", icon: Briefcase },
+      ],
+    };
+  }
+
+  if (isProduction) {
+    return {
+      label: "Production",
+      items: [
+        { href: "/my/admin/production", label: "Production Queue", icon: Clapperboard },
+        { href: "/studio/booking", label: "Studio Booking", icon: Calendar },
+        { href: "/my/studio", label: "Broadcast Studio", icon: Mic },
+        { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
+      ],
+    };
+  }
+
+  if (isPromotions) {
+    return {
+      label: "Promotions",
+      items: [
+        { href: "/events/create", label: "Events Manager", icon: CalendarDays },
+        { href: "/contests", label: "Contests", icon: Gift },
+        { href: "/my/events", label: "My Events", icon: CalendarDays },
+      ],
+    };
+  }
+
+  if (isCreator || isHost) {
+    return {
+      label: isHost ? "Host Tools" : "Creator Tools",
+      items: [
+        { href: "/my/studio", label: "Broadcast Studio", icon: Clapperboard },
+        { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
+        { href: "/studio", label: "Studio Tools", icon: Mic },
+        { href: "/creators", label: "Creator Hub", icon: Palette },
+      ],
+    };
+  }
+
+  // Listener — no role items
+  return { label: "", items: [] };
+}
+
+// ---------------------------------------------------------------------------
+// Role switcher options
+// ---------------------------------------------------------------------------
+const VIEWABLE_ROLES = [
+  { value: "listener", label: "Listener" },
+  { value: "sales", label: "Sales" },
+  { value: "production", label: "Production" },
+  { value: "management", label: "Management" },
+  { value: "promotions", label: "Promotions" },
+  { value: "content_creator", label: "Content Creator" },
+  { value: "host", label: "Host" },
+];
+
+// ---------------------------------------------------------------------------
 // NavLink
 // ---------------------------------------------------------------------------
-function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
+function NavLink({
+  item,
+  pathname,
+  color = "#74ddc7",
+}: {
+  item: NavItem;
+  pathname: string;
+  color?: string;
+}) {
   const isActive = item.exact
     ? pathname === item.href
     : pathname === item.href || pathname.startsWith(item.href + "/");
@@ -48,14 +192,14 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
       href={item.href}
       className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all ${
         isActive
-          ? "bg-foreground/[0.08] text-[#74ddc7]"
+          ? `bg-foreground/[0.08] text-[${color}]`
           : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground/80"
       }`}
-      style={isActive ? { color: "#74ddc7" } : undefined}
+      style={isActive ? { color } : undefined}
     >
       <item.icon
         className="h-4 w-4 shrink-0"
-        style={isActive ? { color: "#74ddc7" } : undefined}
+        style={isActive ? { color } : undefined}
       />
       {item.label}
     </Link>
@@ -63,15 +207,54 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// SidebarContent — listener items only
+// SidebarContent
 // ---------------------------------------------------------------------------
 function SidebarContent({ pathname }: { pathname: string }) {
   const { user } = useAuth();
+  const {
+    isCreator,
+    isHost,
+    isSales,
+    isProduction,
+    isManagement,
+    isPromotions,
+    isAdmin,
+    isSuperAdmin,
+    roleOverride,
+    isOverrideActive,
+    setRoleOverride,
+  } = useUserRoles();
+
+  // Custom dropdown state for role switcher
+  const [roleSwitcherOpen, setRoleSwitcherOpen] = useState(false);
+  const roleSwitcherRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!roleSwitcherOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (roleSwitcherRef.current && !roleSwitcherRef.current.contains(e.target as Node)) {
+        setRoleSwitcherOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [roleSwitcherOpen]);
+
+  const roleSection = getRoleItems({
+    isSales,
+    isProduction,
+    isManagement,
+    isPromotions,
+    isCreator,
+    isHost,
+    isAdmin,
+    isSuperAdmin,
+  });
 
   return (
     <>
       {/* User info */}
-      <div className="border-b border-border px-4 py-4">
+      <div className="border-b border-border px-4 py-4 space-y-3">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#74ddc7]/30 to-[#7401df]/30 border border-border">
             <User className="h-4 w-4 text-foreground/70" />
@@ -85,13 +268,82 @@ function SidebarContent({ pathname }: { pathname: string }) {
             </p>
           </div>
         </div>
+
+        {/* Role switcher */}
+        <div className="space-y-2">
+          {!isOverrideActive ? (
+            <div className="relative" ref={roleSwitcherRef}>
+              <button
+                type="button"
+                onClick={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
+                className="flex w-full items-center justify-between rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-[12px] font-medium text-muted-foreground cursor-pointer hover:bg-muted transition-colors focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/50"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Eye className="h-3 w-3 shrink-0" />
+                  View as role…
+                </span>
+                <ChevronDown className={`h-3 w-3 shrink-0 transition-transform ${roleSwitcherOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {roleSwitcherOpen && (
+                <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-lg border border-border bg-card shadow-xl overflow-hidden">
+                  {VIEWABLE_ROLES.map((r) => (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => {
+                        setRoleOverride(r.value as UserRole);
+                        setRoleSwitcherOpen(false);
+                      }}
+                      className="flex w-full items-center px-3 py-2 text-[12px] font-medium text-foreground/80 hover:bg-foreground/[0.06] hover:text-foreground transition-colors text-left"
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-[#f59e0b]/30 bg-[#f59e0b]/10 px-3 py-1.5">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Eye className="h-3 w-3 shrink-0 text-[#f59e0b]" />
+                <span className="truncate text-[11px] font-semibold text-[#f59e0b] capitalize">
+                  {roleOverride?.replace("_", " ")}
+                </span>
+              </div>
+              <button
+                onClick={() => setRoleOverride(null)}
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[#f59e0b] hover:bg-[#f59e0b]/20 transition-colors"
+                aria-label="Reset role override"
+              >
+                <RotateCcw className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Navigation */}
       <nav className="flex flex-col gap-0.5 p-2">
+        {/* Listener items */}
         {listenerItems.map((item) => (
           <NavLink key={item.href} item={item} pathname={pathname} />
         ))}
+
+        {/* Role-specific items */}
+        {roleSection.items.length > 0 && (
+          <>
+            <div className="my-2 border-t border-border" />
+            {roleSection.label && (
+              <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                {roleSection.label}
+              </p>
+            )}
+            {roleSection.items.map((item) => (
+              <NavLink key={item.href + item.label} item={item} pathname={pathname} />
+            ))}
+          </>
+        )}
       </nav>
     </>
   );
@@ -111,7 +363,7 @@ export default function MyDashboardLayout({
   return (
     <div className="flex min-h-0 -mx-4 sm:-mx-6 lg:-mx-8 -mt-8">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-[200px] shrink-0 flex-col border-r border-border bg-sidebar pt-4">
+      <aside className="hidden lg:flex w-[220px] shrink-0 flex-col border-r border-border bg-sidebar">
         <SidebarContent pathname={pathname} />
       </aside>
 
@@ -136,7 +388,7 @@ export default function MyDashboardLayout({
               onClick={() => setMobileOpen(false)}
             />
             <aside
-              className="fixed left-0 top-14 bottom-14 z-50 w-[220px] overflow-y-auto bg-sidebar border-r border-border shadow-2xl pt-4"
+              className="fixed left-0 top-14 bottom-14 z-50 w-[240px] overflow-y-auto bg-sidebar border-r border-border shadow-2xl"
               onClick={(e) => {
                 const target = e.target as HTMLElement;
                 if (target.closest("a")) setMobileOpen(false);
