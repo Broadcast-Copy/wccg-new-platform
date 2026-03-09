@@ -23,6 +23,25 @@ export const SECURENET_PLAYER_URL =
 const PLAYER_NATIVE_WIDTH = 500;
 
 // ---------------------------------------------------------------------------
+// CSS for hiding the iframe container when not expanded.
+// Uses every known hiding technique simultaneously so the header/drag-handle
+// that live in the same container are completely invisible.
+// ---------------------------------------------------------------------------
+const HIDDEN_STYLES: React.CSSProperties = {
+  position: "fixed",
+  width: "1px",
+  height: "1px",
+  left: "-9999px",
+  top: "-9999px",
+  overflow: "hidden",
+  opacity: 0,
+  pointerEvents: "none",
+  clip: "rect(0,0,0,0)",
+  clipPath: "inset(100%)",
+  zIndex: -1,
+};
+
+// ---------------------------------------------------------------------------
 // Player modes
 // ---------------------------------------------------------------------------
 type PlayerMode = "closed" | "minimized" | "expanded";
@@ -140,33 +159,37 @@ export function StreamPlayerProvider({ children }: { children: ReactNode }) {
       {children}
 
       {/* ================================================================
-          SINGLE PERSISTENT IFRAME
+          SINGLE PERSISTENT CONTAINER
           ------------------------------------------------------------------
-          The iframe is mounted ONCE and never destroyed until stop().
-          It lives in its own container that is ALWAYS in the DOM.
+          ONE container holds the drag handle, header bar, AND the iframe.
+          The entire container is mounted once and never destroyed until
+          stop() is called.
 
-          When EXPANDED: a separate overlay div contains the header/drawer
-                         chrome, and the iframe container is placed inside
-                         it via a React portal-like pattern (actually just
-                         CSS positioning).
-          When MINIMIZED or CLOSED: the iframe container is hidden off-screen
-                         with bulletproof CSS (1px size, off-screen, clipped).
-                         The header/drawer is NOT rendered at all.
+          - When EXPANDED: container is fixed at the bottom of the viewport,
+            visible as a slide-up drawer.
+          - When NOT EXPANDED (minimized or closed but still mounted):
+            container is hidden off-screen using HIDDEN_STYLES — the iframe
+            stays alive so audio keeps playing. The header/drag handle are
+            inside the container too, but they're invisible because the
+            container is 1px clipped off-screen.
           ================================================================ */}
-
-      {/* ── Expanded overlay: drag handle + header + iframe visible ── */}
-      {iframeMounted && isExpanded && (
+      {iframeMounted && (
         <div
-          className="fixed left-0 right-0 flex flex-col"
-          style={{
-            bottom: "3.5rem",
-            zIndex: 70,
-            maxHeight: "min(92vh, 1200px)",
-            boxShadow:
-              "0 -8px 30px rgba(0,0,0,0.25), 0 -2px 8px rgba(0,0,0,0.12)",
-            transform: mounted ? "translateY(0)" : "translateY(100%)",
-            transition: "transform 300ms ease-out",
-          }}
+          className={isExpanded ? "fixed left-0 right-0 flex flex-col" : undefined}
+          aria-hidden={!isExpanded}
+          style={
+            isExpanded
+              ? {
+                  bottom: "3.5rem",
+                  zIndex: 70,
+                  maxHeight: "min(92vh, 1200px)",
+                  boxShadow:
+                    "0 -8px 30px rgba(0,0,0,0.25), 0 -2px 8px rgba(0,0,0,0.12)",
+                  transform: mounted ? "translateY(0)" : "translateY(100%)",
+                  transition: "transform 300ms ease-out",
+                }
+              : HIDDEN_STYLES
+          }
         >
           {/* Drag handle */}
           <div className="flex justify-center pt-2 pb-1 bg-[#1a1a2e] rounded-t-2xl">
@@ -207,7 +230,7 @@ export function StreamPlayerProvider({ children }: { children: ReactNode }) {
             </div>
           </div>
 
-          {/* Iframe container — visible */}
+          {/* Iframe container — the SINGLE iframe lives here always */}
           <div
             ref={iframeContainerRef}
             className="bg-white overflow-hidden"
@@ -220,7 +243,7 @@ export function StreamPlayerProvider({ children }: { children: ReactNode }) {
               allow="autoplay; encrypted-media"
               sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
               style={
-                iframeScale < 1
+                isExpanded && iframeScale < 1
                   ? {
                       width: `${PLAYER_NATIVE_WIDTH}px`,
                       height: `${100 / iframeScale}%`,
@@ -231,45 +254,6 @@ export function StreamPlayerProvider({ children }: { children: ReactNode }) {
               }
             />
           </div>
-        </div>
-      )}
-
-      {/* ── Hidden iframe — keeps audio alive when NOT expanded ──
-           This is a SEPARATE iframe element but it shares the same src URL.
-           The Cirrus player manages its own audio state via the URL/session,
-           so having two iframe elements pointing to the same URL means
-           both connect to the same stream. However, when one unmounts
-           and the other mounts, there can be a brief audio gap.
-
-           BETTER APPROACH: Use a single iframe that is repositioned.
-           We keep the iframe ALWAYS in a fixed container. When expanded,
-           it's visible in the drawer. When minimized, it's off-screen.
-           ─────────────────────────────────────────────────────────── */}
-      {iframeMounted && !isExpanded && (
-        <div
-          aria-hidden="true"
-          style={{
-            position: "fixed",
-            width: "1px",
-            height: "1px",
-            left: "-9999px",
-            top: "-9999px",
-            overflow: "hidden",
-            opacity: 0,
-            pointerEvents: "none",
-            clip: "rect(0,0,0,0)",
-            clipPath: "inset(100%)",
-            zIndex: -1,
-          }}
-        >
-          <iframe
-            src={SECURENET_PLAYER_URL}
-            title="WCCG 104.5 FM Live Stream Player"
-            className="border-0"
-            allow="autoplay; encrypted-media"
-            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-            style={{ width: "1px", height: "1px" }}
-          />
         </div>
       )}
 
