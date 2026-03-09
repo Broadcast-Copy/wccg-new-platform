@@ -229,7 +229,8 @@ export function StreamPlayerProvider({ children }: { children: ReactNode }) {
               {/* iframe container — fills remaining height, scales on narrow viewports */}
               <div
                 ref={iframeContainerRef}
-                className="flex-1 min-h-0 bg-white overflow-hidden"
+                className="bg-white overflow-hidden"
+                style={{ height: "calc(92vh - 80px)", minHeight: "500px" }}
               >
                 <iframe
                   src={SECURENET_PLAYER_URL}
