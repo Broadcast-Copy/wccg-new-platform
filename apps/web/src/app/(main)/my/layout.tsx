@@ -98,8 +98,6 @@ function getRoleItems(flags: {
     return {
       label: "Creator",
       items: [
-        { href: "/my/admin/campaigns", label: "Campaigns", icon: Megaphone },
-        { href: "/my/admin/reports", label: "Reports", icon: BarChart3 },
         { href: "/my/admin/programming", label: "Programming", icon: Radio },
         { href: "/my/admin/production", label: "Production Queue", icon: Clapperboard },
         { href: "/my/studio", label: "Broadcast Studio", icon: Mic },
@@ -115,10 +113,11 @@ function getRoleItems(flags: {
       label: "Sales & Marketing",
       items: [
         { href: "/my/sales", label: "Sales Dashboard", icon: DollarSign },
+        { href: "/my/admin/campaigns", label: "Campaigns", icon: Megaphone },
+        { href: "/my/admin/reports", label: "Reports", icon: BarChart3 },
         { href: "/my/sales/campaign-builder", label: "Campaign Builder", icon: Megaphone },
         { href: "/my/sales/spot-shop", label: "Spot Shop", icon: ShoppingBag },
         { href: "/my/sales/invoices", label: "Invoices", icon: Receipt },
-        { href: "/my/admin/campaigns", label: "My Campaigns", icon: Briefcase },
         { href: "/my/events", label: "Events Manager", icon: CalendarDays },
         { href: "/contests", label: "Contests", icon: Gift },
       ],

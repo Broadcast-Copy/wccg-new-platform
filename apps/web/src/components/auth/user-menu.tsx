@@ -94,8 +94,6 @@ function getRoleSection(flags: {
     return {
       label: "Creator",
       items: [
-        { href: "/my/admin/campaigns", label: "Campaigns", icon: <Megaphone className="mr-2 h-4 w-4" /> },
-        { href: "/my/admin/reports", label: "Reports", icon: <BarChart3 className="mr-2 h-4 w-4" /> },
         { href: "/my/admin/programming", label: "Programming", icon: <Radio className="mr-2 h-4 w-4" /> },
         { href: "/my/admin/production", label: "Production Queue", icon: <Clapperboard className="mr-2 h-4 w-4" /> },
         { href: "/my/studio", label: "Broadcast Studio", icon: <Mic className="mr-2 h-4 w-4" /> },
@@ -111,10 +109,11 @@ function getRoleSection(flags: {
       label: "Sales & Marketing",
       items: [
         { href: "/my/sales", label: "Sales Dashboard", icon: <DollarSign className="mr-2 h-4 w-4" /> },
+        { href: "/my/admin/campaigns", label: "Campaigns", icon: <Megaphone className="mr-2 h-4 w-4" /> },
+        { href: "/my/admin/reports", label: "Reports", icon: <BarChart3 className="mr-2 h-4 w-4" /> },
         { href: "/my/sales/campaign-builder", label: "Campaign Builder", icon: <Megaphone className="mr-2 h-4 w-4" /> },
         { href: "/my/sales/spot-shop", label: "Spot Shop", icon: <ShoppingBag className="mr-2 h-4 w-4" /> },
         { href: "/my/sales/invoices", label: "Invoices", icon: <Receipt className="mr-2 h-4 w-4" /> },
-        { href: "/my/admin/campaigns", label: "My Campaigns", icon: <Briefcase className="mr-2 h-4 w-4" /> },
         { href: "/my/events", label: "Events Manager", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
         { href: "/contests", label: "Contests", icon: <Gift className="mr-2 h-4 w-4" /> },
       ],
