@@ -123,6 +123,7 @@ export const CLIENT_CATEGORIES = [
 ];
 
 export const CAMPAIGNS_KEY = "wccg_sales_campaigns";
+export const MARKETING_CAMPAIGNS_KEY = "wccg_marketing_campaigns";
 export const CLIENTS_KEY = "wccg_sales_clients";
 export const INVOICES_KEY = "wccg_sales_invoices";
 export const SPOT_CART_KEY = "wccg_sales_spot_cart";
@@ -203,4 +204,82 @@ export function computeWeeks(startDate: string, endDate: string): number {
   if (!startDate || !endDate) return 0;
   const ms = new Date(endDate).getTime() - new Date(startDate).getTime();
   return ms > 0 ? Math.max(1, Math.round(ms / (7 * 24 * 60 * 60 * 1000))) : 0;
+}
+
+// ---------------------------------------------------------------------------
+// Marketing Campaign Builder types (new)
+// ---------------------------------------------------------------------------
+import type { CampaignType, SpotLength, DayCategory } from "@/data/rate-card";
+export type { CampaignType, SpotLength, DayCategory };
+
+export interface TrafficOrderLine {
+  daypartId: string;
+  showName: string;
+  dayCategory: DayCategory;
+  timeRange: string;
+  spotLength: SpotLength;
+  breakPosition: ":18" | ":48" | "ROS";
+  rate: number;
+  spotsPerWeek: number;
+}
+
+export interface TrafficOrder {
+  advertiser: string;
+  agency: string;
+  campaignName: string;
+  flightStart: string;
+  flightEnd: string;
+  totalWeeks: number;
+  lines: TrafficOrderLine[];
+  totalSpots: number;
+  totalCost: number;
+}
+
+export interface FlightWeek {
+  weekNumber: number;
+  startDate: string;
+  endDate: string;
+}
+
+export interface MarketingCampaign {
+  id: string;
+  campaignType: CampaignType;
+  campaignName: string;
+  client: SalesClient;
+  flightStart: string;
+  flightEnd: string;
+  trafficOrder: TrafficOrder | null;
+  lineItems: InvoiceLineItem[];
+  subtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  total: number;
+  status: "draft" | "active" | "completed";
+  createdAt: string;
+}
+
+export function computeFlightWeeks(start: string, end: string): FlightWeek[] {
+  if (!start || !end) return [];
+  const weeks: FlightWeek[] = [];
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  let weekNum = 1;
+  const current = new Date(startDate);
+  while (current < endDate) {
+    const weekEnd = new Date(current);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    weeks.push({
+      weekNumber: weekNum++,
+      startDate: current.toISOString().slice(0, 10),
+      endDate: (weekEnd > endDate ? endDate : weekEnd).toISOString().slice(0, 10),
+    });
+    current.setDate(current.getDate() + 7);
+  }
+  return weeks;
+}
+
+export function generateInvoiceNumber(): string {
+  const year = new Date().getFullYear();
+  const seq = Math.floor(Math.random() * 9999) + 1;
+  return `INV-${year}-${String(seq).padStart(4, "0")}`;
 }

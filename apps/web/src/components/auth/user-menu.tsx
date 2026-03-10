@@ -104,18 +104,26 @@ function getRoleSection(flags: {
     };
   }
 
-  if (isSales || isPromotions) {
+  if (isPromotions) {
     return {
-      label: "Sales & Marketing",
+      label: "Marketing",
       items: [
-        { href: "/my/sales", label: "Sales Dashboard", icon: <DollarSign className="mr-2 h-4 w-4" /> },
-        { href: "/my/admin/campaigns", label: "Campaigns", icon: <Megaphone className="mr-2 h-4 w-4" /> },
-        { href: "/my/admin/reports", label: "Reports", icon: <BarChart3 className="mr-2 h-4 w-4" /> },
-        { href: "/my/sales/campaign-builder", label: "Campaign Builder", icon: <Megaphone className="mr-2 h-4 w-4" /> },
-        { href: "/my/sales/spot-shop", label: "Spot Shop", icon: <ShoppingBag className="mr-2 h-4 w-4" /> },
-        { href: "/my/sales/invoices", label: "Invoices", icon: <Receipt className="mr-2 h-4 w-4" /> },
+        { href: "/my/marketing/campaigns", label: "Campaigns", icon: <Megaphone className="mr-2 h-4 w-4" /> },
+        { href: "/my/marketing/campaign-builder", label: "Campaign Builder", icon: <Briefcase className="mr-2 h-4 w-4" /> },
         { href: "/my/events", label: "Events Manager", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
         { href: "/contests", label: "Contests", icon: <Gift className="mr-2 h-4 w-4" /> },
+      ],
+    };
+  }
+
+  if (isSales) {
+    return {
+      label: "Sales",
+      items: [
+        { href: "/my/sales", label: "Sales Dashboard", icon: <DollarSign className="mr-2 h-4 w-4" /> },
+        { href: "/my/admin/reports", label: "Reports", icon: <BarChart3 className="mr-2 h-4 w-4" /> },
+        { href: "/my/sales/invoices", label: "Invoices", icon: <Receipt className="mr-2 h-4 w-4" /> },
+        { href: "/my/events", label: "Events Manager", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
       ],
     };
   }
@@ -129,7 +137,8 @@ function getRoleSection(flags: {
 const VIEWABLE_ROLES: { value: UserRole; label: string }[] = [
   { value: "listener", label: "Listener" },
   { value: "content_creator", label: "Creator" },
-  { value: "sales", label: "Sales & Marketing" },
+  { value: "promotions", label: "Marketing" },
+  { value: "sales", label: "Sales" },
 ];
 
 // ---------------------------------------------------------------------------

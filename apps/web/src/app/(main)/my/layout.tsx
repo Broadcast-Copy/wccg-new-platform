@@ -108,18 +108,26 @@ function getRoleItems(flags: {
     };
   }
 
-  if (isSales || isPromotions) {
+  if (isPromotions) {
     return {
-      label: "Sales & Marketing",
+      label: "Marketing",
       items: [
-        { href: "/my/sales", label: "Sales Dashboard", icon: DollarSign },
-        { href: "/my/admin/campaigns", label: "Campaigns", icon: Megaphone },
-        { href: "/my/admin/reports", label: "Reports", icon: BarChart3 },
-        { href: "/my/sales/campaign-builder", label: "Campaign Builder", icon: Megaphone },
-        { href: "/my/sales/spot-shop", label: "Spot Shop", icon: ShoppingBag },
-        { href: "/my/sales/invoices", label: "Invoices", icon: Receipt },
+        { href: "/my/marketing/campaigns", label: "Campaigns", icon: Megaphone },
+        { href: "/my/marketing/campaign-builder", label: "Campaign Builder", icon: Briefcase },
         { href: "/my/events", label: "Events Manager", icon: CalendarDays },
         { href: "/contests", label: "Contests", icon: Gift },
+      ],
+    };
+  }
+
+  if (isSales) {
+    return {
+      label: "Sales",
+      items: [
+        { href: "/my/sales", label: "Sales Dashboard", icon: DollarSign },
+        { href: "/my/admin/reports", label: "Reports", icon: BarChart3 },
+        { href: "/my/sales/invoices", label: "Invoices", icon: Receipt },
+        { href: "/my/events", label: "Events Manager", icon: CalendarDays },
       ],
     };
   }
@@ -134,7 +142,8 @@ function getRoleItems(flags: {
 const VIEWABLE_ROLES = [
   { value: "listener", label: "Listener" },
   { value: "content_creator", label: "Creator" },
-  { value: "sales", label: "Sales & Marketing" },
+  { value: "promotions", label: "Marketing" },
+  { value: "sales", label: "Sales" },
 ];
 
 // ---------------------------------------------------------------------------
