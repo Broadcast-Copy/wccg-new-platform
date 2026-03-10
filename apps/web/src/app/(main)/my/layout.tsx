@@ -96,7 +96,7 @@ function getRoleItems(flags: {
 
   if (isManagement || isProduction || isCreator || isHost) {
     return {
-      label: "Content & Production",
+      label: "Creator",
       items: [
         { href: "/my/admin/campaigns", label: "Campaigns", icon: Megaphone },
         { href: "/my/admin/reports", label: "Reports", icon: BarChart3 },
@@ -110,26 +110,17 @@ function getRoleItems(flags: {
     };
   }
 
-  if (isSales) {
+  if (isSales || isPromotions) {
     return {
-      label: "Sales",
+      label: "Sales & Marketing",
       items: [
         { href: "/my/sales", label: "Sales Dashboard", icon: DollarSign },
         { href: "/my/sales/campaign-builder", label: "Campaign Builder", icon: Megaphone },
         { href: "/my/sales/spot-shop", label: "Spot Shop", icon: ShoppingBag },
         { href: "/my/sales/invoices", label: "Invoices", icon: Receipt },
         { href: "/my/admin/campaigns", label: "My Campaigns", icon: Briefcase },
-      ],
-    };
-  }
-
-  if (isPromotions) {
-    return {
-      label: "Promotions",
-      items: [
-        { href: "/events/create", label: "Events Manager", icon: CalendarDays },
+        { href: "/my/events", label: "Events Manager", icon: CalendarDays },
         { href: "/contests", label: "Contests", icon: Gift },
-        { href: "/my/events", label: "My Events", icon: CalendarDays },
       ],
     };
   }
@@ -143,12 +134,8 @@ function getRoleItems(flags: {
 // ---------------------------------------------------------------------------
 const VIEWABLE_ROLES = [
   { value: "listener", label: "Listener" },
-  { value: "sales", label: "Sales" },
-  { value: "production", label: "Production" },
-  { value: "management", label: "Management" },
-  { value: "promotions", label: "Promotions" },
-  { value: "content_creator", label: "Content Creator" },
-  { value: "host", label: "Host" },
+  { value: "content_creator", label: "Creator" },
+  { value: "sales", label: "Sales & Marketing" },
 ];
 
 // ---------------------------------------------------------------------------

@@ -92,7 +92,7 @@ function getRoleSection(flags: {
 
   if (isManagement || isProduction || isCreator || isHost) {
     return {
-      label: "Content & Production",
+      label: "Creator",
       items: [
         { href: "/my/admin/campaigns", label: "Campaigns", icon: <Megaphone className="mr-2 h-4 w-4" /> },
         { href: "/my/admin/reports", label: "Reports", icon: <BarChart3 className="mr-2 h-4 w-4" /> },
@@ -106,26 +106,17 @@ function getRoleSection(flags: {
     };
   }
 
-  if (isSales) {
+  if (isSales || isPromotions) {
     return {
-      label: "Sales",
+      label: "Sales & Marketing",
       items: [
         { href: "/my/sales", label: "Sales Dashboard", icon: <DollarSign className="mr-2 h-4 w-4" /> },
         { href: "/my/sales/campaign-builder", label: "Campaign Builder", icon: <Megaphone className="mr-2 h-4 w-4" /> },
         { href: "/my/sales/spot-shop", label: "Spot Shop", icon: <ShoppingBag className="mr-2 h-4 w-4" /> },
         { href: "/my/sales/invoices", label: "Invoices", icon: <Receipt className="mr-2 h-4 w-4" /> },
         { href: "/my/admin/campaigns", label: "My Campaigns", icon: <Briefcase className="mr-2 h-4 w-4" /> },
-      ],
-    };
-  }
-
-  if (isPromotions) {
-    return {
-      label: "Promotions",
-      items: [
-        { href: "/events/create", label: "Events Manager", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
+        { href: "/my/events", label: "Events Manager", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
         { href: "/contests", label: "Contests", icon: <Gift className="mr-2 h-4 w-4" /> },
-        { href: "/my/events", label: "My Events", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
       ],
     };
   }
@@ -138,12 +129,8 @@ function getRoleSection(flags: {
 // ---------------------------------------------------------------------------
 const VIEWABLE_ROLES: { value: UserRole; label: string }[] = [
   { value: "listener", label: "Listener" },
-  { value: "sales", label: "Sales" },
-  { value: "production", label: "Production" },
-  { value: "management", label: "Management" },
-  { value: "promotions", label: "Promotions" },
-  { value: "content_creator", label: "Content Creator" },
-  { value: "host", label: "Host" },
+  { value: "content_creator", label: "Creator" },
+  { value: "sales", label: "Sales & Marketing" },
 ];
 
 // ---------------------------------------------------------------------------
