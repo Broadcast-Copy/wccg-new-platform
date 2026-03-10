@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'wccg1045fm.com',
+      },
     ],
   },
   transpilePackages: ['@wccg/types', '@wccg/ui'],

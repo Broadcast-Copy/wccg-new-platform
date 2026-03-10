@@ -45,7 +45,7 @@ interface NavItem {
 }
 
 // ---------------------------------------------------------------------------
-// Listener nav items — always shown
+// Listener nav items
 // ---------------------------------------------------------------------------
 const listenerItems: NavItem[] = [
   { href: "/my", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -54,6 +54,18 @@ const listenerItems: NavItem[] = [
   { href: "/my/favorites", label: "Favorites", icon: Heart },
   { href: "/my/tickets", label: "My Tickets", icon: Ticket },
   { href: "/my/history", label: "Listening History", icon: Clock },
+];
+
+// ---------------------------------------------------------------------------
+// Creator nav items (used when toggle is set to Creator)
+// ---------------------------------------------------------------------------
+const creatorItems: NavItem[] = [
+  { href: "/my/admin/programming", label: "Programming", icon: Radio },
+  { href: "/my/admin/production", label: "Production Queue", icon: Clapperboard },
+  { href: "/my/studio", label: "Broadcast Studio", icon: Mic },
+  { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
+  { href: "/my/events", label: "Events Manager", icon: CalendarDays },
+  { href: "/creators", label: "Creator Hub", icon: Palette },
 ];
 
 // ---------------------------------------------------------------------------
@@ -137,7 +149,7 @@ function getRoleItems(flags: {
 }
 
 // ---------------------------------------------------------------------------
-// Role switcher options
+// Role switcher options (for the sidebar dropdown — Marketing/Sales/Admin)
 // ---------------------------------------------------------------------------
 const VIEWABLE_ROLES = [
   { value: "listener", label: "Listener" },
@@ -177,6 +189,52 @@ function NavLink({
       />
       {item.label}
     </Link>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Listener / Creator Toggle (pill in the content area header)
+// ---------------------------------------------------------------------------
+function ListenerCreatorToggle() {
+  const { roleOverride, isOverrideActive, setRoleOverride } = useUserRoles();
+
+  const isCreatorMode = isOverrideActive && roleOverride === "content_creator";
+
+  return (
+    <div className="inline-flex items-center rounded-full border border-border bg-muted/50 p-0.5">
+      <button
+        type="button"
+        onClick={() => {
+          if (isCreatorMode) {
+            setRoleOverride(null);
+          }
+        }}
+        className="rounded-full px-3.5 py-1 text-[12px] font-semibold transition-all"
+        style={
+          !isCreatorMode
+            ? { backgroundColor: "#74ddc7", color: "#0a0a0f" }
+            : undefined
+        }
+      >
+        Listener
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          if (!isCreatorMode) {
+            setRoleOverride("content_creator");
+          }
+        }}
+        className="rounded-full px-3.5 py-1 text-[12px] font-semibold transition-all"
+        style={
+          isCreatorMode
+            ? { backgroundColor: "#74ddc7", color: "#0a0a0f" }
+            : undefined
+        }
+      >
+        Creator
+      </button>
+    </div>
   );
 }
 
@@ -225,6 +283,17 @@ function SidebarContent({ pathname }: { pathname: string }) {
     isSuperAdmin,
   });
 
+  // Determine if the toggle is set to Creator mode
+  const isCreatorToggleActive = isOverrideActive && roleOverride === "content_creator";
+
+  // Determine if the override is a non-toggle role (Marketing, Sales, Admin, etc.)
+  // These are roles OTHER than "content_creator" and "listener"
+  const isNonToggleOverride =
+    isOverrideActive &&
+    roleOverride !== null &&
+    roleOverride !== "content_creator" &&
+    roleOverride !== "listener";
+
   return (
     <>
       {/* User info */}
@@ -243,9 +312,9 @@ function SidebarContent({ pathname }: { pathname: string }) {
           </div>
         </div>
 
-        {/* Role switcher */}
+        {/* Role switcher dropdown — for Marketing/Sales/Admin overrides */}
         <div className="space-y-2">
-          {!isOverrideActive ? (
+          {!isNonToggleOverride ? (
             <div className="relative" ref={roleSwitcherRef}>
               <button
                 type="button"
@@ -254,7 +323,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
               >
                 <span className="flex items-center gap-1.5">
                   <Eye className="h-3 w-3 shrink-0" />
-                  View as role…
+                  View as role...
                 </span>
                 <ChevronDown className={`h-3 w-3 shrink-0 transition-transform ${roleSwitcherOpen ? "rotate-180" : ""}`} />
               </button>
@@ -299,23 +368,37 @@ function SidebarContent({ pathname }: { pathname: string }) {
 
       {/* Navigation */}
       <nav className="flex flex-col gap-0.5 p-2">
-        {/* Listener items */}
-        {listenerItems.map((item) => (
-          <NavLink key={item.href} item={item} pathname={pathname} />
-        ))}
-
-        {/* Role-specific items */}
-        {roleSection.items.length > 0 && (
+        {/* When Creator toggle is active, show ONLY creator items */}
+        {isCreatorToggleActive ? (
           <>
-            <div className="my-2 border-t border-border" />
-            {roleSection.label && (
-              <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                {roleSection.label}
-              </p>
-            )}
-            {roleSection.items.map((item) => (
+            <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+              Creator
+            </p>
+            {creatorItems.map((item) => (
               <NavLink key={item.href + item.label} item={item} pathname={pathname} />
             ))}
+          </>
+        ) : (
+          <>
+            {/* Listener items — shown when in Listener mode or non-toggle override */}
+            {listenerItems.map((item) => (
+              <NavLink key={item.href} item={item} pathname={pathname} />
+            ))}
+
+            {/* Role-specific items (for Marketing/Sales/Admin overrides or natural roles) */}
+            {roleSection.items.length > 0 && (
+              <>
+                <div className="my-2 border-t border-border" />
+                {roleSection.label && (
+                  <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                    {roleSection.label}
+                  </p>
+                )}
+                {roleSection.items.map((item) => (
+                  <NavLink key={item.href + item.label} item={item} pathname={pathname} />
+                ))}
+              </>
+            )}
           </>
         )}
       </nav>
@@ -375,8 +458,16 @@ export default function MyDashboardLayout({
       </div>
 
       {/* Main content area */}
-      <div className="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-8">
-        {children}
+      <div className="flex-1 min-w-0">
+        {/* Content area header with Listener/Creator toggle */}
+        <div className="flex items-center justify-end px-4 sm:px-6 lg:px-8 pt-4 pb-0">
+          <ListenerCreatorToggle />
+        </div>
+
+        {/* Page content */}
+        <div className="px-4 sm:px-6 lg:px-8 py-6">
+          {children}
+        </div>
       </div>
     </div>
   );

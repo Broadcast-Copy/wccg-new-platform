@@ -19,6 +19,7 @@ import {
   Newspaper,
   Dribbble,
   ShieldCheck,
+  Church,
 } from "lucide-react";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 
@@ -135,18 +136,18 @@ export default function DiscoverPage() {
           </p>
         </div>
 
-        {/* 2×2 Feature Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Feature Cards — 3 top, 2 bottom */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Card 1: Curated DJ Mixshows */}
           <Link href="/mix-squad" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg hover:shadow-purple-500/5">
             <div className="flex items-center gap-3">
-              <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
+              <div className="relative h-28 w-28 sm:h-36 sm:w-36 rounded-full overflow-hidden border-2 border-border bg-muted">
                 <AppImage src="/images/shows/crank-corleone.png" alt="DJ" fill className="object-cover" />
               </div>
-              <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
+              <div className="relative h-28 w-28 sm:h-36 sm:w-36 rounded-full overflow-hidden border-2 border-border bg-muted">
                 <AppImage src="/images/shows/bootleg-kev-show.png" alt="DJ" fill className="object-cover" />
               </div>
-              <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
+              <div className="relative h-28 w-28 sm:h-36 sm:w-36 rounded-full overflow-hidden border-2 border-border bg-muted">
                 <AppImage src="/images/hosts/incognito.png" alt="DJ" fill className="object-cover" />
               </div>
             </div>
@@ -163,37 +164,41 @@ export default function DiscoverPage() {
           </Link>
 
           {/* Card 2: Live Shows & Podcasts */}
-          <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4">
+          <Link href="/shows" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg hover:shadow-purple-500/5">
             <div className="flex items-center gap-3">
-              <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
+              <div className="relative h-28 w-28 sm:h-36 sm:w-36 rounded-full overflow-hidden border-2 border-border bg-muted">
                 <AppImage src="/images/hosts/angela-yee.png" alt="Host" fill className="object-cover" />
               </div>
-              <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
+              <div className="relative h-28 w-28 sm:h-36 sm:w-36 rounded-full overflow-hidden border-2 border-border bg-muted">
                 <AppImage src="/images/hosts/shorty-corleone.png" alt="Host" fill className="object-cover" />
               </div>
-              <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-border bg-muted">
+              <div className="relative h-28 w-28 sm:h-36 sm:w-36 rounded-full overflow-hidden border-2 border-border bg-muted">
                 <AppImage src="/images/hosts/yung-joc.png" alt="Host" fill className="object-cover" />
               </div>
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-lg sm:text-xl font-bold text-foreground">Live Shows &amp; Podcasts</h3>
+              <h3 className="text-lg sm:text-xl font-bold text-foreground group-hover:text-[#74ddc7] transition-colors">Live Shows &amp; Podcasts</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 From live shows to podcasts, listeners enjoy fresh voices, exclusive content, and on-demand experiences.
               </p>
             </div>
-          </div>
+            <div className="flex items-center gap-1 text-xs text-[#7401df] group-hover:text-[#74ddc7] transition-colors font-medium">
+              Discover Shows
+              <ArrowRight className="h-3 w-3" />
+            </div>
+          </Link>
 
           {/* Card 3: Diverse News & Weather */}
           <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#00a651] text-white font-bold text-xs leading-tight text-center px-1">
+              <div className="flex h-28 w-28 sm:h-36 sm:w-36 items-center justify-center rounded-full bg-[#00a651] text-white font-bold text-lg sm:text-xl leading-tight text-center px-1">
                 <span>BN<br/>Network</span>
               </div>
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#f47920]">
-                <CloudSun className="h-8 w-8 text-white" />
+              <div className="flex h-28 w-28 sm:h-36 sm:w-36 items-center justify-center rounded-full bg-[#f47920]">
+                <CloudSun className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
               </div>
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#4566b0]">
-                <Newspaper className="h-8 w-8 text-white" />
+              <div className="flex h-28 w-28 sm:h-36 sm:w-36 items-center justify-center rounded-full bg-[#4566b0]">
+                <Newspaper className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
               </div>
             </div>
             <div className="space-y-1.5">
@@ -205,22 +210,48 @@ export default function DiscoverPage() {
           </div>
 
           {/* Card 4: Duke Sports */}
-          <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4">
+          <Link href="/sports" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg hover:shadow-purple-500/5">
             <div className="flex items-center gap-3">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#003087]">
-                <Dribbble className="h-8 w-8 text-white" />
+              <div className="flex h-28 w-28 sm:h-36 sm:w-36 items-center justify-center rounded-full bg-[#003087]">
+                <Dribbble className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
               </div>
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#003087]">
-                <ShieldCheck className="h-8 w-8 text-white" />
+              <div className="flex h-28 w-28 sm:h-36 sm:w-36 items-center justify-center rounded-full bg-[#003087]">
+                <ShieldCheck className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
               </div>
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-lg sm:text-xl font-bold text-foreground">Duke Sports</h3>
+              <h3 className="text-lg sm:text-xl font-bold text-foreground group-hover:text-[#74ddc7] transition-colors">Duke Sports</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Duke Sports brings you the excitement of Blue Devil football and basketball all season long.
               </p>
             </div>
-          </div>
+            <div className="flex items-center gap-1 text-xs text-[#7401df] group-hover:text-[#74ddc7] transition-colors font-medium">
+              Duke Blue Devils
+              <ArrowRight className="h-3 w-3" />
+            </div>
+          </Link>
+
+          {/* Card 5: Sunday Gospel Caravan */}
+          <Link href="/gospel-caravan" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg hover:shadow-purple-500/5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-28 w-28 sm:h-36 sm:w-36 items-center justify-center rounded-full bg-gradient-to-br from-[#d4a017] to-[#b8860b]">
+                <Church className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
+              </div>
+              <div className="flex h-28 w-28 sm:h-36 sm:w-36 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df] to-[#4c1d95]">
+                <Mic className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-lg sm:text-xl font-bold text-foreground group-hover:text-[#74ddc7] transition-colors">Sunday Gospel Caravan</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Uplifting gospel music, inspirational messages, and community worship every Sunday morning on WCCG.
+              </p>
+            </div>
+            <div className="flex items-center gap-1 text-xs text-[#7401df] group-hover:text-[#74ddc7] transition-colors font-medium">
+              Gospel Caravan
+              <ArrowRight className="h-3 w-3" />
+            </div>
+          </Link>
         </div>
       </section>
 

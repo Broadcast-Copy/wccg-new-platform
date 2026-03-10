@@ -17,6 +17,7 @@ import {
   Play,
 } from "lucide-react";
 import type { SportsTeam } from "@/data/sports";
+import { AppImage } from "@/components/ui/app-image";
 
 // ---------------------------------------------------------------------------
 // Tabs
@@ -55,12 +56,24 @@ export function TeamProfile({ team }: { team: SportsTeam }) {
           </Link>
 
           <div className="flex items-start gap-6">
-            {/* Team logo placeholder */}
+            {/* Team hero image */}
             <div
-              className="flex-shrink-0 h-20 w-20 sm:h-28 sm:w-28 rounded-2xl flex items-center justify-center border-2 border-white/20"
+              className="relative flex-shrink-0 h-20 w-20 sm:h-28 sm:w-28 rounded-2xl overflow-hidden border-2 border-white/20"
               style={{ backgroundColor: team.primaryColor }}
             >
-              <Trophy className="h-10 w-10 sm:h-14 sm:w-14 text-foreground/80" />
+              {team.heroImageUrl ? (
+                <AppImage
+                  src={team.heroImageUrl}
+                  alt={team.name}
+                  fill
+                  className="object-cover"
+                  sizes="112px"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full w-full">
+                  <Trophy className="h-10 w-10 sm:h-14 sm:w-14 text-foreground/80" />
+                </div>
+              )}
             </div>
 
             <div className="flex-1 min-w-0">

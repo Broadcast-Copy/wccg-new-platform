@@ -36,6 +36,7 @@ export interface SportsTeam {
   primaryColor: string;
   secondaryColor: string;
   logoUrl: string;
+  heroImageUrl: string;
   description: string;
   youtube: {
     channelName: string;
@@ -64,6 +65,7 @@ export const DUKE_BASKETBALL: SportsTeam = {
   primaryColor: "#003087",
   secondaryColor: "#FFFFFF",
   logoUrl: "/images/sports/duke-logo.svg",
+  heroImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/09/duke-basket-ball.png",
   description: "Duke Men's Basketball is one of the most storied programs in college basketball history. Under legendary coach Mike Krzyzewski and now Jon Scheyer, the Blue Devils have won 5 national championships, made 17 Final Four appearances, and produced countless NBA players. WCCG 104.5 FM brings you complete coverage of Duke basketball throughout the season.",
   youtube: {
     channelName: "Duke Blue Planet",
@@ -129,6 +131,7 @@ export const DUKE_FOOTBALL: SportsTeam = {
   primaryColor: "#003087",
   secondaryColor: "#FFFFFF",
   logoUrl: "/images/sports/duke-logo.svg",
+  heroImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/09/DUKE-FB-1.png",
   description: "Duke Blue Devils Football competes in the Atlantic Coast Conference and plays home games at the historic Wallace Wade Stadium in Durham, NC. Under head coach Manny Diaz, the program continues to build on its recent success. WCCG 104.5 FM brings you full coverage of Duke Football including game highlights, player interviews, and analysis.",
   youtube: {
     channelName: "Duke Blue Planet",

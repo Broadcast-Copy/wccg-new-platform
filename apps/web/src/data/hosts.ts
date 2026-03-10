@@ -98,9 +98,9 @@ export const HOST_ANGELA_YEE: HostData = {
   socialLinks: [
     { platform: "instagram", url: "https://instagram.com/angelayee", label: "@angelayee" },
     { platform: "twitter", url: "https://x.com/angelayee", label: "@angelayee" },
-    { platform: "youtube", url: "https://youtube.com/@WayUpWithAngelaYee", label: "@WayUpWithAngelaYee" },
+    { platform: "youtube", url: "https://youtube.com/@wayupwithyee", label: "@wayupwithyee" },
   ],
-  youtubeChannel: "@WayUpWithAngelaYee",
+  youtubeChannel: "@wayupwithyee",
   isSyndicated: true,
   isActive: true,
   category: "main",
