@@ -90,15 +90,18 @@ function getRoleSection(flags: {
     };
   }
 
-  if (isManagement) {
+  if (isManagement || isProduction || isCreator || isHost) {
     return {
-      label: "Management",
+      label: "Content & Production",
       items: [
         { href: "/my/admin/campaigns", label: "Campaigns", icon: <Megaphone className="mr-2 h-4 w-4" /> },
         { href: "/my/admin/reports", label: "Reports", icon: <BarChart3 className="mr-2 h-4 w-4" /> },
         { href: "/my/admin/programming", label: "Programming", icon: <Radio className="mr-2 h-4 w-4" /> },
+        { href: "/my/admin/production", label: "Production Queue", icon: <Clapperboard className="mr-2 h-4 w-4" /> },
+        { href: "/my/studio", label: "Broadcast Studio", icon: <Mic className="mr-2 h-4 w-4" /> },
+        { href: "/my/mixes", label: "Media Manager", icon: <FolderOpen className="mr-2 h-4 w-4" /> },
         { href: "/my/events", label: "Events Manager", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
-        { href: "/my/studio", label: "Broadcast Studio", icon: <Clapperboard className="mr-2 h-4 w-4" /> },
+        { href: "/creators", label: "Creator Hub", icon: <Palette className="mr-2 h-4 w-4" /> },
       ],
     };
   }
@@ -116,18 +119,6 @@ function getRoleSection(flags: {
     };
   }
 
-  if (isProduction) {
-    return {
-      label: "Production",
-      items: [
-        { href: "/my/admin/production", label: "Production Queue", icon: <Clapperboard className="mr-2 h-4 w-4" /> },
-        { href: "/studio/booking", label: "Studio Booking", icon: <Calendar className="mr-2 h-4 w-4" /> },
-        { href: "/my/studio", label: "Broadcast Studio", icon: <Mic className="mr-2 h-4 w-4" /> },
-        { href: "/my/mixes", label: "Media Manager", icon: <FolderOpen className="mr-2 h-4 w-4" /> },
-      ],
-    };
-  }
-
   if (isPromotions) {
     return {
       label: "Promotions",
@@ -135,18 +126,6 @@ function getRoleSection(flags: {
         { href: "/events/create", label: "Events Manager", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
         { href: "/contests", label: "Contests", icon: <Gift className="mr-2 h-4 w-4" /> },
         { href: "/my/events", label: "My Events", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
-      ],
-    };
-  }
-
-  if (isCreator || isHost) {
-    return {
-      label: isHost ? "Host Tools" : "Creator Tools",
-      items: [
-        { href: "/my/studio", label: "Broadcast Studio", icon: <Clapperboard className="mr-2 h-4 w-4" /> },
-        { href: "/my/mixes", label: "Media Manager", icon: <FolderOpen className="mr-2 h-4 w-4" /> },
-        { href: "/studio", label: "Studio Tools", icon: <Mic className="mr-2 h-4 w-4" /> },
-        { href: "/creators", label: "Creator Hub", icon: <Palette className="mr-2 h-4 w-4" /> },
       ],
     };
   }

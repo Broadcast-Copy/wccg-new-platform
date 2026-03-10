@@ -94,15 +94,18 @@ function getRoleItems(flags: {
     };
   }
 
-  if (isManagement) {
+  if (isManagement || isProduction || isCreator || isHost) {
     return {
-      label: "Management",
+      label: "Content & Production",
       items: [
         { href: "/my/admin/campaigns", label: "Campaigns", icon: Megaphone },
         { href: "/my/admin/reports", label: "Reports", icon: BarChart3 },
         { href: "/my/admin/programming", label: "Programming", icon: Radio },
+        { href: "/my/admin/production", label: "Production Queue", icon: Clapperboard },
+        { href: "/my/studio", label: "Broadcast Studio", icon: Mic },
+        { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
         { href: "/my/events", label: "Events Manager", icon: CalendarDays },
-        { href: "/my/studio", label: "Broadcast Studio", icon: Clapperboard },
+        { href: "/creators", label: "Creator Hub", icon: Palette },
       ],
     };
   }
@@ -120,18 +123,6 @@ function getRoleItems(flags: {
     };
   }
 
-  if (isProduction) {
-    return {
-      label: "Production",
-      items: [
-        { href: "/my/admin/production", label: "Production Queue", icon: Clapperboard },
-        { href: "/studio/booking", label: "Studio Booking", icon: Calendar },
-        { href: "/my/studio", label: "Broadcast Studio", icon: Mic },
-        { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
-      ],
-    };
-  }
-
   if (isPromotions) {
     return {
       label: "Promotions",
@@ -139,18 +130,6 @@ function getRoleItems(flags: {
         { href: "/events/create", label: "Events Manager", icon: CalendarDays },
         { href: "/contests", label: "Contests", icon: Gift },
         { href: "/my/events", label: "My Events", icon: CalendarDays },
-      ],
-    };
-  }
-
-  if (isCreator || isHost) {
-    return {
-      label: isHost ? "Host Tools" : "Creator Tools",
-      items: [
-        { href: "/my/studio", label: "Broadcast Studio", icon: Clapperboard },
-        { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
-        { href: "/studio", label: "Studio Tools", icon: Mic },
-        { href: "/creators", label: "Creator Hub", icon: Palette },
       ],
     };
   }
