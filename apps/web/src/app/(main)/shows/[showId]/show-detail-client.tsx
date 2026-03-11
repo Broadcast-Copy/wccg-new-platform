@@ -231,10 +231,10 @@ function PodcastPlayer({
 
   if (!allItems.length) {
     return (
-      <div className="flex h-48 items-center justify-center rounded-xl border border-white/10 bg-white/5">
+      <div className="flex h-48 items-center justify-center rounded-xl border border-border bg-muted/30">
         <div className="text-center space-y-2">
-          <Mic className="h-8 w-8 mx-auto text-white/40" />
-          <p className="text-sm text-white/50">
+          <Mic className="h-8 w-8 mx-auto text-muted-foreground/60" />
+          <p className="text-sm text-muted-foreground">
             No podcast episodes available yet. Check back soon!
           </p>
         </div>
@@ -332,21 +332,21 @@ function PodcastPlayer({
               className={`w-full flex items-center gap-3 rounded-lg p-3 text-left transition-colors ${
                 i === activeIdx
                   ? "bg-[#74ddc7]/10 border border-[#74ddc7]/20"
-                  : "hover:bg-white/5 border border-transparent"
+                  : "hover:bg-muted/50 border border-transparent"
               }`}
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-medium text-white">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-foreground">
                 {itemPlaying ? (
                   <Volume2 className="h-4 w-4 text-[#74ddc7] animate-pulse" />
                 ) : (
-                  <span className="text-white/60">{i + 1}</span>
+                  <span className="text-muted-foreground">{i + 1}</span>
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className={`text-sm truncate text-white ${i === activeIdx ? "font-semibold" : "font-medium"}`}>
+                <p className={`text-sm truncate text-foreground ${i === activeIdx ? "font-semibold" : "font-medium"}`}>
                   {item.title}
                 </p>
-                <div className="flex items-center gap-2 text-[11px] text-white/40">
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                   {item.type === "rss" && item.pubDate && (
                     <span>{formatDate(item.pubDate)}</span>
                   )}
@@ -361,7 +361,7 @@ function PodcastPlayer({
                   )}
                 </div>
               </div>
-              <Play className="h-4 w-4 shrink-0 text-white/30" />
+              <Play className="h-4 w-4 shrink-0 text-muted-foreground/50" />
             </button>
           );
         })}
@@ -378,10 +378,10 @@ function YouTubeFeed({ showId, showName }: { showId: string; showName: string })
 
   if (!youtube) {
     return (
-      <div className="flex h-48 items-center justify-center rounded-xl border border-white/10 bg-white/5">
+      <div className="flex h-48 items-center justify-center rounded-xl border border-border bg-muted/30">
         <div className="text-center space-y-2">
-          <Youtube className="h-8 w-8 mx-auto text-white/40" />
-          <p className="text-sm text-white/50">YouTube content coming soon</p>
+          <Youtube className="h-8 w-8 mx-auto text-muted-foreground/60" />
+          <p className="text-sm text-muted-foreground">YouTube content coming soon</p>
         </div>
       </div>
     );
@@ -497,10 +497,9 @@ export default function ShowDetailPage() {
 
   return (
     <div
-      className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-8 px-4 sm:px-6 lg:px-8 py-8 bg-[#0a0a0f] min-h-[80vh] space-y-8"
-      style={{ colorScheme: "dark" }}
+      className="min-h-[80vh] space-y-8"
     >
-      <Link href="/shows" className="inline-flex items-center gap-1 text-sm text-white/50 hover:text-white transition-colors">
+      <Link href="/shows" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
         <ArrowLeft className="h-4 w-4" /> Back to Shows
       </Link>
 
@@ -572,7 +571,7 @@ export default function ShowDetailPage() {
 
       {/* ─── Tabbed Content ─── */}
       <Tabs defaultValue="podcasts" className="space-y-6">
-        <TabsList className="w-full sm:w-auto bg-white/5 border border-white/10">
+        <TabsList className="w-full sm:w-auto bg-muted/50 border border-border">
           <TabsTrigger value="podcasts" className="flex-1 sm:flex-initial data-[state=active]:bg-[#74ddc7] data-[state=active]:text-[#0a0a0f]">
             <Mic className="mr-2 h-4 w-4" />Podcasts
           </TabsTrigger>
@@ -594,8 +593,8 @@ export default function ShowDetailPage() {
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
               {rssLoading ? (
-                <div className="flex h-48 items-center justify-center rounded-xl border border-white/10 bg-white/5">
-                  <div className="flex items-center gap-2 text-white/50">
+                <div className="flex h-48 items-center justify-center rounded-xl border border-border bg-muted/30">
+                  <div className="flex items-center gap-2 text-muted-foreground">
                     <Rss className="h-5 w-5 animate-pulse" />
                     <span>Loading podcast feed...</span>
                   </div>
@@ -617,8 +616,8 @@ export default function ShowDetailPage() {
             {/* Sidebar */}
             <div className="space-y-4">
               {/* Show Info Card */}
-              <div className="rounded-xl border border-white/10 bg-white/5 p-5 space-y-4">
-                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+                <h3 className="text-sm font-semibold text-card-foreground flex items-center gap-2">
                   <ListMusic className="h-4 w-4 text-[#74ddc7]" />
                   Show Info
                 </h3>
@@ -626,33 +625,33 @@ export default function ShowDetailPage() {
                   {(rssEpisodes.length > 0 || show.episodes.length > 0) && (
                     <>
                       <div className="flex justify-between text-sm">
-                        <span className="text-white/50">Episodes</span>
-                        <span className="font-medium text-white">{rssEpisodes.length + show.episodes.length}</span>
+                        <span className="text-muted-foreground">Episodes</span>
+                        <span className="font-medium text-card-foreground">{rssEpisodes.length + show.episodes.length}</span>
                       </div>
-                      <Separator className="bg-white/10" />
+                      <Separator />
                     </>
                   )}
                   {schedule && (
                     <>
                       <div className="flex justify-between text-sm">
-                        <span className="text-white/50">Schedule</span>
-                        <span className="font-medium text-white text-right text-xs">{schedule}</span>
+                        <span className="text-muted-foreground">Schedule</span>
+                        <span className="font-medium text-card-foreground text-right text-xs">{schedule}</span>
                       </div>
-                      <Separator className="bg-white/10" />
+                      <Separator />
                     </>
                   )}
                   {days && (
                     <>
                       <div className="flex justify-between text-sm">
-                        <span className="text-white/50">Days</span>
-                        <span className="font-medium text-white text-xs">{days}</span>
+                        <span className="text-muted-foreground">Days</span>
+                        <span className="font-medium text-card-foreground text-xs">{days}</span>
                       </div>
-                      <Separator className="bg-white/10" />
+                      <Separator />
                     </>
                   )}
                   <div className="flex justify-between text-sm">
-                    <span className="text-white/50">Status</span>
-                    <Badge className={`text-[10px] border-0 ${show.isActive ? "bg-[#74ddc7] text-[#0a0a0f]" : "bg-white/20 text-white/70"}`}>
+                    <span className="text-muted-foreground">Status</span>
+                    <Badge className={`text-[10px] border-0 ${show.isActive ? "bg-[#74ddc7] text-[#0a0a0f]" : "bg-muted text-muted-foreground"}`}>
                       {show.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </div>
@@ -661,8 +660,8 @@ export default function ShowDetailPage() {
 
               {/* Segments Card */}
               {segments.length > 0 && (
-                <div className="rounded-xl border border-white/10 bg-white/5 p-5 space-y-3">
-                  <h3 className="text-sm font-semibold text-white">Show Segments</h3>
+                <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+                  <h3 className="text-sm font-semibold text-card-foreground">Show Segments</h3>
                   <div className="flex flex-wrap gap-2">
                     {segments.map((seg) => (
                       <Badge key={seg} variant="outline" className="border-[#74ddc7]/30 text-[#74ddc7] text-[10px]">
@@ -674,17 +673,17 @@ export default function ShowDetailPage() {
               )}
 
               {/* Connect Card */}
-              <div className="rounded-xl border border-white/10 bg-white/5 p-5 space-y-3">
-                <h3 className="text-sm font-semibold text-white">Connect</h3>
+              <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+                <h3 className="text-sm font-semibold text-card-foreground">Connect</h3>
                 <div className="space-y-2">
-                  <a href="mailto:programming@wccg1045fm.com" className="flex items-center gap-2 text-sm text-white/50 hover:text-[#74ddc7] transition-colors">
+                  <a href="mailto:programming@wccg1045fm.com" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-[#74ddc7] transition-colors">
                     <Mail className="h-4 w-4" />programming@wccg1045fm.com
                   </a>
-                  <Link href="/contact" className="flex items-center gap-2 text-sm text-white/50 hover:text-[#74ddc7] transition-colors">
+                  <Link href="/contact" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-[#74ddc7] transition-colors">
                     <ExternalLink className="h-4 w-4" />Contact Us
                   </Link>
                   {showData?.podcastRss && (
-                    <a href={showData.podcastRss} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-white/50 hover:text-[#74ddc7] transition-colors">
+                    <a href={showData.podcastRss} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-[#74ddc7] transition-colors">
                       <Rss className="h-4 w-4" />Podcast RSS Feed
                     </a>
                   )}
@@ -704,24 +703,24 @@ export default function ShowDetailPage() {
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-6">
               {/* About */}
-              <div className="rounded-xl border border-white/10 bg-white/5 p-6 space-y-4">
-                <h2 className="text-xl font-bold text-white">About {show.name}</h2>
-                <p className="text-white/70 leading-relaxed whitespace-pre-line">
+              <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+                <h2 className="text-xl font-bold text-card-foreground">About {show.name}</h2>
+                <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
                   {show.description ?? "Show description coming soon."}
                 </p>
               </div>
 
               {/* Schedule */}
               {schedule && (
-                <div className="rounded-xl border border-white/10 bg-white/5 p-6 space-y-4">
-                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+                  <h2 className="text-lg font-bold text-card-foreground flex items-center gap-2">
                     <Calendar className="h-5 w-5 text-[#74ddc7]" />Broadcast Schedule
                   </h2>
                   <div className="flex items-center gap-3 rounded-lg bg-[#74ddc7]/10 border border-[#74ddc7]/20 p-4">
                     <Clock className="h-5 w-5 text-[#74ddc7]" />
                     <div>
-                      <p className="font-medium text-white">{schedule}</p>
-                      <p className="text-sm text-white/50">{days} — Eastern Time (ET) on WCCG 104.5 FM</p>
+                      <p className="font-medium text-foreground">{schedule}</p>
+                      <p className="text-sm text-muted-foreground">{days} — Eastern Time (ET) on WCCG 104.5 FM</p>
                     </div>
                   </div>
                 </div>
@@ -729,15 +728,15 @@ export default function ShowDetailPage() {
 
               {/* Segments */}
               {segments.length > 0 && (
-                <div className="rounded-xl border border-white/10 bg-white/5 p-6 space-y-4">
-                  <h2 className="text-lg font-bold text-white">Show Segments</h2>
+                <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+                  <h2 className="text-lg font-bold text-card-foreground">Show Segments</h2>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {segments.map((seg) => (
-                      <div key={seg} className="flex items-center gap-3 rounded-lg bg-white/5 border border-white/10 p-3">
+                      <div key={seg} className="flex items-center gap-3 rounded-lg bg-muted/50 border border-border p-3">
                         <div className="h-8 w-8 rounded-full bg-[#74ddc7]/20 flex items-center justify-center shrink-0">
                           <Mic className="h-4 w-4 text-[#74ddc7]" />
                         </div>
-                        <span className="text-sm font-medium text-white">{seg}</span>
+                        <span className="text-sm font-medium text-foreground">{seg}</span>
                       </div>
                     ))}
                   </div>
@@ -748,24 +747,24 @@ export default function ShowDetailPage() {
             {/* Sidebar - Host Image + Hosts List */}
             <div className="space-y-4">
               {hostImage && (
-                <div className="rounded-xl overflow-hidden border border-white/10">
+                <div className="rounded-xl overflow-hidden border border-border">
                   <img src={hostImage} alt={show.name} className="w-full object-cover" />
                 </div>
               )}
               {show.hosts.length > 0 && (
-                <div className="rounded-xl border border-white/10 bg-white/5 p-5 space-y-3">
-                  <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+                  <h3 className="text-sm font-semibold text-card-foreground flex items-center gap-2">
                     <Mic className="h-4 w-4 text-[#74ddc7]" />Hosts
                   </h3>
                   <div className="space-y-2">
                     {show.hosts.map((host) => (
-                      <Link key={host.id} href={`/hosts/${host.id}`} className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-white/5">
-                        <Avatar className="h-10 w-10 border border-white/10">
+                      <Link key={host.id} href={`/hosts/${host.id}`} className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-muted/50">
+                        <Avatar className="h-10 w-10 border border-border">
                           {host.avatarUrl && <AvatarImage src={host.avatarUrl} alt={host.name} />}
                           <AvatarFallback className="text-xs bg-[#74ddc7]/20 text-[#74ddc7]">{getInitials(host.name)}</AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="text-sm font-medium text-white">{host.name}</p>
+                          <p className="text-sm font-medium text-foreground">{host.name}</p>
                           {host.isPrimary && <p className="text-[10px] text-[#74ddc7]">Primary Host</p>}
                         </div>
                       </Link>
@@ -782,28 +781,28 @@ export default function ShowDetailPage() {
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {show.hosts.length > 0 ? show.hosts.map((host) => (
               <Link key={host.id} href={`/hosts/${host.id}`}>
-                <div className="h-full rounded-xl border border-white/10 bg-white/5 p-6 text-center space-y-4 transition-all hover:bg-white/10 hover:border-[#74ddc7]/30">
+                <div className="h-full rounded-xl border border-border bg-card p-6 text-center space-y-4 transition-all hover:bg-muted hover:border-[#74ddc7]/30">
                   <Avatar className="h-24 w-24 mx-auto border-2 border-[#74ddc7]/30">
                     {host.avatarUrl && <AvatarImage src={host.avatarUrl} alt={host.name} />}
                     <AvatarFallback className="text-xl bg-[#74ddc7]/20 text-[#74ddc7]">{getInitials(host.name)}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="font-semibold text-lg text-white">{host.name}</h3>
+                    <h3 className="font-semibold text-lg text-foreground">{host.name}</h3>
                     {host.isPrimary && (
                       <Badge variant="outline" className="mt-1 text-[10px] border-[#74ddc7]/30 text-[#74ddc7]">Primary Host</Badge>
                     )}
                   </div>
-                  {host.bio && <p className="text-sm text-white/50 line-clamp-3">{host.bio}</p>}
+                  {host.bio && <p className="text-sm text-muted-foreground line-clamp-3">{host.bio}</p>}
                   {host.email && (
-                    <p className="flex items-center justify-center gap-1 text-xs text-white/40">
+                    <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
                       <Mail className="h-3 w-3" />{host.email}
                     </p>
                   )}
                 </div>
               </Link>
             )) : (
-              <div className="col-span-full flex h-32 items-center justify-center rounded-xl border border-white/10 bg-white/5">
-                <p className="text-sm text-white/50">No hosts assigned to this show yet.</p>
+              <div className="col-span-full flex h-32 items-center justify-center rounded-xl border border-border bg-muted/30">
+                <p className="text-sm text-muted-foreground">No hosts assigned to this show yet.</p>
               </div>
             )}
           </div>

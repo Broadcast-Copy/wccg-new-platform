@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { useNowPlaying } from "@/hooks/use-now-playing";
+import { useMediaSession } from "@/hooks/use-media-session";
 import { useListeningPoints, awardSharePoints } from "@/hooks/use-listening-points";
 import { resolveNowPlaying } from "@/data/schedule";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,16 @@ export function GlobalPlayer() {
 
   // Track listening time for points rewards
   useListeningPoints(isPlaying);
+
+  // Media Session API — shows "Now Playing" on lock screen, notification shade,
+  // Bluetooth displays, and OS media controls for engagement even when phone is locked
+  useMediaSession({
+    metadata,
+    isPlaying,
+    onPlay: resume,
+    onPause: pause,
+    onStop: stop,
+  });
 
   // Current show/program name from schedule
   const [currentShow, setCurrentShow] = useState<string | null>(null);
