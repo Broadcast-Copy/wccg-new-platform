@@ -296,11 +296,8 @@ function SidebarContent({ pathname }: { pathname: string }) {
 
   return (
     <>
-      {/* Listener/Creator toggle + User info */}
-      <div className="border-b border-border px-4 py-4 space-y-3">
-        <div className="flex justify-center pb-1">
-          <ListenerCreatorToggle />
-        </div>
+      {/* User info + toggle */}
+      <div className="border-b border-border px-4 py-4 space-y-2">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#74ddc7]/30 to-[#7401df]/30 border border-border">
             <User className="h-4 w-4 text-foreground/70" />
@@ -314,63 +311,13 @@ function SidebarContent({ pathname }: { pathname: string }) {
             </p>
           </div>
         </div>
-
-        {/* Role switcher dropdown — for Marketing/Sales/Admin overrides */}
-        <div className="space-y-2">
-          {!isNonToggleOverride ? (
-            <div className="relative" ref={roleSwitcherRef}>
-              <button
-                type="button"
-                onClick={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
-                className="flex w-full items-center justify-between rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-[12px] font-medium text-muted-foreground cursor-pointer hover:bg-muted transition-colors focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/50"
-              >
-                <span className="flex items-center gap-1.5">
-                  <Eye className="h-3 w-3 shrink-0" />
-                  View as role...
-                </span>
-                <ChevronDown className={`h-3 w-3 shrink-0 transition-transform ${roleSwitcherOpen ? "rotate-180" : ""}`} />
-              </button>
-
-              {roleSwitcherOpen && (
-                <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-lg border border-border bg-card shadow-xl overflow-hidden">
-                  {VIEWABLE_ROLES.map((r) => (
-                    <button
-                      key={r.value}
-                      type="button"
-                      onClick={() => {
-                        setRoleOverride(r.value as UserRole);
-                        setRoleSwitcherOpen(false);
-                      }}
-                      className="flex w-full items-center px-3 py-2 text-[12px] font-medium text-foreground/80 hover:bg-foreground/[0.06] hover:text-foreground transition-colors text-left"
-                    >
-                      {r.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-2 rounded-lg border border-[#f59e0b]/30 bg-[#f59e0b]/10 px-3 py-1.5">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <Eye className="h-3 w-3 shrink-0 text-[#f59e0b]" />
-                <span className="truncate text-[11px] font-semibold text-[#f59e0b] capitalize">
-                  {roleOverride?.replace("_", " ")}
-                </span>
-              </div>
-              <button
-                onClick={() => setRoleOverride(null)}
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[#f59e0b] hover:bg-[#f59e0b]/20 transition-colors"
-                aria-label="Reset role override"
-              >
-                <RotateCcw className="h-3 w-3" />
-              </button>
-            </div>
-          )}
+        <div className="flex justify-center pt-1">
+          <ListenerCreatorToggle />
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex flex-col gap-0.5 p-2">
+      <nav className="flex flex-1 flex-col gap-0.5 p-2">
         {/* When Creator toggle is active, show ONLY creator items */}
         {isCreatorToggleActive ? (
           <>
@@ -405,6 +352,59 @@ function SidebarContent({ pathname }: { pathname: string }) {
           </>
         )}
       </nav>
+
+      {/* Role switcher — bottom of sidebar */}
+      <div className="border-t border-border px-3 py-3">
+        {!isNonToggleOverride ? (
+          <div className="relative" ref={roleSwitcherRef}>
+            <button
+              type="button"
+              onClick={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
+              className="flex w-full items-center justify-between rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-[12px] font-medium text-muted-foreground cursor-pointer hover:bg-muted transition-colors focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/50"
+            >
+              <span className="flex items-center gap-1.5">
+                <Eye className="h-3 w-3 shrink-0" />
+                View as role...
+              </span>
+              <ChevronDown className={`h-3 w-3 shrink-0 transition-transform ${roleSwitcherOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {roleSwitcherOpen && (
+              <div className="absolute left-0 right-0 bottom-full mb-1 z-50 rounded-lg border border-border bg-card shadow-xl overflow-hidden">
+                {VIEWABLE_ROLES.map((r) => (
+                  <button
+                    key={r.value}
+                    type="button"
+                    onClick={() => {
+                      setRoleOverride(r.value as UserRole);
+                      setRoleSwitcherOpen(false);
+                    }}
+                    className="flex w-full items-center px-3 py-2 text-[12px] font-medium text-foreground/80 hover:bg-foreground/[0.06] hover:text-foreground transition-colors text-left"
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-[#f59e0b]/30 bg-[#f59e0b]/10 px-3 py-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Eye className="h-3 w-3 shrink-0 text-[#f59e0b]" />
+              <span className="truncate text-[11px] font-semibold text-[#f59e0b] capitalize">
+                {roleOverride?.replace("_", " ")}
+              </span>
+            </div>
+            <button
+              onClick={() => setRoleOverride(null)}
+              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[#f59e0b] hover:bg-[#f59e0b]/20 transition-colors"
+              aria-label="Reset role override"
+            >
+              <RotateCcw className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+      </div>
     </>
   );
 }
