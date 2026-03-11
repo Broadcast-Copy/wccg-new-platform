@@ -115,10 +115,10 @@ export default async function ShowsPage() {
               <Mic2 className="h-8 w-8 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-2">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">
                 Show Directory
               </h1>
-              <p className="text-base text-muted-foreground max-w-2xl">
+              <p className="text-base text-white/60 max-w-2xl">
                 Explore all shows on WCCG 104.5 FM — live morning shows,
                 afternoon drives, late night sessions, gospel, mixshows, and
                 podcasts.
@@ -126,36 +126,36 @@ export default async function ShowsPage() {
             </div>
           </div>
           <div className="mt-8 grid grid-cols-3 gap-4">
-            <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
+            <div className="rounded-xl bg-black/20 backdrop-blur-sm border border-white/10 px-4 py-3">
               <div className="flex items-center gap-2">
                 <Mic2 className="h-4 w-4 text-pink-400" />
-                <span className="text-sm font-medium text-gray-300">
+                <span className="text-sm font-medium text-white/70">
                   Active Shows
                 </span>
               </div>
-              <p className="mt-1 text-2xl font-bold text-foreground">
+              <p className="mt-1 text-2xl font-bold text-white">
                 {activeShows.length}
               </p>
             </div>
-            <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
+            <div className="rounded-xl bg-black/20 backdrop-blur-sm border border-white/10 px-4 py-3">
               <div className="flex items-center gap-2">
                 <Podcast className="h-4 w-4 text-purple-400" />
-                <span className="text-sm font-medium text-gray-300">
+                <span className="text-sm font-medium text-white/70">
                   Total Shows
                 </span>
               </div>
-              <p className="mt-1 text-2xl font-bold text-foreground">
+              <p className="mt-1 text-2xl font-bold text-white">
                 {shows.length}
               </p>
             </div>
-            <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
+            <div className="rounded-xl bg-black/20 backdrop-blur-sm border border-white/10 px-4 py-3">
               <div className="flex items-center gap-2">
                 <Zap className="h-4 w-4 text-amber-400" />
-                <span className="text-sm font-medium text-gray-300">
+                <span className="text-sm font-medium text-white/70">
                   On Air
                 </span>
               </div>
-              <p className="mt-1 text-2xl font-bold text-foreground">24/7</p>
+              <p className="mt-1 text-2xl font-bold text-white">24/7</p>
             </div>
           </div>
         </div>

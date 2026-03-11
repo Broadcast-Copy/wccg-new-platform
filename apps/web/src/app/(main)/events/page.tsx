@@ -45,25 +45,25 @@ export default async function EventsPage() {
               <CalendarDays className="h-8 w-8 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-2">Events &amp; Experiences</h1>
-              <p className="text-base text-muted-foreground max-w-2xl">Discover upcoming events, concerts, and community experiences in Fayetteville. Attend events to earn mY1045 points.</p>
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">Events &amp; Experiences</h1>
+              <p className="text-base text-white/60 max-w-2xl">Discover upcoming events, concerts, and community experiences in Fayetteville. Attend events to earn mY1045 points.</p>
             </div>
             <Button asChild className="rounded-full gap-2 bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20">
               <Link href="/events/create"><Plus className="h-4 w-4" />Create Event</Link>
             </Button>
           </div>
           <div className="mt-8 grid grid-cols-3 gap-4">
-            <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
-              <div className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-orange-400" /><span className="text-sm font-medium text-gray-300">Upcoming</span></div>
-              <p className="mt-1 text-2xl font-bold text-foreground">{events.length}</p>
+            <div className="rounded-xl bg-black/20 backdrop-blur-sm border border-white/10 px-4 py-3">
+              <div className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-orange-400" /><span className="text-sm font-medium text-white/70">Upcoming</span></div>
+              <p className="mt-1 text-2xl font-bold text-white">{events.length}</p>
             </div>
-            <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
-              <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-teal-400" /><span className="text-sm font-medium text-gray-300">Location</span></div>
-              <p className="mt-1 text-2xl font-bold text-foreground">Fayetteville</p>
+            <div className="rounded-xl bg-black/20 backdrop-blur-sm border border-white/10 px-4 py-3">
+              <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-teal-400" /><span className="text-sm font-medium text-white/70">Location</span></div>
+              <p className="mt-1 text-2xl font-bold text-white">Fayetteville</p>
             </div>
-            <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
-              <div className="flex items-center gap-2"><Ticket className="h-4 w-4 text-amber-400" /><span className="text-sm font-medium text-gray-300">Perks</span></div>
-              <p className="mt-1 text-2xl font-bold text-foreground">Earn Pts</p>
+            <div className="rounded-xl bg-black/20 backdrop-blur-sm border border-white/10 px-4 py-3">
+              <div className="flex items-center gap-2"><Ticket className="h-4 w-4 text-amber-400" /><span className="text-sm font-medium text-white/70">Perks</span></div>
+              <p className="mt-1 text-2xl font-bold text-white">Earn Pts</p>
             </div>
           </div>
         </div>

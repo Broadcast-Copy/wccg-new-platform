@@ -142,7 +142,7 @@ function SocialLinksBar({ hostData }: { hostData: HostData }) {
           href={social.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-muted-foreground transition-all hover:bg-[#74ddc7]/20 hover:text-[#74ddc7] hover:border-[#74ddc7]/30"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-foreground/5 text-muted-foreground transition-all hover:bg-[#74ddc7]/20 hover:text-[#74ddc7] hover:border-[#74ddc7]/30"
           title={social.label}
         >
           <social.icon className="h-4 w-4" />

@@ -480,7 +480,7 @@ export default function ShowDetailPage() {
         <Link href="/shows" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" /> Back to Shows
         </Link>
-        <div className="flex h-64 items-center justify-center rounded-xl border border-white/10 bg-white/5">
+        <div className="flex h-64 items-center justify-center rounded-xl border border-border bg-muted/30">
           <p className="text-sm text-muted-foreground">{error ?? "Show not found."}</p>
         </div>
       </div>
@@ -496,7 +496,10 @@ export default function ShowDetailPage() {
   const gradient = showData?.gradient ?? "from-purple-900 via-indigo-900 to-teal-800";
 
   return (
-    <div className="space-y-8" style={{ colorScheme: "dark" }}>
+    <div
+      className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-8 px-4 sm:px-6 lg:px-8 py-8 bg-[#0a0a0f] min-h-[80vh] space-y-8"
+      style={{ colorScheme: "dark" }}
+    >
       <Link href="/shows" className="inline-flex items-center gap-1 text-sm text-white/50 hover:text-white transition-colors">
         <ArrowLeft className="h-4 w-4" /> Back to Shows
       </Link>

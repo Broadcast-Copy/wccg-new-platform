@@ -383,7 +383,7 @@ export default function MainLayout({
             </div>
             <Link
               href="/advertise"
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-1.5 text-xs font-semibold text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground transition-colors"
             >
               Get Started
             </Link>

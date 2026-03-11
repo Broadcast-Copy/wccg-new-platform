@@ -99,7 +99,7 @@ export const SHOW_STREETZ_MORNING: ShowData = {
     channelUrl: "https://youtube.com/@WCCG1045FM",
     searchQuery: "Streetz Morning Takeover WCCG",
   },
-  podcastRss: "https://post.futurimedia.com/streetz/playlist/rss/4.xml",
+  podcastRss: "https://feeds.simplecast.com/c3z3h1Ug",
   segments: ["Date Dilemma", "Shawty's Crazy Report", "Celebrity Interviews", "Trending Topics"],
   isSyndicated: true,
   isActive: true,

@@ -53,7 +53,7 @@ export function YouTubeGrid({
 
       {/* Main embedded player */}
       {embedSrc && (
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/40">
+        <div className="overflow-hidden rounded-2xl border border-border bg-black/40">
           <div className="relative aspect-video w-full">
             <iframe
               src={embedSrc}
@@ -71,7 +71,7 @@ export function YouTubeGrid({
         {Array.from({ length: placeholderCount }).map((_, i) => (
           <div
             key={i}
-            className="group relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] transition-all hover:border-[#74ddc7]/30 hover:shadow-lg hover:shadow-[#74ddc7]/5"
+            className="group relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-muted/50 to-muted/20 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg hover:shadow-[#74ddc7]/5"
           >
             {/* Thumbnail placeholder */}
             <div className="relative aspect-video bg-gradient-to-br from-gray-800 to-gray-900">
@@ -87,8 +87,8 @@ export function YouTubeGrid({
             </div>
             {/* Card info */}
             <div className="space-y-1.5 p-3">
-              <div className="h-4 w-3/4 rounded bg-white/10" />
-              <div className="h-3 w-1/2 rounded bg-white/5" />
+              <div className="h-4 w-3/4 rounded bg-muted" />
+              <div className="h-3 w-1/2 rounded bg-muted/60" />
             </div>
           </div>
         ))}

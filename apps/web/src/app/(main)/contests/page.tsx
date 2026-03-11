@@ -431,10 +431,10 @@ export default function ContestsPage() {
                 {activeCount} Active Contests
               </span>
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl md:text-5xl">
+            <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl">
               Contests &amp; <span className="text-[#74ddc7]">Giveaways</span>
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+            <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg">
               Win cash, concert tickets, exclusive merch, and more! Enter online,
               call in, or use the mY1045 app for your chance to win.
             </p>
