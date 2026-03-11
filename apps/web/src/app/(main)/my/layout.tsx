@@ -201,7 +201,7 @@ function ListenerCreatorToggle() {
   const isCreatorMode = isOverrideActive && roleOverride === "content_creator";
 
   return (
-    <div className="inline-flex items-center rounded-full border border-border bg-muted/50 p-0.5">
+    <div className="inline-flex items-center rounded-full border border-border bg-muted/50 p-px">
       <button
         type="button"
         onClick={() => {
@@ -209,7 +209,7 @@ function ListenerCreatorToggle() {
             setRoleOverride(null);
           }
         }}
-        className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition-all"
+        className="rounded-full px-2 py-px text-[9px] font-semibold transition-all"
         style={
           !isCreatorMode
             ? { backgroundColor: "#74ddc7", color: "#0a0a0f" }
@@ -225,7 +225,7 @@ function ListenerCreatorToggle() {
             setRoleOverride("content_creator");
           }
         }}
-        className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition-all"
+        className="rounded-full px-2 py-px text-[9px] font-semibold transition-all"
         style={
           isCreatorMode
             ? { backgroundColor: "#74ddc7", color: "#0a0a0f" }
@@ -296,8 +296,11 @@ function SidebarContent({ pathname }: { pathname: string }) {
 
   return (
     <>
-      {/* User info + toggle */}
+      {/* Toggle + User info */}
       <div className="border-b border-border px-4 py-4 space-y-2">
+        <div className="flex justify-end">
+          <ListenerCreatorToggle />
+        </div>
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#74ddc7]/30 to-[#7401df]/30 border border-border">
             <User className="h-4 w-4 text-foreground/70" />
@@ -310,9 +313,6 @@ function SidebarContent({ pathname }: { pathname: string }) {
               {user?.email || ""}
             </p>
           </div>
-        </div>
-        <div className="flex justify-center pt-1">
-          <ListenerCreatorToggle />
         </div>
       </div>
 
