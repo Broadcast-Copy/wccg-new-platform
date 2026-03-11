@@ -46,7 +46,7 @@ export default function SportsPage() {
           {ALL_SPORTS_TEAMS.map((team) => (
             <div
               key={team.id}
-              className="group relative overflow-hidden rounded-2xl border border-border bg-white/[0.03] transition-all hover:border-white/[0.15] hover:bg-white/[0.05]"
+              className="group relative overflow-hidden rounded-2xl border border-border bg-foreground/[0.03] transition-all hover:border-foreground/[0.15] hover:bg-foreground/[0.05]"
             >
               {/* Team Image */}
               <div className="relative aspect-[16/10] w-full overflow-hidden bg-gradient-to-br from-[#003087]/30 to-[#001a4d]/30">

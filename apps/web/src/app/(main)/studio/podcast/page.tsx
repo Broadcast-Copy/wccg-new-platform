@@ -53,6 +53,10 @@ import {
   Unlock,
   PanelBottomOpen,
   PanelBottomClose,
+  Mail,
+  QrCode,
+  Save,
+  MonitorPlay,
 } from "lucide-react";
 import { LoginRequired } from "@/components/auth/login-required";
 
@@ -340,6 +344,52 @@ function VideoTile({
 }
 
 // ---------------------------------------------------------------------------
+// Screen share tile
+// ---------------------------------------------------------------------------
+
+function ScreenShareTile({
+  streamRef,
+}: {
+  streamRef: React.RefObject<MediaStream | null>;
+}) {
+  const videoCallbackRef = useCallback(
+    (el: HTMLVideoElement | null) => {
+      if (el && streamRef?.current) {
+        el.srcObject = streamRef.current;
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [streamRef?.current]
+  );
+
+  return (
+    <div className="relative w-full h-full rounded-xl overflow-hidden bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-800 group">
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <video
+        ref={videoCallbackRef}
+        autoPlay
+        playsInline
+        className="absolute inset-0 w-full h-full object-contain bg-black"
+      />
+      {/* Label */}
+      <div className="absolute bottom-3 left-3 flex items-center gap-2">
+        <span className="bg-black/60 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+          <MonitorPlay className="h-3 w-3 text-[#74ddc7]" />
+          Screen Share
+        </span>
+      </div>
+      {/* Live indicator */}
+      <div className="absolute top-3 left-3 flex items-center gap-1 bg-[#74ddc7]/20 backdrop-blur-sm px-2 py-1 rounded-lg">
+        <Circle className="h-2 w-2 fill-[#74ddc7] text-[#74ddc7] animate-pulse" />
+        <span className="text-[10px] font-bold text-[#74ddc7] tracking-wide">
+          LIVE
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Format helpers
 // ---------------------------------------------------------------------------
 
@@ -408,6 +458,13 @@ function PodcastStudioContent() {
   // Camera
   const [hasCamera, setHasCamera] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Screen sharing
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+
+  // Save to media
+  const [savedToMedia, setSavedToMedia] = useState(false);
 
   // Recording
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -790,6 +847,65 @@ function PodcastStudioContent() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // ------ Screen sharing ------
+  const toggleScreenShare = useCallback(async () => {
+    if (isScreenSharing) {
+      // Stop screen sharing
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach((t) => t.stop());
+        screenStreamRef.current = null;
+      }
+      setIsScreenSharing(false);
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true,
+        });
+        screenStreamRef.current = stream;
+        setIsScreenSharing(true);
+
+        // Listen for user stopping via browser UI
+        stream.getVideoTracks()[0]?.addEventListener("ended", () => {
+          screenStreamRef.current = null;
+          setIsScreenSharing(false);
+        });
+      } catch (err) {
+        console.warn("[PodcastStudio] Screen share cancelled or failed:", err);
+      }
+    }
+  }, [isScreenSharing]);
+
+  // ------ Save recording to media manager ------
+  const handleSaveToMedia = useCallback(() => {
+    if (!recordedUrl) return;
+
+    const mediaKey = "wccg_media_manager";
+    const existing = JSON.parse(
+      localStorage.getItem(mediaKey) || '{"folders":[],"files":[]}'
+    );
+
+    const newFile = {
+      id: `media-${Date.now()}`,
+      name: episodeName,
+      category: "mix",
+      folderId: "root",
+      format: "webm",
+      duration: recordingTime,
+      size: recordingBytes,
+      createdAt: new Date().toISOString(),
+      status: "PUBLISHED",
+      blobUrl: recordedUrl,
+    };
+
+    existing.files = [...(existing.files || []), newFile];
+    localStorage.setItem(mediaKey, JSON.stringify(existing));
+
+    // Show confirmation
+    setSavedToMedia(true);
+    setTimeout(() => setSavedToMedia(false), 3000);
+  }, [recordedUrl, episodeName, recordingTime, recordingBytes]);
+
   const handleSendChat = () => {
     if (!chatInput.trim()) return;
     setChatMessages((prev) => [
@@ -1020,10 +1136,14 @@ function PodcastStudioContent() {
       ...others.map((p) => (
         <VideoTile key={p.id} participant={p} />
       )),
+      // Screen share tile when active
+      ...(isScreenSharing
+        ? [<ScreenShareTile key="screen-share" streamRef={screenStreamRef} />]
+        : []),
     ].filter(Boolean);
 
-    // If only host, add a placeholder "waiting for guests" tile
-    if (allTiles.length === 1) {
+    // If only host (no guests, no screen share), add a placeholder "waiting for guests" tile
+    if (allTiles.length === 1 && !isScreenSharing) {
       allTiles.push(
         <div
           key="empty"
@@ -1116,7 +1236,7 @@ function PodcastStudioContent() {
   // =====================================================================
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] -mx-4 sm:-mx-6 lg:-mx-8 -mt-6 overflow-hidden bg-zinc-950">
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] -mx-4 sm:-mx-6 lg:-mx-8 -mt-6 overflow-hidden bg-zinc-950 text-white" style={{ colorScheme: 'dark' }}>
       {/* ================================================================= */}
       {/* Top Bar                                                           */}
       {/* ================================================================= */}
@@ -1385,17 +1505,109 @@ function PodcastStudioContent() {
                     ))}
                   </div>
 
-                  {/* Download recording */}
+                  {/* Download recording + Save to Media */}
                   {recordedUrl && (
-                    <a
-                      href={recordedUrl}
-                      download={`${episodeName.replace(/\s+/g, "-")}-${Date.now()}.webm`}
-                      className="flex items-center justify-center gap-2 bg-[#74ddc7]/10 text-[#74ddc7] border border-[#74ddc7]/30 rounded-xl px-3 py-2.5 text-xs font-semibold hover:bg-[#74ddc7]/20 transition-colors"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      Download Recording ({recordVideoEnabled ? "Video" : "Audio"})
-                    </a>
+                    <div className="flex flex-col gap-2">
+                      <a
+                        href={recordedUrl}
+                        download={`${episodeName.replace(/\s+/g, "-")}-${Date.now()}.webm`}
+                        className="flex items-center justify-center gap-2 bg-[#74ddc7]/10 text-[#74ddc7] border border-[#74ddc7]/30 rounded-xl px-3 py-2.5 text-xs font-semibold hover:bg-[#74ddc7]/20 transition-colors"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Download Recording ({recordVideoEnabled ? "Video" : "Audio"})
+                      </a>
+                      <button
+                        onClick={handleSaveToMedia}
+                        disabled={savedToMedia}
+                        className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold transition-colors ${
+                          savedToMedia
+                            ? "bg-green-500/10 text-green-400 border border-green-500/30"
+                            : "bg-[#7401df]/10 text-[#7401df] border border-[#7401df]/30 hover:bg-[#7401df]/20"
+                        }`}
+                      >
+                        {savedToMedia ? (
+                          <>
+                            <Check className="h-3.5 w-3.5" />
+                            Saved to Media Library
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-3.5 w-3.5" />
+                            Save to Media Library
+                          </>
+                        )}
+                      </button>
+                    </div>
                   )}
+
+                  {/* Invite & Share */}
+                  <div className="space-y-2">
+                    <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">
+                      Invite &amp; Share
+                    </span>
+
+                    {/* Copy link */}
+                    <button
+                      onClick={handleCopyLink}
+                      className="w-full flex items-center justify-center gap-2 bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-xs font-medium text-zinc-300 hover:border-zinc-600 hover:text-white transition-colors"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="h-3.5 w-3.5 text-green-400" />
+                          <span className="text-green-400">Link Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3.5 w-3.5" />
+                          Copy Invite Link
+                        </>
+                      )}
+                    </button>
+
+                    {/* Share via Email */}
+                    <a
+                      href={`mailto:?subject=${encodeURIComponent(
+                        "Join my podcast on WCCG Studio"
+                      )}&body=${encodeURIComponent(
+                        `Hey! Join my podcast recording session:\n\n${
+                          typeof window !== "undefined"
+                            ? `${window.location.origin}/studio/podcast?join=true`
+                            : ""
+                        }\n\nPowered by WCCG 104.5 FM Studio`
+                      )}`}
+                      className="w-full flex items-center justify-center gap-2 bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-xs font-medium text-zinc-300 hover:border-zinc-600 hover:text-white transition-colors"
+                    >
+                      <Mail className="h-3.5 w-3.5" />
+                      Share via Email
+                    </a>
+
+                    {/* QR Code */}
+                    <div className="bg-zinc-800/50 rounded-xl p-3 space-y-2 border border-zinc-800">
+                      <div className="flex items-center gap-1.5">
+                        <QrCode className="h-3.5 w-3.5 text-zinc-400" />
+                        <span className="text-xs font-semibold text-white">
+                          QR Code
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-zinc-500">
+                        Scan to join from a mobile device
+                      </p>
+                      <div className="flex justify-center bg-white rounded-lg p-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(
+                            typeof window !== "undefined"
+                              ? `${window.location.origin}/studio/podcast?join=true`
+                              : ""
+                          )}`}
+                          alt="QR code to join studio"
+                          className="h-[160px] w-[160px]"
+                          width={160}
+                          height={160}
+                        />
+                      </div>
+                    </div>
+                  </div>
 
                   {/* Director — Layout presets */}
                   <div className="space-y-2">
@@ -2107,8 +2319,13 @@ function PodcastStudioContent() {
         <div className="flex items-center gap-2">
           {/* Screen Share */}
           <button
-            className="p-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-            title="Share Screen"
+            onClick={toggleScreenShare}
+            className={`p-2.5 rounded-xl transition-colors ${
+              isScreenSharing
+                ? "text-[#74ddc7] bg-[#74ddc7]/10 ring-1 ring-[#74ddc7]/30"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+            }`}
+            title={isScreenSharing ? "Stop sharing" : "Share Screen"}
           >
             <MonitorUp className="h-5 w-5" />
           </button>

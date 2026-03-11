@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { useNowPlaying } from "@/hooks/use-now-playing";
-import { useListeningPoints } from "@/hooks/use-listening-points";
+import { useListeningPoints, awardSharePoints } from "@/hooks/use-listening-points";
+import { resolveNowPlaying } from "@/data/schedule";
 import { Button } from "@/components/ui/button";
-import { Pause, Play, Volume2, VolumeX, Radio, Music2, X } from "lucide-react";
+import { Pause, Play, Volume2, VolumeX, Radio, Music2, X, Share2 } from "lucide-react";
 
 export function GlobalPlayer() {
   const { isPlaying, pause, resume, stop, volume, setVolume, metadata, currentStream, updateMetadata } =
@@ -17,9 +18,55 @@ export function GlobalPlayer() {
   // Track listening time for points rewards
   useListeningPoints(isPlaying);
 
+  // Current show/program name from schedule
+  const [currentShow, setCurrentShow] = useState<string | null>(null);
+
   // Track title change animation
   const [titlePop, setTitlePop] = useState(false);
   const [prevTitle, setPrevTitle] = useState("");
+
+  // Share state feedback
+  const [shareToast, setShareToast] = useState(false);
+
+  // Resolve currently airing show and refresh every 60s
+  useEffect(() => {
+    function updateShow() {
+      const block = resolveNowPlaying();
+      setCurrentShow(block?.showName ?? null);
+    }
+    updateShow();
+    const timer = setInterval(updateShow, 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Share handler
+  const handleShare = useCallback(async () => {
+    const shareData = {
+      title: `Listening to WCCG 104.5 FM`,
+      text: currentShow
+        ? `Tune in to ${currentShow} on WCCG 104.5 FM!`
+        : `Tune in to WCCG 104.5 FM!`,
+      url: "https://wccg1045fm.com",
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(
+          `${shareData.text} ${shareData.url}`
+        );
+      }
+      // Award share points
+      const awarded = awardSharePoints();
+      if (awarded) {
+        setShareToast(true);
+        setTimeout(() => setShareToast(false), 3000);
+      }
+    } catch {
+      // User cancelled share dialog — ignore
+    }
+  }, [currentShow]);
 
   // Update metadata when now-playing data changes
   useEffect(() => {
@@ -101,7 +148,7 @@ export function GlobalPlayer() {
             <span className="text-muted-foreground/30 mx-0.5">|</span>
           </div>
 
-          {/* Song title + artist — scrolling / pop-out */}
+          {/* Show name + Song title + artist */}
           <div
             className={`flex min-w-0 flex-1 flex-col transition-all duration-500 ${
               titlePop
@@ -109,6 +156,12 @@ export function GlobalPlayer() {
                 : "translate-x-0 opacity-100"
             }`}
           >
+            {/* Currently airing show/program name */}
+            {currentShow && (
+              <span className="truncate text-[10px] font-medium text-muted-foreground/70 ml-5 leading-tight">
+                {"\u{1F4FB}"} {currentShow}
+              </span>
+            )}
             <div className="flex items-center gap-1.5 min-w-0">
               <Music2 className={`h-3.5 w-3.5 shrink-0 ${titlePop ? "text-[#74ddc7]" : "text-muted-foreground/50"} transition-colors duration-500`} />
               <span
@@ -153,6 +206,24 @@ export function GlobalPlayer() {
             </span>
           </div>
         )}
+
+        {/* Share Button */}
+        <div className="relative shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleShare}
+            aria-label="Share"
+            className="h-8 w-8 rounded-full text-muted-foreground hover:text-[#74ddc7] hover:bg-[#74ddc7]/10"
+          >
+            <Share2 className="h-4 w-4" />
+          </Button>
+          {shareToast && (
+            <span className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-[#74ddc7] px-2 py-0.5 text-[10px] font-bold text-[#0a0a0f] animate-in fade-in slide-in-from-bottom-1">
+              +2 pts!
+            </span>
+          )}
+        </div>
 
         {/* Volume Controls */}
         <div className="flex items-center gap-1 shrink-0">

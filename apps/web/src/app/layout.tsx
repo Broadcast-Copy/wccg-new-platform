@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AudioProvider } from "@/components/player/audio-provider";
 import { GlobalPlayer } from "@/components/player/global-player";
 import { StreamPlayerProvider } from "@/components/player/stream-player-overlay";
+import { InactivityGuard } from "@/components/providers/inactivity-guard";
 import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
@@ -39,8 +40,10 @@ export default function RootLayout({
           <SupabaseProvider>
             <AudioProvider>
               <StreamPlayerProvider>
-                {children}
-                <GlobalPlayer />
+                <InactivityGuard>
+                  {children}
+                  <GlobalPlayer />
+                </InactivityGuard>
               </StreamPlayerProvider>
             </AudioProvider>
           </SupabaseProvider>

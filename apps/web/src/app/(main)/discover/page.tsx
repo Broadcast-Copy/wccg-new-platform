@@ -61,10 +61,10 @@ export default function DiscoverPage() {
               <Radio className="mr-1 h-3 w-3" />
               WCCG 104.5 FM
             </Badge>
-            <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl md:text-5xl">
+            <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl">
               Discover What&apos;s On
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+            <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg">
               20+ shows, 6 live channels, community events, local services, and
               exclusive perks&mdash;all in one place.
             </p>
@@ -80,7 +80,7 @@ export default function DiscoverPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="rounded-full border-white/20 text-foreground hover:bg-white/5 hover:text-foreground px-6"
+                className="rounded-full border-white/20 text-white hover:bg-white/5 hover:text-white px-6"
                 asChild
               >
                 <Link href="/shows">
@@ -92,36 +92,6 @@ export default function DiscoverPage() {
           </div>
         </div>
       </div>
-
-      {/* ── Community Banner ─────────────────────────────────────────── */}
-      <section className="mx-auto max-w-3xl rounded-xl border border-border bg-card overflow-hidden">
-        <div className="flex flex-col sm:flex-row items-stretch">
-          {/* Left: Community image */}
-          <div className="relative w-full sm:w-[45%] aspect-[4/3] overflow-hidden">
-            <AppImage
-              src="/images/discover-hero-1.png"
-              alt="WCCG 104.5 FM Community"
-              fill
-              className="object-cover"
-            />
-          </div>
-
-          {/* Right: Text content */}
-          <div className="flex-1 px-5 py-5 sm:px-7 sm:py-6 flex flex-col justify-center space-y-2">
-            <h2 className="text-lg sm:text-xl md:text-2xl font-extrabold tracking-tight text-foreground leading-tight">
-              WCCG 104.5 FM + Community<br />
-              Always Free, Always Local!
-            </h2>
-            <p className="text-xs text-muted-foreground leading-relaxed max-w-md">
-              Your free access to nonstop hits, exclusive interviews, giveaways, and local
-              event perks — all in one place.
-            </p>
-            <p className="text-xs font-bold text-foreground">
-              No Subscription. No Gimmicks.
-            </p>
-          </div>
-        </div>
-      </section>
 
       {/* ── Where Every Beat Belongs ──────────────────────────────────── */}
       <section className="space-y-8 py-4">
@@ -136,18 +106,18 @@ export default function DiscoverPage() {
           </p>
         </div>
 
-        {/* Feature Cards — 3 top, 2 bottom */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Feature Cards — 2-column grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Card 1: Curated DJ Mixshows */}
-          <Link href="/mix-squad" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg hover:shadow-purple-500/5">
+          <Link href="/mix-squad" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg">
             <div className="flex items-center gap-3">
-              <div className="relative h-28 w-28 sm:h-36 sm:w-36 rounded-full overflow-hidden border-2 border-border bg-muted">
+              <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
                 <AppImage src="/images/shows/crank-corleone.png" alt="DJ" fill className="object-cover" />
               </div>
-              <div className="relative h-28 w-28 sm:h-36 sm:w-36 rounded-full overflow-hidden border-2 border-border bg-muted">
+              <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
                 <AppImage src="/images/shows/bootleg-kev-show.png" alt="DJ" fill className="object-cover" />
               </div>
-              <div className="relative h-28 w-28 sm:h-36 sm:w-36 rounded-full overflow-hidden border-2 border-border bg-muted">
+              <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
                 <AppImage src="/images/hosts/incognito.png" alt="DJ" fill className="object-cover" />
               </div>
             </div>
@@ -164,16 +134,16 @@ export default function DiscoverPage() {
           </Link>
 
           {/* Card 2: Live Shows & Podcasts */}
-          <Link href="/shows" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg hover:shadow-purple-500/5">
+          <Link href="/shows" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg">
             <div className="flex items-center gap-3">
-              <div className="relative h-28 w-28 sm:h-36 sm:w-36 rounded-full overflow-hidden border-2 border-border bg-muted">
+              <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
                 <AppImage src="/images/hosts/angela-yee.png" alt="Host" fill className="object-cover" />
               </div>
-              <div className="relative h-28 w-28 sm:h-36 sm:w-36 rounded-full overflow-hidden border-2 border-border bg-muted">
-                <AppImage src="/images/hosts/shorty-corleone.png" alt="Host" fill className="object-cover" />
-              </div>
-              <div className="relative h-28 w-28 sm:h-36 sm:w-36 rounded-full overflow-hidden border-2 border-border bg-muted">
+              <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
                 <AppImage src="/images/hosts/yung-joc.png" alt="Host" fill className="object-cover" />
+              </div>
+              <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
+                <AppImage src="/images/hosts/incognito.png" alt="Host" fill className="object-cover" />
               </div>
             </div>
             <div className="space-y-1.5">
@@ -191,14 +161,14 @@ export default function DiscoverPage() {
           {/* Card 3: Diverse News & Weather */}
           <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-28 w-28 sm:h-36 sm:w-36 items-center justify-center rounded-full bg-[#00a651] text-white font-bold text-lg sm:text-xl leading-tight text-center px-1">
+              <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#00a651] text-white font-bold text-lg sm:text-xl leading-tight text-center px-1">
                 <span>BN<br/>Network</span>
               </div>
-              <div className="flex h-28 w-28 sm:h-36 sm:w-36 items-center justify-center rounded-full bg-[#f47920]">
-                <CloudSun className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
+              <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#f47920]">
+                <CloudSun className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
               </div>
-              <div className="flex h-28 w-28 sm:h-36 sm:w-36 items-center justify-center rounded-full bg-[#4566b0]">
-                <Newspaper className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
+              <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#4566b0]">
+                <Newspaper className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
               </div>
             </div>
             <div className="space-y-1.5">
@@ -210,13 +180,13 @@ export default function DiscoverPage() {
           </div>
 
           {/* Card 4: Duke Sports */}
-          <Link href="/sports" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg hover:shadow-purple-500/5">
+          <Link href="/sports" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg">
             <div className="flex items-center gap-3">
-              <div className="flex h-28 w-28 sm:h-36 sm:w-36 items-center justify-center rounded-full bg-[#003087]">
-                <Dribbble className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
+              <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#003087]">
+                <Dribbble className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
               </div>
-              <div className="flex h-28 w-28 sm:h-36 sm:w-36 items-center justify-center rounded-full bg-[#003087]">
-                <ShieldCheck className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
+              <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#003087]">
+                <ShieldCheck className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
               </div>
             </div>
             <div className="space-y-1.5">
@@ -232,23 +202,45 @@ export default function DiscoverPage() {
           </Link>
 
           {/* Card 5: Sunday Gospel Caravan */}
-          <Link href="/gospel-caravan" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg hover:shadow-purple-500/5">
+          <Link href="/gospel-caravan" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg">
             <div className="flex items-center gap-3">
-              <div className="flex h-28 w-28 sm:h-36 sm:w-36 items-center justify-center rounded-full bg-gradient-to-br from-[#d4a017] to-[#b8860b]">
-                <Church className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
+              <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-gradient-to-br from-[#d4a017] to-[#b8860b]">
+                <Church className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
               </div>
-              <div className="flex h-28 w-28 sm:h-36 sm:w-36 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df] to-[#4c1d95]">
-                <Mic className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
+              <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df] to-[#4c1d95]">
+                <Mic className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
               </div>
             </div>
             <div className="space-y-1.5">
               <h3 className="text-lg sm:text-xl font-bold text-foreground group-hover:text-[#74ddc7] transition-colors">Sunday Gospel Caravan</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Uplifting gospel music, inspirational messages, and community worship every Sunday morning on WCCG.
+                Bringing uplifting music, inspiring messages, and a community of faith together every Sunday.
               </p>
             </div>
             <div className="flex items-center gap-1 text-xs text-[#7401df] group-hover:text-[#74ddc7] transition-colors font-medium">
               Gospel Caravan
+              <ArrowRight className="h-3 w-3" />
+            </div>
+          </Link>
+
+          {/* Card 6: Legacy Streaming */}
+          <Link href="/channels" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#0d9488]">
+                <Radio className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
+              </div>
+              <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#ec4899]">
+                <Disc3 className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-lg sm:text-xl font-bold text-foreground group-hover:text-[#74ddc7] transition-colors">Legacy Streaming</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                These timeless streams carry the music, culture, and community that built our legacy.
+              </p>
+            </div>
+            <div className="flex items-center gap-1 text-xs text-[#7401df] group-hover:text-[#74ddc7] transition-colors font-medium">
+              Browse Channels
               <ArrowRight className="h-3 w-3" />
             </div>
           </Link>

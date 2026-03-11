@@ -209,7 +209,7 @@ function ListenerCreatorToggle() {
             setRoleOverride(null);
           }
         }}
-        className="rounded-full px-3.5 py-1 text-[12px] font-semibold transition-all"
+        className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition-all"
         style={
           !isCreatorMode
             ? { backgroundColor: "#74ddc7", color: "#0a0a0f" }
@@ -225,7 +225,7 @@ function ListenerCreatorToggle() {
             setRoleOverride("content_creator");
           }
         }}
-        className="rounded-full px-3.5 py-1 text-[12px] font-semibold transition-all"
+        className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition-all"
         style={
           isCreatorMode
             ? { backgroundColor: "#74ddc7", color: "#0a0a0f" }
@@ -296,16 +296,19 @@ function SidebarContent({ pathname }: { pathname: string }) {
 
   return (
     <>
-      {/* User info */}
+      {/* User info + Listener/Creator toggle */}
       <div className="border-b border-border px-4 py-4 space-y-3">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#74ddc7]/30 to-[#7401df]/30 border border-border">
             <User className="h-4 w-4 text-foreground/70" />
           </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-foreground">
-              {user?.user_metadata?.display_name || user?.email?.split("@")[0] || "My Account"}
-            </p>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <p className="truncate text-sm font-semibold text-foreground">
+                {user?.user_metadata?.display_name || user?.email?.split("@")[0] || "My Account"}
+              </p>
+              <ListenerCreatorToggle />
+            </div>
             <p className="truncate text-[11px] text-muted-foreground">
               {user?.email || ""}
             </p>
@@ -459,11 +462,6 @@ export default function MyDashboardLayout({
 
       {/* Main content area */}
       <div className="flex-1 min-w-0">
-        {/* Content area header with Listener/Creator toggle */}
-        <div className="flex items-center justify-end px-4 sm:px-6 lg:px-8 pt-4 pb-0">
-          <ListenerCreatorToggle />
-        </div>
-
         {/* Page content */}
         <div className="px-4 sm:px-6 lg:px-8 py-6">
           {children}

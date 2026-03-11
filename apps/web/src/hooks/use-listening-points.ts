@@ -13,13 +13,24 @@ import { useEffect, useRef } from "react";
  */
 
 const POINTS_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
+const ONE_HOUR_MS = 60 * 60 * 1000;
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 const STORAGE_KEY = "wccg_listening_points";
 const ACCUMULATED_KEY = "wccg_listening_accumulated_ms";
+const SESSION_START_KEY = "wccg_listening_session_start";
 
 interface PointsData {
   totalPoints: number;
   totalListeningMs: number;
   lastAwardedAt: string | null;
+  /** ISO date string (YYYY-MM-DD) of last share bonus */
+  lastShareDate?: string;
+  /** ISO date string (YYYY-MM-DD) of last daily bounty */
+  lastBountyDate?: string;
+  /** Whether the 1-hour streak bonus was awarded this session */
+  streak1hAwarded?: boolean;
+  /** Whether the 2-hour streak bonus was awarded this session */
+  streak2hAwarded?: boolean;
   history: Array<{
     points: number;
     reason: string;
@@ -27,17 +38,66 @@ interface PointsData {
   }>;
 }
 
+function defaultPointsData(): PointsData {
+  return {
+    totalPoints: 0,
+    totalListeningMs: 0,
+    lastAwardedAt: null,
+    lastShareDate: undefined,
+    lastBountyDate: undefined,
+    streak1hAwarded: false,
+    streak2hAwarded: false,
+    history: [],
+  };
+}
+
 function loadPointsData(): PointsData {
   if (typeof window === "undefined") {
-    return { totalPoints: 0, totalListeningMs: 0, lastAwardedAt: null, history: [] };
+    return defaultPointsData();
   }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) return { ...defaultPointsData(), ...JSON.parse(raw) };
   } catch {
     // ignore
   }
-  return { totalPoints: 0, totalListeningMs: 0, lastAwardedAt: null, history: [] };
+  return defaultPointsData();
+}
+
+/** Get today's date string in YYYY-MM-DD format (ET timezone) */
+function todayET(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+}
+
+/** Save listening session start timestamp */
+function saveSessionStart(ts: number) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(SESSION_START_KEY, String(ts));
+  } catch {
+    // ignore
+  }
+}
+
+/** Load listening session start timestamp */
+function loadSessionStart(): number {
+  if (typeof window === "undefined") return 0;
+  try {
+    const raw = localStorage.getItem(SESSION_START_KEY);
+    return raw ? parseInt(raw, 10) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** Clear listening session start (when playback stops) */
+function clearSessionStart() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(SESSION_START_KEY);
+  } catch {
+    // ignore
+  }
 }
 
 function savePointsData(data: PointsData) {
@@ -75,12 +135,43 @@ export function useListeningPoints(isPlaying: boolean) {
   useEffect(() => {
     if (isPlaying) {
       // Start tracking
-      lastTickRef.current = Date.now();
+      const now = Date.now();
+      lastTickRef.current = now;
+
+      // Start a new continuous session if one isn't active
+      if (!loadSessionStart()) {
+        saveSessionStart(now);
+        // Reset streak flags for new session
+        const data = loadPointsData();
+        data.streak1hAwarded = false;
+        data.streak2hAwarded = false;
+        savePointsData(data);
+      }
+
+      // Daily bounty — award 3 points on first listen of the day
+      {
+        const data = loadPointsData();
+        const today = todayET();
+        if (data.lastBountyDate !== today) {
+          data.lastBountyDate = today;
+          data.totalPoints += 3;
+          data.lastAwardedAt = new Date().toISOString();
+          data.history.unshift({
+            points: 3,
+            reason: "DAILY_BOUNTY",
+            timestamp: new Date().toISOString(),
+          });
+          if (data.history.length > 100) {
+            data.history = data.history.slice(0, 100);
+          }
+          savePointsData(data);
+        }
+      }
 
       intervalRef.current = setInterval(() => {
-        const now = Date.now();
-        const elapsed = now - lastTickRef.current;
-        lastTickRef.current = now;
+        const tickNow = Date.now();
+        const elapsed = tickNow - lastTickRef.current;
+        lastTickRef.current = tickNow;
 
         // Add elapsed time to accumulated
         let accumulated = loadAccumulated() + elapsed;
@@ -90,7 +181,7 @@ export function useListeningPoints(isPlaying: boolean) {
           const pointsToAward = Math.floor(accumulated / POINTS_INTERVAL_MS);
           accumulated = accumulated % POINTS_INTERVAL_MS;
 
-          // Award points
+          // Award listening points
           const data = loadPointsData();
           data.totalPoints += pointsToAward;
           data.totalListeningMs += pointsToAward * POINTS_INTERVAL_MS;
@@ -100,7 +191,6 @@ export function useListeningPoints(isPlaying: boolean) {
             reason: "LISTENING",
             timestamp: new Date().toISOString(),
           });
-          // Keep only last 100 history entries
           if (data.history.length > 100) {
             data.history = data.history.slice(0, 100);
           }
@@ -108,13 +198,52 @@ export function useListeningPoints(isPlaying: boolean) {
         }
 
         saveAccumulated(accumulated);
+
+        // --- Listening streak bonuses ---
+        const sessionStart = loadSessionStart();
+        if (sessionStart) {
+          const sessionDuration = tickNow - sessionStart;
+          const data = loadPointsData();
+
+          // 2-hour streak: 10 bonus points (check first since it's larger)
+          if (sessionDuration >= TWO_HOURS_MS && !data.streak2hAwarded) {
+            data.streak2hAwarded = true;
+            data.totalPoints += 10;
+            data.lastAwardedAt = new Date().toISOString();
+            data.history.unshift({
+              points: 10,
+              reason: "STREAK_BONUS",
+              timestamp: new Date().toISOString(),
+            });
+            if (data.history.length > 100) {
+              data.history = data.history.slice(0, 100);
+            }
+            savePointsData(data);
+          }
+          // 1-hour streak: 5 bonus points
+          else if (sessionDuration >= ONE_HOUR_MS && !data.streak1hAwarded) {
+            data.streak1hAwarded = true;
+            data.totalPoints += 5;
+            data.lastAwardedAt = new Date().toISOString();
+            data.history.unshift({
+              points: 5,
+              reason: "STREAK_BONUS",
+              timestamp: new Date().toISOString(),
+            });
+            if (data.history.length > 100) {
+              data.history = data.history.slice(0, 100);
+            }
+            savePointsData(data);
+          }
+        }
       }, 30_000); // Check every 30 seconds
     } else {
-      // Paused — save any final accumulated time
+      // Paused — save any final accumulated time and clear session
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+      clearSessionStart();
     }
 
     return () => {
@@ -135,4 +264,32 @@ export function getListeningPoints(): number {
 export function getListeningProgress(): number {
   const accumulated = loadAccumulated();
   return Math.min(100, Math.floor((accumulated / POINTS_INTERVAL_MS) * 100));
+}
+
+/**
+ * Award 2 points for sharing the player.
+ * Can only be awarded once per day (based on ET timezone).
+ * Returns true if points were awarded, false if already claimed today.
+ */
+export function awardSharePoints(): boolean {
+  const data = loadPointsData();
+  const today = todayET();
+
+  if (data.lastShareDate === today) {
+    return false; // Already awarded today
+  }
+
+  data.lastShareDate = today;
+  data.totalPoints += 2;
+  data.lastAwardedAt = new Date().toISOString();
+  data.history.unshift({
+    points: 2,
+    reason: "SHARE",
+    timestamp: new Date().toISOString(),
+  });
+  if (data.history.length > 100) {
+    data.history = data.history.slice(0, 100);
+  }
+  savePointsData(data);
+  return true;
 }

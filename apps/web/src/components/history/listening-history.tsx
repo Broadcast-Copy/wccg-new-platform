@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Radio,
   Headphones,
@@ -15,6 +15,9 @@ import {
   CalendarDays,
   RotateCcw,
   Trash2,
+  Timer,
+  Square,
+  Award,
 } from "lucide-react";
 import {
   Card,
@@ -29,9 +32,15 @@ import {
   getHistoryEntries,
   getListeningStats,
   clearHistory,
+  getSessions,
   type HistoryEntry,
 } from "@/lib/listening-history";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
+import { useAudioPlayer } from "@/hooks/use-audio-player";
+import {
+  getListeningPoints,
+  getListeningProgress,
+} from "@/hooks/use-listening-points";
 
 // ─── Types ─────────────────────────────────────────────────────────────
 
@@ -397,7 +406,11 @@ export function ListeningHistory() {
 
           <div className="space-y-2">
             {activeEntries.map((entry) => (
-              <HistoryItem key={entry.id} entry={entry} />
+              <ActiveSessionItem
+                key={entry.id}
+                entry={entry}
+                onSessionEnded={() => setRefreshKey((k) => k + 1)}
+              />
             ))}
           </div>
         </div>
@@ -490,6 +503,153 @@ export function ListeningHistory() {
         </div>
       )}
     </>
+  );
+}
+
+// ─── Active Session Item Component ─────────────────────────────────────
+
+/**
+ * Renders an active (currently listening) session with:
+ * - Real-time session duration (e.g., "1h 23m 45s")
+ * - Accumulated points for the current session
+ * - An "End Session" button that stops the audio player
+ */
+function ActiveSessionItem({
+  entry,
+  onSessionEnded,
+}: {
+  entry: HistoryEntry;
+  onSessionEnded: () => void;
+}) {
+  const { stop } = useAudioPlayer();
+  const { close } = useStreamPlayer();
+
+  // ── Real-time duration ──────────────────────────────────────────────
+  const [elapsed, setElapsed] = useState("");
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    // Find the session startedAt from localStorage to get precise start time
+    const sessions = getSessions();
+    const session = sessions.find((s) => s.id === entry.id);
+    const startTime = session
+      ? new Date(session.startedAt).getTime()
+      : Date.now();
+
+    const tick = () => {
+      const diff = Math.floor((Date.now() - startTime) / 1000);
+      setElapsedSeconds(diff);
+      const h = Math.floor(diff / 3600);
+      const m = Math.floor((diff % 3600) / 60);
+      const s = diff % 60;
+      if (h > 0) {
+        setElapsed(`${h}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`);
+      } else if (m > 0) {
+        setElapsed(`${m}m ${String(s).padStart(2, "0")}s`);
+      } else {
+        setElapsed(`${s}s`);
+      }
+    };
+
+    tick(); // Initial tick
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [entry.id]);
+
+  // ── Session points calculation ──────────────────────────────────────
+  // 1 point per 15 minutes of listening
+  const sessionPoints = Math.floor(elapsedSeconds / (15 * 60));
+  const totalPoints = getListeningPoints();
+  const progressToNext = getListeningProgress();
+
+  // ── End session handler ─────────────────────────────────────────────
+  const handleEndSession = useCallback(() => {
+    stop();   // Stop audio playback
+    close();  // Close stream player (ends listening tracker)
+    // Small delay to let the tracker end the session in localStorage
+    setTimeout(() => {
+      onSessionEnded();
+    }, 300);
+  }, [stop, close, onSessionEnded]);
+
+  return (
+    <Card className="border-[#74ddc7]/30 bg-[#74ddc7]/5 transition-colors hover:bg-accent/50">
+      <CardContent className="flex flex-col gap-3 py-3">
+        {/* Top row: icon + info + end button */}
+        <div className="flex items-center gap-4">
+          {/* Content Type Icon */}
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#74ddc7]/15">
+            <span className="relative flex h-4 w-4 items-center justify-center">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#74ddc7] opacity-50" />
+              <Radio className="relative h-4 w-4 text-[#74ddc7]" />
+            </span>
+          </div>
+
+          {/* Main Info */}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="truncate text-sm font-semibold">{entry.title}</h3>
+              <Badge className="shrink-0 text-[10px] border-[#74ddc7]/30 bg-[#74ddc7]/10 text-[#74ddc7] animate-pulse">
+                LIVE
+              </Badge>
+            </div>
+
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+              <span>{entry.artist}</span>
+              <span>{entry.timestamp}</span>
+              {entry.tracks.length > 0 && (
+                <span className="text-[#74ddc7]">
+                  {entry.tracks.length} track{entry.tracks.length !== 1 ? "s" : ""} heard
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* End Session Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0 gap-1.5 border-red-500/30 text-red-500 hover:bg-red-500/10 hover:text-red-400"
+            onClick={handleEndSession}
+          >
+            <Square className="h-3 w-3" />
+            <span className="hidden sm:inline">End Session</span>
+          </Button>
+        </div>
+
+        {/* Bottom row: session duration + points */}
+        <div className="flex flex-wrap items-center gap-4 pl-14">
+          {/* Session Duration */}
+          <div className="flex items-center gap-1.5 rounded-md bg-[#74ddc7]/10 px-2.5 py-1">
+            <Timer className="h-3.5 w-3.5 text-[#74ddc7]" />
+            <span className="text-sm font-mono font-semibold text-[#74ddc7]">
+              {elapsed}
+            </span>
+            <span className="text-[10px] text-[#74ddc7]/70 uppercase tracking-wider">
+              Session Duration
+            </span>
+          </div>
+
+          {/* Session Points */}
+          <div className="flex items-center gap-1.5 rounded-md bg-[#7401df]/10 px-2.5 py-1">
+            <Award className="h-3.5 w-3.5 text-[#7401df]" />
+            <span className="text-sm font-semibold text-[#7401df]">
+              {sessionPoints}
+            </span>
+            <span className="text-[10px] text-[#7401df]/70 uppercase tracking-wider">
+              {sessionPoints === 1 ? "Point" : "Points"} earned
+            </span>
+            {/* Progress toward next point */}
+            <div className="ml-1 h-1.5 w-12 rounded-full bg-[#7401df]/20">
+              <div
+                className="h-1.5 rounded-full bg-[#7401df] transition-all"
+                style={{ width: `${progressToNext}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

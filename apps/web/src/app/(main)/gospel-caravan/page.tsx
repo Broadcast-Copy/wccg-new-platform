@@ -149,7 +149,7 @@ export default function GospelCaravanPage() {
           {GOSPEL_CARAVAN_SHOWS.map((show) => (
             <div
               key={show.id}
-              className="group relative overflow-hidden rounded-2xl border border-border bg-white/[0.03] hover:border-white/[0.15] hover:bg-white/[0.05] transition-all"
+              className="group relative overflow-hidden rounded-2xl border border-border bg-foreground/[0.03] hover:border-foreground/[0.15] hover:bg-foreground/[0.05] transition-all"
             >
               <div className="flex flex-col sm:flex-row">
                 {/* Show Image */}

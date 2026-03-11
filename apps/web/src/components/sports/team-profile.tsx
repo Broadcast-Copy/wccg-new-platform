@@ -158,7 +158,7 @@ function OverviewTab({ team }: { team: SportsTeam }) {
   return (
     <div className="space-y-6">
       {/* About */}
-      <div className="rounded-2xl border border-border bg-white/[0.03] p-6">
+      <div className="rounded-2xl border border-border bg-foreground/[0.03] p-6">
         <h2 className="text-lg font-bold text-foreground mb-3">About</h2>
         <p className="text-sm text-foreground/60 leading-relaxed">
           {team.description}
@@ -170,7 +170,7 @@ function OverviewTab({ team }: { team: SportsTeam }) {
         {team.stats.slice(0, 6).map((stat) => (
           <div
             key={stat.label}
-            className="rounded-xl border border-border bg-white/[0.03] p-4 text-center"
+            className="rounded-xl border border-border bg-foreground/[0.03] p-4 text-center"
           >
             <p className="text-2xl font-extrabold text-[#74ddc7]">
               {stat.value}
@@ -182,7 +182,7 @@ function OverviewTab({ team }: { team: SportsTeam }) {
 
       {/* Head Coach */}
       {team.coaches[0] && (
-        <div className="rounded-2xl border border-border bg-white/[0.03] p-6">
+        <div className="rounded-2xl border border-border bg-foreground/[0.03] p-6">
           <h2 className="text-lg font-bold text-foreground mb-3">Head Coach</h2>
           <div className="flex items-center gap-4">
             <div className="h-16 w-16 rounded-xl bg-foreground/[0.06] flex items-center justify-center border border-border">
@@ -239,7 +239,7 @@ function RosterTab({ team }: { team: SportsTeam }) {
         {team.players.map((player) => (
           <div
             key={player.name}
-            className="flex items-center gap-4 rounded-xl border border-border bg-white/[0.03] p-4 hover:bg-white/[0.05] transition-colors"
+            className="flex items-center gap-4 rounded-xl border border-border bg-foreground/[0.03] p-4 hover:bg-foreground/[0.05] transition-colors"
           >
             {/* Number */}
             <div
@@ -294,7 +294,7 @@ function CoachesTab({ team }: { team: SportsTeam }) {
         {team.coaches.map((coach) => (
           <div
             key={coach.name}
-            className="flex items-center gap-4 rounded-xl border border-border bg-white/[0.03] p-5 hover:bg-white/[0.05] transition-colors"
+            className="flex items-center gap-4 rounded-xl border border-border bg-foreground/[0.03] p-5 hover:bg-foreground/[0.05] transition-colors"
           >
             <div className="flex-shrink-0 h-14 w-14 rounded-xl bg-foreground/[0.06] flex items-center justify-center border border-border">
               <User className="h-7 w-7 text-muted-foreground/70" />
@@ -323,7 +323,7 @@ function StatsTab({ team }: { team: SportsTeam }) {
         {team.stats.map((stat) => (
           <div
             key={stat.label}
-            className="rounded-xl border border-border bg-white/[0.03] p-5 text-center hover:bg-white/[0.05] transition-colors"
+            className="rounded-xl border border-border bg-foreground/[0.03] p-5 text-center hover:bg-foreground/[0.05] transition-colors"
           >
             <p className="text-3xl font-extrabold text-[#74ddc7]">
               {stat.value}
@@ -383,7 +383,7 @@ function YoutubeTab({ team }: { team: SportsTeam }) {
             href={`https://www.youtube.com/results?search_query=${encodeURIComponent(team.youtube.searchQuery + " " + label)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="group rounded-xl border border-border bg-white/[0.03] p-5 hover:bg-white/[0.05] transition-colors"
+            className="group rounded-xl border border-border bg-foreground/[0.03] p-5 hover:bg-foreground/[0.05] transition-colors"
           >
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-foreground/[0.06] flex items-center justify-center group-hover:bg-red-500/20 transition-colors">
