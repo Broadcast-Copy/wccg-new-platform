@@ -18,6 +18,7 @@ import Link from "next/link";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { toast } from "sonner";
 import { ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
+import { AppImage as Image } from "@/components/ui/app-image";
 
 const forgotPasswordSchema = z.object({
   email: z.email("Please enter a valid email address"),
@@ -102,6 +103,28 @@ export function ForgotPasswordForm() {
   return (
     <Card>
       <CardHeader className="space-y-1 text-center">
+        <Link href="/" className="mx-auto mb-2 block">
+          <span className="block dark:hidden">
+            <Image
+              src="/images/logos/wccg-logo.png"
+              alt="WCCG 104.5 FM — The Hip Hop Station"
+              width={500}
+              height={324}
+              className="mx-auto w-[160px] h-auto"
+              priority
+            />
+          </span>
+          <span className="hidden dark:block">
+            <Image
+              src="/images/logos/1045fm-logo.png"
+              alt="WCCG 104.5 FM"
+              width={500}
+              height={324}
+              className="mx-auto w-[160px] h-auto"
+              priority
+            />
+          </span>
+        </Link>
         <CardTitle className="text-2xl font-bold">Reset your password</CardTitle>
         <CardDescription>
           Enter your email and we&apos;ll send you a link to reset your password

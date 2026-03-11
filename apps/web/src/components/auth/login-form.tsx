@@ -19,6 +19,7 @@ import { useState } from "react";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { toast } from "sonner";
 import { LogIn } from "lucide-react";
+import { AppImage as Image } from "@/components/ui/app-image";
 
 const loginSchema = z.object({
   email: z.email("Please enter a valid email address"),
@@ -67,6 +68,30 @@ export function LoginForm() {
   return (
     <Card>
       <CardHeader className="space-y-1 text-center">
+        <Link href="/" className="mx-auto mb-2 block">
+          {/* Light mode: black & red logo */}
+          <span className="block dark:hidden">
+            <Image
+              src="/images/logos/wccg-logo.png"
+              alt="WCCG 104.5 FM — The Hip Hop Station"
+              width={500}
+              height={324}
+              className="mx-auto w-[160px] h-auto"
+              priority
+            />
+          </span>
+          {/* Dark mode: red/white logo */}
+          <span className="hidden dark:block">
+            <Image
+              src="/images/logos/1045fm-logo.png"
+              alt="WCCG 104.5 FM"
+              width={500}
+              height={324}
+              className="mx-auto w-[160px] h-auto"
+              priority
+            />
+          </span>
+        </Link>
         <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
         <CardDescription>
           Sign in to your WCCG account to continue

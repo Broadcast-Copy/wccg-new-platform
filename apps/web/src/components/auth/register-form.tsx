@@ -26,6 +26,7 @@ import {
   ChevronRight,
   Check,
 } from "lucide-react";
+import { AppImage as Image } from "@/components/ui/app-image";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -515,6 +516,28 @@ export function RegisterForm() {
   return (
     <Card className="w-full max-w-lg">
       <CardHeader className="space-y-1 text-center">
+        <Link href="/" className="mx-auto mb-2 block">
+          <span className="block dark:hidden">
+            <Image
+              src="/images/logos/wccg-logo.png"
+              alt="WCCG 104.5 FM — The Hip Hop Station"
+              width={500}
+              height={324}
+              className="mx-auto w-[160px] h-auto"
+              priority
+            />
+          </span>
+          <span className="hidden dark:block">
+            <Image
+              src="/images/logos/1045fm-logo.png"
+              alt="WCCG 104.5 FM"
+              width={500}
+              height={324}
+              className="mx-auto w-[160px] h-auto"
+              priority
+            />
+          </span>
+        </Link>
         <CardTitle className="text-2xl font-bold">
           {headings[step].title}
         </CardTitle>
