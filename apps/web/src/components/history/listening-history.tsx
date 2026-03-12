@@ -728,6 +728,26 @@ function ActiveSessionItem({
             </div>
           </div>
         </div>
+
+        {/* Track list — songs heard during this session */}
+        {entry.tracks.length > 0 && (
+          <div className="ml-14 space-y-1 border-t border-[#74ddc7]/10 pt-2">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1">
+              Songs This Session
+            </p>
+            {entry.tracks.map((track, i) => (
+              <div
+                key={`${track.title}-${i}`}
+                className="flex items-center gap-2 text-xs"
+              >
+                <Music className="h-3 w-3 shrink-0 text-[#74ddc7]/60" />
+                <span className="truncate font-medium">{track.title}</span>
+                <span className="shrink-0 text-muted-foreground">—</span>
+                <span className="truncate text-muted-foreground">{track.artist}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
