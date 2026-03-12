@@ -7,6 +7,7 @@ import { RewardCard } from "./reward-card";
 import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
 import { toast } from "sonner";
+import { readPointsBalance } from "@/lib/points-storage";
 
 interface Reward {
   id: string;
@@ -41,41 +42,8 @@ export function RewardsContent({ rewards }: RewardsContentProps) {
           // Fall through to localStorage
         }
       }
-      // Read from localStorage — check user-specific key first, then default, then scan all
-      try {
-        const keys = user?.email
-          ? [`wccg_listening_points_${user.email}`, "wccg_listening_points"]
-          : ["wccg_listening_points"];
-        for (const key of keys) {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            const pts = JSON.parse(raw).totalPoints ?? JSON.parse(raw).points ?? 0;
-            if (pts > 0) {
-              setBalance(pts);
-              return;
-            }
-          }
-        }
-        // If email not provided, scan all user-specific keys
-        if (!user?.email) {
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith("wccg_listening_points_") && key !== "wccg_listening_points") {
-              const raw = localStorage.getItem(key);
-              if (raw) {
-                const pts = JSON.parse(raw).totalPoints ?? 0;
-                if (pts > 0) {
-                  setBalance(pts);
-                  return;
-                }
-              }
-            }
-          }
-        }
-        setBalance(0);
-      } catch {
-        setBalance(0);
-      }
+      // Read from localStorage using shared utility (sums user + orphaned default keys)
+      setBalance(readPointsBalance(user?.email));
     }
 
     fetchBalance();

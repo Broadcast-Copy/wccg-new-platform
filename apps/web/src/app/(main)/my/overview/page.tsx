@@ -38,30 +38,7 @@ import { Badge } from "@/components/ui/badge";
 import { useUserRoles } from "@/hooks/use-user-roles";
 import { useAuth } from "@/hooks/use-auth";
 import { getListeningStats, getHistoryEntries } from "@/lib/listening-history";
-
-/**
- * Read points balance directly from localStorage, checking both
- * user-specific and default keys so we don't depend on the module-level
- * _currentEmail variable (which may not be set yet on first render).
- */
-function readPointsFromStorage(email: string | null | undefined): number {
-  if (typeof window === "undefined") return 0;
-  try {
-    const keys = email
-      ? [`wccg_listening_points_${email}`, "wccg_listening_points"]
-      : ["wccg_listening_points"];
-    for (const key of keys) {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.totalPoints > 0) return parsed.totalPoints;
-      }
-    }
-  } catch {
-    // ignore
-  }
-  return 0;
-}
+import { readPointsBalance } from "@/lib/points-storage";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -284,7 +261,7 @@ export default function OverviewPage() {
     if (!isListener) return;
     const email = user?.email ?? null;
     function refresh() {
-      const points = readPointsFromStorage(email);
+      const points = readPointsBalance(email);
       const stats = getListeningStats();
       const entries = getHistoryEntries().slice(0, 5);
       setListenerStats({

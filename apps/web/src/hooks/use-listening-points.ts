@@ -86,7 +86,74 @@ function loadPointsData(): PointsData {
   }
   try {
     const raw = localStorage.getItem(storageKey());
-    if (raw) return { ...defaultPointsData(), ...JSON.parse(raw) };
+    if (raw) {
+      const data = { ...defaultPointsData(), ...JSON.parse(raw) };
+
+      // Merge orphaned default key into user key (points earned before login)
+      if (_currentEmail) {
+        const orphaned = localStorage.getItem(STORAGE_KEY_DEFAULT);
+        if (orphaned) {
+          const orphanedData: PointsData = {
+            ...defaultPointsData(),
+            ...JSON.parse(orphaned),
+          };
+          if (orphanedData.totalPoints > 0 || orphanedData.history.length > 0) {
+            data.totalPoints += orphanedData.totalPoints;
+            data.totalListeningMs += orphanedData.totalListeningMs;
+            // Merge history entries, de-duplicate by timestamp+reason
+            const existingKeys = new Set(
+              data.history.map(
+                (h: { timestamp: string; reason: string; points: number }) =>
+                  `${h.timestamp}_${h.reason}_${h.points}`,
+              ),
+            );
+            for (const h of orphanedData.history) {
+              const key = `${h.timestamp}_${h.reason}_${h.points}`;
+              if (!existingKeys.has(key)) {
+                data.history.push(h);
+              }
+            }
+            // Sort history newest first
+            data.history.sort(
+              (
+                a: { timestamp: string },
+                b: { timestamp: string },
+              ) =>
+                new Date(b.timestamp).getTime() -
+                new Date(a.timestamp).getTime(),
+            );
+            if (data.history.length > 100) {
+              data.history = data.history.slice(0, 100);
+            }
+            // Save merged data and clean up default key
+            localStorage.setItem(storageKey(), JSON.stringify(data));
+            localStorage.removeItem(STORAGE_KEY_DEFAULT);
+            // Also merge accumulated time
+            try {
+              const accOrphaned = parseInt(
+                localStorage.getItem(ACCUMULATED_KEY_DEFAULT) || "0",
+                10,
+              );
+              if (accOrphaned > 0) {
+                const accUser = parseInt(
+                  localStorage.getItem(accumulatedKey()) || "0",
+                  10,
+                );
+                localStorage.setItem(
+                  accumulatedKey(),
+                  String(accUser + accOrphaned),
+                );
+                localStorage.removeItem(ACCUMULATED_KEY_DEFAULT);
+              }
+            } catch {
+              // ignore
+            }
+          }
+        }
+      }
+
+      return data;
+    }
 
     // Fallback: if user-specific key has no data, migrate from default key
     if (_currentEmail) {

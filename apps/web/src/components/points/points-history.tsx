@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/lib/api-client";
 import { Coins, Loader2, History } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { readAllPoints } from "@/lib/points-storage";
 
 type PointsReason =
   | "LISTENING"
@@ -76,59 +77,24 @@ function ReasonBadge({ reason }: { reason: string }) {
   );
 }
 
-/** Read points data from localStorage (for when API is unavailable) */
+/** Read points data from localStorage using shared utility */
 function loadLocalPointsData(email: string | null | undefined): {
   balance: number;
   history: PointsTransaction[];
 } {
-  if (typeof window === "undefined") return { balance: 0, history: [] };
-
-  const parseEntry = (raw: string) => {
-    const parsed = JSON.parse(raw);
-    const totalPoints = parsed.totalPoints ?? 0;
-    const history: PointsTransaction[] = (parsed.history ?? []).map(
-      (h: { points: number; reason: string; timestamp: string; program?: string }, i: number) => ({
-        id: `local_${i}`,
-        amount: h.points,
-        reason: h.reason as PointsReason,
-        referenceType: null,
-        referenceId: h.program || null,
-        balance: 0,
-        createdAt: h.timestamp,
-      }),
-    );
-    return { balance: totalPoints, history };
+  const data = readAllPoints(email);
+  return {
+    balance: data.balance,
+    history: data.history.map((h) => ({
+      id: h.id,
+      amount: h.amount,
+      reason: h.reason as PointsReason,
+      referenceType: null,
+      referenceId: h.program || null,
+      balance: 0,
+      createdAt: h.createdAt,
+    })),
   };
-
-  try {
-    // Check user-specific key first, then default key
-    const keys = email
-      ? [`wccg_listening_points_${email}`, "wccg_listening_points"]
-      : ["wccg_listening_points"];
-    for (const key of keys) {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        const result = parseEntry(raw);
-        if (result.balance > 0 || result.history.length > 0) return result;
-      }
-    }
-    // If email was not provided, scan all user-specific keys
-    if (!email) {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith("wccg_listening_points_") && key !== "wccg_listening_points") {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            const result = parseEntry(raw);
-            if (result.balance > 0 || result.history.length > 0) return result;
-          }
-        }
-      }
-    }
-  } catch {
-    // ignore
-  }
-  return { balance: 0, history: [] };
 }
 
 export function PointsHistory() {

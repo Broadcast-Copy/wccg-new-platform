@@ -55,44 +55,7 @@ import {
   type SongHistoryEntry,
   type SongHistoryGroup,
 } from "@/lib/song-history";
-
-/**
- * Read points balance directly from localStorage, checking both
- * user-specific and default keys so we don't depend on the module-level
- * _currentEmail variable (which may not be set yet on first render).
- */
-function readPointsFromStorage(email: string | null | undefined): {
-  balance: number;
-  history: Array<{ id: string; amount: number; reason: string; createdAt: string }>;
-} {
-  if (typeof window === "undefined") return { balance: 0, history: [] };
-  try {
-    const keys = email
-      ? [`wccg_listening_points_${email}`, "wccg_listening_points"]
-      : ["wccg_listening_points"];
-    for (const key of keys) {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        const totalPoints = parsed.totalPoints ?? 0;
-        const history = (parsed.history ?? []).slice(0, 5).map(
-          (h: { points: number; reason: string; timestamp: string }, i: number) => ({
-            id: `local_${i}`,
-            amount: h.points,
-            reason: h.reason,
-            createdAt: h.timestamp,
-          }),
-        );
-        if (totalPoints > 0 || history.length > 0) {
-          return { balance: totalPoints, history };
-        }
-      }
-    }
-  } catch {
-    // ignore
-  }
-  return { balance: 0, history: [] };
-}
+import { readAllPoints } from "@/lib/points-storage";
 
 // --- Types ---
 
@@ -394,10 +357,10 @@ export default function UserDashboardPage() {
 
         // Fall back to localStorage if API returned 0 / empty
         if (pointsBalance === 0 || recentPoints.length === 0) {
-          const local = readPointsFromStorage(user?.email);
+          const local = readAllPoints(user?.email);
           if (local.balance > pointsBalance) pointsBalance = local.balance;
           if (recentPoints.length === 0 && local.history.length > 0)
-            recentPoints = local.history;
+            recentPoints = local.history.slice(0, 5);
         }
 
         setStats({
