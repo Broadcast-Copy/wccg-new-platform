@@ -36,8 +36,32 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useUserRoles } from "@/hooks/use-user-roles";
-import { getListeningPoints } from "@/hooks/use-listening-points";
+import { useAuth } from "@/hooks/use-auth";
 import { getListeningStats, getHistoryEntries } from "@/lib/listening-history";
+
+/**
+ * Read points balance directly from localStorage, checking both
+ * user-specific and default keys so we don't depend on the module-level
+ * _currentEmail variable (which may not be set yet on first render).
+ */
+function readPointsFromStorage(email: string | null | undefined): number {
+  if (typeof window === "undefined") return 0;
+  try {
+    const keys = email
+      ? [`wccg_listening_points_${email}`, "wccg_listening_points"]
+      : ["wccg_listening_points"];
+    for (const key of keys) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.totalPoints > 0) return parsed.totalPoints;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return 0;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -243,6 +267,7 @@ export default function OverviewPage() {
     isAdmin,
     isSuperAdmin,
   } = useUserRoles();
+  const { user } = useAuth();
 
   const [listenerStats, setListenerStats] = useState<{
     points: number;
@@ -257,8 +282,9 @@ export default function OverviewPage() {
 
   useEffect(() => {
     if (!isListener) return;
+    const email = user?.email ?? null;
     function refresh() {
-      const points = getListeningPoints();
+      const points = readPointsFromStorage(email);
       const stats = getListeningStats();
       const entries = getHistoryEntries().slice(0, 5);
       setListenerStats({
@@ -273,7 +299,7 @@ export default function OverviewPage() {
     refresh();
     const interval = setInterval(refresh, 15_000);
     return () => clearInterval(interval);
-  }, [isListener]);
+  }, [isListener, user?.email]);
 
   const config = getOverviewConfig({
     isSales,

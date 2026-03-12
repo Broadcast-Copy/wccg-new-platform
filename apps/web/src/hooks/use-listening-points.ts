@@ -300,9 +300,39 @@ export function useListeningPoints(isPlaying: boolean) {
   }, [isPlaying]);
 }
 
-/** Get the current points balance (for display) */
+/** Get the current points balance (for display).
+ *  Checks both user-specific and default keys to avoid timing issues
+ *  where _currentEmail may not yet be set.
+ */
 export function getListeningPoints(): number {
-  return loadPointsData().totalPoints;
+  const data = loadPointsData();
+  if (data.totalPoints > 0) return data.totalPoints;
+  // Fallback: if _currentEmail is set but returned 0, also check default key
+  if (_currentEmail) {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_DEFAULT);
+      if (raw) {
+        const fallback = JSON.parse(raw);
+        if (fallback.totalPoints > 0) return fallback.totalPoints;
+      }
+    } catch { /* ignore */ }
+  }
+  // Fallback: if _currentEmail is null, check all wccg_listening_points_* keys
+  if (!_currentEmail) {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("wccg_listening_points_") && key !== "wccg_listening_points") {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed.totalPoints > 0) return parsed.totalPoints;
+          }
+        }
+      }
+    } catch { /* ignore */ }
+  }
+  return data.totalPoints;
 }
 
 /** Get accumulated listening time toward next point (as percentage 0-100) */
