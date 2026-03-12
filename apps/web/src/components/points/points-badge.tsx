@@ -7,57 +7,57 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { apiClient } from "@/lib/api-client";
 
+/** Read points from localStorage, checking user-specific key then default */
+function readLocalBalance(email: string | null | undefined): number {
+  try {
+    const keys = email
+      ? [`wccg_listening_points_${email}`, "wccg_listening_points"]
+      : ["wccg_listening_points"];
+    for (const key of keys) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const pts = parsed.totalPoints ?? 0;
+        if (pts > 0) return pts;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return 0;
+}
+
 export function PointsBadge() {
   const { user } = useAuth();
   const [balance, setBalance] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!user) {
-      // Defer state reset to avoid synchronous setState in effect
-      queueMicrotask(() => setBalance(null));
-      return;
-    }
-
     let cancelled = false;
 
     async function fetchBalance() {
-      try {
-        const data = await apiClient<{ balance: number }>("/points/balance");
-        if (!cancelled) setBalance(data.balance);
-      } catch {
-        // Fall back to localStorage points
-        if (!cancelled) {
-          try {
-            const key = user?.email
-              ? `wccg_listening_points_${user.email}`
-              : "wccg_listening_points";
-            const raw = localStorage.getItem(key);
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              setBalance(parsed.totalPoints ?? 0);
-            } else {
-              setBalance(0);
-            }
-          } catch {
-            setBalance(0);
-          }
+      // Try API if logged in
+      if (user) {
+        try {
+          const data = await apiClient<{ balance: number }>("/points/balance");
+          if (!cancelled) setBalance(data.balance);
+          return;
+        } catch {
+          // Fall through to localStorage
         }
+      }
+      // Fall back to localStorage
+      if (!cancelled) {
+        setBalance(readLocalBalance(user?.email));
       }
     }
 
     fetchBalance();
-    // Refresh every 30 seconds so points update in real-time
     const interval = setInterval(fetchBalance, 30_000);
     return () => { cancelled = true; clearInterval(interval); };
   }, [user]);
 
-  // Don't show points badge for unauthenticated users
-  if (!user) {
-    return null;
-  }
-
   return (
-    <Link href="/my/points">
+    <Link href="/rewards">
       <Badge
         variant="secondary"
         className="flex items-center gap-1 px-2.5 py-1 transition-colors hover:bg-secondary/80"

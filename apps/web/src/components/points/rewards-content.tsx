@@ -41,24 +41,31 @@ export function RewardsContent({ rewards }: RewardsContentProps) {
           // Fall through to localStorage
         }
       }
-      // Read from localStorage
+      // Read from localStorage — check user-specific key first, then default
       try {
-        const key = user?.email
-          ? `wccg_listening_points_${user.email}`
-          : "wccg_listening_points";
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          setBalance(parsed.totalPoints ?? parsed.points ?? 0);
-        } else {
-          setBalance(0);
+        const keys = user?.email
+          ? [`wccg_listening_points_${user.email}`, "wccg_listening_points"]
+          : ["wccg_listening_points"];
+        for (const key of keys) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            const pts = parsed.totalPoints ?? parsed.points ?? 0;
+            if (pts > 0) {
+              setBalance(pts);
+              return;
+            }
+          }
         }
+        setBalance(0);
       } catch {
         setBalance(0);
       }
     }
 
     fetchBalance();
+    const interval = setInterval(fetchBalance, 30_000);
+    return () => clearInterval(interval);
   }, [user]);
 
   const handleRedeem = async (rewardId: string) => {
@@ -86,7 +93,7 @@ export function RewardsContent({ rewards }: RewardsContentProps) {
   return (
     <div className="space-y-6">
       {/* User points balance */}
-      {user && balance !== null && (
+      {balance !== null && (
         <div className="flex items-center gap-3 rounded-lg border bg-gradient-to-r from-primary/5 to-primary/10 p-6">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
             <Star className="h-6 w-6 text-primary" />

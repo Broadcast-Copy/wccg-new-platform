@@ -82,28 +82,35 @@ function loadLocalPointsData(email: string | null | undefined): {
   history: PointsTransaction[];
 } {
   try {
-    const key = email
-      ? `wccg_listening_points_${email}`
-      : "wccg_listening_points";
-    const raw = localStorage.getItem(key);
-    if (!raw) return { balance: 0, history: [] };
-    const parsed = JSON.parse(raw);
-    const totalPoints = parsed.totalPoints ?? 0;
-    const history: PointsTransaction[] = (parsed.history ?? []).map(
-      (h: { points: number; reason: string; timestamp: string }, i: number) => ({
-        id: `local_${i}`,
-        amount: h.points,
-        reason: h.reason as PointsReason,
-        referenceType: null,
-        referenceId: null,
-        balance: 0, // local history doesn't track running balance
-        createdAt: h.timestamp,
-      }),
-    );
-    return { balance: totalPoints, history };
+    // Check user-specific key first, then default key
+    const keys = email
+      ? [`wccg_listening_points_${email}`, "wccg_listening_points"]
+      : ["wccg_listening_points"];
+    for (const key of keys) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const totalPoints = parsed.totalPoints ?? 0;
+        const history: PointsTransaction[] = (parsed.history ?? []).map(
+          (h: { points: number; reason: string; timestamp: string }, i: number) => ({
+            id: `local_${i}`,
+            amount: h.points,
+            reason: h.reason as PointsReason,
+            referenceType: null,
+            referenceId: null,
+            balance: 0,
+            createdAt: h.timestamp,
+          }),
+        );
+        if (totalPoints > 0 || history.length > 0) {
+          return { balance: totalPoints, history };
+        }
+      }
+    }
   } catch {
-    return { balance: 0, history: [] };
+    // ignore
   }
+  return { balance: 0, history: [] };
 }
 
 export function PointsHistory() {
