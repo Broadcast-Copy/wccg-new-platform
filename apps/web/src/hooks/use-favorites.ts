@@ -2,75 +2,66 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "./use-auth";
-import { apiClient } from "@/lib/api-client";
+
+const FAVORITES_STORAGE_KEY = "wccg_favorites";
+
+function getStoredFavorites(): Record<string, string[]> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(FAVORITES_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function setStoredFavorites(favorites: Record<string, string[]>) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
+}
 
 /**
  * Hook to manage favorites for a specific item.
- *
- * Provides the current favorited state and a toggle function.
- * Automatically syncs with the backend API.
- *
- * @param itemType - The type of item (e.g., "show", "stream")
- * @param itemId - The ID of the item
+ * Uses localStorage for persistence (works without API).
  */
 export function useFavorites(itemType: string, itemId: string) {
   const { user } = useAuth();
   const [isFavorited, setIsFavorited] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch initial favorite status
+  // Load favorite state from localStorage
   useEffect(() => {
-    if (!user) {
-      setIsFavorited(false);
-      return;
-    }
+    const favorites = getStoredFavorites();
+    const key = itemType;
+    const items = favorites[key] || [];
+    setIsFavorited(items.includes(itemId));
+  }, [itemType, itemId]);
 
-    let cancelled = false;
-
-    async function checkFavorite() {
-      try {
-        const response = await apiClient<{ favorited: boolean }>(
-          `/favorites/${itemType}/${itemId}`,
-        );
-        if (!cancelled) {
-          setIsFavorited(response.favorited);
-        }
-      } catch {
-        // Silently fail — user may not be authenticated or endpoint not ready
-      }
-    }
-
-    checkFavorite();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user, itemType, itemId]);
-
-  const toggle = useCallback(async () => {
-    if (!user) return;
-
+  const toggle = useCallback(() => {
     setIsLoading(true);
-    const previousState = isFavorited;
-    setIsFavorited(!previousState); // Optimistic update
+    const favorites = getStoredFavorites();
+    const key = itemType;
+    const items = favorites[key] || [];
 
-    try {
-      if (previousState) {
-        await apiClient(`/favorites/${itemType}/${itemId}`, {
-          method: "DELETE",
-        });
-      } else {
-        await apiClient(`/favorites`, {
-          method: "POST",
-          body: JSON.stringify({ itemType, itemId }),
-        });
-      }
-    } catch {
-      setIsFavorited(previousState); // Rollback on error
-    } finally {
-      setIsLoading(false);
+    if (items.includes(itemId)) {
+      favorites[key] = items.filter((id) => id !== itemId);
+      setIsFavorited(false);
+    } else {
+      favorites[key] = [...items, itemId];
+      setIsFavorited(true);
     }
-  }, [user, isFavorited, itemType, itemId]);
+
+    setStoredFavorites(favorites);
+    // Dispatch event so other components can react
+    window.dispatchEvent(new CustomEvent("wccg-favorites-change"));
+    setIsLoading(false);
+  }, [itemType, itemId]);
 
   return { isFavorited, toggle, isLoading };
+}
+
+/** Get all favorites for a given type */
+export function getFavoritesByType(itemType: string): string[] {
+  const favorites = getStoredFavorites();
+  return favorites[itemType] || [];
 }

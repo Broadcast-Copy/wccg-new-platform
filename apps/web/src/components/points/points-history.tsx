@@ -12,7 +12,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/lib/api-client";
-import { toast } from "sonner";
 import { Coins, Loader2, History } from "lucide-react";
 
 type PointsReason =
@@ -78,10 +77,9 @@ export function PointsHistory() {
       ]);
       setBalance(balanceRes.balance);
       setTransactions(historyRes.data);
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to load points data"
-      );
+    } catch {
+      // Silently handle — API endpoint may not exist yet.
+      // The empty state UI ("No transactions yet") will display.
     } finally {
       setLoading(false);
     }

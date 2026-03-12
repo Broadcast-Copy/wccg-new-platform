@@ -162,9 +162,9 @@ export const SHOW_POSTED_CORNER: ShowData = {
   showImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/10/27e86769d0fecd2b17374095975a3091.png",
   hostImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/11/incog-new-1.png",
   youtube: {
-    channelName: "WCCG 104.5 FM",
-    channelUrl: "https://youtube.com/@WCCG1045FM",
-    searchQuery: "Posted on The Corner Incognito",
+    channelName: "Posted On The Corner",
+    channelUrl: "https://www.youtube.com/@PostedOnTheCorner",
+    searchQuery: "Posted on The Corner",
   },
   segments: ["Top 7 Countdown", "Posted on The Corner Trivia", "Trending on the Timeline", "Celebrity Interviews"],
   isSyndicated: true,
@@ -189,8 +189,8 @@ export const SHOW_BOOTLEG_KEV: ShowData = {
   hostImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/11/GAxhqlAXcAAPZOQ.jpg",
   youtube: {
     channelName: "Bootleg Kev",
-    channelUrl: "https://youtube.com/@bootlegkev",
-    searchQuery: "Bootleg Kev interview",
+    channelUrl: "https://www.youtube.com/@BootlegKev",
+    searchQuery: "Bootleg Kev",
   },
   segments: ["No Cap News", "Artist Freestyles", "Pop Culture Debates", "Listener Call-ins"],
   isSyndicated: true,
@@ -330,6 +330,11 @@ export const SHOW_GRACE_PLUS_NOTHING: ShowData = {
   gradient: "from-[#1a1a2e] via-[#0d1b2a] to-[#16213e]",
   imageUrl: null,
   showImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/10/gpn-1-1024x743-1.png",
+  youtube: {
+    channelName: "Grace Plus Nothing",
+    channelUrl: "https://www.youtube.com/@anthonymonds3736",
+    searchQuery: "Grace Plus Nothing Ministries",
+  },
   isSyndicated: false,
   isActive: true,
   category: "gospel",
@@ -349,6 +354,11 @@ export const SHOW_ENCOURAGING_MOMENT: ShowData = {
   gradient: "from-[#16213e] via-[#1a1a2e] to-[#0d1b2a]",
   imageUrl: null,
   showImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/10/thm-main-1024x743-1.png",
+  youtube: {
+    channelName: "Encouraging Moments",
+    channelUrl: "https://www.youtube.com/@encouraging1moment",
+    searchQuery: "Encouraging Moments Dr Anthony Haire",
+  },
   isSyndicated: false,
   isActive: true,
   category: "gospel",
@@ -387,6 +397,11 @@ export const SHOW_FAMILY_FELLOWSHIP: ShowData = {
   gradient: "from-[#0d1b2a] via-[#1a1a2e] to-[#16213e]",
   imageUrl: null,
   showImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/10/ffwc-1024x743-1.png",
+  youtube: {
+    channelName: "Family Fellowship Worship Center",
+    channelUrl: "https://www.youtube.com/@weareffwc",
+    searchQuery: "Family Fellowship Worship Center",
+  },
   isSyndicated: false,
   isActive: true,
   category: "gospel",
@@ -406,6 +421,11 @@ export const SHOW_MT_PISGAH: ShowData = {
   gradient: "from-[#16213e] via-[#0d1b2a] to-[#1a1a2e]",
   imageUrl: null,
   showImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/10/progressive-1024x743-1.png",
+  youtube: {
+    channelName: "Progressive Missionary Baptist Church",
+    channelUrl: "https://www.youtube.com/@progressivemissionarybapti7744",
+    searchQuery: "Progressive Missionary Baptist Church",
+  },
   isSyndicated: false,
   isActive: true,
   category: "gospel",
@@ -425,6 +445,11 @@ export const SHOW_LEWIS_CHAPEL: ShowData = {
   gradient: "from-[#1a1a2e] via-[#16213e] to-[#0d1b2a]",
   imageUrl: null,
   showImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/10/lewis-chapel-1024x743-1.png",
+  youtube: {
+    channelName: "Lewis Chapel Missionary Baptist Church",
+    channelUrl: "https://www.youtube.com/@lewischapelmissionarybapti4024",
+    searchQuery: "Lewis Chapel Missionary Baptist Church",
+  },
   isSyndicated: false,
   isActive: true,
   category: "gospel",
@@ -528,6 +553,30 @@ export const SHOW_ISLAND_FREQUENCY: ShowData = {
   category: "sunday",
 };
 
+export const SHOW_ABC_NEWS: ShowData = {
+  id: "show_abc_news",
+  name: "ABC News Updates",
+  slug: "abc-news",
+  hostNames: "ABC News",
+  hostIds: [],
+  timeSlot: "Hourly",
+  days: "Monday - Friday",
+  streamId: "stream_wccg",
+  description: "Stay informed with ABC News updates airing throughout the day on WCCG 104.5 FM. National and world news coverage keeping you connected to breaking stories and trending topics.",
+  tagline: "National news updates throughout the day",
+  gradient: "from-[#0a0a1a] via-[#1a1a2e] to-[#16213e]",
+  imageUrl: null,
+  showImageUrl: null,
+  youtube: {
+    channelName: "ABC News",
+    channelUrl: "https://www.youtube.com/@ABCNews",
+    searchQuery: "ABC News",
+  },
+  isSyndicated: true,
+  isActive: true,
+  category: "weekday",
+};
+
 // ─── All Shows ────────────────────────────────────────────────────
 
 export const ALL_SHOWS: ShowData[] = [
@@ -537,6 +586,7 @@ export const ALL_SHOWS: ShowData[] = [
   SHOW_GENERAL_PROGRAMMING_WEEKDAY,
   SHOW_POSTED_CORNER,
   SHOW_BOOTLEG_KEV,
+  SHOW_ABC_NEWS,
   // Saturday
   SHOW_STREETZ_WEEKEND,
   SHOW_DEJA_VU,

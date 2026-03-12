@@ -15,6 +15,8 @@ import {
   Trash2,
   X,
   CheckCircle2,
+  ExternalLink,
+  FolderOpen,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -35,6 +37,7 @@ interface ProductionJob {
   due: string;
   status: JobStatus;
   assignedTo: string;
+  project?: string; // Broadcast Studio project name
 }
 
 interface Studio {
@@ -48,15 +51,24 @@ interface Studio {
 // Seed data
 // ---------------------------------------------------------------------------
 
+// Mock broadcast studio projects for the dropdown
+const STUDIO_PROJECTS = [
+  { id: "proj_1", name: "Spring Auto Campaign Mix" },
+  { id: "proj_2", name: "Morning Show Bumpers" },
+  { id: "proj_3", name: "BBQ Fest Jingles" },
+  { id: "proj_4", name: "Bank Holiday Promo" },
+  { id: "proj_5", name: "Event Recap Video" },
+];
+
 const initialJobs: ProductionJob[] = [
-  { id: "PQ-1042", client: "Metro Auto Group", type: "Audio Spot", due: "2026-03-05", status: "In Progress", assignedTo: "Marcus T." },
+  { id: "PQ-1042", client: "Metro Auto Group", type: "Audio Spot", due: "2026-03-05", status: "In Progress", assignedTo: "Marcus T.", project: "Spring Auto Campaign Mix" },
   { id: "PQ-1043", client: "City Health Clinic", type: "Audio Spot", due: "2026-03-06", status: "Pending", assignedTo: "Unassigned" },
-  { id: "PQ-1044", client: "WCCG Internal", type: "Promo", due: "2026-03-05", status: "Review", assignedTo: "Keisha W." },
-  { id: "PQ-1045", client: "Carolina BBQ Fest", type: "Audio Spot", due: "2026-03-08", status: "In Progress", assignedTo: "Marcus T." },
-  { id: "PQ-1046", client: "First National Bank", type: "Video", due: "2026-03-10", status: "Pending", assignedTo: "Devon R." },
-  { id: "PQ-1047", client: "WCCG Morning Show", type: "Promo", due: "2026-03-04", status: "Completed", assignedTo: "Keisha W." },
+  { id: "PQ-1044", client: "WCCG Internal", type: "Promo", due: "2026-03-05", status: "Review", assignedTo: "Keisha W.", project: "Morning Show Bumpers" },
+  { id: "PQ-1045", client: "Carolina BBQ Fest", type: "Audio Spot", due: "2026-03-08", status: "In Progress", assignedTo: "Marcus T.", project: "BBQ Fest Jingles" },
+  { id: "PQ-1046", client: "First National Bank", type: "Video", due: "2026-03-10", status: "Pending", assignedTo: "Devon R.", project: "Bank Holiday Promo" },
+  { id: "PQ-1047", client: "WCCG Morning Show", type: "Promo", due: "2026-03-04", status: "Completed", assignedTo: "Keisha W.", project: "Morning Show Bumpers" },
   { id: "PQ-1048", client: "Johnson Law Firm", type: "Audio Spot", due: "2026-03-07", status: "In Progress", assignedTo: "Marcus T." },
-  { id: "PQ-1049", client: "WCCG Events", type: "Video", due: "2026-03-12", status: "Pending", assignedTo: "Devon R." },
+  { id: "PQ-1049", client: "WCCG Events", type: "Video", due: "2026-03-12", status: "Pending", assignedTo: "Devon R.", project: "Event Recap Video" },
 ];
 
 const initialStudios: Studio[] = [
@@ -147,6 +159,7 @@ export default function ProductionPage() {
   const [newType, setNewType] = useState("Audio Spot");
   const [newDue, setNewDue] = useState("");
   const [newAssigned, setNewAssigned] = useState("");
+  const [newProject, setNewProject] = useState("");
 
   // -- Helpers --------------------------------------------------------------
   const showToast = useCallback((msg: string) => {
@@ -209,6 +222,7 @@ export default function ProductionPage() {
       due: newDue,
       status: "Pending",
       assignedTo: newAssigned.trim() || "Unassigned",
+      project: newProject || undefined,
     };
     setJobs((prev) => [job, ...prev]);
     setShowNewForm(false);
@@ -216,6 +230,7 @@ export default function ProductionPage() {
     setNewType("Audio Spot");
     setNewDue("");
     setNewAssigned("");
+    setNewProject("");
     showToast(`Created job ${job.id}`);
   }
 
@@ -282,7 +297,7 @@ export default function ProductionPage() {
       {showNewForm && (
         <div className="rounded-xl border border-[#74ddc7]/30 bg-[#74ddc7]/5 p-5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
           <h3 className="text-sm font-semibold text-foreground">Add New Production Job</h3>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground font-medium">Client Name *</label>
               <Input
@@ -323,6 +338,32 @@ export default function ProductionPage() {
                 onChange={(e) => setNewAssigned(e.target.value)}
                 className="bg-background"
               />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground font-medium">Studio Project</label>
+              <select
+                value={newProject}
+                onChange={(e) => setNewProject(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="">None (no linked project)</option>
+                {STUDIO_PROJECTS.map((proj) => (
+                  <option key={proj.id} value={proj.name}>
+                    {proj.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground font-medium">Final Mixdown</label>
+              <Link
+                href="/my/mixes"
+                className="flex h-9 w-full items-center gap-2 rounded-md border border-input bg-background px-3 py-1 text-sm text-muted-foreground hover:text-[#74ddc7] hover:border-[#74ddc7]/30 transition-colors"
+              >
+                <FolderOpen className="h-4 w-4" />
+                Open Media Manager
+                <ExternalLink className="h-3 w-3 ml-auto" />
+              </Link>
             </div>
           </div>
           <div className="flex justify-end">
@@ -380,6 +421,7 @@ export default function ProductionPage() {
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Job #</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Client</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Type</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Project</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Due Date</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Assigned To</th>
@@ -389,7 +431,7 @@ export default function ProductionPage() {
               <tbody>
                 {filteredJobs.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
                       No jobs found matching your criteria
                     </td>
                   </tr>
@@ -402,6 +444,21 @@ export default function ProductionPage() {
                       <td className="px-4 py-3 font-mono text-xs text-[#74ddc7]">{job.id}</td>
                       <td className="px-4 py-3 font-medium text-foreground">{job.client}</td>
                       <td className="px-4 py-3 text-muted-foreground">{job.type}</td>
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        {job.project ? (
+                          <Link
+                            href="/my/studio"
+                            className="inline-flex items-center gap-1 text-xs text-[#7401df] hover:text-[#7401df]/80 transition-colors font-medium"
+                            title={`Open project: ${job.project}`}
+                          >
+                            <Clapperboard className="h-3 w-3" />
+                            <span className="truncate max-w-[140px]">{job.project}</span>
+                            <ExternalLink className="h-2.5 w-2.5 shrink-0" />
+                          </Link>
+                        ) : (
+                          <span className="text-xs text-muted-foreground/50">--</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">
                         {new Date(job.due).toLocaleDateString("en-US", {
                           month: "short",
@@ -416,7 +473,16 @@ export default function ProductionPage() {
                         />
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">{job.assignedTo}</td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-right flex items-center justify-end gap-1">
+                        {job.project && (
+                          <Link
+                            href="/my/mixes"
+                            className="inline-flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-[#74ddc7] hover:bg-[#74ddc7]/10 transition-all"
+                            title="Open in Media Manager"
+                          >
+                            <FolderOpen className="h-3.5 w-3.5" />
+                          </Link>
+                        )}
                         <button
                           type="button"
                           onClick={() => handleDeleteJob(job.id)}

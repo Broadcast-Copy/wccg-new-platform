@@ -21,6 +21,7 @@ import {
   AvatarImage,
 } from "@/components/ui/avatar";
 import { FollowButton } from "@/components/social/follow-button";
+import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { FollowerCount } from "@/components/social/follower-count";
 import {
   ArrowLeft,
@@ -330,10 +331,11 @@ export default function HostBioPage() {
             </p>
           )}
 
-          {/* Follow + Social links */}
+          {/* Follow + Favorite + Social links */}
           <div className="flex items-center gap-3 pt-2 flex-wrap">
             <FollowButton targetType="host" targetId={host.id} />
             <FollowerCount targetType="host" targetId={host.id} />
+            <FavoriteButton itemType="host" itemId={host.id} />
           </div>
 
           {hostData && (

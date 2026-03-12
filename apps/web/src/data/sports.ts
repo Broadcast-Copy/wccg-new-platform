@@ -23,6 +23,16 @@ export interface TeamStats {
   value: string;
 }
 
+export interface UpcomingGame {
+  opponent: string;
+  opponentLogo?: string;
+  date: string; // ISO date string
+  time: string; // e.g. "7:00 PM ET"
+  venue: string;
+  isHome: boolean;
+  broadcast?: string;
+}
+
 export interface SportsTeam {
   id: string;
   slug: string;
@@ -44,10 +54,13 @@ export interface SportsTeam {
     searchQuery: string;
   };
   website: string;
+  newsUrl: string;
   coaches: Coach[];
   players: Player[];
   stats: TeamStats[];
   gradient: string;
+  nextGame?: UpcomingGame;
+  schedule?: UpcomingGame[];
 }
 
 // ─── Duke Men's Basketball ──────────────────────────────────────────
@@ -73,6 +86,7 @@ export const DUKE_BASKETBALL: SportsTeam = {
     searchQuery: "Duke Blue Devils Basketball highlights",
   },
   website: "https://goduke.com/sports/mens-basketball",
+  newsUrl: "https://www.espn.com/mens-college-basketball/team/_/id/150/duke-blue-devils",
   coaches: [
     {
       name: "Jon Scheyer",
@@ -114,6 +128,42 @@ export const DUKE_BASKETBALL: SportsTeam = {
     { label: "NBA Draft Picks", value: "70+" },
   ],
   gradient: "from-[#003087] via-[#001a4d] to-[#0a0a0f]",
+  nextGame: {
+    opponent: "North Carolina Tar Heels",
+    opponentLogo: "/images/sports/unc-logo.svg",
+    date: "2026-03-14T19:00:00",
+    time: "7:00 PM ET",
+    venue: "Cameron Indoor Stadium",
+    isHome: true,
+    broadcast: "ESPN / WCCG 104.5 FM",
+  },
+  schedule: [
+    {
+      opponent: "North Carolina Tar Heels",
+      opponentLogo: "/images/sports/unc-logo.svg",
+      date: "2026-03-14T19:00:00",
+      time: "7:00 PM ET",
+      venue: "Cameron Indoor Stadium",
+      isHome: true,
+      broadcast: "ESPN / WCCG 104.5 FM",
+    },
+    {
+      opponent: "Wake Forest Demon Deacons",
+      date: "2026-03-18T20:00:00",
+      time: "8:00 PM ET",
+      venue: "Lawrence Joel Veterans Memorial Coliseum",
+      isHome: false,
+      broadcast: "ACC Network / WCCG 104.5 FM",
+    },
+    {
+      opponent: "Virginia Cavaliers",
+      date: "2026-03-22T14:00:00",
+      time: "2:00 PM ET",
+      venue: "Cameron Indoor Stadium",
+      isHome: true,
+      broadcast: "CBS / WCCG 104.5 FM",
+    },
+  ],
 };
 
 // ─── Duke Football ──────────────────────────────────────────────────
@@ -134,11 +184,12 @@ export const DUKE_FOOTBALL: SportsTeam = {
   heroImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/09/DUKE-FB-1.png",
   description: "Duke Blue Devils Football competes in the Atlantic Coast Conference and plays home games at the historic Wallace Wade Stadium in Durham, NC. Under head coach Manny Diaz, the program continues to build on its recent success. WCCG 104.5 FM brings you full coverage of Duke Football including game highlights, player interviews, and analysis.",
   youtube: {
-    channelName: "Duke Blue Planet",
-    channelUrl: "https://www.youtube.com/@DukeBluePlanet",
+    channelName: "Duke Football",
+    channelUrl: "https://www.youtube.com/@Duke_Football",
     searchQuery: "Duke Blue Devils Football highlights",
   },
   website: "https://goduke.com/sports/football",
+  newsUrl: "https://www.espn.com/college-football/team/_/id/150/duke-blue-devils",
   coaches: [
     {
       name: "Manny Diaz",
@@ -173,6 +224,50 @@ export const DUKE_FOOTBALL: SportsTeam = {
     { label: "NFL Draft Picks", value: "100+" },
   ],
   gradient: "from-[#003087] via-[#001a4d] to-[#0a0a0f]",
+  nextGame: {
+    opponent: "NC State Wolfpack",
+    opponentLogo: "/images/sports/ncstate-logo.svg",
+    date: "2026-09-05T15:30:00",
+    time: "3:30 PM ET",
+    venue: "Wallace Wade Stadium",
+    isHome: true,
+    broadcast: "ACC Network / WCCG 104.5 FM",
+  },
+  schedule: [
+    {
+      opponent: "NC State Wolfpack",
+      opponentLogo: "/images/sports/ncstate-logo.svg",
+      date: "2026-09-05T15:30:00",
+      time: "3:30 PM ET",
+      venue: "Wallace Wade Stadium",
+      isHome: true,
+      broadcast: "ACC Network / WCCG 104.5 FM",
+    },
+    {
+      opponent: "Clemson Tigers",
+      date: "2026-09-12T19:00:00",
+      time: "7:00 PM ET",
+      venue: "Memorial Stadium",
+      isHome: false,
+      broadcast: "ESPN / WCCG 104.5 FM",
+    },
+    {
+      opponent: "Virginia Tech Hokies",
+      date: "2026-09-19T12:00:00",
+      time: "12:00 PM ET",
+      venue: "Wallace Wade Stadium",
+      isHome: true,
+      broadcast: "ACC Network / WCCG 104.5 FM",
+    },
+    {
+      opponent: "North Carolina Tar Heels",
+      date: "2026-10-03T15:30:00",
+      time: "3:30 PM ET",
+      venue: "Kenan Memorial Stadium",
+      isHome: false,
+      broadcast: "ABC / WCCG 104.5 FM",
+    },
+  ],
 };
 
 export const ALL_SPORTS_TEAMS: SportsTeam[] = [

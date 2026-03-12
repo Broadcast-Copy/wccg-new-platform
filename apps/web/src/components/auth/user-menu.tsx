@@ -32,6 +32,7 @@ import {
   Heart,
   LayoutDashboard,
   LogOut,
+  MapPin,
   Megaphone,
   Mic,
   Palette,
@@ -135,11 +136,51 @@ function getRoleSection(flags: {
 // Role switcher options
 // ---------------------------------------------------------------------------
 const VIEWABLE_ROLES: { value: UserRole; label: string }[] = [
-  { value: "listener", label: "Listener" },
-  { value: "content_creator", label: "Creator" },
-  { value: "promotions", label: "Marketing" },
-  { value: "sales", label: "Sales" },
+  { value: "promotions", label: "Advertising" },
+  { value: "admin", label: "Admin" },
 ];
+
+// ---------------------------------------------------------------------------
+// Listener / Creator Toggle (inline for the dropdown)
+// ---------------------------------------------------------------------------
+function ListenerCreatorToggle({
+  isCreatorMode,
+  onListenerClick,
+  onCreatorClick,
+}: {
+  isCreatorMode: boolean;
+  onListenerClick: () => void;
+  onCreatorClick: () => void;
+}) {
+  return (
+    <div className="inline-flex w-full items-center justify-center rounded-full border border-border bg-muted/50 p-px">
+      <button
+        type="button"
+        onClick={onListenerClick}
+        className="flex-1 rounded-full px-3 py-1 text-[10px] font-semibold transition-all text-center"
+        style={
+          !isCreatorMode
+            ? { backgroundColor: "#74ddc7", color: "#0a0a0f" }
+            : undefined
+        }
+      >
+        Listener
+      </button>
+      <button
+        type="button"
+        onClick={onCreatorClick}
+        className="flex-1 rounded-full px-3 py-1 text-[10px] font-semibold transition-all text-center"
+        style={
+          isCreatorMode
+            ? { backgroundColor: "#74ddc7", color: "#0a0a0f" }
+            : undefined
+        }
+      >
+        Creator
+      </button>
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -227,18 +268,30 @@ export function UserMenu() {
         </div>
         <DropdownMenuSeparator />
 
+        {/* Listener / Creator toggle */}
+        <div className="px-2 py-1.5">
+          <ListenerCreatorToggle
+            isCreatorMode={isOverrideActive && roleOverride === "content_creator"}
+            onListenerClick={() => {
+              if (isOverrideActive && roleOverride === "content_creator") {
+                setRoleOverride(null);
+              }
+            }}
+            onCreatorClick={() => {
+              if (!isOverrideActive || roleOverride !== "content_creator") {
+                setRoleOverride("content_creator");
+              }
+            }}
+          />
+        </div>
+        <DropdownMenuSeparator />
+
         {/* Base navigation */}
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
             <Link href="/my">
               <LayoutDashboard className="mr-2 h-4 w-4" />
               Dashboard
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/my/overview">
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Overview
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
@@ -251,6 +304,12 @@ export function UserMenu() {
             <Link href="/my/favorites">
               <Heart className="mr-2 h-4 w-4" />
               Favorites
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/my/places">
+              <MapPin className="mr-2 h-4 w-4" />
+              My Places
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>

@@ -29,6 +29,8 @@ export interface ListeningSession {
   endedAt: string | null; // null = still active
   durationSeconds: number;
   tracks: TrackEntry[];
+  /** Name of the stream the user was listening to (e.g., "WCCG 104.5 FM") */
+  streamName: string;
 }
 
 // What the history page consumes — flattened from sessions
@@ -48,16 +50,32 @@ export interface HistoryEntry {
   isActive: boolean;
   /** Tracks heard during this session */
   tracks: TrackEntry[];
+  /** Name of the stream the user was listening to */
+  streamName: string;
 }
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const STORAGE_KEY = "wccg_listening_history";
+const STORAGE_KEY_DEFAULT = "wccg_listening_history";
 const MAX_SESSIONS = 500; // Keep at most 500 sessions in localStorage
 // Sessions older than 24h with endedAt === null are considered orphaned
 const ORPHAN_THRESHOLD_MS = 24 * 60 * 60 * 1000;
+
+/** Currently resolved email — set via setHistoryUserEmail */
+let _currentEmail: string | null = null;
+
+/** Set the logged-in user email so history persists per-user */
+export function setHistoryUserEmail(email: string | null) {
+  _currentEmail = email;
+}
+
+function historyStorageKey(): string {
+  return _currentEmail
+    ? `wccg_listening_history_${_currentEmail}`
+    : STORAGE_KEY_DEFAULT;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -146,9 +164,21 @@ function toDateString(isoDate: string): string {
 export function getSessions(): ListeningSession[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw) as ListeningSession[];
+    const raw = localStorage.getItem(historyStorageKey());
+    if (raw) return JSON.parse(raw) as ListeningSession[];
+
+    // Fallback: if user-specific key has no data, migrate from default key
+    if (_currentEmail) {
+      const fallback = localStorage.getItem(STORAGE_KEY_DEFAULT);
+      if (fallback) {
+        const sessions = JSON.parse(fallback) as ListeningSession[];
+        localStorage.setItem(historyStorageKey(), JSON.stringify(sessions));
+        localStorage.removeItem(STORAGE_KEY_DEFAULT);
+        return sessions;
+      }
+    }
+
+    return [];
   } catch {
     return [];
   }
@@ -160,26 +190,29 @@ function saveSessions(sessions: ListeningSession[]): void {
   try {
     // Keep only latest MAX_SESSIONS
     const trimmed = sessions.slice(0, MAX_SESSIONS);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    localStorage.setItem(historyStorageKey(), JSON.stringify(trimmed));
   } catch {
     // Storage full or unavailable — silently fail
   }
 }
 
 /** Create and store a new session, returns the session */
-export function startSession(): ListeningSession {
+export function startSession(streamName?: string): ListeningSession {
   // End any orphaned active sessions first
   endOrphanedSessions();
+
+  const resolvedStreamName = streamName || "WCCG 104.5 FM";
 
   const session: ListeningSession = {
     id: generateId(),
     type: "live",
-    title: "WCCG 104.5 FM",
+    title: resolvedStreamName,
     artist: "Live Stream",
     startedAt: new Date().toISOString(),
     endedAt: null,
     durationSeconds: 0,
     tracks: [],
+    streamName: resolvedStreamName,
   };
 
   const sessions = getSessions();
@@ -318,6 +351,7 @@ export function getHistoryEntries(): HistoryEntry[] {
         dateGroup: getDateGroup(s.startedAt),
         isActive,
         tracks: s.tracks,
+        streamName: s.streamName || "WCCG 104.5 FM",
       };
     });
 }
@@ -346,6 +380,15 @@ export function getListeningStats() {
   // Count active sessions
   const activeSessions = entries.filter((e) => e.isActive).length;
 
+  // Last completed session date/time
+  const completedEntries = entries.filter((e) => !e.isActive);
+  const lastSessionDate = completedEntries.length > 0
+    ? completedEntries[0].date
+    : null;
+  const lastSessionTimestamp = completedEntries.length > 0
+    ? completedEntries[0].timestamp
+    : null;
+
   return {
     totalHours,
     remainingMinutes,
@@ -353,11 +396,15 @@ export function getListeningStats() {
     totalTracks,
     topArtist,
     activeSessions,
+    /** YYYY-MM-DD of the most recent completed session */
+    lastSessionDate,
+    /** Formatted time string of the most recent completed session */
+    lastSessionTimestamp,
   };
 }
 
 /** Clear all history (for settings/privacy) */
 export function clearHistory(): void {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(historyStorageKey());
 }

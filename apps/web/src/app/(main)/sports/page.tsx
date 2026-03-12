@@ -72,7 +72,7 @@ export default function SportsPage() {
               {/* Card Content */}
               <div className="p-6 space-y-4">
                 <h2 className="text-2xl font-extrabold text-foreground group-hover:text-[#74ddc7] transition-colors">
-                  {team.name}
+                  Duke {team.sport.replace("Men's ", "")}
                 </h2>
 
                 <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">

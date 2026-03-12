@@ -24,19 +24,22 @@ import {
   Phone,
   MapPin,
   Tag,
+  Gift,
+  Trash2,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type OrderType = "specific" | "non_specific";
+type OrderType = "specific" | "non_specific" | "promotions";
 type DaypartId =
   | "morning_drive"
   | "midday"
   | "afternoon_drive"
   | "evening"
   | "overnight";
+type DaySchedule = "weekday" | "saturday" | "sunday" | "sports";
 
 interface DaypartConfig {
   id: DaypartId;
@@ -120,6 +123,15 @@ const DAYPARTS: DaypartConfig[] = [
   { id: "afternoon_drive", label: "Afternoon Drive", startHour: 15, endHour: 19, defaultRate: 65 },
   { id: "evening", label: "Evening", startHour: 19, endHour: 24, defaultRate: 40 },
   { id: "overnight", label: "Overnight", startHour: 0, endHour: 6, defaultRate: 25 },
+];
+
+const PROMOTIONS_RATE_PER_WEEK = 150;
+
+const DAY_SCHEDULES: { key: DaySchedule; label: string }[] = [
+  { key: "weekday", label: "Weekday" },
+  { key: "saturday", label: "Saturday" },
+  { key: "sunday", label: "Sunday" },
+  { key: "sports", label: "Sports" },
 ];
 
 const CATEGORIES = [
@@ -235,13 +247,15 @@ export default function CampaignBuilderPage() {
     category: "Other",
   });
 
-  // Section 2 — Flight Dates
+  // Section 2 — Flight Dates & Day Schedule
   const [flightStart, setFlightStart] = useState("");
   const [flightEnd, setFlightEnd] = useState("");
+  const [daySchedules, setDaySchedules] = useState<DaySchedule[]>(["weekday"]);
 
   // Section 3 — Order Configuration
   const [orderType, setOrderType] = useState<OrderType>("non_specific");
   const [selectedDayparts, setSelectedDayparts] = useState<DaypartId[]>([]);
+  const [promoDescription, setPromoDescription] = useState("");
   const [daypartOrders, setDaypartOrders] = useState<Record<DaypartId, DaypartOrder>>(() => {
     const initial: Record<string, DaypartOrder> = {};
     DAYPARTS.forEach((dp) => {
@@ -298,7 +312,25 @@ export default function CampaignBuilderPage() {
   }, [flightStart, flightEnd]);
 
   const lineItems: InvoiceLineItem[] = useMemo(() => {
-    if (weeks === 0 || selectedDayparts.length === 0) return [];
+    if (weeks === 0) return [];
+
+    // Promotions tier — flat $150/week per selected day schedule
+    if (orderType === "promotions") {
+      return daySchedules.map((ds) => {
+        const label = DAY_SCHEDULES.find((d) => d.key === ds)?.label ?? ds;
+        return {
+          daypartLabel: `Promotions — ${label}`,
+          orderType: "Promo",
+          slotsPerDay: 0,
+          spotsPerWeek: 0,
+          weeks,
+          ratePerSpot: PROMOTIONS_RATE_PER_WEEK,
+          lineTotal: PROMOTIONS_RATE_PER_WEEK * weeks,
+        };
+      });
+    }
+
+    if (selectedDayparts.length === 0) return [];
     return selectedDayparts.map((dpId) => {
       const dp = DAYPARTS.find((d) => d.id === dpId)!;
       const order = daypartOrders[dpId];
@@ -328,7 +360,7 @@ export default function CampaignBuilderPage() {
         };
       }
     });
-  }, [selectedDayparts, daypartOrders, orderType, weeks]);
+  }, [selectedDayparts, daypartOrders, orderType, weeks, daySchedules]);
 
   const subtotal = lineItems.reduce((sum, li) => sum + li.lineTotal, 0);
   const taxAmount = Math.round(subtotal * (taxRate / 100));
@@ -367,6 +399,12 @@ export default function CampaignBuilderPage() {
   const toggleDaypart = useCallback((dpId: DaypartId) => {
     setSelectedDayparts((prev) =>
       prev.includes(dpId) ? prev.filter((id) => id !== dpId) : [...prev, dpId]
+    );
+  }, []);
+
+  const toggleDaySchedule = useCallback((ds: DaySchedule) => {
+    setDaySchedules((prev) =>
+      prev.includes(ds) ? prev.filter((d) => d !== ds) : [...prev, ds]
     );
   }, []);
 
@@ -466,7 +504,7 @@ export default function CampaignBuilderPage() {
 
   if (!mounted) return null;
 
-  const canSave = !!selectedClient && !!campaignName.trim() && weeks > 0 && lineItems.length > 0;
+  const canSave = !!selectedClient && !!campaignName.trim() && weeks > 0 && lineItems.length > 0 && daySchedules.length > 0;
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -755,11 +793,11 @@ export default function CampaignBuilderPage() {
       </section>
 
       {/* ================================================================= */}
-      {/* SECTION 2 — Flight Dates */}
+      {/* SECTION 2 — Flight Dates & Day Schedule */}
       {/* ================================================================= */}
       <section className="rounded-xl border border-border bg-card p-5">
-        <SectionHeader number={2} title="Flight Dates" icon={Calendar} />
-        <div className="flex flex-wrap items-end gap-4">
+        <SectionHeader number={2} title="Flight Dates & Schedule" icon={Calendar} />
+        <div className="flex flex-wrap items-end gap-4 mb-5">
           <div>
             <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1 block">Start Date</label>
             <input
@@ -784,6 +822,32 @@ export default function CampaignBuilderPage() {
               <Clock className="h-4 w-4 text-[#74ddc7]" />
               <span className="font-semibold text-foreground">{weeks} week{weeks !== 1 ? "s" : ""}</span>
             </div>
+          )}
+        </div>
+
+        {/* Day Schedule Selection */}
+        <div>
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Day Schedule</label>
+          <div className="flex flex-wrap gap-2">
+            {DAY_SCHEDULES.map((ds) => {
+              const active = daySchedules.includes(ds.key);
+              return (
+                <button
+                  key={ds.key}
+                  onClick={() => toggleDaySchedule(ds.key)}
+                  className={`rounded-lg px-3 py-2 text-xs font-semibold transition-all border ${
+                    active
+                      ? "bg-[#74ddc7]/10 text-[#74ddc7] border-[#74ddc7]/30"
+                      : "bg-background text-muted-foreground border-border hover:border-foreground/20"
+                  }`}
+                >
+                  {ds.label}
+                </button>
+              );
+            })}
+          </div>
+          {daySchedules.length === 0 && (
+            <p className="text-xs text-red-400 mt-1">Select at least one day schedule.</p>
           )}
         </div>
       </section>
@@ -818,10 +882,50 @@ export default function CampaignBuilderPage() {
             >
               Specific
             </button>
+            <button
+              onClick={() => setOrderType("promotions")}
+              className={`px-4 py-2 text-xs font-semibold transition-colors border-l border-border ${
+                orderType === "promotions"
+                  ? "bg-amber-500 text-[#0a0a0f]"
+                  : "bg-background text-muted-foreground hover:bg-foreground/[0.04]"
+              }`}
+            >
+              <span className="flex items-center gap-1"><Gift className="h-3 w-3" /> Promotions</span>
+            </button>
           </div>
         </div>
 
-        {/* Daypart Selection */}
+        {/* Promotions Mode */}
+        {orderType === "promotions" && (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 mb-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Gift className="h-4 w-4 text-amber-400" />
+              <h3 className="text-sm font-semibold text-foreground">On-Air Giveaway / Promotion</h3>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Flat rate of <span className="font-semibold text-amber-400">{formatCurrency(PROMOTIONS_RATE_PER_WEEK)}/week</span> per selected day schedule. Includes on-air mentions, social media posts, and prize coordination.
+            </p>
+            <div>
+              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1 block">Promotion Details (optional)</label>
+              <input
+                type="text"
+                placeholder="e.g. Concert ticket giveaway, Free oil change drawing..."
+                value={promoDescription}
+                onChange={(e) => setPromoDescription(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/50"
+              />
+            </div>
+            {weeks > 0 && daySchedules.length > 0 && (
+              <div className="mt-3 text-sm text-muted-foreground">
+                Total: <span className="font-semibold text-foreground">{formatCurrency(PROMOTIONS_RATE_PER_WEEK * weeks * daySchedules.length)}</span>
+                <span className="text-xs ml-1">({daySchedules.length} schedule{daySchedules.length !== 1 ? "s" : ""} x {weeks} week{weeks !== 1 ? "s" : ""})</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Daypart Selection (non-promotions) */}
+        {orderType !== "promotions" && (
         <div className="mb-5">
           <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Dayparts</label>
           <div className="flex flex-wrap gap-2">
@@ -846,13 +950,14 @@ export default function CampaignBuilderPage() {
             })}
           </div>
         </div>
+        )}
 
         {/* Daypart Configuration Cards */}
-        {selectedDayparts.length === 0 && (
+        {orderType !== "promotions" && selectedDayparts.length === 0 && (
           <p className="text-sm text-muted-foreground italic">Select one or more dayparts above to configure.</p>
         )}
 
-        <div className="space-y-4">
+        {orderType !== "promotions" && <div className="space-y-4">
           {selectedDayparts.map((dpId) => {
             const dp = DAYPARTS.find((d) => d.id === dpId)!;
             const order = daypartOrders[dpId];
@@ -977,7 +1082,7 @@ export default function CampaignBuilderPage() {
               </div>
             );
           })}
-        </div>
+        </div>}
       </section>
 
       {/* ================================================================= */}
@@ -1109,7 +1214,8 @@ export default function CampaignBuilderPage() {
             {!selectedClient && <p>Select or create a client.</p>}
             {!campaignName.trim() && <p>Enter a campaign name.</p>}
             {weeks === 0 && <p>Set valid flight dates (end must be after start).</p>}
-            {lineItems.length === 0 && <p>Select and configure at least one daypart.</p>}
+            {daySchedules.length === 0 && <p>Select at least one day schedule.</p>}
+            {lineItems.length === 0 && orderType !== "promotions" && <p>Select and configure at least one daypart.</p>}
           </div>
         )}
       </section>

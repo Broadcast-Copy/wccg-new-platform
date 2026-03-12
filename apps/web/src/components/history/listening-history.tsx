@@ -5,7 +5,7 @@ import {
   Radio,
   Headphones,
   Podcast,
-  Play,
+  Info,
   Clock,
   Search,
   Filter,
@@ -14,10 +14,11 @@ import {
   TrendingUp,
   CalendarDays,
   RotateCcw,
-  Trash2,
   Timer,
   Square,
   Award,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   Card,
@@ -31,7 +32,6 @@ import { Input } from "@/components/ui/input";
 import {
   getHistoryEntries,
   getListeningStats,
-  clearHistory,
   getSessions,
   type HistoryEntry,
 } from "@/lib/listening-history";
@@ -150,6 +150,7 @@ export function ListeningHistory() {
   const [dateRange, setDateRange] = useState<DateRange>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
+  const [showMissed, setShowMissed] = useState(false);
   const [stats, setStats] = useState({
     totalHours: 0,
     remainingMinutes: 0,
@@ -157,6 +158,8 @@ export function ListeningHistory() {
     totalTracks: 0,
     topArtist: "—",
     activeSessions: 0,
+    lastSessionDate: null as string | null,
+    lastSessionTimestamp: null as string | null,
   });
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -230,26 +233,23 @@ export function ListeningHistory() {
 
   const hasAnyEntries = activeEntries.length > 0 || orderedGroups.length > 0;
 
-  const handleClearHistory = () => {
-    if (window.confirm("Are you sure you want to clear all listening history? This cannot be undone.")) {
-      clearHistory();
-      setRefreshKey((k) => k + 1);
-    }
-  };
-
   return (
     <>
-      {/* ─── Clear History Button ────────────────────────────────────── */}
+      {/* ─── Songs You Missed Toggle ───────────────────────────────── */}
       {historyEntries.length > 0 && (
         <div className="flex justify-end -mt-6">
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="gap-1.5 text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 hover:bg-red-500/10"
-            onClick={handleClearHistory}
+            className="gap-1.5 text-muted-foreground hover:text-foreground"
+            onClick={() => setShowMissed((v) => !v)}
           >
-            <Trash2 className="h-3.5 w-3.5" />
-            Clear History
+            {showMissed ? (
+              <EyeOff className="h-3.5 w-3.5" />
+            ) : (
+              <Eye className="h-3.5 w-3.5" />
+            )}
+            Songs You Missed
           </Button>
         </div>
       )}
@@ -272,16 +272,21 @@ export function ListeningHistory() {
             <div className="text-2xl font-bold">
               {stats.totalHours > 0 || stats.remainingMinutes > 0
                 ? `${stats.totalHours}h ${stats.remainingMinutes}m`
-                : "0m"}
+                : "0h 0m"}
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Across {stats.totalSessions} session{stats.totalSessions !== 1 ? "s" : ""}
-              {stats.activeSessions > 0 && (
+            {stats.activeSessions > 0 && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Across {stats.totalSessions} session{stats.totalSessions !== 1 ? "s" : ""}
                 <span className="text-[#74ddc7] ml-1">
                   ({stats.activeSessions} live now)
                 </span>
-              )}
-            </p>
+              </p>
+            )}
+            {stats.lastSessionDate && (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Last session: {stats.lastSessionDate}{stats.lastSessionTimestamp ? ` at ${stats.lastSessionTimestamp}` : ""}
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -414,6 +419,23 @@ export function ListeningHistory() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* ─── Songs You Missed ──────────────────────────────────────── */}
+      {showMissed && (
+        <Card className="border-dashed border-amber-500/30 bg-amber-500/5">
+          <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10">
+              <Music className="h-6 w-6 text-amber-500" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold">Songs You Missed</h3>
+              <p className="mt-1 text-sm text-muted-foreground max-w-sm">
+                This feature will show tracks that played on WCCG while you were away. Check back soon as we build out this feature.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* ─── History List ────────────────────────────────────────────── */}
@@ -557,8 +579,8 @@ function ActiveSessionItem({
   }, [entry.id]);
 
   // ── Session points calculation ──────────────────────────────────────
-  // 1 point per 15 minutes of listening
-  const sessionPoints = Math.floor(elapsedSeconds / (15 * 60));
+  // 1 point per 90 seconds of listening
+  const sessionPoints = Math.floor(elapsedSeconds / 90);
   const totalPoints = getListeningPoints();
   const progressToNext = getListeningProgress();
 
@@ -588,14 +610,14 @@ function ActiveSessionItem({
           {/* Main Info */}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h3 className="truncate text-sm font-semibold">{entry.title}</h3>
+              <h3 className="truncate text-sm font-semibold">{entry.streamName}</h3>
               <Badge className="shrink-0 text-[10px] border-[#74ddc7]/30 bg-[#74ddc7]/10 text-[#74ddc7] animate-pulse">
                 LIVE
               </Badge>
             </div>
 
             <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-              <span>{entry.artist}</span>
+              <span>{entry.title !== entry.streamName ? entry.title : entry.artist}</span>
               <span>{entry.timestamp}</span>
               {entry.tracks.length > 0 && (
                 <span className="text-[#74ddc7]">
@@ -656,8 +678,6 @@ function ActiveSessionItem({
 // ─── History Item Component ────────────────────────────────────────────
 
 function HistoryItem({ entry }: { entry: HistoryEntry }) {
-  const { open: openStreamPlayer } = useStreamPlayer();
-
   const hasProgress = entry.totalMinutes !== null && entry.totalMinutes > 0;
   const progressPercent = hasProgress
     ? Math.min(
@@ -697,20 +717,22 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
         {/* Main Info */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="truncate text-sm font-semibold">{entry.title}</h3>
+            <h3 className="truncate text-sm font-semibold">
+              {entry.type === "live" ? entry.streamName : entry.title}
+            </h3>
             {entry.isActive ? (
               <Badge className="shrink-0 text-[10px] border-[#74ddc7]/30 bg-[#74ddc7]/10 text-[#74ddc7] animate-pulse">
                 LIVE
               </Badge>
             ) : (
               <Badge className={`shrink-0 text-[10px] ${getContentBadgeStyle(entry.type)}`}>
-                {getContentLabel(entry.type)}
+                {entry.type === "live" ? entry.streamName : getContentLabel(entry.type)}
               </Badge>
             )}
           </div>
 
           <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-            <span>{entry.artist}</span>
+            <span>{entry.type === "live" && entry.title !== entry.streamName ? entry.title : entry.artist}</span>
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {entry.listenedDuration}
@@ -754,7 +776,7 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
           )}
         </div>
 
-        {/* Play Again Button / Listening Indicator */}
+        {/* More Info Button / Listening Indicator */}
         {entry.isActive ? (
           <div className="flex items-center gap-1 shrink-0 text-[#74ddc7]">
             <div className="flex gap-0.5">
@@ -768,10 +790,12 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
             variant="outline"
             size="sm"
             className="shrink-0 gap-1.5"
-            onClick={openStreamPlayer}
+            asChild
           >
-            <Play className="h-3 w-3" />
-            <span className="hidden sm:inline">Listen</span>
+            <a href={`/shows/${encodeURIComponent(entry.title)}`}>
+              <Info className="h-3 w-3" />
+              <span className="hidden sm:inline">More Info</span>
+            </a>
           </Button>
         )}
       </CardContent>

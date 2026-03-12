@@ -31,6 +31,8 @@ import {
   Mic,
   Gift,
   Palette,
+  MapPin,
+  Shield,
   type LucideIcon,
 } from "lucide-react";
 
@@ -49,9 +51,9 @@ interface NavItem {
 // ---------------------------------------------------------------------------
 const listenerItems: NavItem[] = [
   { href: "/my", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/my/overview", label: "Overview", icon: BarChart3 },
   { href: "/my/points", label: "Points & Rewards", icon: Star },
   { href: "/my/favorites", label: "Favorites", icon: Heart },
+  { href: "/my/places", label: "My Places", icon: MapPin },
   { href: "/my/tickets", label: "My Tickets", icon: Ticket },
   { href: "/my/history", label: "Listening History", icon: Clock },
 ];
@@ -60,12 +62,43 @@ const listenerItems: NavItem[] = [
 // Creator nav items (used when toggle is set to Creator)
 // ---------------------------------------------------------------------------
 const creatorItems: NavItem[] = [
-  { href: "/my/admin/programming", label: "Programming", icon: Radio },
   { href: "/my/admin/production", label: "Production Queue", icon: Clapperboard },
   { href: "/my/studio", label: "Broadcast Studio", icon: Mic },
   { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
-  { href: "/my/events", label: "Events Manager", icon: CalendarDays },
   { href: "/creators", label: "Creator Hub", icon: Palette },
+];
+
+const creatorEventsItems: NavItem[] = [
+  { href: "/my/events", label: "Events Manager", icon: CalendarDays },
+];
+
+// ---------------------------------------------------------------------------
+// Advertising nav items (combined Sales + Marketing)
+// ---------------------------------------------------------------------------
+interface NavSection {
+  sectionLabel: string;
+  items: NavItem[];
+}
+
+const advertisingItems: NavSection[] = [
+  {
+    sectionLabel: "SALES",
+    items: [
+      { href: "/my/sales", label: "Sales Dashboard", icon: DollarSign },
+      { href: "/my/admin/reports", label: "Reports", icon: BarChart3 },
+      { href: "/my/sales/invoices", label: "Invoices", icon: Receipt },
+      { href: "/my/sales/clients", label: "Client Manager", icon: Briefcase },
+    ],
+  },
+  {
+    sectionLabel: "MARKETING",
+    items: [
+      { href: "/my/marketing/campaigns", label: "Campaigns", icon: Megaphone },
+      { href: "/my/marketing/campaign-builder", label: "Campaign Builder", icon: Briefcase },
+      { href: "/my/events", label: "Events Manager", icon: CalendarDays },
+      { href: "/contests", label: "Contests", icon: Gift },
+    ],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -80,7 +113,7 @@ function getRoleItems(flags: {
   isHost: boolean;
   isAdmin: boolean;
   isSuperAdmin: boolean;
-}): { label: string; items: NavItem[] } {
+}): { label: string; items: NavItem[]; sections?: NavSection[] } {
   const {
     isSales,
     isProduction,
@@ -110,7 +143,6 @@ function getRoleItems(flags: {
     return {
       label: "Creator",
       items: [
-        { href: "/my/admin/programming", label: "Programming", icon: Radio },
         { href: "/my/admin/production", label: "Production Queue", icon: Clapperboard },
         { href: "/my/studio", label: "Broadcast Studio", icon: Mic },
         { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
@@ -120,27 +152,12 @@ function getRoleItems(flags: {
     };
   }
 
-  if (isPromotions) {
+  // Advertising: combined Sales + Marketing
+  if (isPromotions || isSales) {
     return {
-      label: "Marketing",
-      items: [
-        { href: "/my/marketing/campaigns", label: "Campaigns", icon: Megaphone },
-        { href: "/my/marketing/campaign-builder", label: "Campaign Builder", icon: Briefcase },
-        { href: "/my/events", label: "Events Manager", icon: CalendarDays },
-        { href: "/contests", label: "Contests", icon: Gift },
-      ],
-    };
-  }
-
-  if (isSales) {
-    return {
-      label: "Sales",
-      items: [
-        { href: "/my/sales", label: "Sales Dashboard", icon: DollarSign },
-        { href: "/my/admin/reports", label: "Reports", icon: BarChart3 },
-        { href: "/my/sales/invoices", label: "Invoices", icon: Receipt },
-        { href: "/my/events", label: "Events Manager", icon: CalendarDays },
-      ],
+      label: "Advertising",
+      items: [],
+      sections: advertisingItems,
     };
   }
 
@@ -154,8 +171,7 @@ function getRoleItems(flags: {
 const VIEWABLE_ROLES = [
   { value: "listener", label: "Listener" },
   { value: "content_creator", label: "Creator" },
-  { value: "promotions", label: "Marketing" },
-  { value: "sales", label: "Sales" },
+  { value: "promotions", label: "Advertising" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -252,10 +268,14 @@ function SidebarContent({ pathname }: { pathname: string }) {
     isPromotions,
     isAdmin,
     isSuperAdmin,
+    realRoles,
     roleOverride,
     isOverrideActive,
     setRoleOverride,
   } = useUserRoles();
+
+  // Check real admin status (not affected by role override)
+  const isRealAdmin = realRoles.includes("admin") || realRoles.includes("super_admin");
 
   // Custom dropdown state for role switcher
   const [roleSwitcherOpen, setRoleSwitcherOpen] = useState(false);
@@ -327,16 +347,43 @@ function SidebarContent({ pathname }: { pathname: string }) {
             {creatorItems.map((item) => (
               <NavLink key={item.href + item.label} item={item} pathname={pathname} />
             ))}
+
+            {/* Events section with divider */}
+            <div className="my-2 border-t border-border" />
+            <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+              Events
+            </p>
+            {creatorEventsItems.map((item) => (
+              <NavLink key={item.href + item.label} item={item} pathname={pathname} />
+            ))}
           </>
         ) : (
           <>
+            {/* Listener label */}
+            <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+              Listener
+            </p>
             {/* Listener items — shown when in Listener mode or non-toggle override */}
             {listenerItems.map((item) => (
               <NavLink key={item.href} item={item} pathname={pathname} />
             ))}
 
-            {/* Role-specific items (for Marketing/Sales/Admin overrides or natural roles) */}
-            {roleSection.items.length > 0 && (
+            {/* Role-specific items (for Advertising/Admin overrides or natural roles) */}
+            {roleSection.sections ? (
+              <>
+                <div className="my-2 border-t border-border" />
+                {roleSection.sections.map((section) => (
+                  <div key={section.sectionLabel}>
+                    <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                      {section.sectionLabel}
+                    </p>
+                    {section.items.map((item) => (
+                      <NavLink key={item.href + item.label} item={item} pathname={pathname} />
+                    ))}
+                  </div>
+                ))}
+              </>
+            ) : roleSection.items.length > 0 ? (
               <>
                 <div className="my-2 border-t border-border" />
                 {roleSection.label && (
@@ -348,13 +395,13 @@ function SidebarContent({ pathname }: { pathname: string }) {
                   <NavLink key={item.href + item.label} item={item} pathname={pathname} />
                 ))}
               </>
-            )}
+            ) : null}
           </>
         )}
       </nav>
 
       {/* Role switcher — bottom of sidebar */}
-      <div className="border-t border-border px-3 py-3">
+      <div className="border-t border-border px-3 py-2">
         {!isNonToggleOverride ? (
           <div className="relative" ref={roleSwitcherRef}>
             <button
@@ -405,6 +452,17 @@ function SidebarContent({ pathname }: { pathname: string }) {
           </div>
         )}
       </div>
+
+      {/* Admin controls — very bottom of sidebar */}
+      {isRealAdmin && (
+        <div className="border-t border-border px-2 py-2">
+          <NavLink
+            item={{ href: "/my/admin", label: "Station Control", icon: Shield, exact: true }}
+            pathname={pathname}
+            color="#dc2626"
+          />
+        </div>
+      )}
     </>
   );
 }

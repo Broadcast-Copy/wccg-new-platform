@@ -104,27 +104,17 @@ function StreamingMegaMenu() {
 
   return (
     <div ref={ref} className="relative inline-flex items-center">
-      {/* Label is a regular link — navigates to /channels */}
-      <Link
-        href="/channels"
-        className={`inline-flex items-center rounded-l-full pl-3.5 pr-1 py-1.5 text-[13px] font-medium transition-all ${
-          isActive || open
-            ? "bg-foreground/10 text-[#74ddc7]"
-            : "text-muted-foreground hover:text-foreground/80 hover:bg-foreground/[0.04]"
-        }`}
-      >
-        Streaming
-      </Link>
-      {/* Only the chevron arrow opens the mega menu dropdown */}
+      {/* Entire pill toggles the mega menu dropdown */}
       <button
         onClick={() => setOpen(!open)}
-        className={`inline-flex items-center rounded-r-full pr-3 pl-0.5 py-1.5 transition-all ${
+        className={`inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all ${
           isActive || open
             ? "bg-foreground/10 text-[#74ddc7]"
             : "text-muted-foreground hover:text-foreground/80 hover:bg-foreground/[0.04]"
         }`}
         aria-label="Toggle streaming channels menu"
       >
+        Streaming
         <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
@@ -180,6 +170,7 @@ function StreamingMegaMenu() {
                       fill
                       className="object-cover"
                       sizes="400px"
+                      priority
                     />
                   </div>
                 </Link>

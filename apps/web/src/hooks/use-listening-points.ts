@@ -5,19 +5,47 @@ import { useEffect, useRef } from "react";
 /**
  * Hook that awards points for continuous listening.
  *
- * Awards 1 point per POINTS_INTERVAL_MS (15 minutes) of continuous listening.
+ * Awards 1 point per POINTS_INTERVAL_MS (1 minute 30 seconds) of continuous listening.
  * Tracks accumulated listening time in localStorage so it persists across
  * page navigations (since AudioProvider already persists the stream).
+ * Points are persisted per-user when an email is provided via setPointsUserEmail().
  *
  * Usage: call this hook in GlobalPlayer with the `isPlaying` state.
  */
 
-const POINTS_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
+const POINTS_INTERVAL_MS = 90 * 1000; // 1 minute 30 seconds
 const ONE_HOUR_MS = 60 * 60 * 1000;
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
-const STORAGE_KEY = "wccg_listening_points";
-const ACCUMULATED_KEY = "wccg_listening_accumulated_ms";
+const STORAGE_KEY_DEFAULT = "wccg_listening_points";
+const ACCUMULATED_KEY_DEFAULT = "wccg_listening_accumulated_ms";
 const SESSION_START_KEY = "wccg_listening_session_start";
+const BOUNTY_TRACKER_KEY_DEFAULT = "wccg_bounty_tracker";
+
+/** Currently resolved email — set via setPointsUserEmail */
+let _currentEmail: string | null = null;
+
+/** Set the logged-in user email so points persist per-user */
+export function setPointsUserEmail(email: string | null) {
+  _currentEmail = email;
+}
+
+function storageKey(): string {
+  return _currentEmail
+    ? `wccg_listening_points_${_currentEmail}`
+    : STORAGE_KEY_DEFAULT;
+}
+
+function accumulatedKey(): string {
+  return _currentEmail
+    ? `wccg_listening_accumulated_${_currentEmail}`
+    : ACCUMULATED_KEY_DEFAULT;
+}
+
+function bountyTrackerKey(): string {
+  return _currentEmail
+    ? `wccg_bounty_tracker_${_currentEmail}`
+    : BOUNTY_TRACKER_KEY_DEFAULT;
+}
 
 interface PointsData {
   totalPoints: number;
@@ -56,8 +84,20 @@ function loadPointsData(): PointsData {
     return defaultPointsData();
   }
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey());
     if (raw) return { ...defaultPointsData(), ...JSON.parse(raw) };
+
+    // Fallback: if user-specific key has no data, migrate from default key
+    if (_currentEmail) {
+      const fallback = localStorage.getItem(STORAGE_KEY_DEFAULT);
+      if (fallback) {
+        const data = { ...defaultPointsData(), ...JSON.parse(fallback) };
+        // Save to user-specific key and clear default
+        localStorage.setItem(storageKey(), JSON.stringify(data));
+        localStorage.removeItem(STORAGE_KEY_DEFAULT);
+        return data;
+      }
+    }
   } catch {
     // ignore
   }
@@ -103,7 +143,7 @@ function clearSessionStart() {
 function savePointsData(data: PointsData) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(storageKey(), JSON.stringify(data));
   } catch {
     // ignore
   }
@@ -112,7 +152,7 @@ function savePointsData(data: PointsData) {
 function loadAccumulated(): number {
   if (typeof window === "undefined") return 0;
   try {
-    const raw = localStorage.getItem(ACCUMULATED_KEY);
+    const raw = localStorage.getItem(accumulatedKey());
     return raw ? parseInt(raw, 10) : 0;
   } catch {
     return 0;
@@ -122,7 +162,7 @@ function loadAccumulated(): number {
 function saveAccumulated(ms: number) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(ACCUMULATED_KEY, String(ms));
+    localStorage.setItem(accumulatedKey(), String(ms));
   } catch {
     // ignore
   }
@@ -291,5 +331,106 @@ export function awardSharePoints(): boolean {
     data.history = data.history.slice(0, 100);
   }
   savePointsData(data);
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Bounty tracker helpers (prevents abuse by tracking claimed bounty IDs)
+// ---------------------------------------------------------------------------
+
+interface BountyTracker {
+  /** Set of bounty IDs that have already been claimed */
+  claimed: string[];
+}
+
+function loadBountyTracker(): BountyTracker {
+  if (typeof window === "undefined") return { claimed: [] };
+  try {
+    const raw = localStorage.getItem(bountyTrackerKey());
+    if (raw) return JSON.parse(raw) as BountyTracker;
+  } catch {
+    // ignore
+  }
+  return { claimed: [] };
+}
+
+function saveBountyTracker(tracker: BountyTracker) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(bountyTrackerKey(), JSON.stringify(tracker));
+  } catch {
+    // ignore
+  }
+}
+
+function isBountyClaimed(bountyId: string): boolean {
+  const tracker = loadBountyTracker();
+  return tracker.claimed.includes(bountyId);
+}
+
+function claimBounty(bountyId: string) {
+  const tracker = loadBountyTracker();
+  if (!tracker.claimed.includes(bountyId)) {
+    tracker.claimed.push(bountyId);
+    // Keep tracker from growing unbounded
+    if (tracker.claimed.length > 500) {
+      tracker.claimed = tracker.claimed.slice(-500);
+    }
+    saveBountyTracker(tracker);
+  }
+}
+
+/**
+ * Award 2 points for sharing the player.
+ * Each share event should provide a unique bountyId (e.g., "share_<timestamp>").
+ * The same bountyId cannot be claimed twice.
+ * Returns true if points were awarded, false if this bounty was already claimed.
+ */
+export function awardShareBonus(bountyId?: string): boolean {
+  const id = bountyId ?? `share_${todayET()}`;
+  if (isBountyClaimed(id)) {
+    return false;
+  }
+
+  const data = loadPointsData();
+  data.totalPoints += 2;
+  data.lastAwardedAt = new Date().toISOString();
+  data.history.unshift({
+    points: 2,
+    reason: "SHARE_BONUS",
+    timestamp: new Date().toISOString(),
+  });
+  if (data.history.length > 100) {
+    data.history = data.history.slice(0, 100);
+  }
+  savePointsData(data);
+  claimBounty(id);
+  return true;
+}
+
+/**
+ * Award 5 points when a referral code is used.
+ * The referralCode is used as the bounty ID to prevent double-claiming.
+ * Returns true if points were awarded, false if this referral was already claimed.
+ */
+export function awardReferralBonus(referralCode: string): boolean {
+  const id = `referral_${referralCode}`;
+  if (isBountyClaimed(id)) {
+    return false;
+  }
+
+  const data = loadPointsData();
+  data.totalPoints += 5;
+  data.lastAwardedAt = new Date().toISOString();
+  data.history.unshift({
+    points: 5,
+    reason: "REFERRAL_BONUS",
+    timestamp: new Date().toISOString(),
+  });
+  if (data.history.length > 100) {
+    data.history = data.history.slice(0, 100);
+  }
+  savePointsData(data);
+  claimBounty(id);
   return true;
 }

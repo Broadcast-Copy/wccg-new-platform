@@ -15,8 +15,20 @@ import {
   X,
   Check,
   FolderOpen,
+  UserPlus,
+  QrCode,
+  Copy,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { StudioProjects } from "@/components/studio/studio-projects";
 
 // ---------------------------------------------------------------------------
@@ -207,16 +219,162 @@ function NewProjectModal({ open, onClose }: { open: boolean; onClose: () => void
 }
 
 // ---------------------------------------------------------------------------
+// QR Code SVG (simple placeholder — generates a visual QR pattern)
+// ---------------------------------------------------------------------------
+
+function QRCodePlaceholder({ value, size = 180 }: { value: string; size?: number }) {
+  // Generate a deterministic pattern from the value string
+  const cells = 21; // 21x21 grid (QR Version 1 size)
+  const cellSize = size / cells;
+
+  // Simple hash to generate deterministic pattern
+  function hashChar(str: string, i: number) {
+    const code = str.charCodeAt(i % str.length);
+    return ((code * (i + 1) * 7 + i * 13) % 100) > 40;
+  }
+
+  const rects: { x: number; y: number }[] = [];
+  for (let row = 0; row < cells; row++) {
+    for (let col = 0; col < cells; col++) {
+      // Finder patterns (top-left, top-right, bottom-left)
+      const inFinderTL = row < 7 && col < 7;
+      const inFinderTR = row < 7 && col >= cells - 7;
+      const inFinderBL = row >= cells - 7 && col < 7;
+      const isFinderBorder =
+        (inFinderTL || inFinderTR || inFinderBL) &&
+        (row === 0 || row === 6 || col === 0 || col === 6 ||
+         (inFinderTR && (col === cells - 7 || col === cells - 1)) ||
+         (inFinderBL && (row === cells - 7 || row === cells - 1)));
+      const isFinderCenter =
+        (inFinderTL && row >= 2 && row <= 4 && col >= 2 && col <= 4) ||
+        (inFinderTR && row >= 2 && row <= 4 && col >= cells - 5 && col <= cells - 3) ||
+        (inFinderBL && row >= cells - 5 && row <= cells - 3 && col >= 2 && col <= 4);
+      const isFinderWhite =
+        (inFinderTL || inFinderTR || inFinderBL) && !isFinderBorder && !isFinderCenter;
+
+      if (isFinderBorder || isFinderCenter) {
+        rects.push({ x: col, y: row });
+      } else if (!isFinderWhite && !(inFinderTL || inFinderTR || inFinderBL)) {
+        if (hashChar(value, row * cells + col)) {
+          rects.push({ x: col, y: row });
+        }
+      }
+    }
+  }
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="mx-auto">
+      <rect width={size} height={size} fill="white" rx="8" />
+      {rects.map((r, i) => (
+        <rect
+          key={i}
+          x={r.x * cellSize}
+          y={r.y * cellSize}
+          width={cellSize}
+          height={cellSize}
+          fill="#0a0a0f"
+        />
+      ))}
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Invite Guest Dialog
+// ---------------------------------------------------------------------------
+
+function InviteGuestDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [copied, setCopied] = useState(false);
+  const inviteLink = "https://studio.wccg.fm/invite/abc123";
+
+  function handleCopy() {
+    navigator.clipboard.writeText(inviteLink).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-[#74ddc7]" />
+            Invite Guest
+          </DialogTitle>
+          <DialogDescription>
+            Share this QR code or link with your guest so they can join your studio session remotely.
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* QR Code */}
+        <div className="flex flex-col items-center gap-4 py-4">
+          <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
+            <QRCodePlaceholder value={inviteLink} size={180} />
+          </div>
+          <p className="text-xs text-muted-foreground text-center max-w-[280px]">
+            Guests can scan this code with their phone camera to join from any browser. No app required.
+          </p>
+        </div>
+
+        {/* Invite Link */}
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-muted-foreground">Invite Link</label>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 rounded-lg border border-border bg-muted/50 px-3 py-2 text-xs text-foreground font-mono truncate select-all">
+              {inviteLink}
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCopy}
+              className="shrink-0"
+            >
+              {copied ? (
+                <>
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1.5 text-emerald-500" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5 mr-1.5" />
+                  Copy
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        <DialogFooter showCloseButton>
+          <Button
+            size="sm"
+            onClick={handleCopy}
+            className="bg-[#74ddc7] hover:bg-[#74ddc7]/90 text-[#0a0a0f]"
+          >
+            <Copy className="h-3.5 w-3.5 mr-1.5" />
+            Copy & Share
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
 export default function MyStudioPage() {
   const [showNewProject, setShowNewProject] = useState(false);
+  const [showInviteGuest, setShowInviteGuest] = useState(false);
 
   return (
     <div className="space-y-8">
       {/* New Project Modal */}
       <NewProjectModal open={showNewProject} onClose={() => setShowNewProject(false)} />
+
+      {/* Invite Guest Dialog */}
+      <InviteGuestDialog open={showInviteGuest} onOpenChange={setShowInviteGuest} />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -229,14 +387,25 @@ export default function MyStudioPage() {
             Create projects, manage your work, and access studio resources.
           </p>
         </div>
-        <Button
-          size="sm"
-          onClick={() => setShowNewProject(true)}
-          className="bg-[#74ddc7] hover:bg-[#74ddc7]/90 text-[#0a0a0f] rounded-lg"
-        >
-          <Plus className="h-4 w-4 mr-1.5" />
-          New Project
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowInviteGuest(true)}
+            className="rounded-lg"
+          >
+            <UserPlus className="h-4 w-4 mr-1.5" />
+            Invite Guest
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setShowNewProject(true)}
+            className="bg-[#74ddc7] hover:bg-[#74ddc7]/90 text-[#0a0a0f] rounded-lg"
+          >
+            <Plus className="h-4 w-4 mr-1.5" />
+            New Project
+          </Button>
+        </div>
       </div>
 
       {/* Quick Links — right below header */}

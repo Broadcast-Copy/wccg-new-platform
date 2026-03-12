@@ -33,6 +33,27 @@ const creativeSchema = z.object({
   status: z.enum(["draft", "ready", "approved"]),
 });
 
+// ---------------------------------------------------------------------------
+// Flight variation schema — combines flight dates + order config into one tile
+// ---------------------------------------------------------------------------
+
+const flightVariationSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  dayType: z.enum(["weekday", "saturday", "sunday", "sports"]),
+  flightStart: z.string(),
+  flightEnd: z.string(),
+  // On-air daypart orders specific to this flight
+  daypartOrders: z.array(daypartOrderSchema),
+  // Promotions-specific fields for this flight variation
+  promotionDaypartId: z.string(),
+  promotionTimeSlot: z.string(),
+});
+
+// ---------------------------------------------------------------------------
+// Main campaign form schema
+// ---------------------------------------------------------------------------
+
 export const campaignFormSchema = z.object({
   // Step 1: Campaign type
   campaignType: z.enum(["on_air", "digital", "remote_broadcast", "promotions", "sports_sponsorship"]),
@@ -46,7 +67,10 @@ export const campaignFormSchema = z.object({
   flightStart: z.string().min(1, "Start date is required"),
   flightEnd: z.string().min(1, "End date is required"),
 
-  // On-air specific
+  // Flight variations — each tile has its own dates + day type + order config
+  flightVariations: z.array(flightVariationSchema),
+
+  // On-air specific (legacy / global)
   selectedDays: z.array(z.enum(["weekday", "saturday", "sunday"])),
   daypartOrders: z.array(daypartOrderSchema),
   includeMixShows: z.boolean(),
@@ -68,6 +92,7 @@ export const campaignFormSchema = z.object({
   // Promotions specific
   promotionType: z.string(),
   promotionDescription: z.string(),
+  promotionRate: z.number().min(0),
 
   // Step 4: Creative
   creatives: z.array(creativeSchema),
@@ -82,6 +107,20 @@ export type CampaignFormValues = z.infer<typeof campaignFormSchema>;
 export type DaypartOrderValues = z.infer<typeof daypartOrderSchema>;
 export type BreakSlotValues = z.infer<typeof breakSlotSchema>;
 export type CreativeValues = z.infer<typeof creativeSchema>;
+export type FlightVariationValues = z.infer<typeof flightVariationSchema>;
+
+// ---------------------------------------------------------------------------
+// Day type for flight tiles
+// ---------------------------------------------------------------------------
+
+export type DayType = "weekday" | "saturday" | "sunday" | "sports";
+
+export const DAY_TYPE_LABELS: Record<DayType, string> = {
+  weekday: "Weekday (Mon-Fri)",
+  saturday: "Saturday",
+  sunday: "Sunday",
+  sports: "Sports",
+};
 
 // ---------------------------------------------------------------------------
 // Step definitions
@@ -115,6 +154,7 @@ export const DEFAULT_FORM_VALUES: CampaignFormValues = {
   campaignName: "",
   flightStart: "",
   flightEnd: "",
+  flightVariations: [],
   selectedDays: ["weekday"],
   daypartOrders: [],
   includeMixShows: false,
@@ -128,6 +168,7 @@ export const DEFAULT_FORM_VALUES: CampaignFormValues = {
   digitalBudget: 0,
   promotionType: "",
   promotionDescription: "",
+  promotionRate: 150,
   creatives: [],
   taxRate: 7,
   notes: "",

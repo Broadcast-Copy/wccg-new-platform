@@ -1,7 +1,8 @@
-import { ShowCard } from "@/components/shows/show-card";
 import { Mic2, Zap, Podcast, Radio } from "lucide-react";
 import { ALL_SHOWS, getDayPart, getShowById } from "@/data/shows";
 import { getHostsByShowId } from "@/data/hosts";
+import Link from "next/link";
+import { ShowFilter } from "@/components/shows/show-filter";
 
 export const metadata = {
   title: "Shows | WCCG 104.5 FM",
@@ -94,8 +95,6 @@ async function getShows(): Promise<Show[]> {
 
 export default async function ShowsPage() {
   const shows = await getShows();
-  const activeShows = shows.filter((s) => s.isActive);
-  const inactiveShows = shows.filter((s) => !s.isActive);
 
   return (
     <div className="space-y-8">
@@ -134,7 +133,7 @@ export default async function ShowsPage() {
                 </span>
               </div>
               <p className="mt-1 text-2xl font-bold text-white">
-                {activeShows.length}
+                {shows.filter((s) => s.isActive).length}
               </p>
             </div>
             <div className="rounded-xl bg-black/20 backdrop-blur-sm border border-white/10 px-4 py-3">
@@ -166,87 +165,37 @@ export default async function ShowsPage() {
         <Radio className="h-4 w-4 text-primary/60 flex-shrink-0" />
         <p className="text-sm text-muted-foreground">
           All shows air on our streaming channels.{" "}
-          <a
+          <Link
             href="/channels"
             className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors font-medium"
           >
             Browse all channels
-          </a>
+          </Link>
         </p>
       </div>
 
-      {/* Active Shows — wide tiles, stacked vertically */}
-      {activeShows.length > 0 ? (
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold">Active Shows</h2>
-          <div className="flex flex-col gap-4">
-            {activeShows.map((show) => (
-              <ShowCard
-                key={show.id}
-                showId={show.id}
-                title={show.name}
-                description={show.description}
-                hostName={
-                  show.hosts?.find((h) => h.isPrimary)?.name ??
-                  show.hosts?.[0]?.name
-                }
-                imageUrl={show.imageUrl}
-                hosts={show.hosts?.map((h) => ({
-                  name: h.name,
-                  avatarUrl: h.avatarUrl,
-                }))}
-                timeSlot={show.timeSlot}
-                days={show.days}
-                dayPart={show.dayPart}
-                category={show.category}
-                streamId={show.streamId}
-                isSyndicated={show.isSyndicated}
-              />
-            ))}
-          </div>
-        </section>
-      ) : (
-        <div className="flex flex-col h-48 items-center justify-center rounded-2xl border border-dashed border-border/50 bg-muted/20">
-          <Mic2 className="h-8 w-8 text-muted-foreground/40 mb-3" />
-          <p className="text-sm font-medium text-muted-foreground">
-            Show listings will appear once the API is connected.
-          </p>
-        </div>
-      )}
-
-      {/* Past Shows */}
-      {inactiveShows.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-muted-foreground">
-            Past Shows
-          </h2>
-          <div className="flex flex-col gap-4 opacity-60">
-            {inactiveShows.map((show) => (
-              <ShowCard
-                key={show.id}
-                showId={show.id}
-                title={show.name}
-                description={show.description}
-                hostName={
-                  show.hosts?.find((h) => h.isPrimary)?.name ??
-                  show.hosts?.[0]?.name
-                }
-                imageUrl={show.imageUrl}
-                hosts={show.hosts?.map((h) => ({
-                  name: h.name,
-                  avatarUrl: h.avatarUrl,
-                }))}
-                timeSlot={show.timeSlot}
-                days={show.days}
-                dayPart={show.dayPart}
-                category={show.category}
-                streamId={show.streamId}
-                isSyndicated={show.isSyndicated}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Filterable Shows */}
+      <ShowFilter
+        shows={shows.map((show) => ({
+          id: show.id,
+          name: show.name,
+          slug: show.slug,
+          description: show.description,
+          imageUrl: show.imageUrl,
+          isActive: show.isActive,
+          hosts: show.hosts?.map((h) => ({
+            name: h.name,
+            avatarUrl: h.avatarUrl,
+            isPrimary: h.isPrimary,
+          })) ?? [],
+          timeSlot: show.timeSlot,
+          days: show.days,
+          dayPart: show.dayPart,
+          category: show.category,
+          streamId: show.streamId,
+          isSyndicated: show.isSyndicated,
+        }))}
+      />
     </div>
   );
 }

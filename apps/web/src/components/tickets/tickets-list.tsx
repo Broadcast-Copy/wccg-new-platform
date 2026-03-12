@@ -6,7 +6,6 @@ import { AppImage as Image } from "@/components/ui/app-image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/lib/api-client";
-import { toast } from "sonner";
 import {
   Loader2,
   Ticket,
@@ -184,10 +183,9 @@ export function TicketsList() {
     try {
       const data = await apiClient<Registration[]>("/registrations/me");
       setRegistrations(data);
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to load tickets"
-      );
+    } catch {
+      // Silently handle — API endpoint may not exist yet.
+      // The empty state UI ("You have no tickets yet") will display.
     } finally {
       setLoading(false);
     }

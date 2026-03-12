@@ -30,12 +30,29 @@ export function RewardsContent({ rewards }: RewardsContentProps) {
   const [balance, setBalance] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!user) return;
-
+    // Try API first, fall back to localStorage
     async function fetchBalance() {
+      if (user) {
+        try {
+          const data = await apiClient<{ balance: number }>("/points/balance");
+          setBalance(data.balance);
+          return;
+        } catch {
+          // Fall through to localStorage
+        }
+      }
+      // Read from localStorage
       try {
-        const data = await apiClient<{ balance: number }>("/points/balance");
-        setBalance(data.balance);
+        const key = user?.email
+          ? `wccg_listening_points_${user.email}`
+          : "wccg_listening_points";
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          setBalance(parsed.totalPoints ?? parsed.points ?? 0);
+        } else {
+          setBalance(0);
+        }
       } catch {
         setBalance(0);
       }

@@ -102,10 +102,8 @@ function FavoriteCard({
       await apiClient(`/favorites/${favorite.id}`, { method: "DELETE" });
       onRemoved(favorite.id);
       toast.success(`Removed ${name} from favorites`);
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to remove favorite"
-      );
+    } catch {
+      // Silently handle — API endpoint may not exist yet.
     } finally {
       setRemoving(false);
       setDialogOpen(false);
@@ -226,10 +224,9 @@ export function FavoritesList() {
     try {
       const data = await apiClient<Favorite[]>("/favorites");
       setFavorites(data);
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to load favorites"
-      );
+    } catch {
+      // Silently handle — API endpoint may not exist yet.
+      // The empty state UI will display.
     } finally {
       setLoading(false);
     }

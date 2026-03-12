@@ -370,6 +370,68 @@ export const REMOTE_PACKAGES: RemoteBroadcastPackage[] = [
 ];
 
 // =========================================================================
+// PROMOTIONS PACKAGES
+// =========================================================================
+
+export interface PromotionsPackage {
+  id: string;
+  name: string;
+  ratePerWeek: number;
+  description: string;
+  includes: string[];
+}
+
+export const PROMOTIONS_PACKAGES: PromotionsPackage[] = [
+  {
+    id: "promo_giveaway",
+    name: "Giveaway Package",
+    ratePerWeek: 150,
+    description: "On-air giveaways with listener call-ins and prize fulfillment.",
+    includes: [
+      "On-air giveaway mentions",
+      "Listener call-in segments",
+      "Prize fulfillment coordination",
+      "Social media cross-promotion",
+    ],
+  },
+  {
+    id: "promo_contest",
+    name: "Contest Package",
+    ratePerWeek: 200,
+    description: "Multi-day contest with on-air promotion, rules, and winner announcements.",
+    includes: [
+      "Contest rules & compliance",
+      "Daily on-air mentions",
+      "Winner announcements",
+      "Digital promotion on WCCG.com",
+    ],
+  },
+  {
+    id: "promo_mentions",
+    name: "On-Air Mentions",
+    ratePerWeek: 100,
+    description: "Personality-read mentions and endorsements during live shows.",
+    includes: [
+      "Live personality reads",
+      "Organic show integration",
+      "Repeat mentions per shift",
+    ],
+  },
+  {
+    id: "promo_sponsorship",
+    name: "Segment Sponsorship",
+    ratePerWeek: 250,
+    description: "Branded segment sponsorship with custom liners and billboards.",
+    includes: [
+      "Custom segment intro/outro",
+      "Billboard mentions",
+      "Branded segment naming",
+      "Social media tagging",
+    ],
+  },
+];
+
+// =========================================================================
 // CAMPAIGN TYPE METADATA (for the builder UI)
 // =========================================================================
 export const CAMPAIGN_TYPES: {
@@ -399,7 +461,7 @@ export const CAMPAIGN_TYPES: {
   {
     value: "promotions",
     label: "Promotions",
-    description: "Contests, giveaways, on-air mentions, and promotional campaigns.",
+    description: "Giveaways, contests, on-air mentions, and segment sponsorships starting at $150/week.",
     icon: "Gift",
   },
   {
