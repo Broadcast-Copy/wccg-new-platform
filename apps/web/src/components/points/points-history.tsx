@@ -81,6 +81,25 @@ function loadLocalPointsData(email: string | null | undefined): {
   balance: number;
   history: PointsTransaction[];
 } {
+  if (typeof window === "undefined") return { balance: 0, history: [] };
+
+  const parseEntry = (raw: string) => {
+    const parsed = JSON.parse(raw);
+    const totalPoints = parsed.totalPoints ?? 0;
+    const history: PointsTransaction[] = (parsed.history ?? []).map(
+      (h: { points: number; reason: string; timestamp: string; program?: string }, i: number) => ({
+        id: `local_${i}`,
+        amount: h.points,
+        reason: h.reason as PointsReason,
+        referenceType: null,
+        referenceId: h.program || null,
+        balance: 0,
+        createdAt: h.timestamp,
+      }),
+    );
+    return { balance: totalPoints, history };
+  };
+
   try {
     // Check user-specific key first, then default key
     const keys = email
@@ -89,21 +108,20 @@ function loadLocalPointsData(email: string | null | undefined): {
     for (const key of keys) {
       const raw = localStorage.getItem(key);
       if (raw) {
-        const parsed = JSON.parse(raw);
-        const totalPoints = parsed.totalPoints ?? 0;
-        const history: PointsTransaction[] = (parsed.history ?? []).map(
-          (h: { points: number; reason: string; timestamp: string; program?: string }, i: number) => ({
-            id: `local_${i}`,
-            amount: h.points,
-            reason: h.reason as PointsReason,
-            referenceType: null,
-            referenceId: h.program || null,
-            balance: 0,
-            createdAt: h.timestamp,
-          }),
-        );
-        if (totalPoints > 0 || history.length > 0) {
-          return { balance: totalPoints, history };
+        const result = parseEntry(raw);
+        if (result.balance > 0 || result.history.length > 0) return result;
+      }
+    }
+    // If email was not provided, scan all user-specific keys
+    if (!email) {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("wccg_listening_points_") && key !== "wccg_listening_points") {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const result = parseEntry(raw);
+            if (result.balance > 0 || result.history.length > 0) return result;
+          }
         }
       }
     }

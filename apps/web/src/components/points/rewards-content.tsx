@@ -41,7 +41,7 @@ export function RewardsContent({ rewards }: RewardsContentProps) {
           // Fall through to localStorage
         }
       }
-      // Read from localStorage — check user-specific key first, then default
+      // Read from localStorage — check user-specific key first, then default, then scan all
       try {
         const keys = user?.email
           ? [`wccg_listening_points_${user.email}`, "wccg_listening_points"]
@@ -49,11 +49,26 @@ export function RewardsContent({ rewards }: RewardsContentProps) {
         for (const key of keys) {
           const raw = localStorage.getItem(key);
           if (raw) {
-            const parsed = JSON.parse(raw);
-            const pts = parsed.totalPoints ?? parsed.points ?? 0;
+            const pts = JSON.parse(raw).totalPoints ?? JSON.parse(raw).points ?? 0;
             if (pts > 0) {
               setBalance(pts);
               return;
+            }
+          }
+        }
+        // If email not provided, scan all user-specific keys
+        if (!user?.email) {
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith("wccg_listening_points_") && key !== "wccg_listening_points") {
+              const raw = localStorage.getItem(key);
+              if (raw) {
+                const pts = JSON.parse(raw).totalPoints ?? 0;
+                if (pts > 0) {
+                  setBalance(pts);
+                  return;
+                }
+              }
             }
           }
         }

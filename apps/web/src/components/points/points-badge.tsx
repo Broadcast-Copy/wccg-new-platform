@@ -7,8 +7,9 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { apiClient } from "@/lib/api-client";
 
-/** Read points from localStorage, checking user-specific key then default */
+/** Read points from localStorage, checking user-specific key, default, then scanning all keys */
 function readLocalBalance(email: string | null | undefined): number {
+  if (typeof window === "undefined") return 0;
   try {
     const keys = email
       ? [`wccg_listening_points_${email}`, "wccg_listening_points"]
@@ -16,9 +17,21 @@ function readLocalBalance(email: string | null | undefined): number {
     for (const key of keys) {
       const raw = localStorage.getItem(key);
       if (raw) {
-        const parsed = JSON.parse(raw);
-        const pts = parsed.totalPoints ?? 0;
+        const pts = JSON.parse(raw).totalPoints ?? 0;
         if (pts > 0) return pts;
+      }
+    }
+    // If email not provided, scan all user-specific keys
+    if (!email) {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("wccg_listening_points_") && key !== "wccg_listening_points") {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const pts = JSON.parse(raw).totalPoints ?? 0;
+            if (pts > 0) return pts;
+          }
+        }
       }
     }
   } catch {
