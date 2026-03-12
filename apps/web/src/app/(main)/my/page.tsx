@@ -49,6 +49,12 @@ import {
   getListeningStats,
   type HistoryEntry,
 } from "@/lib/listening-history";
+import {
+  fetchSongHistory,
+  formatTime,
+  type SongHistoryEntry,
+  type SongHistoryGroup,
+} from "@/lib/song-history";
 
 /**
  * Read points balance directly from localStorage, checking both
@@ -349,6 +355,8 @@ export default function UserDashboardPage() {
     totalTracks: number;
     topArtist: string;
   } | null>(null);
+  const [songGroups, setSongGroups] = useState<SongHistoryGroup[]>([]);
+  const [songHistoryLoading, setSongHistoryLoading] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -425,6 +433,19 @@ export default function UserDashboardPage() {
     }
 
     fetchStats();
+
+    // Fetch station song history from Supabase
+    async function fetchSongData() {
+      try {
+        const { groups } = await fetchSongHistory("WCCG", 50);
+        setSongGroups(groups);
+      } catch {
+        // ignore — table may not exist yet
+      } finally {
+        setSongHistoryLoading(false);
+      }
+    }
+    fetchSongData();
   }, [user]);
 
   if (!user) {
@@ -663,38 +684,109 @@ export default function UserDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* ═══ Listening History ═══ */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Listening History</CardTitle>
-              <CardDescription>
-                {listeningStats && (listeningStats.totalHours > 0 || listeningStats.remainingMinutes > 0)
-                  ? `${listeningStats.totalHours > 0 ? `${listeningStats.totalHours}h ` : ""}${listeningStats.remainingMinutes}m total · ${listeningStats.totalTracks} tracks heard`
-                  : "Your recent listening sessions"}
-              </CardDescription>
-            </div>
-            <Link
-              href="/my/overview"
-              className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-            >
-              View all
-              <ChevronRight className="h-4 w-4" />
-            </Link>
+      {/* ═══ Song History — Station Playlist ═══ */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Song History</h2>
+            <p className="text-sm text-muted-foreground">What played on WCCG 104.5 FM</p>
           </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : listeningHistory.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-6 text-center">
-              <Headphones className="h-8 w-8 text-muted-foreground/50" />
+          <Link
+            href="/my/history"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
+            View all
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        {songHistoryLoading ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="rounded-lg border border-border bg-card p-4 animate-pulse">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-md bg-muted" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 w-3/4 rounded bg-muted" />
+                    <div className="h-2.5 w-1/2 rounded bg-muted" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : songGroups.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center gap-2 py-8 text-center">
+              <Music className="h-8 w-8 text-muted-foreground/50" />
               <p className="text-sm text-muted-foreground">
-                No listening history yet. Tune into WCCG 104.5 FM to start tracking!
+                Song history will appear here once the station playlist is being tracked.
               </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {songGroups.map((group) => (
+              <div key={group.label} className="space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {group.label}
+                </h3>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {group.songs.map((song) => (
+                    <div
+                      key={song.id}
+                      className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted/50"
+                    >
+                      {/* Album art or fallback icon */}
+                      {song.album_art ? (
+                        <img
+                          src={song.album_art}
+                          alt=""
+                          className="h-10 w-10 shrink-0 rounded-md object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#7401df]/10">
+                          <Music className="h-5 w-5 text-[#7401df]" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{song.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground shrink-0">
+                        {formatTime(song.played_at)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ═══ Listening History (personal) ═══ */}
+      {listeningHistory.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">My Listening Sessions</CardTitle>
+                <CardDescription>
+                  {listeningStats && (listeningStats.totalHours > 0 || listeningStats.remainingMinutes > 0)
+                    ? `${listeningStats.totalHours > 0 ? `${listeningStats.totalHours}h ` : ""}${listeningStats.remainingMinutes}m total · ${listeningStats.totalTracks} tracks heard`
+                    : "Your recent listening sessions"}
+                </CardDescription>
+              </div>
+              <Link
+                href="/my/overview"
+                className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+              >
+                View all
+                <ChevronRight className="h-4 w-4" />
+              </Link>
             </div>
-          ) : (
+          </CardHeader>
+          <CardContent>
             <div className="space-y-3">
               {listeningHistory.map((entry) => (
                 <div
@@ -751,9 +843,9 @@ export default function UserDashboardPage() {
                 </div>
               )}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ═══ Listener Quick Links (only for listener role) ═══ */}
       {config.isListener && (
