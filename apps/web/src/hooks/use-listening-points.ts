@@ -63,6 +63,7 @@ interface PointsData {
     points: number;
     reason: string;
     timestamp: string;
+    program?: string;
   }>;
 }
 
@@ -200,6 +201,7 @@ export function useListeningPoints(isPlaying: boolean) {
             points: 3,
             reason: "DAILY_BOUNTY",
             timestamp: new Date().toISOString(),
+            program: "Daily Bonus",
           });
           if (data.history.length > 100) {
             data.history = data.history.slice(0, 100);
@@ -230,6 +232,7 @@ export function useListeningPoints(isPlaying: boolean) {
             points: pointsToAward,
             reason: "LISTENING",
             timestamp: new Date().toISOString(),
+            program: "WCCG 104.5 FM",
           });
           if (data.history.length > 100) {
             data.history = data.history.slice(0, 100);
@@ -254,6 +257,7 @@ export function useListeningPoints(isPlaying: boolean) {
               points: 10,
               reason: "STREAK_BONUS",
               timestamp: new Date().toISOString(),
+              program: "Streak Bonus",
             });
             if (data.history.length > 100) {
               data.history = data.history.slice(0, 100);
@@ -269,6 +273,7 @@ export function useListeningPoints(isPlaying: boolean) {
               points: 5,
               reason: "STREAK_BONUS",
               timestamp: new Date().toISOString(),
+              program: "Streak Bonus",
             });
             if (data.history.length > 100) {
               data.history = data.history.slice(0, 100);
@@ -326,6 +331,7 @@ export function awardSharePoints(): boolean {
     points: 2,
     reason: "SHARE",
     timestamp: new Date().toISOString(),
+    program: "Share",
   });
   if (data.history.length > 100) {
     data.history = data.history.slice(0, 100);
@@ -399,6 +405,7 @@ export function awardShareBonus(bountyId?: string): boolean {
     points: 2,
     reason: "SHARE_BONUS",
     timestamp: new Date().toISOString(),
+    program: "Share",
   });
   if (data.history.length > 100) {
     data.history = data.history.slice(0, 100);
@@ -431,6 +438,7 @@ export function awardVideoWatchPoints(videoId: string): boolean {
     points: 3,
     reason: "VIDEO_WATCH",
     timestamp: new Date().toISOString(),
+    program: "YouTube",
   });
   if (data.history.length > 100) {
     data.history = data.history.slice(0, 100);
@@ -453,6 +461,7 @@ export function awardReferralBonus(referralCode: string): boolean {
     points: 5,
     reason: "REFERRAL_BONUS",
     timestamp: new Date().toISOString(),
+    program: "Referral",
   });
   if (data.history.length > 100) {
     data.history = data.history.slice(0, 100);

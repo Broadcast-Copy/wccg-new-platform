@@ -13,7 +13,6 @@ import {
   Volume2,
   VolumeX,
   Radio,
-  Music2,
   X,
   Share2,
   Maximize2,
@@ -314,7 +313,7 @@ export function GlobalPlayer() {
         {/* Program Info (left) | Vertical Divider | Song Info (right) */}
         <div className="flex min-w-0 flex-1 items-center overflow-hidden">
           {/* Now Playing label + live indicator */}
-          <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             {isPlaying && (
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#74ddc7] opacity-75" />
@@ -327,15 +326,14 @@ export function GlobalPlayer() {
           </div>
 
           {/* Current show / program on the left side */}
-          <div className="hidden sm:flex items-center shrink-0 ml-2 min-w-0 max-w-[160px] lg:max-w-[220px]">
-            <Radio className="h-3 w-3 shrink-0 text-muted-foreground/60 mr-1.5" />
+          <div className="flex items-center shrink-0 ml-2 min-w-0 max-w-[120px] sm:max-w-[160px] lg:max-w-[220px]">
             <span className="truncate text-xs font-medium text-muted-foreground">
               {currentShow || "WCCG 104.5 FM"}
             </span>
           </div>
 
           {/* Vertical divider */}
-          <div className="hidden sm:block mx-2.5 h-8 w-px shrink-0 bg-border" />
+          <div className="mx-2 sm:mx-2.5 h-8 w-px shrink-0 bg-border" />
 
           {/* Song title + artist on the right side */}
           <div
@@ -346,7 +344,6 @@ export function GlobalPlayer() {
             }`}
           >
             <div className="flex items-center gap-1.5 min-w-0">
-              <Music2 className={`h-3.5 w-3.5 shrink-0 ${titlePop ? "text-[#74ddc7]" : "text-muted-foreground/50"} transition-colors duration-500`} />
               <span
                 className={`truncate font-semibold transition-all duration-500 ${
                   titlePop
@@ -379,7 +376,7 @@ export function GlobalPlayer() {
 
         {/* Live Badge */}
         {isPlaying && (
-          <div className="hidden lg:flex items-center gap-1.5 rounded-full bg-[#74ddc7]/10 border border-[#74ddc7]/20 px-2.5 py-0.5 shrink-0">
+          <div className="flex items-center gap-1.5 rounded-full bg-[#74ddc7]/10 border border-[#74ddc7]/20 px-2.5 py-0.5 shrink-0">
             <span className="relative flex h-1.5 w-1.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#74ddc7] opacity-75" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#74ddc7]" />

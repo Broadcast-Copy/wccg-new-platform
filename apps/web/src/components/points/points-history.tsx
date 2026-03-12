@@ -92,12 +92,12 @@ function loadLocalPointsData(email: string | null | undefined): {
         const parsed = JSON.parse(raw);
         const totalPoints = parsed.totalPoints ?? 0;
         const history: PointsTransaction[] = (parsed.history ?? []).map(
-          (h: { points: number; reason: string; timestamp: string }, i: number) => ({
+          (h: { points: number; reason: string; timestamp: string; program?: string }, i: number) => ({
             id: `local_${i}`,
             amount: h.points,
             reason: h.reason as PointsReason,
             referenceType: null,
-            referenceId: null,
+            referenceId: h.program || null,
             balance: 0,
             createdAt: h.timestamp,
           }),
@@ -193,6 +193,7 @@ export function PointsHistory() {
             <TableHeader>
               <TableRow>
                 <TableHead>Date</TableHead>
+                <TableHead>Program</TableHead>
                 <TableHead>Reason</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
               </TableRow>
@@ -214,6 +215,7 @@ export function PointsHistory() {
                         })}
                       </span>
                     </TableCell>
+                    <TableCell className="text-sm">{tx.referenceId || "WCCG 104.5 FM"}</TableCell>
                     <TableCell>
                       <ReasonBadge reason={tx.reason} />
                     </TableCell>

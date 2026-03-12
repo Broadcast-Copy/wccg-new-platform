@@ -576,8 +576,13 @@ export default function ShowDetailPage({
       </div>
 
       {/* ─── Tabbed Content ─── */}
-      <Tabs defaultValue="podcasts" className="space-y-6">
+      <Tabs defaultValue={hasYT ? "videos" : "podcasts"} className="space-y-6">
         <TabsList className="w-full sm:w-auto bg-muted/50 border border-border">
+          {hasYT && (
+            <TabsTrigger value="videos" className="flex-1 sm:flex-initial data-[state=active]:bg-[#74ddc7] data-[state=active]:text-[#0a0a0f]">
+              <Youtube className="mr-2 h-4 w-4" />Videos
+            </TabsTrigger>
+          )}
           <TabsTrigger value="podcasts" className="flex-1 sm:flex-initial data-[state=active]:bg-[#74ddc7] data-[state=active]:text-[#0a0a0f]">
             <Mic className="mr-2 h-4 w-4" />Podcasts
           </TabsTrigger>
@@ -587,11 +592,6 @@ export default function ShowDetailPage({
           <TabsTrigger value="hosts" className="flex-1 sm:flex-initial data-[state=active]:bg-[#74ddc7] data-[state=active]:text-[#0a0a0f]">
             <Users className="mr-2 h-4 w-4" />All Hosts
           </TabsTrigger>
-          {hasYT && (
-            <TabsTrigger value="videos" className="flex-1 sm:flex-initial data-[state=active]:bg-[#74ddc7] data-[state=active]:text-[#0a0a0f]">
-              <Youtube className="mr-2 h-4 w-4" />Videos
-            </TabsTrigger>
-          )}
         </TabsList>
 
         {/* ─── Podcasts Tab ─── */}

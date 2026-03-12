@@ -31,11 +31,12 @@ function timeAgo(dateStr: string): string {
 export function YouTubeGrid({
   channelUrl,
   searchQuery,
-  maxVideos = 6,
+  maxVideos = 9,
   title,
   videos,
 }: YouTubeGridProps) {
   const [activeVideo, setActiveVideo] = useState<YouTubeVideo | null>(null);
+  const [showCount, setShowCount] = useState(9);
 
   if (!channelUrl && !searchQuery) return null;
 
@@ -43,7 +44,9 @@ export function YouTubeGrid({
     ? `${channelUrl.replace(/\/$/, "")}/videos`
     : `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery ?? "")}`;
 
-  const displayVideos = videos?.slice(0, maxVideos) ?? [];
+  const allVideos = videos?.slice(0, maxVideos) ?? [];
+  const displayVideos = allVideos.slice(0, showCount);
+  const hasMore = allVideos.length > showCount;
   const hasRealVideos = displayVideos.length > 0;
 
   return (
@@ -74,44 +77,56 @@ export function YouTubeGrid({
       )}
 
       {hasRealVideos ? (
-        /* Real video thumbnails grid */
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {displayVideos.map((video) => (
-            <button
-              key={video.videoId}
-              onClick={() => setActiveVideo(video)}
-              className="group relative overflow-hidden rounded-xl border border-border bg-card text-left transition-all hover:border-red-500/30 hover:shadow-lg hover:shadow-red-500/5"
-            >
-              {/* Thumbnail */}
-              <div className="relative aspect-video overflow-hidden bg-gray-900">
-                <Image
-                  src={video.thumbnailUrl}
-                  alt={video.title}
-                  fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  className="object-cover transition-transform group-hover:scale-105"
-                  unoptimized
-                />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-600/90 opacity-0 shadow-xl backdrop-blur-sm transition-all group-hover:scale-110 group-hover:opacity-100">
-                    <Play className="ml-0.5 h-6 w-6 text-white" fill="white" />
+        <>
+          {/* Real video thumbnails grid */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {displayVideos.map((video) => (
+              <button
+                key={video.videoId}
+                onClick={() => setActiveVideo(video)}
+                className="group relative overflow-hidden rounded-xl border border-border bg-card text-left transition-all hover:border-red-500/30 hover:shadow-lg hover:shadow-red-500/5"
+              >
+                {/* Thumbnail */}
+                <div className="relative aspect-video overflow-hidden bg-gray-900">
+                  <Image
+                    src={video.thumbnailUrl}
+                    alt={video.title}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="object-cover transition-transform group-hover:scale-105"
+                    unoptimized
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-600/90 opacity-0 shadow-xl backdrop-blur-sm transition-all group-hover:scale-110 group-hover:opacity-100">
+                      <Play className="ml-0.5 h-6 w-6 text-white" fill="white" />
+                    </div>
                   </div>
                 </div>
-              </div>
-              {/* Card info */}
-              <div className="space-y-1 p-3">
-                <p className="line-clamp-2 text-sm font-medium leading-snug text-foreground">
-                  {video.title}
-                </p>
-                {video.publishedAt && (
-                  <p className="text-xs text-muted-foreground">
-                    {timeAgo(video.publishedAt)}
+                {/* Card info */}
+                <div className="space-y-1 p-3">
+                  <p className="line-clamp-2 text-sm font-medium leading-snug text-foreground">
+                    {video.title}
                   </p>
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
+                  {video.publishedAt && (
+                    <p className="text-xs text-muted-foreground">
+                      {timeAgo(video.publishedAt)}
+                    </p>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+          {hasMore && (
+            <div className="flex justify-center pt-2">
+              <button
+                onClick={() => setShowCount((c) => c + 9)}
+                className="rounded-full border border-red-500/30 bg-red-500/10 px-6 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/20"
+              >
+                Load More Videos
+              </button>
+            </div>
+          )}
+        </>
       ) : (
         /* Fallback: channel banner when no videos are available */
         <a

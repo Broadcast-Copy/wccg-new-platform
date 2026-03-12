@@ -121,6 +121,45 @@ export default function CreatorsPage() {
         ))}
       </div>
 
+      {/* My Uploads Tracker */}
+      <div className="rounded-xl border border-border bg-card p-6 sm:p-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+            <Music className="h-5 w-5 text-[#7401df]" />
+            My Uploads
+          </h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Track songs you&apos;ve submitted to WCCG for airplay consideration.
+        </p>
+        <div className="rounded-lg border border-border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Song Title</th>
+                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Artist</th>
+                <th className="text-left px-4 py-2 font-medium text-muted-foreground hidden sm:table-cell">Status</th>
+                <th className="text-left px-4 py-2 font-medium text-muted-foreground hidden md:table-cell">Submitted</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-border/50">
+                <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                  <div className="flex flex-col items-center gap-2">
+                    <Music className="h-8 w-8 text-muted-foreground/30" />
+                    <p>No uploads yet</p>
+                    <p className="text-xs">Submit your music through the Upload Music page to see them tracked here.</p>
+                    <Link href="/creators/upload-music" className="mt-2 text-xs font-medium text-[#74ddc7] hover:text-[#74ddc7]/80 transition-colors">
+                      Upload Music →
+                    </Link>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Application Form */}
       <div className="rounded-xl border border-border bg-card p-6 sm:p-8">
         <h2 className="text-xl font-semibold text-foreground mb-4">Apply to the Creator Program</h2>

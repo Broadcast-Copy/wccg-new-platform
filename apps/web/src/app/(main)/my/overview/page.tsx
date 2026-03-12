@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Radio,
@@ -25,8 +26,6 @@ import {
   Clock,
   Heart,
   Star,
-  Ticket,
-  Building2,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -37,6 +36,8 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useUserRoles } from "@/hooks/use-user-roles";
+import { getListeningPoints } from "@/hooks/use-listening-points";
+import { getListeningStats, getHistoryEntries } from "@/lib/listening-history";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -210,7 +211,7 @@ function getOverviewConfig(flags: {
     };
   }
 
-  // Default: Listener — no role-specific tools, just activity stats
+  // Default: Listener — dynamic activity stats
   return {
     title: "Overview",
     subtitle: "Your WCCG activity & platform highlights",
@@ -218,10 +219,13 @@ function getOverviewConfig(flags: {
     stats: [
       { label: "Stream Status", value: "LIVE", sub: "WCCG 104.5 FM — On Air", icon: Radio, color: "#74ddc7", live: true },
       { label: "Points Balance", value: "--", sub: "WCCG Points", icon: Star, color: "#f59e0b" },
-      { label: "Favorites", value: "--", sub: "Saved shows & streams", icon: Heart, color: "#dc2626" },
-      { label: "Tickets", value: "--", sub: "Active registrations", icon: Ticket, color: "#3b82f6" },
+      { label: "Listen Time", value: "--", sub: "Total listening", icon: Clock, color: "#7401df" },
+      { label: "Songs Heard", value: "--", sub: "Unique tracks", icon: Music, color: "#dc2626" },
     ],
-    actions: [],
+    actions: [
+      { href: "/rewards", label: "Points & Rewards", desc: "Redeem your listening rewards", icon: Gift, color: "#f59e0b" },
+      { href: "/my/history", label: "Listening History", desc: "See what you've listened to", icon: Clock, color: "#7401df" },
+    ],
   };
 }
 
@@ -240,6 +244,37 @@ export default function OverviewPage() {
     isSuperAdmin,
   } = useUserRoles();
 
+  const [listenerStats, setListenerStats] = useState<{
+    points: number;
+    totalHours: number;
+    remainingMinutes: number;
+    totalTracks: number;
+    topArtist: string;
+    recentEntries: { id: string; streamName: string; title: string; timestamp: string }[];
+  } | null>(null);
+
+  const isListener = !isSales && !isProduction && !isManagement && !isPromotions && !isCreator && !isHost && !isAdmin && !isSuperAdmin;
+
+  useEffect(() => {
+    if (!isListener) return;
+    function refresh() {
+      const points = getListeningPoints();
+      const stats = getListeningStats();
+      const entries = getHistoryEntries().slice(0, 5);
+      setListenerStats({
+        points,
+        totalHours: stats.totalHours,
+        remainingMinutes: stats.remainingMinutes,
+        totalTracks: stats.totalTracks,
+        topArtist: stats.topArtist,
+        recentEntries: entries.map((e) => ({ id: e.id, streamName: e.streamName, title: e.title, timestamp: e.timestamp })),
+      });
+    }
+    refresh();
+    const interval = setInterval(refresh, 15_000);
+    return () => clearInterval(interval);
+  }, [isListener]);
+
   const config = getOverviewConfig({
     isSales,
     isProduction,
@@ -250,6 +285,16 @@ export default function OverviewPage() {
     isAdmin,
     isSuperAdmin,
   });
+
+  // Patch listener stats into config
+  if (isListener && listenerStats) {
+    config.stats = [
+      { label: "Stream Status", value: "LIVE", sub: "WCCG 104.5 FM — On Air", icon: Radio, color: "#74ddc7", live: true },
+      { label: "Points Balance", value: listenerStats.points.toLocaleString(), sub: "WCCG Points", icon: Star, color: "#f59e0b" },
+      { label: "Listen Time", value: listenerStats.totalHours > 0 ? `${listenerStats.totalHours}h ${listenerStats.remainingMinutes}m` : `${listenerStats.remainingMinutes}m`, sub: "Total listening", icon: Clock, color: "#7401df" },
+      { label: "Songs Heard", value: listenerStats.totalTracks.toLocaleString(), sub: listenerStats.topArtist !== "—" ? `Top: ${listenerStats.topArtist}` : "Unique tracks", icon: Music, color: "#dc2626" },
+    ];
+  }
 
   return (
     <div className="space-y-8">
@@ -308,6 +353,28 @@ export default function OverviewPage() {
           ))}
         </div>
       </section>
+
+      {/* Recent Activity — listener only */}
+      {isListener && listenerStats && listenerStats.recentEntries.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="text-lg font-semibold">Recent Activity</h2>
+          <div className="space-y-2">
+            {listenerStats.recentEntries.map((entry) => (
+              <Card key={entry.id} className="border-border">
+                <CardContent className="flex items-center gap-3 py-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#74ddc7]/10">
+                    <Radio className="h-4 w-4 text-[#74ddc7]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{entry.title}</p>
+                    <p className="text-xs text-muted-foreground">{entry.streamName} · {entry.timestamp}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Quick actions (hidden when empty, e.g. listener) */}
       {config.actions.length > 0 && (

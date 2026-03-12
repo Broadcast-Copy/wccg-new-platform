@@ -6,15 +6,17 @@ import {
   endSession,
   addTrackToSession,
   updateSession,
+  getSessions,
 } from "@/lib/listening-history";
 import { useNowPlaying } from "@/hooks/use-now-playing";
 
 /**
  * Hook that tracks listening sessions based on the stream overlay state.
  *
- * - When `isListening` becomes true → starts a new session
+ * - When `isListening` becomes true → resumes existing session or starts new one
  * - While active → polls now-playing API and logs track changes
  * - When `isListening` becomes false → ends the session and saves it
+ * - On refresh → resumes the existing active session instead of creating a new one
  *
  * All data is stored client-side in localStorage.
  */
@@ -26,12 +28,23 @@ export function useListeningTracker(isListening: boolean) {
   // Poll now-playing only while the overlay is open
   const { data: nowPlaying } = useNowPlaying(isListening);
 
-  // ── Start session when overlay opens ──────────────────────────────────
+  // ── Start or resume session when overlay opens ────────────────────────
   useEffect(() => {
     if (isListening && !sessionIdRef.current) {
-      const session = startSession();
-      sessionIdRef.current = session.id;
-      startTimeRef.current = Date.now();
+      // Check for an existing active session to resume (e.g. after refresh)
+      const sessions = getSessions();
+      const activeSession = sessions.find((s) => s.endedAt === null);
+
+      if (activeSession) {
+        // Resume existing session
+        sessionIdRef.current = activeSession.id;
+        startTimeRef.current = new Date(activeSession.startedAt).getTime();
+      } else {
+        // Start a fresh session
+        const session = startSession();
+        sessionIdRef.current = session.id;
+        startTimeRef.current = Date.now();
+      }
 
       // Periodically update the session's duration so if the browser
       // crashes/closes, we still have a rough record
@@ -67,17 +80,18 @@ export function useListeningTracker(isListening: boolean) {
     });
   }, [nowPlaying?.title, nowPlaying?.artist]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Cleanup on unmount ────────────────────────────────────────────────
+  // ── Cleanup on unmount — do NOT end session on unmount (refresh case) ──
+  // We intentionally do NOT end the session on unmount anymore.
+  // Sessions are only ended when isListening becomes false (user stops).
+  // On refresh, the session remains active and gets resumed above.
   useEffect(() => {
     return () => {
-      if (sessionIdRef.current) {
-        endSession(sessionIdRef.current);
-        sessionIdRef.current = null;
-      }
       if (durationIntervalRef.current) {
         clearInterval(durationIntervalRef.current);
         durationIntervalRef.current = null;
       }
+      // Clear the ref without ending the session
+      sessionIdRef.current = null;
     };
   }, []);
 }
