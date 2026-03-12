@@ -44,6 +44,49 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles } from "@/hooks/use-user-roles";
 import { apiClient } from "@/lib/api-client";
+import {
+  getHistoryEntries,
+  getListeningStats,
+  type HistoryEntry,
+} from "@/lib/listening-history";
+
+/**
+ * Read points balance directly from localStorage, checking both
+ * user-specific and default keys so we don't depend on the module-level
+ * _currentEmail variable (which may not be set yet on first render).
+ */
+function readPointsFromStorage(email: string | null | undefined): {
+  balance: number;
+  history: Array<{ id: string; amount: number; reason: string; createdAt: string }>;
+} {
+  if (typeof window === "undefined") return { balance: 0, history: [] };
+  try {
+    const keys = email
+      ? [`wccg_listening_points_${email}`, "wccg_listening_points"]
+      : ["wccg_listening_points"];
+    for (const key of keys) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const totalPoints = parsed.totalPoints ?? 0;
+        const history = (parsed.history ?? []).slice(0, 5).map(
+          (h: { points: number; reason: string; timestamp: string }, i: number) => ({
+            id: `local_${i}`,
+            amount: h.points,
+            reason: h.reason,
+            createdAt: h.timestamp,
+          }),
+        );
+        if (totalPoints > 0 || history.length > 0) {
+          return { balance: totalPoints, history };
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return { balance: 0, history: [] };
+}
 
 // --- Types ---
 
@@ -299,6 +342,13 @@ export default function UserDashboardPage() {
     ticketsCount: 0,
     recentPoints: [],
   });
+  const [listeningHistory, setListeningHistory] = useState<HistoryEntry[]>([]);
+  const [listeningStats, setListeningStats] = useState<{
+    totalHours: number;
+    remainingMinutes: number;
+    totalTracks: number;
+    topArtist: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -324,9 +374,26 @@ export default function UserDashboardPage() {
             }>("/points/history"),
           ]);
 
+        // Get API values
+        let pointsBalance =
+          balanceRes.status === "fulfilled" ? balanceRes.value.balance : 0;
+        let recentPoints =
+          historyRes.status === "fulfilled"
+            ? Array.isArray(historyRes.value?.data)
+              ? historyRes.value.data.slice(0, 5)
+              : []
+            : [];
+
+        // Fall back to localStorage if API returned 0 / empty
+        if (pointsBalance === 0 || recentPoints.length === 0) {
+          const local = readPointsFromStorage(user?.email);
+          if (local.balance > pointsBalance) pointsBalance = local.balance;
+          if (recentPoints.length === 0 && local.history.length > 0)
+            recentPoints = local.history;
+        }
+
         setStats({
-          pointsBalance:
-            balanceRes.status === "fulfilled" ? balanceRes.value.balance : 0,
+          pointsBalance,
           favoritesCount:
             favoritesRes.status === "fulfilled"
               ? Array.isArray(favoritesRes.value)
@@ -339,16 +406,20 @@ export default function UserDashboardPage() {
                 ? ticketsRes.value.length
                 : 0
               : 0,
-          recentPoints:
-            historyRes.status === "fulfilled"
-              ? Array.isArray(historyRes.value?.data)
-                ? historyRes.value.data.slice(0, 5)
-                : []
-              : [],
+          recentPoints,
         });
       } catch {
         // Silently fail
       } finally {
+        // Load listening history from localStorage
+        try {
+          const entries = getHistoryEntries();
+          setListeningHistory(entries.slice(0, 8)); // Show up to 8 recent entries
+          const lStats = getListeningStats();
+          setListeningStats(lStats);
+        } catch {
+          // ignore
+        }
         setLoading(false);
       }
     }
@@ -587,6 +658,98 @@ export default function UserDashboardPage() {
                   </Badge>
                 </div>
               ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ═══ Listening History ═══ */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Listening History</CardTitle>
+              <CardDescription>
+                {listeningStats && (listeningStats.totalHours > 0 || listeningStats.remainingMinutes > 0)
+                  ? `${listeningStats.totalHours > 0 ? `${listeningStats.totalHours}h ` : ""}${listeningStats.remainingMinutes}m total · ${listeningStats.totalTracks} tracks heard`
+                  : "Your recent listening sessions"}
+              </CardDescription>
+            </div>
+            <Link
+              href="/my/overview"
+              className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+            >
+              View all
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          ) : listeningHistory.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-6 text-center">
+              <Headphones className="h-8 w-8 text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground">
+                No listening history yet. Tune into WCCG 104.5 FM to start tracking!
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {listeningHistory.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex items-center justify-between rounded-lg border p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                        entry.isActive
+                          ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                          : "bg-[#7401df]/10 text-[#7401df]"
+                      }`}
+                    >
+                      {entry.isActive ? (
+                        <span className="relative flex h-3 w-3">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
+                          <span className="relative inline-flex h-3 w-3 rounded-full bg-green-500" />
+                        </span>
+                      ) : (
+                        <Music className="h-4 w-4" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {entry.title}
+                        {entry.isActive && (
+                          <span className="ml-2 text-[10px] font-semibold text-green-600 dark:text-green-400">
+                            LIVE
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {entry.artist} · {entry.streamName}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end shrink-0 ml-3">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {entry.listenedDuration}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground/70">
+                      {entry.timestamp}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {listeningStats && listeningStats.topArtist !== "—" && (
+                <div className="mt-2 flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+                  <Star className="h-3.5 w-3.5 text-yellow-500 shrink-0" />
+                  <span>
+                    Top artist: <span className="font-medium text-foreground">{listeningStats.topArtist}</span>
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

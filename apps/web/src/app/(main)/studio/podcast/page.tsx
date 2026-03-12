@@ -170,51 +170,51 @@ function LayoutIcon({
   const cls = `h-full w-full rounded-sm ${
     active
       ? "border-2 border-[#7401df] bg-[#7401df]/10"
-      : "border border-zinc-600 bg-zinc-800 hover:border-zinc-500"
+      : "border border-border bg-muted hover:border-foreground/30"
   }`;
 
   switch (preset) {
     case "single":
       return (
         <div className={cls}>
-          <div className="h-full w-full bg-zinc-600/30 rounded-sm" />
+          <div className="h-full w-full bg-muted-foreground/20 rounded-sm" />
         </div>
       );
     case "side-by-side":
       return (
         <div className={`${cls} flex gap-[2px] p-[2px]`}>
-          <div className="flex-1 bg-zinc-600/30 rounded-[1px]" />
-          <div className="flex-1 bg-zinc-600/30 rounded-[1px]" />
+          <div className="flex-1 bg-muted-foreground/20 rounded-[1px]" />
+          <div className="flex-1 bg-muted-foreground/20 rounded-[1px]" />
         </div>
       );
     case "highlight-right":
       return (
         <div className={`${cls} flex gap-[2px] p-[2px]`}>
-          <div className="flex-[2] bg-zinc-600/30 rounded-[1px]" />
-          <div className="flex-1 bg-zinc-600/30 rounded-[1px]" />
+          <div className="flex-[2] bg-muted-foreground/20 rounded-[1px]" />
+          <div className="flex-1 bg-muted-foreground/20 rounded-[1px]" />
         </div>
       );
     case "grid-2x2":
       return (
         <div className={`${cls} grid grid-cols-2 grid-rows-2 gap-[2px] p-[2px]`}>
-          <div className="bg-zinc-600/30 rounded-[1px]" />
-          <div className="bg-zinc-600/30 rounded-[1px]" />
-          <div className="bg-zinc-600/30 rounded-[1px]" />
-          <div className="bg-zinc-600/30 rounded-[1px]" />
+          <div className="bg-muted-foreground/20 rounded-[1px]" />
+          <div className="bg-muted-foreground/20 rounded-[1px]" />
+          <div className="bg-muted-foreground/20 rounded-[1px]" />
+          <div className="bg-muted-foreground/20 rounded-[1px]" />
         </div>
       );
     case "top-bottom":
       return (
         <div className={`${cls} flex flex-col gap-[2px] p-[2px]`}>
-          <div className="flex-1 bg-zinc-600/30 rounded-[1px]" />
-          <div className="flex-1 bg-zinc-600/30 rounded-[1px]" />
+          <div className="flex-1 bg-muted-foreground/20 rounded-[1px]" />
+          <div className="flex-1 bg-muted-foreground/20 rounded-[1px]" />
         </div>
       );
     case "pip":
       return (
         <div className={`${cls} relative p-[2px]`}>
-          <div className="h-full w-full bg-zinc-600/30 rounded-[1px]" />
-          <div className="absolute bottom-[3px] right-[3px] w-[35%] h-[35%] bg-zinc-500/40 rounded-[1px] border border-zinc-500/50" />
+          <div className="h-full w-full bg-muted-foreground/20 rounded-[1px]" />
+          <div className="absolute bottom-[3px] right-[3px] w-[35%] h-[35%] bg-muted-foreground/30 rounded-[1px] border border-border/50" />
         </div>
       );
   }
@@ -238,7 +238,7 @@ function AudioLevelBar({ level }: { level: number }) {
           <div
             key={i}
             className={`w-[3px] h-[6px] rounded-[0.5px] transition-colors ${
-              active ? color : "bg-zinc-700"
+              active ? color : "bg-border"
             }`}
           />
         );
@@ -275,7 +275,7 @@ function VideoTile({
   );
 
   return (
-    <div className="relative w-full h-full rounded-xl overflow-hidden bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-800 group">
+    <div className="relative w-full h-full rounded-xl overflow-hidden bg-gradient-to-br from-muted via-card to-muted group">
       {hasStream ? (
         /* eslint-disable-next-line jsx-a11y/media-has-caption */
         <video
@@ -302,11 +302,11 @@ function VideoTile({
       ) : (
         <div className="absolute inset-0 flex items-center justify-center">
           <div
-            className={`rounded-full bg-zinc-700 flex items-center justify-center ${
+            className={`rounded-full bg-border flex items-center justify-center ${
               large ? "h-28 w-28 text-4xl" : "h-16 w-16 text-2xl"
             }`}
           >
-            <span className="font-bold text-zinc-400">
+            <span className="font-bold text-muted-foreground">
               {participant.name.charAt(0).toUpperCase()}
             </span>
           </div>
@@ -363,7 +363,7 @@ function ScreenShareTile({
   );
 
   return (
-    <div className="relative w-full h-full rounded-xl overflow-hidden bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-800 group">
+    <div className="relative w-full h-full rounded-xl overflow-hidden bg-gradient-to-br from-muted via-card to-muted group">
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <video
         ref={videoCallbackRef}
@@ -1147,12 +1147,12 @@ function PodcastStudioContent() {
       allTiles.push(
         <div
           key="empty"
-          className="relative w-full h-full rounded-xl overflow-hidden bg-zinc-900 border-2 border-dashed border-zinc-700 flex flex-col items-center justify-center gap-3"
+          className="relative w-full h-full rounded-xl overflow-hidden bg-card border-2 border-dashed border-border flex flex-col items-center justify-center gap-3"
         >
-          <div className="h-16 w-16 rounded-full bg-zinc-800 flex items-center justify-center">
-            <UserPlus className="h-7 w-7 text-zinc-600" />
+          <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+            <UserPlus className="h-7 w-7 text-muted-foreground/60" />
           </div>
-          <span className="text-sm text-zinc-500 font-medium">
+          <span className="text-sm text-muted-foreground font-medium">
             Invite a guest
           </span>
           <button
@@ -1212,7 +1212,7 @@ function PodcastStudioContent() {
           <div className="h-full p-3 relative">
             <div className="h-full">{allTiles[0]}</div>
             {allTiles[1] && (
-              <div className="absolute bottom-6 right-6 w-[200px] h-[150px] shadow-2xl rounded-xl overflow-hidden border-2 border-zinc-700">
+              <div className="absolute bottom-6 right-6 w-[200px] h-[150px] shadow-2xl rounded-xl overflow-hidden border-2 border-border">
                 {allTiles[1]}
               </div>
             )}
@@ -1236,35 +1236,35 @@ function PodcastStudioContent() {
   // =====================================================================
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] -mx-4 sm:-mx-6 lg:-mx-8 -mt-6 overflow-hidden bg-zinc-950 text-white" style={{ colorScheme: 'dark' }}>
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden bg-background text-foreground">
       {/* ================================================================= */}
       {/* Top Bar                                                           */}
       {/* ================================================================= */}
-      <div className="flex items-center justify-between px-4 py-2 bg-zinc-900/90 border-b border-zinc-800 shrink-0">
+      <div className="flex items-center justify-between px-4 py-2 bg-card/90 border-b border-border shrink-0">
         {/* Left */}
         <div className="flex items-center gap-3">
           <Link
             href="/my/studio"
-            className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">My Studio</span>
           </Link>
 
-          <div className="h-4 w-px bg-zinc-700" />
+          <div className="h-4 w-px bg-border" />
 
           <div className="flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#7401df]">
               <Radio className="h-3.5 w-3.5 text-white" />
             </div>
-            <span className="text-sm font-semibold text-white hidden sm:inline">
+            <span className="text-sm font-semibold text-foreground hidden sm:inline">
               WCCG Studio
             </span>
           </div>
 
           <button
             onClick={handleCopyLink}
-            className="hidden md:flex items-center gap-1.5 bg-zinc-800 border border-zinc-700 text-zinc-400 text-xs px-2.5 py-1 rounded-lg hover:border-zinc-600 hover:text-zinc-300 transition-colors"
+            className="hidden md:flex items-center gap-1.5 bg-muted border border-border text-muted-foreground text-xs px-2.5 py-1 rounded-lg hover:border-border hover:text-foreground/70 transition-colors"
           >
             <span className="max-w-[140px] truncate font-mono text-[11px]">
               /podcast-studio
@@ -1276,9 +1276,9 @@ function PodcastStudioContent() {
             )}
           </button>
 
-          <div className="flex items-center gap-1.5 bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1">
-            <Users className="h-3 w-3 text-zinc-400" />
-            <span className="text-xs text-zinc-300 font-medium">
+          <div className="flex items-center gap-1.5 bg-muted border border-border rounded-lg px-2 py-1">
+            <Users className="h-3 w-3 text-muted-foreground" />
+            <span className="text-xs text-foreground/70 font-medium">
               {participants.length}
             </span>
           </div>
@@ -1299,7 +1299,7 @@ function PodcastStudioContent() {
             className={`p-1.5 rounded-lg transition-colors ${
               showTimeline
                 ? "text-[#74ddc7] bg-[#74ddc7]/10"
-                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
             }`}
             title="Toggle Timeline"
           >
@@ -1312,7 +1312,7 @@ function PodcastStudioContent() {
 
           <button
             onClick={toggleFullscreen}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
           >
             {isFullscreen ? (
@@ -1326,8 +1326,8 @@ function PodcastStudioContent() {
             onClick={() => setShowSidebar(!showSidebar)}
             className={`p-1.5 rounded-lg transition-colors ${
               showSidebar
-                ? "text-white bg-zinc-800"
-                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                ? "text-foreground bg-muted"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
             }`}
             title="Toggle sidebar"
           >
@@ -1345,15 +1345,15 @@ function PodcastStudioContent() {
       {/* ================================================================= */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* ── Video Grid ── */}
-        <div className="flex-1 min-w-0 bg-zinc-950 overflow-hidden">
+        <div className="flex-1 min-w-0 bg-background overflow-hidden">
           {renderVideoGrid()}
         </div>
 
         {/* ── Right Sidebar ── */}
         {showSidebar && (
-          <div className="w-[300px] xl:w-[320px] bg-zinc-900 border-l border-zinc-800 flex flex-col shrink-0 overflow-hidden">
+          <div className="w-[300px] xl:w-[320px] bg-card border-l border-border flex flex-col shrink-0 overflow-hidden">
             {/* Sidebar Tabs */}
-            <div className="flex border-b border-zinc-800 shrink-0">
+            <div className="flex border-b border-border shrink-0">
               {(
                 [
                   { key: "studio" as const, label: "Studio", badge: 0 },
@@ -1366,8 +1366,8 @@ function PodcastStudioContent() {
                   onClick={() => setSidebarTab(tab.key)}
                   className={`flex-1 px-3 py-2.5 text-xs font-medium transition-colors border-b-2 flex items-center justify-center gap-1.5 ${
                     sidebarTab === tab.key
-                      ? "border-[#7401df] text-white bg-zinc-800/50"
-                      : "border-transparent text-zinc-500 hover:text-zinc-300"
+                      ? "border-[#7401df] text-foreground bg-muted/50"
+                      : "border-transparent text-muted-foreground hover:text-foreground/70"
                   }`}
                 >
                   {tab.label}
@@ -1387,7 +1387,7 @@ function PodcastStudioContent() {
                 <div className="flex flex-col gap-4 p-3">
                   {/* Episode Name */}
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">
+                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                       Episode Name
                     </label>
                     {editingName ? (
@@ -1399,18 +1399,18 @@ function PodcastStudioContent() {
                         onKeyDown={(e) =>
                           e.key === "Enter" && setEditingName(false)
                         }
-                        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-[#7401df]"
+                        className="w-full bg-muted border border-border rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none focus:border-[#7401df]"
                         autoFocus
                       />
                     ) : (
                       <button
                         onClick={() => setEditingName(true)}
-                        className="w-full text-left bg-zinc-800/50 rounded-lg px-3 py-1.5 text-sm text-white hover:bg-zinc-800 transition-colors"
+                        className="w-full text-left bg-muted/50 rounded-lg px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors"
                       >
                         {episodeName}
                       </button>
                     )}
-                    <p className="text-[10px] text-zinc-600">
+                    <p className="text-[10px] text-muted-foreground/60">
                       Audio &amp; Video &bull; 1080p (HD)
                     </p>
                   </div>
@@ -1418,7 +1418,7 @@ function PodcastStudioContent() {
                   {/* Participants summary */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                         Participants
                       </span>
                       <button className="text-[10px] text-[#7401df] hover:text-[#74ddc7] transition-colors font-medium flex items-center gap-1">
@@ -1430,18 +1430,18 @@ function PodcastStudioContent() {
                     {participants.map((p) => (
                       <div
                         key={p.id}
-                        className="bg-zinc-800/50 rounded-xl p-3 space-y-2"
+                        className="bg-muted/50 rounded-xl p-3 space-y-2"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-white">
+                            <span className="text-sm font-semibold text-foreground">
                               {p.name}
                             </span>
                             <span
                               className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
                                 p.role === "host"
                                   ? "bg-[#7401df]/20 text-[#7401df]"
-                                  : "bg-zinc-700 text-zinc-400"
+                                  : "bg-border text-muted-foreground"
                               }`}
                             >
                               {p.role}
@@ -1450,11 +1450,11 @@ function PodcastStudioContent() {
                               <Circle className="h-2 w-2 fill-red-500 text-red-500 animate-pulse" />
                             )}
                           </div>
-                          <button className="text-zinc-600 hover:text-zinc-400 transition-colors">
+                          <button className="text-muted-foreground/60 hover:text-muted-foreground transition-colors">
                             <MoreHorizontal className="h-4 w-4" />
                           </button>
                         </div>
-                        <p className="text-[10px] text-zinc-500">
+                        <p className="text-[10px] text-muted-foreground">
                           {p.resolution} / {p.device.split(" ").slice(0, 3).join(" ")} / {p.bandwidth}
                         </p>
                         <AudioLevelBar level={p.audioLevel} />
@@ -1463,17 +1463,17 @@ function PodcastStudioContent() {
                   </div>
 
                   {/* Recording info */}
-                  <div className="bg-zinc-800/50 rounded-xl p-3 space-y-2 border border-zinc-800">
+                  <div className="bg-muted/50 rounded-xl p-3 space-y-2 border border-border">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-white flex items-center gap-1.5">
-                        <HardDrive className="h-3.5 w-3.5 text-zinc-400" />
+                      <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                        <HardDrive className="h-3.5 w-3.5 text-muted-foreground" />
                         {episodeName}
                       </span>
                       <span
                         className={`font-mono text-xs px-2 py-0.5 rounded-lg ${
                           isRecording
                             ? "bg-red-600 text-white"
-                            : "bg-zinc-700 text-zinc-400"
+                            : "bg-border text-muted-foreground"
                         }`}
                       >
                         {formatTime(recordingTime)}
@@ -1486,14 +1486,14 @@ function PodcastStudioContent() {
                         className="flex items-center justify-between"
                       >
                         <div>
-                          <p className="text-xs text-white font-medium">
+                          <p className="text-xs text-foreground font-medium">
                             {p.name}
                           </p>
-                          <p className="text-[10px] text-zinc-500">
+                          <p className="text-[10px] text-muted-foreground">
                             Video and Audio
                           </p>
                         </div>
-                        <div className="flex items-center gap-1 text-[10px] text-zinc-500 font-mono">
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
                           {isRecording
                             ? formatFileSize(recordingBytes)
                             : recordedUrl
@@ -1542,14 +1542,14 @@ function PodcastStudioContent() {
 
                   {/* Invite & Share */}
                   <div className="space-y-2">
-                    <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                       Invite &amp; Share
                     </span>
 
                     {/* Copy link */}
                     <button
                       onClick={handleCopyLink}
-                      className="w-full flex items-center justify-center gap-2 bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-xs font-medium text-zinc-300 hover:border-zinc-600 hover:text-white transition-colors"
+                      className="w-full flex items-center justify-center gap-2 bg-muted border border-border rounded-xl px-3 py-2.5 text-xs font-medium text-foreground/70 hover:border-border hover:text-foreground transition-colors"
                     >
                       {copied ? (
                         <>
@@ -1575,21 +1575,21 @@ function PodcastStudioContent() {
                             : ""
                         }\n\nPowered by WCCG 104.5 FM Studio`
                       )}`}
-                      className="w-full flex items-center justify-center gap-2 bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-xs font-medium text-zinc-300 hover:border-zinc-600 hover:text-white transition-colors"
+                      className="w-full flex items-center justify-center gap-2 bg-muted border border-border rounded-xl px-3 py-2.5 text-xs font-medium text-foreground/70 hover:border-border hover:text-foreground transition-colors"
                     >
                       <Mail className="h-3.5 w-3.5" />
                       Share via Email
                     </a>
 
                     {/* QR Code */}
-                    <div className="bg-zinc-800/50 rounded-xl p-3 space-y-2 border border-zinc-800">
+                    <div className="bg-muted/50 rounded-xl p-3 space-y-2 border border-border">
                       <div className="flex items-center gap-1.5">
-                        <QrCode className="h-3.5 w-3.5 text-zinc-400" />
-                        <span className="text-xs font-semibold text-white">
+                        <QrCode className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs font-semibold text-foreground">
                           QR Code
                         </span>
                       </div>
-                      <p className="text-[10px] text-zinc-500">
+                      <p className="text-[10px] text-muted-foreground">
                         Scan to join from a mobile device
                       </p>
                       <div className="flex justify-center bg-white rounded-lg p-2">
@@ -1611,7 +1611,7 @@ function PodcastStudioContent() {
 
                   {/* Director — Layout presets */}
                   <div className="space-y-2">
-                    <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                       Director
                     </span>
                     <div className="grid grid-cols-3 gap-2">
@@ -1656,24 +1656,24 @@ function PodcastStudioContent() {
                               msg.sender === "You"
                                 ? "text-[#74ddc7]"
                                 : msg.sender === "System"
-                                ? "text-zinc-500"
-                                : "text-white"
+                                ? "text-muted-foreground"
+                                : "text-foreground"
                             }`}
                           >
                             {msg.sender}
                           </span>
-                          <span className="text-[9px] text-zinc-600">
+                          <span className="text-[9px] text-muted-foreground/60">
                             {msg.time}
                           </span>
                         </div>
-                        <p className="text-xs text-zinc-300 leading-relaxed">
+                        <p className="text-xs text-foreground/70 leading-relaxed">
                           {msg.text}
                         </p>
                       </div>
                     ))}
                     <div ref={chatEndRef} />
                   </div>
-                  <div className="border-t border-zinc-800 p-3">
+                  <div className="border-t border-border p-3">
                     <div className="flex gap-2">
                       <input
                         type="text"
@@ -1683,7 +1683,7 @@ function PodcastStudioContent() {
                           e.key === "Enter" && handleSendChat()
                         }
                         placeholder="Send a message..."
-                        className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-[#7401df]"
+                        className="flex-1 bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder-muted-foreground/60 focus:outline-none focus:border-[#7401df]"
                       />
                       <button
                         onClick={handleSendChat}
@@ -1700,7 +1700,7 @@ function PodcastStudioContent() {
               {sidebarTab === "participants" && (
                 <div className="p-3 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-zinc-400 font-medium">
+                    <span className="text-xs text-muted-foreground font-medium">
                       In Studio ({participants.length})
                     </span>
                     <button
@@ -1715,7 +1715,7 @@ function PodcastStudioContent() {
                   {participants.map((p) => (
                     <div
                       key={p.id}
-                      className="bg-zinc-800/50 rounded-xl p-3 space-y-2"
+                      className="bg-muted/50 rounded-xl p-3 space-y-2"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -1723,7 +1723,7 @@ function PodcastStudioContent() {
                             className={`h-8 w-8 rounded-full flex items-center justify-center ${
                               p.role === "host"
                                 ? "bg-[#7401df]/30"
-                                : "bg-zinc-700"
+                                : "bg-border"
                             }`}
                           >
                             <span className="text-sm font-bold text-white/80">
@@ -1732,31 +1732,31 @@ function PodcastStudioContent() {
                           </div>
                           <div>
                             <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-semibold text-white">
+                              <span className="text-sm font-semibold text-foreground">
                                 {p.name}
                               </span>
                               <span
                                 className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
                                   p.role === "host"
                                     ? "bg-[#7401df]/20 text-[#7401df]"
-                                    : "bg-zinc-700 text-zinc-400"
+                                    : "bg-border text-muted-foreground"
                                 }`}
                               >
                                 {p.role}
                               </span>
                             </div>
-                            <p className="text-[10px] text-zinc-500">
+                            <p className="text-[10px] text-muted-foreground">
                               {p.device.split(" ").slice(0, 3).join(" ")}
                             </p>
                           </div>
                         </div>
-                        <button className="text-zinc-600 hover:text-zinc-400">
+                        <button className="text-muted-foreground/60 hover:text-muted-foreground">
                           <MoreHorizontal className="h-4 w-4" />
                         </button>
                       </div>
                       <div className="flex items-center gap-3">
                         <AudioLevelBar level={p.audioLevel} />
-                        <span className="text-[9px] text-zinc-600 font-mono">
+                        <span className="text-[9px] text-muted-foreground/60 font-mono">
                           {p.bandwidth}
                         </span>
                       </div>
@@ -1764,17 +1764,17 @@ function PodcastStudioContent() {
                   ))}
 
                   {/* Waiting room placeholder */}
-                  <div className="bg-zinc-800/30 rounded-xl p-3 border border-dashed border-zinc-800">
-                    <div className="flex items-center gap-2 text-zinc-600">
+                  <div className="bg-muted/30 rounded-xl p-3 border border-dashed border-border">
+                    <div className="flex items-center gap-2 text-muted-foreground/60">
                       <Clock className="h-3.5 w-3.5" />
                       <span className="text-xs font-medium">
                         Waiting Room
                       </span>
-                      <span className="text-[10px] bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-500">
+                      <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
                         0
                       </span>
                     </div>
-                    <p className="text-[10px] text-zinc-600 mt-1.5">
+                    <p className="text-[10px] text-muted-foreground/60 mt-1.5">
                       Guests will appear here when they join via invite link.
                     </p>
                   </div>
@@ -1789,9 +1789,9 @@ function PodcastStudioContent() {
       {/* Timeline Panel                                                    */}
       {/* ================================================================= */}
       {showTimeline && (
-        <div className="shrink-0 bg-zinc-900 border-t border-zinc-800 flex flex-col" style={{ height: 220 }}>
+        <div className="shrink-0 bg-card border-t border-border flex flex-col" style={{ height: 220 }}>
           {/* Timeline Toolbar */}
-          <div className="flex items-center justify-between px-3 py-1.5 border-b border-zinc-800 shrink-0 gap-4">
+          <div className="flex items-center justify-between px-3 py-1.5 border-b border-border shrink-0 gap-4">
             {/* Left: Editing Tools */}
             <div className="flex items-center gap-1">
               {TOOL_INFO.map((tool) => (
@@ -1801,7 +1801,7 @@ function PodcastStudioContent() {
                   className={`p-1.5 rounded-lg transition-colors ${
                     timelineTool === tool.key
                       ? "bg-[#7401df]/20 text-[#7401df]"
-                      : "text-zinc-500 hover:text-white hover:bg-zinc-800"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   }`}
                   title={`${tool.label} (${tool.shortcut})`}
                 >
@@ -1814,7 +1814,7 @@ function PodcastStudioContent() {
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setTimelinePlayhead(0)}
-                className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 title="Skip to Start (Home)"
               >
                 <SkipBack className="h-3.5 w-3.5" />
@@ -1824,7 +1824,7 @@ function PodcastStudioContent() {
                 className={`p-1.5 rounded-lg transition-colors ${
                   isTimelinePlaying
                     ? "bg-[#74ddc7]/20 text-[#74ddc7]"
-                    : "text-zinc-500 hover:text-white hover:bg-zinc-800"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
                 title={isTimelinePlaying ? "Pause" : "Play"}
               >
@@ -1836,24 +1836,24 @@ function PodcastStudioContent() {
               </button>
               <button
                 onClick={() => setTimelinePlayhead(timelineDuration())}
-                className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 title="Skip to End (End)"
               >
                 <SkipForward className="h-3.5 w-3.5" />
               </button>
 
-              <span className="text-[11px] font-mono text-zinc-400 min-w-[60px] text-center tabular-nums">
+              <span className="text-[11px] font-mono text-muted-foreground min-w-[60px] text-center tabular-nums">
                 {formatTime(Math.floor(timelinePlayhead))}
               </span>
 
-              <div className="h-4 w-px bg-zinc-700 mx-0.5" />
+              <div className="h-4 w-px bg-border mx-0.5" />
 
               <button
                 onClick={() => setLoopEnabled(!loopEnabled)}
                 className={`p-1.5 rounded-lg transition-colors ${
                   loopEnabled
                     ? "bg-[#74ddc7]/20 text-[#74ddc7]"
-                    : "text-zinc-500 hover:text-white hover:bg-zinc-800"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
                 title="Loop"
               >
@@ -1868,28 +1868,28 @@ function PodcastStudioContent() {
                 className={`px-2 py-1 rounded-lg text-[9px] font-bold tracking-wider transition-colors ${
                   snapEnabled
                     ? "bg-[#74ddc7]/20 text-[#74ddc7]"
-                    : "text-zinc-500 hover:text-white hover:bg-zinc-800"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
                 title="Snap to Grid"
               >
                 SNAP
               </button>
 
-              <div className="h-4 w-px bg-zinc-700 mx-0.5" />
+              <div className="h-4 w-px bg-border mx-0.5" />
 
               <button
                 onClick={() => setTimelineZoom((z) => Math.max(MIN_ZOOM, z - 0.25))}
-                className="p-1 rounded text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+                className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 title="Zoom Out"
               >
                 <Minus className="h-3 w-3" />
               </button>
-              <span className="text-[10px] font-mono text-zinc-500 min-w-[32px] text-center">
+              <span className="text-[10px] font-mono text-muted-foreground min-w-[32px] text-center">
                 {timelineZoom.toFixed(1)}x
               </span>
               <button
                 onClick={() => setTimelineZoom((z) => Math.min(MAX_ZOOM, z + 0.25))}
-                className="p-1 rounded text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+                className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 title="Zoom In"
               >
                 <Plus className="h-3 w-3" />
@@ -1901,11 +1901,11 @@ function PodcastStudioContent() {
           <div className="flex flex-1 min-h-0">
             {/* Track Headers (fixed left) */}
             <div
-              className="shrink-0 flex flex-col border-r border-zinc-800 bg-zinc-900"
+              className="shrink-0 flex flex-col border-r border-border bg-card"
               style={{ width: TRACK_HEADER_WIDTH }}
             >
-              <div className="h-6 border-b border-zinc-800 shrink-0 flex items-center px-2">
-                <span className="text-[9px] text-zinc-600 font-semibold uppercase tracking-wider">
+              <div className="h-6 border-b border-border shrink-0 flex items-center px-2">
+                <span className="text-[9px] text-muted-foreground/60 font-semibold uppercase tracking-wider">
                   Tracks
                 </span>
               </div>
@@ -1913,14 +1913,14 @@ function PodcastStudioContent() {
                 {timelineTracks.map((track) => (
                   <div
                     key={track.id}
-                    className="flex items-center gap-1.5 px-2 border-b border-zinc-800/50"
+                    className="flex items-center gap-1.5 px-2 border-b border-border/50"
                     style={{ height: track.height }}
                   >
                     <div
                       className="h-2 w-2 rounded-full shrink-0"
                       style={{ backgroundColor: track.color }}
                     />
-                    <span className="text-[10px] text-zinc-300 font-medium truncate flex-1">
+                    <span className="text-[10px] text-foreground/70 font-medium truncate flex-1">
                       {track.label}
                     </span>
                     <div className="flex items-center gap-0.5 shrink-0">
@@ -1937,7 +1937,7 @@ function PodcastStudioContent() {
                         className={`h-5 w-5 flex items-center justify-center rounded text-[9px] font-bold transition-colors ${
                           track.muted
                             ? "bg-red-500/20 text-red-400"
-                            : "text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800"
+                            : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted"
                         }`}
                         title="Mute"
                       >
@@ -1956,7 +1956,7 @@ function PodcastStudioContent() {
                         className={`h-5 w-5 flex items-center justify-center rounded text-[9px] font-bold transition-colors ${
                           track.solo
                             ? "bg-yellow-500/20 text-yellow-400"
-                            : "text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800"
+                            : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted"
                         }`}
                         title="Solo"
                       >
@@ -1974,8 +1974,8 @@ function PodcastStudioContent() {
                         }
                         className={`h-5 w-5 flex items-center justify-center rounded transition-colors ${
                           track.locked
-                            ? "text-zinc-400"
-                            : "text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800"
+                            ? "text-muted-foreground"
+                            : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted"
                         }`}
                         title={track.locked ? "Unlock" : "Lock"}
                       >
@@ -1990,7 +1990,7 @@ function PodcastStudioContent() {
                 ))}
                 {timelineTracks.length === 0 && (
                   <div className="flex items-center justify-center h-full">
-                    <span className="text-[10px] text-zinc-600">No tracks</span>
+                    <span className="text-[10px] text-muted-foreground/60">No tracks</span>
                   </div>
                 )}
               </div>
@@ -2032,7 +2032,7 @@ function PodcastStudioContent() {
                 className="relative"
               >
                 {/* Time Ruler */}
-                <div className="sticky top-0 h-6 bg-zinc-900/90 border-b border-zinc-800 z-10 relative backdrop-blur-sm cursor-pointer">
+                <div className="sticky top-0 h-6 bg-card/90 border-b border-border z-10 relative backdrop-blur-sm cursor-pointer">
                   {(() => {
                     const step =
                       pxPerSec >= 160
@@ -2060,12 +2060,12 @@ function PodcastStudioContent() {
                           <div
                             className={`w-px ${
                               isMajor
-                                ? "h-3 bg-zinc-600"
-                                : "h-1.5 bg-zinc-700"
+                                ? "h-3 bg-muted-foreground/40"
+                                : "h-1.5 bg-border"
                             }`}
                           />
                           {isMajor && (
-                            <span className="absolute bottom-3 -translate-x-1/2 text-[8px] text-zinc-500 font-mono whitespace-nowrap select-none">
+                            <span className="absolute bottom-3 -translate-x-1/2 text-[8px] text-muted-foreground font-mono whitespace-nowrap select-none">
                               {mm}:{ss.toString().padStart(2, "0")}
                             </span>
                           )}
@@ -2080,7 +2080,7 @@ function PodcastStudioContent() {
                 {timelineTracks.map((track) => (
                   <div
                     key={track.id}
-                    className="relative border-b border-zinc-800/50"
+                    className="relative border-b border-border/50"
                     style={{ height: track.height }}
                   >
                     {/* Clips */}
@@ -2112,7 +2112,7 @@ function PodcastStudioContent() {
                             } ${
                               isSelected
                                 ? "ring-2 ring-[#74ddc7] shadow-[0_0_12px_rgba(116,221,199,0.3)]"
-                                : "hover:ring-1 hover:ring-zinc-500"
+                                : "hover:ring-1 hover:ring-border"
                             }`}
                             style={{
                               left: clipLeft,
@@ -2262,12 +2262,12 @@ function PodcastStudioContent() {
 
                 {/* Empty state when no tracks */}
                 {timelineTracks.length === 0 && (
-                  <div className="absolute inset-0 top-6 flex flex-col items-center justify-center gap-2 text-zinc-600">
+                  <div className="absolute inset-0 top-6 flex flex-col items-center justify-center gap-2 text-muted-foreground/60">
                     <Scissors className="h-6 w-6" />
                     <span className="text-xs font-medium">
                       Start recording to see your timeline
                     </span>
-                    <span className="text-[10px] text-zinc-700">
+                    <span className="text-[10px] text-muted-foreground/50">
                       Clips will appear here automatically
                     </span>
                   </div>
@@ -2299,7 +2299,7 @@ function PodcastStudioContent() {
       {/* ================================================================= */}
       {/* Bottom Transport Bar                                              */}
       {/* ================================================================= */}
-      <div className="flex items-center justify-between px-4 py-3 bg-zinc-900/95 border-t border-zinc-800 shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 bg-card/95 border-t border-border shrink-0">
         {/* Left: Settings */}
         <div className="flex items-center gap-2">
           <button
@@ -2307,7 +2307,7 @@ function PodcastStudioContent() {
             className={`p-2.5 rounded-xl transition-colors ${
               showSettings
                 ? "text-[#74ddc7] bg-[#74ddc7]/10"
-                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
             }`}
             title="Settings"
           >
@@ -2323,7 +2323,7 @@ function PodcastStudioContent() {
             className={`p-2.5 rounded-xl transition-colors ${
               isScreenSharing
                 ? "text-[#74ddc7] bg-[#74ddc7]/10 ring-1 ring-[#74ddc7]/30"
-                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
             }`}
             title={isScreenSharing ? "Stop sharing" : "Share Screen"}
           >
@@ -2335,7 +2335,7 @@ function PodcastStudioContent() {
             onClick={() => setMicEnabled(!micEnabled)}
             className={`p-2.5 rounded-xl transition-colors ${
               micEnabled
-                ? "text-white bg-zinc-800 hover:bg-zinc-700"
+                ? "text-foreground bg-muted hover:bg-accent"
                 : "text-red-400 bg-red-600/20 hover:bg-red-600/30"
             }`}
             title={micEnabled ? "Mute mic" : "Unmute mic"}
@@ -2369,7 +2369,7 @@ function PodcastStudioContent() {
             onClick={() => setSpeakerEnabled(!speakerEnabled)}
             className={`p-2.5 rounded-xl transition-colors ${
               speakerEnabled
-                ? "text-white bg-zinc-800 hover:bg-zinc-700"
+                ? "text-foreground bg-muted hover:bg-accent"
                 : "text-red-400 bg-red-600/20 hover:bg-red-600/30"
             }`}
             title={speakerEnabled ? "Mute speaker" : "Unmute speaker"}
@@ -2386,7 +2386,7 @@ function PodcastStudioContent() {
             onClick={() => setCameraEnabled(!cameraEnabled)}
             className={`p-2.5 rounded-xl transition-colors ${
               cameraEnabled
-                ? "text-white bg-zinc-800 hover:bg-zinc-700"
+                ? "text-foreground bg-muted hover:bg-accent"
                 : "text-red-400 bg-red-600/20 hover:bg-red-600/30"
             }`}
             title={cameraEnabled ? "Turn off camera" : "Turn on camera"}
@@ -2432,18 +2432,18 @@ function PodcastStudioContent() {
           />
 
           {/* Modal */}
-          <div className="relative bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl w-[460px] max-h-[80vh] overflow-y-auto">
+          <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-[460px] max-h-[80vh] overflow-y-auto">
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#7401df]/20">
                   <Settings className="h-4 w-4 text-[#7401df]" />
                 </div>
-                <h2 className="text-sm font-bold text-white">Studio Settings</h2>
+                <h2 className="text-sm font-bold text-foreground">Studio Settings</h2>
               </div>
               <button
                 onClick={() => setShowSettings(false)}
-                className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -2453,7 +2453,7 @@ function PodcastStudioContent() {
             <div className="p-5 space-y-5">
               {/* Audio Input */}
               <div className="space-y-2">
-                <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold flex items-center gap-1.5">
+                <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
                   <Mic className="h-3 w-3" />
                   Microphone
                 </label>
@@ -2464,7 +2464,7 @@ function PodcastStudioContent() {
                     setSelectedAudioDeviceId(id);
                     switchDevices(id, selectedVideoDeviceId || undefined);
                   }}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#7401df] appearance-none cursor-pointer"
+                  className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-[#7401df] appearance-none cursor-pointer"
                 >
                   {audioDevices.length === 0 && (
                     <option value="">No microphones detected</option>
@@ -2477,12 +2477,12 @@ function PodcastStudioContent() {
                 </select>
 
                 {/* Live audio level preview */}
-                <div className="bg-zinc-800/50 rounded-lg p-2.5 flex items-center gap-3">
-                  <span className="text-[10px] text-zinc-500 shrink-0">Level</span>
+                <div className="bg-muted/50 rounded-lg p-2.5 flex items-center gap-3">
+                  <span className="text-[10px] text-muted-foreground shrink-0">Level</span>
                   <div className="flex-1">
                     <AudioLevelBar level={participants.find((p) => p.id === "host")?.audioLevel || 0} />
                   </div>
-                  <span className="text-[10px] text-zinc-600 font-mono shrink-0">
+                  <span className="text-[10px] text-muted-foreground/60 font-mono shrink-0">
                     {micEnabled ? "Active" : "Muted"}
                   </span>
                 </div>
@@ -2490,7 +2490,7 @@ function PodcastStudioContent() {
 
               {/* Video Input */}
               <div className="space-y-2">
-                <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold flex items-center gap-1.5">
+                <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
                   <Camera className="h-3 w-3" />
                   Camera
                 </label>
@@ -2501,7 +2501,7 @@ function PodcastStudioContent() {
                     setSelectedVideoDeviceId(id);
                     switchDevices(selectedAudioDeviceId || undefined, id);
                   }}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#7401df] appearance-none cursor-pointer"
+                  className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-[#7401df] appearance-none cursor-pointer"
                 >
                   {videoDevices.length === 0 && (
                     <option value="">No cameras detected</option>
@@ -2514,8 +2514,8 @@ function PodcastStudioContent() {
                 </select>
 
                 {/* Camera preview */}
-                <div className="bg-zinc-800/50 rounded-lg overflow-hidden">
-                  <div className="aspect-video relative bg-zinc-900">
+                <div className="bg-muted/50 rounded-lg overflow-hidden">
+                  <div className="aspect-video relative bg-card">
                     {hasCamera && cameraEnabled ? (
                       /* eslint-disable-next-line jsx-a11y/media-has-caption */
                       <video
@@ -2532,8 +2532,8 @@ function PodcastStudioContent() {
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-center">
-                          <VideoOff className="h-8 w-8 text-zinc-600 mx-auto mb-1" />
-                          <span className="text-[10px] text-zinc-600">
+                          <VideoOff className="h-8 w-8 text-muted-foreground/60 mx-auto mb-1" />
+                          <span className="text-[10px] text-muted-foreground/60">
                             {!hasCamera ? "No camera" : "Camera off"}
                           </span>
                         </div>
@@ -2545,7 +2545,7 @@ function PodcastStudioContent() {
 
               {/* Recording Format */}
               <div className="space-y-2">
-                <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold flex items-center gap-1.5">
+                <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
                   <HardDrive className="h-3 w-3" />
                   Recording Format
                 </label>
@@ -2555,7 +2555,7 @@ function PodcastStudioContent() {
                     className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-medium transition-colors ${
                       recordVideoEnabled
                         ? "border-[#7401df] bg-[#7401df]/10 text-[#7401df]"
-                        : "border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-zinc-300"
+                        : "border-border text-muted-foreground hover:border-border hover:text-foreground/70"
                     }`}
                   >
                     <Film className="h-3.5 w-3.5" />
@@ -2566,14 +2566,14 @@ function PodcastStudioContent() {
                     className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-medium transition-colors ${
                       !recordVideoEnabled
                         ? "border-[#7401df] bg-[#7401df]/10 text-[#7401df]"
-                        : "border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-zinc-300"
+                        : "border-border text-muted-foreground hover:border-border hover:text-foreground/70"
                     }`}
                   >
                     <Mic className="h-3.5 w-3.5" />
                     Audio Only
                   </button>
                 </div>
-                <p className="text-[10px] text-zinc-600">
+                <p className="text-[10px] text-muted-foreground/60">
                   {recordVideoEnabled
                     ? "Records camera feed and microphone as WebM video"
                     : "Records microphone only as WebM audio"}
@@ -2582,12 +2582,12 @@ function PodcastStudioContent() {
 
               {/* Speaker Output */}
               <div className="space-y-2">
-                <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold flex items-center gap-1.5">
+                <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
                   <Volume2 className="h-3 w-3" />
                   Speaker
                 </label>
-                <div className="bg-zinc-800/50 rounded-lg p-3 flex items-center justify-between">
-                  <span className="text-xs text-zinc-300">
+                <div className="bg-muted/50 rounded-lg p-3 flex items-center justify-between">
+                  <span className="text-xs text-foreground/70">
                     {speakerEnabled ? "System Default" : "Muted"}
                   </span>
                   <button
@@ -2604,15 +2604,15 @@ function PodcastStudioContent() {
               </div>
 
               {/* Device info */}
-              <div className="bg-zinc-800/30 rounded-lg p-3 border border-zinc-800/50 space-y-1.5">
-                <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">Device Info</span>
+              <div className="bg-muted/30 rounded-lg p-3 border border-border/50 space-y-1.5">
+                <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Device Info</span>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                  <span className="text-[10px] text-zinc-500">Microphones</span>
-                  <span className="text-[10px] text-zinc-400 text-right">{audioDevices.length} found</span>
-                  <span className="text-[10px] text-zinc-500">Cameras</span>
-                  <span className="text-[10px] text-zinc-400 text-right">{videoDevices.length} found</span>
-                  <span className="text-[10px] text-zinc-500">Format</span>
-                  <span className="text-[10px] text-zinc-400 text-right font-mono">
+                  <span className="text-[10px] text-muted-foreground">Microphones</span>
+                  <span className="text-[10px] text-muted-foreground text-right">{audioDevices.length} found</span>
+                  <span className="text-[10px] text-muted-foreground">Cameras</span>
+                  <span className="text-[10px] text-muted-foreground text-right">{videoDevices.length} found</span>
+                  <span className="text-[10px] text-muted-foreground">Format</span>
+                  <span className="text-[10px] text-muted-foreground text-right font-mono">
                     {getSupportedMimeType(recordVideoEnabled).split(";")[0] || "N/A"}
                   </span>
                 </div>
@@ -2620,7 +2620,7 @@ function PodcastStudioContent() {
             </div>
 
             {/* Footer */}
-            <div className="px-5 py-3 border-t border-zinc-800 flex justify-end">
+            <div className="px-5 py-3 border-t border-border flex justify-end">
               <button
                 onClick={() => setShowSettings(false)}
                 className="bg-[#7401df] hover:bg-[#7401df]/80 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"

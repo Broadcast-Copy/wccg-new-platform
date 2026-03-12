@@ -17,7 +17,6 @@ import {
   Share2,
   Maximize2,
   Minimize2,
-  Infinity,
 } from "lucide-react";
 
 /** localStorage key for the continuous play preference. */
@@ -310,9 +309,9 @@ export function GlobalPlayer() {
           )}
         </Button>
 
-        {/* Program Info (left) | Vertical Divider | Song Info (right) */}
+        {/* Now Playing | Song Info | Program */}
         <div className="flex min-w-0 flex-1 items-center overflow-hidden">
-          {/* Now Playing label + live indicator */}
+          {/* Now Playing label */}
           <div className="flex items-center gap-1.5 shrink-0">
             {isPlaying && (
               <span className="relative flex h-2 w-2">
@@ -325,25 +324,27 @@ export function GlobalPlayer() {
             </span>
           </div>
 
-          {/* Current show / program on the left side */}
-          <div className="flex items-center shrink-0 ml-2 min-w-0 max-w-[120px] sm:max-w-[160px] lg:max-w-[220px]">
-            <span className="truncate text-xs font-medium text-muted-foreground">
-              {currentShow || "WCCG 104.5 FM"}
-            </span>
-          </div>
-
           {/* Vertical divider */}
           <div className="mx-2 sm:mx-2.5 h-8 w-px shrink-0 bg-border" />
 
-          {/* Song title + artist on the right side */}
-          <div
-            className={`flex min-w-0 flex-1 flex-col transition-all duration-500 ${
-              titlePop
-                ? "translate-x-0 opacity-100"
-                : "translate-x-0 opacity-100"
-            }`}
-          >
-            <div className="flex items-center gap-1.5 min-w-0">
+          {/* Song title + artist */}
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            {/* Album Art */}
+            <div className="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-[#74ddc7]/20 to-[#7401df]/20 border border-border overflow-hidden">
+              {metadata.albumArt ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={metadata.albumArt}
+                  alt="Album art"
+                  className="h-9 w-9 rounded-md object-cover"
+                />
+              ) : (
+                <Radio className="h-4 w-4 text-[#74ddc7]" />
+              )}
+            </div>
+            <div
+              className={`flex min-w-0 flex-1 flex-col transition-all duration-500`}
+            >
               <span
                 className={`truncate font-semibold transition-all duration-500 ${
                   titlePop
@@ -353,55 +354,22 @@ export function GlobalPlayer() {
               >
                 {songTitle}
               </span>
+              <span className="truncate text-xs text-muted-foreground">
+                {songArtist}
+              </span>
             </div>
-            <span className="truncate text-xs text-muted-foreground ml-5">
-              {songArtist}
+          </div>
+
+          {/* Vertical divider */}
+          <div className="mx-2 sm:mx-2.5 h-8 w-px shrink-0 bg-border" />
+
+          {/* Program / show name */}
+          <div className="hidden sm:flex items-center shrink-0 min-w-0 max-w-[120px] sm:max-w-[160px] lg:max-w-[220px]">
+            <span className="truncate text-xs font-medium text-muted-foreground">
+              {currentShow || "WCCG 104.5 FM"}
             </span>
           </div>
         </div>
-
-        {/* Album Art */}
-        <div className="hidden md:flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#74ddc7]/20 to-[#7401df]/20 border border-border overflow-hidden">
-          {metadata.albumArt ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={metadata.albumArt}
-              alt="Album art"
-              className="h-10 w-10 rounded-lg object-cover"
-            />
-          ) : (
-            <Radio className="h-5 w-5 text-[#74ddc7]" />
-          )}
-        </div>
-
-        {/* Live Badge */}
-        {isPlaying && (
-          <div className="flex items-center gap-1.5 rounded-full bg-[#74ddc7]/10 border border-[#74ddc7]/20 px-2.5 py-0.5 shrink-0">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#74ddc7] opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#74ddc7]" />
-            </span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[#74ddc7]">
-              Live
-            </span>
-          </div>
-        )}
-
-        {/* Continuous Play Toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleContinuousPlay}
-          aria-label={continuousPlay ? "Disable continuous play" : "Enable continuous play"}
-          title={continuousPlay ? "Continuous play ON" : "Continuous play OFF"}
-          className={`h-8 w-8 shrink-0 rounded-full transition-colors ${
-            continuousPlay
-              ? "text-[#74ddc7] bg-[#74ddc7]/10 hover:bg-[#74ddc7]/20 hover:text-[#74ddc7]"
-              : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06]"
-          }`}
-        >
-          <Infinity className="h-4 w-4" />
-        </Button>
 
         {/* Share Button */}
         <div className="relative shrink-0">
