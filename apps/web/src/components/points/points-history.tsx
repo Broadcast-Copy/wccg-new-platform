@@ -13,13 +13,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/lib/api-client";
 import { Coins, Loader2, History } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 type PointsReason =
   | "LISTENING"
   | "EVENT_CHECKIN"
   | "PURCHASE"
   | "REDEMPTION"
-  | "ADMIN_GRANT";
+  | "ADMIN_GRANT"
+  | "DAILY_BOUNTY"
+  | "STREAK_BONUS"
+  | "SHARE"
+  | "SHARE_BONUS"
+  | "VIDEO_WATCH"
+  | "REFERRAL_BONUS";
 
 interface PointsTransaction {
   id: string;
@@ -35,19 +42,25 @@ interface PointsBalance {
   balance: number;
 }
 
-const REASON_LABELS: Record<PointsReason, string> = {
+const REASON_LABELS: Record<string, string> = {
   LISTENING: "Listening",
   EVENT_CHECKIN: "Event Check-in",
   PURCHASE: "Purchase",
   REDEMPTION: "Redemption",
   ADMIN_GRANT: "Admin Grant",
+  DAILY_BOUNTY: "Daily Bonus",
+  STREAK_BONUS: "Streak Bonus",
+  SHARE: "Share",
+  SHARE_BONUS: "Share Bonus",
+  VIDEO_WATCH: "Video Watch",
+  REFERRAL_BONUS: "Referral Bonus",
 };
 
-function reasonIsPositive(reason: PointsReason): boolean {
-  return reason === "LISTENING" || reason === "EVENT_CHECKIN" || reason === "ADMIN_GRANT";
+function reasonIsPositive(reason: string): boolean {
+  return reason !== "PURCHASE" && reason !== "REDEMPTION";
 }
 
-function ReasonBadge({ reason }: { reason: PointsReason }) {
+function ReasonBadge({ reason }: { reason: string }) {
   const isPositive = reasonIsPositive(reason);
   return (
     <Badge
@@ -63,7 +76,38 @@ function ReasonBadge({ reason }: { reason: PointsReason }) {
   );
 }
 
+/** Read points data from localStorage (for when API is unavailable) */
+function loadLocalPointsData(email: string | null | undefined): {
+  balance: number;
+  history: PointsTransaction[];
+} {
+  try {
+    const key = email
+      ? `wccg_listening_points_${email}`
+      : "wccg_listening_points";
+    const raw = localStorage.getItem(key);
+    if (!raw) return { balance: 0, history: [] };
+    const parsed = JSON.parse(raw);
+    const totalPoints = parsed.totalPoints ?? 0;
+    const history: PointsTransaction[] = (parsed.history ?? []).map(
+      (h: { points: number; reason: string; timestamp: string }, i: number) => ({
+        id: `local_${i}`,
+        amount: h.points,
+        reason: h.reason as PointsReason,
+        referenceType: null,
+        referenceId: null,
+        balance: 0, // local history doesn't track running balance
+        createdAt: h.timestamp,
+      }),
+    );
+    return { balance: totalPoints, history };
+  } catch {
+    return { balance: 0, history: [] };
+  }
+}
+
 export function PointsHistory() {
+  const { user } = useAuth();
   const [balance, setBalance] = useState<number | null>(null);
   const [transactions, setTransactions] = useState<PointsTransaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,15 +122,20 @@ export function PointsHistory() {
       setBalance(balanceRes.balance);
       setTransactions(historyRes.data);
     } catch {
-      // Silently handle — API endpoint may not exist yet.
-      // The empty state UI ("No transactions yet") will display.
+      // Fall back to localStorage
+      const local = loadLocalPointsData(user?.email);
+      setBalance(local.balance);
+      setTransactions(local.history);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.email]);
 
+  // Refresh every 30s
   useEffect(() => {
     fetchData();
+    const interval = setInterval(fetchData, 30_000);
+    return () => clearInterval(interval);
   }, [fetchData]);
 
   if (loading) {
@@ -139,7 +188,6 @@ export function PointsHistory() {
                 <TableHead>Date</TableHead>
                 <TableHead>Reason</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
-                <TableHead className="text-right">Balance</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -151,8 +199,13 @@ export function PointsHistory() {
                       {new Date(tx.createdAt).toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
-                        year: "numeric",
-                      })}
+                      })}{" "}
+                      <span className="text-muted-foreground/60">
+                        {new Date(tx.createdAt).toLocaleTimeString("en-US", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <ReasonBadge reason={tx.reason} />
@@ -164,9 +217,6 @@ export function PointsHistory() {
                     >
                       {isPositive ? "+" : ""}
                       {tx.amount.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">
-                      {tx.balance.toLocaleString()}
                     </TableCell>
                   </TableRow>
                 );

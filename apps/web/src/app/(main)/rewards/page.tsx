@@ -1,9 +1,9 @@
-import { RewardsContent } from "@/components/points/rewards-content";
+import { RewardsPageClient } from "@/components/points/rewards-page-client";
 import { Gift, Star, Trophy, Coins } from "lucide-react";
 
 export const metadata = {
-  title: "Rewards | WCCG 104.5 FM",
-  description: "Redeem your mY1045 points for exclusive rewards, merchandise, and experiences at WCCG 104.5 FM.",
+  title: "Points & Rewards | WCCG 104.5 FM",
+  description: "Earn mY1045 points by listening and redeem for exclusive rewards, merchandise, and experiences at WCCG 104.5 FM.",
 };
 
 interface Reward {
@@ -60,8 +60,8 @@ export default async function RewardsPage() {
               <Gift className="h-8 w-8 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">Rewards Catalog</h1>
-              <p className="text-base text-white/60 max-w-2xl">Redeem your mY1045 points for exclusive rewards, merchandise, concert tickets, and VIP experiences.</p>
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">Points & Rewards</h1>
+              <p className="text-base text-white/60 max-w-2xl">Earn mY1045 points by listening, then redeem for exclusive rewards, merchandise, concert tickets, and VIP experiences.</p>
             </div>
           </div>
           <div className="mt-8 grid grid-cols-3 gap-4">
@@ -81,15 +81,7 @@ export default async function RewardsPage() {
         </div>
       </div>
 
-      {rewards.length > 0 ? (
-        <RewardsContent rewards={rewards} />
-      ) : (
-        <div className="flex flex-col h-48 items-center justify-center rounded-2xl border border-dashed border-border/50 bg-muted/20">
-          <Gift className="h-8 w-8 text-muted-foreground/40 mb-3" />
-          <p className="text-sm font-medium text-muted-foreground">Rewards will appear once the catalog is loaded.</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">Listen to earn mY1045 points and unlock exclusive rewards</p>
-        </div>
-      )}
+      <RewardsPageClient rewards={rewards} />
     </div>
   );
 }

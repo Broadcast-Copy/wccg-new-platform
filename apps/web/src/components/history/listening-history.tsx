@@ -19,6 +19,7 @@ import {
   Award,
   Eye,
   EyeOff,
+  ChevronDown,
 } from "lucide-react";
 import {
   Card,
@@ -396,29 +397,10 @@ export function ListeningHistory() {
 
       {/* ─── Active Sessions (Now Playing) ────────────────────────────── */}
       {activeEntries.length > 0 && (
-        <div>
-          <div className="sticky top-0 z-10 -mx-1 mb-3 bg-background/95 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#74ddc7] opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#74ddc7]" />
-              </span>
-              <h2 className="text-sm font-semibold text-[#74ddc7] uppercase tracking-wider">
-                Listening Now
-              </h2>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            {activeEntries.map((entry) => (
-              <ActiveSessionItem
-                key={entry.id}
-                entry={entry}
-                onSessionEnded={() => setRefreshKey((k) => k + 1)}
-              />
-            ))}
-          </div>
-        </div>
+        <ActiveSessionsSection
+          entries={activeEntries}
+          onSessionEnded={() => setRefreshKey((k) => k + 1)}
+        />
       )}
 
       {/* ─── Songs You Missed ──────────────────────────────────────── */}
@@ -525,6 +507,82 @@ export function ListeningHistory() {
         </div>
       )}
     </>
+  );
+}
+
+// ─── Active Sessions Section (single tile / accordion for multiples) ──
+
+function ActiveSessionsSection({
+  entries,
+  onSessionEnded,
+}: {
+  entries: HistoryEntry[];
+  onSessionEnded: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Always show the first (primary) session
+  const primary = entries[0];
+  const extras = entries.slice(1);
+
+  return (
+    <div>
+      <div className="sticky top-0 z-10 -mx-1 mb-3 bg-background/95 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#74ddc7] opacity-75" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#74ddc7]" />
+          </span>
+          <h2 className="text-sm font-semibold text-[#74ddc7] uppercase tracking-wider">
+            Listening Now
+          </h2>
+          {entries.length > 1 && (
+            <Badge variant="secondary" className="text-[10px]">
+              {entries.length} sessions
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {/* Primary active session — always visible */}
+        <ActiveSessionItem
+          entry={primary}
+          onSessionEnded={onSessionEnded}
+        />
+
+        {/* If multiple sessions, show accordion toggle */}
+        {extras.length > 0 && (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full gap-2 text-[#74ddc7] hover:text-[#74ddc7] hover:bg-[#74ddc7]/10"
+              onClick={() => setExpanded((v) => !v)}
+            >
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
+              />
+              {expanded
+                ? "Hide additional sessions"
+                : `Show ${extras.length} more active session${extras.length > 1 ? "s" : ""}`}
+            </Button>
+
+            {expanded && (
+              <div className="space-y-2">
+                {extras.map((entry) => (
+                  <ActiveSessionItem
+                    key={entry.id}
+                    entry={entry}
+                    onSessionEnded={onSessionEnded}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 

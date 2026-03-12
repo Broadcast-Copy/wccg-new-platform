@@ -25,12 +25,30 @@ export function PointsBadge() {
         const data = await apiClient<{ balance: number }>("/points/balance");
         if (!cancelled) setBalance(data.balance);
       } catch {
-        if (!cancelled) setBalance(0);
+        // Fall back to localStorage points
+        if (!cancelled) {
+          try {
+            const key = user?.email
+              ? `wccg_listening_points_${user.email}`
+              : "wccg_listening_points";
+            const raw = localStorage.getItem(key);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              setBalance(parsed.totalPoints ?? 0);
+            } else {
+              setBalance(0);
+            }
+          } catch {
+            setBalance(0);
+          }
+        }
       }
     }
 
     fetchBalance();
-    return () => { cancelled = true; };
+    // Refresh every 30 seconds so points update in real-time
+    const interval = setInterval(fetchBalance, 30_000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, [user]);
 
   // Don't show points badge for unauthenticated users
