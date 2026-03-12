@@ -26,6 +26,7 @@ import {
 import type { SportsTeam, UpcomingGame } from "@/data/sports";
 import { AppImage } from "@/components/ui/app-image";
 import { YouTubeGrid } from "@/components/youtube/youtube-grid";
+import type { YouTubeVideo } from "@/lib/youtube-rss";
 
 // ---------------------------------------------------------------------------
 // Tabs
@@ -218,7 +219,7 @@ function NextGameCountdown({
 // Main Component
 // ---------------------------------------------------------------------------
 
-export function TeamProfile({ team }: { team: SportsTeam }) {
+export function TeamProfile({ team, youtubeVideos }: { team: SportsTeam; youtubeVideos?: YouTubeVideo[] }) {
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
 
   return (
@@ -337,7 +338,7 @@ export function TeamProfile({ team }: { team: SportsTeam }) {
         {activeTab === "players" && <PlayersTab team={team} />}
         {activeTab === "schedule" && <ScheduleTab team={team} />}
         {activeTab === "news" && <NewsTab team={team} />}
-        {activeTab === "videos" && <VideosTab team={team} />}
+        {activeTab === "videos" && <VideosTab team={team} videos={youtubeVideos} />}
       </div>
     </div>
   );
@@ -938,7 +939,7 @@ function NewsTab({ team }: { team: SportsTeam }) {
 // Videos Tab (uses YouTubeGrid component)
 // ---------------------------------------------------------------------------
 
-function VideosTab({ team }: { team: SportsTeam }) {
+function VideosTab({ team, videos }: { team: SportsTeam; videos?: YouTubeVideo[] }) {
   return (
     <div className="space-y-6">
       {/* Reuse the YouTubeGrid component */}
@@ -947,6 +948,7 @@ function VideosTab({ team }: { team: SportsTeam }) {
         searchQuery={team.youtube.searchQuery}
         maxVideos={6}
         title={`${team.youtube.channelName} Videos`}
+        videos={videos}
       />
 
       {/* Video Categories */}

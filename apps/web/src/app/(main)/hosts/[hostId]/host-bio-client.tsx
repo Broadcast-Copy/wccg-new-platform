@@ -8,6 +8,7 @@ import { getHostById, type HostData } from "@/data/hosts";
 import { getShowById } from "@/data/shows";
 import { getHostMixes } from "@/data/mixes";
 import { YouTubeGrid } from "@/components/youtube/youtube-grid";
+import type { YouTubeVideo } from "@/lib/youtube-rss";
 import { DJMixPlayer } from "@/components/mixes/dj-mix-player";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -155,7 +156,11 @@ function SocialLinksBar({ hostData }: { hostData: HostData }) {
 
 // ─── Component ───────────────────────────────────────────────────────────
 
-export default function HostBioPage() {
+export default function HostBioPage({
+  youtubeVideos,
+}: {
+  youtubeVideos?: YouTubeVideo[];
+}) {
   const params = useParams<{ hostId: string }>();
   const hostId = params.hostId;
 
@@ -411,6 +416,7 @@ export default function HostBioPage() {
               searchQuery={`${host.name} WCCG`}
               title="Videos"
               maxVideos={6}
+              videos={youtubeVideos}
             />
           </section>
         </>

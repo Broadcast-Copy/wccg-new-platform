@@ -84,6 +84,7 @@ interface Show {
 import { getShowById, getShowBySlug, type ShowData } from "@/data/shows";
 import { getHostsByShowId } from "@/data/hosts";
 import { YouTubeGrid } from "@/components/youtube/youtube-grid";
+import type { YouTubeVideo } from "@/lib/youtube-rss";
 
 // ─── RSS podcast parser ─────────────────────────────────────────────────
 
@@ -372,7 +373,7 @@ function PodcastPlayer({
 
 // ─── YouTube Feed ───────────────────────────────────────────────────────
 
-function YouTubeFeed({ showId, showName }: { showId: string; showName: string }) {
+function YouTubeFeed({ showId, showName, videos }: { showId: string; showName: string; videos?: YouTubeVideo[] }) {
   const showData = getShowById(showId);
   const youtube = showData?.youtube;
 
@@ -393,13 +394,18 @@ function YouTubeFeed({ showId, showName }: { showId: string; showName: string })
       searchQuery={youtube.searchQuery || showName}
       title={`${showName} Videos`}
       maxVideos={6}
+      videos={videos}
     />
   );
 }
 
 // ─── Main Component ─────────────────────────────────────────────────────
 
-export default function ShowDetailPage() {
+export default function ShowDetailPage({
+  youtubeVideos,
+}: {
+  youtubeVideos?: YouTubeVideo[];
+}) {
   const params = useParams<{ showId: string }>();
   const showId = params.showId;
   const [show, setShow] = useState<Show | null>(null);
@@ -694,7 +700,7 @@ export default function ShowDetailPage() {
 
           {/* YouTube content below podcasts */}
           <div className="mt-8">
-            <YouTubeFeed showId={show.id} showName={show.name} />
+            <YouTubeFeed showId={show.id} showName={show.name} videos={youtubeVideos} />
           </div>
         </TabsContent>
 
@@ -811,7 +817,7 @@ export default function ShowDetailPage() {
         {/* ─── Videos Tab ─── */}
         {hasYT && (
           <TabsContent value="videos">
-            <YouTubeFeed showId={show.id} showName={show.name} />
+            <YouTubeFeed showId={show.id} showName={show.name} videos={youtubeVideos} />
           </TabsContent>
         )}
       </Tabs>

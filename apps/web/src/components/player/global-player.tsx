@@ -453,18 +453,8 @@ export function GlobalPlayer() {
           />
         </div>
 
-        {/* Minimize / Maximize / Close Buttons */}
+        {/* Maximize / Close Buttons */}
         <div className="flex items-center gap-0.5 shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setPlayerMode("minimized")}
-            aria-label="Minimize player"
-            title="Minimize"
-            className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06]"
-          >
-            <Minimize2 className="h-3.5 w-3.5" />
-          </Button>
           <Button
             variant="ghost"
             size="icon"

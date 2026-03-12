@@ -17,6 +17,7 @@
     "@wccg/ui": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "fast-xml-parser": "^5.5.3",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.574.0",
     "next": "16.1.6",

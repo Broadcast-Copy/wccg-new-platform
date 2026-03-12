@@ -12,6 +12,7 @@ export interface HostData {
   imageUrl: string | null;
   socialLinks: { platform: string; url: string; label: string }[];
   youtubeChannel?: string;
+  youtubeChannelId?: string;
   isSyndicated?: boolean;
   isActive: boolean;
   category: "main" | "gospel" | "mixsquad" | "weekend" | "sunday";
@@ -101,6 +102,7 @@ export const HOST_ANGELA_YEE: HostData = {
     { platform: "youtube", url: "https://youtube.com/@wayupwithyee", label: "@wayupwithyee" },
   ],
   youtubeChannel: "@wayupwithyee",
+  youtubeChannelId: "UCJVR_M2dXZT6uXIapYGHtTA",
   isSyndicated: true,
   isActive: true,
   category: "main",
@@ -148,6 +150,7 @@ export const HOST_BOOTLEG_KEV: HostData = {
     { platform: "twitter", url: "https://x.com/bootlegkev", label: "@bootlegkev" },
   ],
   youtubeChannel: "@bootlegkev",
+  youtubeChannelId: "UCBgOGeH-NL4o2WGutwverqQ",
   isSyndicated: true,
   isActive: true,
   category: "main",

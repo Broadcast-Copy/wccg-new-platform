@@ -413,6 +413,33 @@ export function awardShareBonus(bountyId?: string): boolean {
  * The referralCode is used as the bounty ID to prevent double-claiming.
  * Returns true if points were awarded, false if this referral was already claimed.
  */
+/**
+ * Award 3 points for watching a YouTube video (15+ seconds).
+ * Each videoId can only be claimed once.
+ * Returns true if points were awarded, false if already claimed.
+ */
+export function awardVideoWatchPoints(videoId: string): boolean {
+  const id = `video_${videoId}`;
+  if (isBountyClaimed(id)) {
+    return false;
+  }
+
+  const data = loadPointsData();
+  data.totalPoints += 3;
+  data.lastAwardedAt = new Date().toISOString();
+  data.history.unshift({
+    points: 3,
+    reason: "VIDEO_WATCH",
+    timestamp: new Date().toISOString(),
+  });
+  if (data.history.length > 100) {
+    data.history = data.history.slice(0, 100);
+  }
+  savePointsData(data);
+  claimBounty(id);
+  return true;
+}
+
 export function awardReferralBonus(referralCode: string): boolean {
   const id = `referral_${referralCode}`;
   if (isBountyClaimed(id)) {

@@ -19,6 +19,14 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'wccg1045fm.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'img.youtube.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.ytimg.com',
+      },
     ],
   },
   transpilePackages: ['@wccg/types', '@wccg/ui'],

@@ -21,6 +21,7 @@ export interface ShowData {
   youtube?: {
     channelName: string;
     channelUrl: string;
+    channelId?: string;
     searchQuery: string;
   };
   podcastRss?: string;
@@ -97,6 +98,7 @@ export const SHOW_STREETZ_MORNING: ShowData = {
   youtube: {
     channelName: "WCCG 104.5 FM",
     channelUrl: "https://youtube.com/@WCCG1045FM",
+    channelId: "UC7fsAn1jAj4lX8sk_bd8H4A",
     searchQuery: "Streetz Morning Takeover WCCG",
   },
   podcastRss: "https://feeds.simplecast.com/c3z3h1Ug",
@@ -164,6 +166,7 @@ export const SHOW_POSTED_CORNER: ShowData = {
   youtube: {
     channelName: "Posted On The Corner",
     channelUrl: "https://www.youtube.com/@PostedOnTheCorner",
+    channelId: "UCB4JlD2jIkXanFehab9CbDw",
     searchQuery: "Posted on The Corner",
   },
   segments: ["Top 7 Countdown", "Posted on The Corner Trivia", "Trending on the Timeline", "Celebrity Interviews"],
@@ -190,6 +193,7 @@ export const SHOW_BOOTLEG_KEV: ShowData = {
   youtube: {
     channelName: "Bootleg Kev",
     channelUrl: "https://www.youtube.com/@BootlegKev",
+    channelId: "UCBgOGeH-NL4o2WGutwverqQ",
     searchQuery: "Bootleg Kev",
   },
   segments: ["No Cap News", "Artist Freestyles", "Pop Culture Debates", "Listener Call-ins"],
@@ -333,6 +337,7 @@ export const SHOW_GRACE_PLUS_NOTHING: ShowData = {
   youtube: {
     channelName: "Grace Plus Nothing",
     channelUrl: "https://www.youtube.com/@anthonymonds3736",
+    channelId: "UCRqRVNSRMdIQqZw60bAgN1w",
     searchQuery: "Grace Plus Nothing Ministries",
   },
   isSyndicated: false,
@@ -357,6 +362,7 @@ export const SHOW_ENCOURAGING_MOMENT: ShowData = {
   youtube: {
     channelName: "Encouraging Moments",
     channelUrl: "https://www.youtube.com/@encouraging1moment",
+    channelId: "UCvxWyn4rfcI2H9APhfUIB1Q",
     searchQuery: "Encouraging Moments Dr Anthony Haire",
   },
   isSyndicated: false,
@@ -400,6 +406,7 @@ export const SHOW_FAMILY_FELLOWSHIP: ShowData = {
   youtube: {
     channelName: "Family Fellowship Worship Center",
     channelUrl: "https://www.youtube.com/@weareffwc",
+    channelId: "UCxTzK_2da5bZag5WTAbiVzQ",
     searchQuery: "Family Fellowship Worship Center",
   },
   isSyndicated: false,
@@ -424,6 +431,7 @@ export const SHOW_MT_PISGAH: ShowData = {
   youtube: {
     channelName: "Progressive Missionary Baptist Church",
     channelUrl: "https://www.youtube.com/@progressivemissionarybapti7744",
+    channelId: "UCavo4QHyzuMM2FED2W6PwEg",
     searchQuery: "Progressive Missionary Baptist Church",
   },
   isSyndicated: false,
@@ -448,6 +456,7 @@ export const SHOW_LEWIS_CHAPEL: ShowData = {
   youtube: {
     channelName: "Lewis Chapel Missionary Baptist Church",
     channelUrl: "https://www.youtube.com/@lewischapelmissionarybapti4024",
+    channelId: "UCOe1fQxFPHNf3N7Rb55ySTA",
     searchQuery: "Lewis Chapel Missionary Baptist Church",
   },
   isSyndicated: false,
@@ -570,6 +579,7 @@ export const SHOW_ABC_NEWS: ShowData = {
   youtube: {
     channelName: "ABC News",
     channelUrl: "https://www.youtube.com/@ABCNews",
+    channelId: "UCBi2mrWuNuyYy4gbM6fU18Q",
     searchQuery: "ABC News",
   },
   isSyndicated: true,

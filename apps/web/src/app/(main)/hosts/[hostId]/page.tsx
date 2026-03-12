@@ -1,5 +1,6 @@
 import HostBioPage from "./host-bio-client";
-import { ALL_HOSTS } from "@/data/hosts";
+import { ALL_HOSTS, getHostById } from "@/data/hosts";
+import { fetchYouTubeVideos } from "@/lib/youtube-rss";
 
 export async function generateStaticParams() {
   return [
@@ -8,6 +9,18 @@ export async function generateStaticParams() {
   ];
 }
 
-export default function Page() {
-  return <HostBioPage />;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ hostId: string }>;
+}) {
+  const { hostId } = await params;
+  const host = getHostById(hostId);
+  const channelId = host?.youtubeChannelId;
+
+  const youtubeVideos = channelId
+    ? await fetchYouTubeVideos(channelId)
+    : [];
+
+  return <HostBioPage youtubeVideos={youtubeVideos} />;
 }

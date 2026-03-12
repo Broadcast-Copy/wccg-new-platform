@@ -51,6 +51,7 @@ export interface SportsTeam {
   youtube: {
     channelName: string;
     channelUrl: string;
+    channelId?: string;
     searchQuery: string;
   };
   website: string;
@@ -81,8 +82,9 @@ export const DUKE_BASKETBALL: SportsTeam = {
   heroImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/09/duke-basket-ball.png",
   description: "Duke Men's Basketball is one of the most storied programs in college basketball history. Under legendary coach Mike Krzyzewski and now Jon Scheyer, the Blue Devils have won 5 national championships, made 17 Final Four appearances, and produced countless NBA players. WCCG 104.5 FM brings you complete coverage of Duke basketball throughout the season.",
   youtube: {
-    channelName: "Duke Blue Planet",
-    channelUrl: "https://www.youtube.com/@DukeBluePlanet",
+    channelName: "Duke Basketball",
+    channelUrl: "https://www.youtube.com/@DukeMBB",
+    channelId: "UC9KCzNMmf0IRcEIsFDgt2bg",
     searchQuery: "Duke Blue Devils Basketball highlights",
   },
   website: "https://goduke.com/sports/mens-basketball",
@@ -186,6 +188,7 @@ export const DUKE_FOOTBALL: SportsTeam = {
   youtube: {
     channelName: "Duke Football",
     channelUrl: "https://www.youtube.com/@Duke_Football",
+    channelId: "UC-v9UWlnqtYeCQtPDO1lGVQ",
     searchQuery: "Duke Blue Devils Football highlights",
   },
   website: "https://goduke.com/sports/football",
