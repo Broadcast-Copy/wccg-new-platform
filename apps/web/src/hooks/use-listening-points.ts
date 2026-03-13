@@ -236,6 +236,93 @@ function saveAccumulated(ms: number) {
   }
 }
 
+/**
+ * Award a batch of listening points and save to storage.
+ * Consolidates multiple points into a single history entry to keep history lean.
+ */
+function awardListeningBatch(pointsToAward: number, listeningMs: number) {
+  if (pointsToAward <= 0) return;
+  const data = loadPointsData();
+  data.totalPoints += pointsToAward;
+  data.totalListeningMs += listeningMs;
+  data.lastAwardedAt = new Date().toISOString();
+  data.history.unshift({
+    points: pointsToAward,
+    reason: "LISTENING",
+    timestamp: new Date().toISOString(),
+    program: "WCCG 104.5 FM",
+  });
+  if (data.history.length > 100) {
+    data.history = data.history.slice(0, 100);
+  }
+  savePointsData(data);
+}
+
+/**
+ * Reconcile points with session duration — catches up points that were
+ * missed while the browser tab was in the background (timer throttled).
+ *
+ * Compares expected points (from session start timestamp) with what was
+ * actually awarded, and grants the difference.
+ */
+export function reconcileSessionPoints() {
+  const sessionStart = loadSessionStart();
+  if (!sessionStart) return;
+
+  const sessionDurationMs = Date.now() - sessionStart;
+  const expectedListeningPoints = Math.floor(sessionDurationMs / POINTS_INTERVAL_MS);
+
+  const data = loadPointsData();
+
+  // Count only LISTENING points earned since session start
+  const sessionStartISO = new Date(sessionStart).toISOString();
+  let listeningPointsSinceSession = 0;
+  for (const h of data.history) {
+    if (h.reason === "LISTENING" && h.timestamp >= sessionStartISO) {
+      listeningPointsSinceSession += h.points;
+    }
+  }
+
+  const missed = expectedListeningPoints - listeningPointsSinceSession;
+  if (missed > 0) {
+    awardListeningBatch(missed, missed * POINTS_INTERVAL_MS);
+    // Reset accumulated since we've reconciled
+    saveAccumulated(
+      sessionDurationMs % POINTS_INTERVAL_MS,
+    );
+  }
+
+  // Also check streak bonuses
+  {
+    const fresh = loadPointsData();
+    if (sessionDurationMs >= TWO_HOURS_MS && !fresh.streak2hAwarded) {
+      fresh.streak2hAwarded = true;
+      fresh.totalPoints += 10;
+      fresh.lastAwardedAt = new Date().toISOString();
+      fresh.history.unshift({
+        points: 10,
+        reason: "STREAK_BONUS",
+        timestamp: new Date().toISOString(),
+        program: "Streak Bonus",
+      });
+      if (fresh.history.length > 100) fresh.history = fresh.history.slice(0, 100);
+      savePointsData(fresh);
+    } else if (sessionDurationMs >= ONE_HOUR_MS && !fresh.streak1hAwarded) {
+      fresh.streak1hAwarded = true;
+      fresh.totalPoints += 5;
+      fresh.lastAwardedAt = new Date().toISOString();
+      fresh.history.unshift({
+        points: 5,
+        reason: "STREAK_BONUS",
+        timestamp: new Date().toISOString(),
+        program: "Streak Bonus",
+      });
+      if (fresh.history.length > 100) fresh.history = fresh.history.slice(0, 100);
+      savePointsData(fresh);
+    }
+  }
+}
+
 export function useListeningPoints(isPlaying: boolean) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastTickRef = useRef<number>(0);
@@ -254,6 +341,10 @@ export function useListeningPoints(isPlaying: boolean) {
         data.streak1hAwarded = false;
         data.streak2hAwarded = false;
         savePointsData(data);
+      } else {
+        // Session already active — reconcile any missed points
+        // (browser may have throttled timers while tab was in background)
+        reconcileSessionPoints();
       }
 
       // Daily bounty — award 3 points on first listen of the day
@@ -282,6 +373,14 @@ export function useListeningPoints(isPlaying: boolean) {
         const elapsed = tickNow - lastTickRef.current;
         lastTickRef.current = tickNow;
 
+        // If elapsed is much larger than 30s, the tab was likely backgrounded.
+        // Use reconcileSessionPoints for accurate catch-up instead of
+        // just the elapsed delta (which would under-count).
+        if (elapsed > 60_000) {
+          reconcileSessionPoints();
+          return;
+        }
+
         // Add elapsed time to accumulated
         let accumulated = loadAccumulated() + elapsed;
 
@@ -289,22 +388,7 @@ export function useListeningPoints(isPlaying: boolean) {
         if (accumulated >= POINTS_INTERVAL_MS) {
           const pointsToAward = Math.floor(accumulated / POINTS_INTERVAL_MS);
           accumulated = accumulated % POINTS_INTERVAL_MS;
-
-          // Award listening points
-          const data = loadPointsData();
-          data.totalPoints += pointsToAward;
-          data.totalListeningMs += pointsToAward * POINTS_INTERVAL_MS;
-          data.lastAwardedAt = new Date().toISOString();
-          data.history.unshift({
-            points: pointsToAward,
-            reason: "LISTENING",
-            timestamp: new Date().toISOString(),
-            program: "WCCG 104.5 FM",
-          });
-          if (data.history.length > 100) {
-            data.history = data.history.slice(0, 100);
-          }
-          savePointsData(data);
+          awardListeningBatch(pointsToAward, pointsToAward * POINTS_INTERVAL_MS);
         }
 
         saveAccumulated(accumulated);
