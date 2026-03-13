@@ -618,6 +618,89 @@ export default function UserDashboardPage() {
         </div>
       </section>
 
+      {/* ═══ Listening History (personal) ═══ */}
+      {listeningHistory.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">My Listening Sessions</CardTitle>
+                <CardDescription>
+                  {listeningStats && (listeningStats.totalHours > 0 || listeningStats.remainingMinutes > 0)
+                    ? `${listeningStats.totalHours > 0 ? `${listeningStats.totalHours}h ` : ""}${listeningStats.remainingMinutes}m total · ${listeningStats.totalTracks} tracks heard`
+                    : "Your recent listening sessions"}
+                </CardDescription>
+              </div>
+              <Link
+                href="/my/history"
+                className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+              >
+                View all
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {listeningHistory.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex items-center justify-between rounded-lg border p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                        entry.isActive
+                          ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                          : "bg-[#7401df]/10 text-[#7401df]"
+                      }`}
+                    >
+                      {entry.isActive ? (
+                        <span className="relative flex h-3 w-3">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
+                          <span className="relative inline-flex h-3 w-3 rounded-full bg-green-500" />
+                        </span>
+                      ) : (
+                        <Music className="h-4 w-4" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {entry.title}
+                        {entry.isActive && (
+                          <span className="ml-2 text-[10px] font-semibold text-green-600 dark:text-green-400">
+                            LIVE
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {entry.artist} · {entry.streamName}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end shrink-0 ml-3">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {entry.listenedDuration}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground/70">
+                      {entry.timestamp}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {listeningStats && listeningStats.topArtist !== "—" && (
+                <div className="mt-2 flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+                  <Star className="h-3.5 w-3.5 text-yellow-500 shrink-0" />
+                  <span>
+                    Top artist: <span className="font-medium text-foreground">{listeningStats.topArtist}</span>
+                  </span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* ═══ Recent Points Activity ═══ */}
       <Card>
         <CardHeader>
@@ -782,89 +865,6 @@ export default function UserDashboardPage() {
           </div>
         )}
       </section>
-
-      {/* ═══ Listening History (personal) ═══ */}
-      {listeningHistory.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg">My Listening Sessions</CardTitle>
-                <CardDescription>
-                  {listeningStats && (listeningStats.totalHours > 0 || listeningStats.remainingMinutes > 0)
-                    ? `${listeningStats.totalHours > 0 ? `${listeningStats.totalHours}h ` : ""}${listeningStats.remainingMinutes}m total · ${listeningStats.totalTracks} tracks heard`
-                    : "Your recent listening sessions"}
-                </CardDescription>
-              </div>
-              <Link
-                href="/my/history"
-                className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-              >
-                View all
-                <ChevronRight className="h-4 w-4" />
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {listeningHistory.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="flex items-center justify-between rounded-lg border p-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                        entry.isActive
-                          ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                          : "bg-[#7401df]/10 text-[#7401df]"
-                      }`}
-                    >
-                      {entry.isActive ? (
-                        <span className="relative flex h-3 w-3">
-                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
-                          <span className="relative inline-flex h-3 w-3 rounded-full bg-green-500" />
-                        </span>
-                      ) : (
-                        <Music className="h-4 w-4" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {entry.title}
-                        {entry.isActive && (
-                          <span className="ml-2 text-[10px] font-semibold text-green-600 dark:text-green-400">
-                            LIVE
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {entry.artist} · {entry.streamName}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end shrink-0 ml-3">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {entry.listenedDuration}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground/70">
-                      {entry.timestamp}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {listeningStats && listeningStats.topArtist !== "—" && (
-                <div className="mt-2 flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
-                  <Star className="h-3.5 w-3.5 text-yellow-500 shrink-0" />
-                  <span>
-                    Top artist: <span className="font-medium text-foreground">{listeningStats.topArtist}</span>
-                  </span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* ═══ Listener Quick Links (only for listener role) ═══ */}
       {config.isListener && (
