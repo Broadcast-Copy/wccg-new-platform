@@ -1,11 +1,21 @@
 /**
- * Station Song History — fetches the full playlist log from Supabase.
+ * Station Song History — fetches playlist data from SongIQ / SecureNet.
+ *
+ * Primary source: SongIQ JSON endpoint (live, no auth needed).
+ * Fallback: Supabase `song_history` table.
  *
  * This is the STATION-wide playlist (every song that played), as opposed
  * to the per-user listening-history.ts (only songs a user personally heard).
  */
 
 import { createClient } from "@/lib/supabase/client";
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const SONGIQ_URL =
+  "https://streamdb7web.securenetsystems.net/player_status_update/WCCG_history.txt";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -23,6 +33,22 @@ export interface SongHistoryEntry {
 export interface SongHistoryGroup {
   label: string; // "Now", "Earlier Today", "Yesterday", etc.
   songs: SongHistoryEntry[];
+}
+
+// SongIQ JSON shape
+interface SongIQSong {
+  title: string;
+  artist: string;
+  album: string;
+  cover: string;
+  duration: string;
+  programStartTS: string; // "13 Mar 2026 15:49:56"
+}
+
+interface SongIQResponse {
+  playHistory: {
+    song: SongIQSong[];
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -54,18 +80,62 @@ function formatTime(isoDate: string): string {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Fetch from Supabase
-// ---------------------------------------------------------------------------
+/**
+ * Parse SongIQ timestamp "13 Mar 2026 15:49:56" → ISO string.
+ */
+function parseSongIQTimestamp(ts: string): string {
+  // Format: "DD Mon YYYY HH:MM:SS"
+  const d = new Date(ts + " GMT-0400"); // WCCG is Eastern time
+  if (isNaN(d.getTime())) {
+    // Fallback — let the browser parse it
+    return new Date(ts).toISOString();
+  }
+  return d.toISOString();
+}
 
 /**
- * Fetch the station's song history from Supabase.
- * Returns the most recent `limit` songs, grouped by date.
+ * Convert a SongIQ song to our standard format.
  */
-export async function fetchSongHistory(
-  streamId = "WCCG",
-  limit = 50,
-): Promise<{ songs: SongHistoryEntry[]; groups: SongHistoryGroup[] }> {
+function songIQToEntry(song: SongIQSong, index: number): SongHistoryEntry {
+  return {
+    id: `songiq-${index}-${song.programStartTS}`,
+    title: song.title,
+    artist: song.artist,
+    album_art: song.cover || null,
+    stream_id: "WCCG",
+    played_at: parseSongIQTimestamp(song.programStartTS),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// SongIQ Fetch (primary)
+// ---------------------------------------------------------------------------
+
+async function fetchFromSongIQ(): Promise<SongHistoryEntry[] | null> {
+  try {
+    const resp = await fetch(SONGIQ_URL, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!resp.ok) return null;
+
+    const json: SongIQResponse = await resp.json();
+    const songs = json?.playHistory?.song;
+    if (!Array.isArray(songs) || songs.length === 0) return null;
+
+    return songs.map((s, i) => songIQToEntry(s, i));
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Supabase Fetch (fallback)
+// ---------------------------------------------------------------------------
+
+async function fetchFromSupabase(
+  streamId: string,
+  limit: number,
+): Promise<SongHistoryEntry[]> {
   const supabase = createClient();
 
   const { data, error } = await supabase
@@ -76,11 +146,40 @@ export async function fetchSongHistory(
     .limit(limit);
 
   if (error || !data) {
-    console.warn("Failed to fetch song history:", error?.message);
+    console.warn("Failed to fetch song history from Supabase:", error?.message);
+    return [];
+  }
+
+  return data as SongHistoryEntry[];
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch the station's song history.
+ * Tries SongIQ first, falls back to Supabase.
+ * Returns the most recent songs, grouped by date.
+ */
+export async function fetchSongHistory(
+  streamId = "WCCG",
+  limit = 50,
+): Promise<{ songs: SongHistoryEntry[]; groups: SongHistoryGroup[] }> {
+  // Try SongIQ first
+  let songs = await fetchFromSongIQ();
+
+  // Fallback to Supabase
+  if (!songs || songs.length === 0) {
+    songs = await fetchFromSupabase(streamId, limit);
+  }
+
+  if (songs.length === 0) {
     return { songs: [], groups: [] };
   }
 
-  const songs = data as SongHistoryEntry[];
+  // Apply limit
+  songs = songs.slice(0, limit);
 
   // Group by date
   const groupMap = new Map<string, SongHistoryEntry[]>();
@@ -101,11 +200,23 @@ export async function fetchSongHistory(
 
 /**
  * Fetch today's song history only.
+ * Tries SongIQ first (which only returns recent songs anyway).
  */
 export async function fetchTodaySongs(
   streamId = "WCCG",
   limit = 30,
 ): Promise<SongHistoryEntry[]> {
+  // Try SongIQ first — it returns the most recent ~30 songs
+  const songIQSongs = await fetchFromSongIQ();
+  if (songIQSongs && songIQSongs.length > 0) {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    return songIQSongs
+      .filter((s) => new Date(s.played_at).getTime() >= todayStart.getTime())
+      .slice(0, limit);
+  }
+
+  // Fallback to Supabase
   const supabase = createClient();
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
