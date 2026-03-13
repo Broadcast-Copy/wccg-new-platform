@@ -10,7 +10,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
  * POST /ingest-streaming-logs — ingest today's log
  * POST /ingest-streaming-logs?date=2026-03-12 — ingest a specific date
  *
- * Schedule via pg_cron: SELECT cron.schedule('ingest-logs', '*/15 * * * *', $$...$$)
+ * Can be scheduled via pg_cron every 15 minutes or called manually via HTTP POST
  */
 
 const CIRST_BASE = "https://r.cir.st/dx/remote_data_request.cfm";
