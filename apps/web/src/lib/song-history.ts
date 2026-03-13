@@ -26,6 +26,8 @@ export interface SongHistoryEntry {
   title: string;
   artist: string;
   album_art: string | null;
+  album: string | null;
+  duration: number | null; // seconds
   stream_id: string;
   played_at: string; // ISO timestamp
 }
@@ -81,11 +83,42 @@ function formatTime(isoDate: string): string {
 }
 
 /**
+ * Get the current Eastern Time UTC offset, accounting for EDT/EST.
+ * EDT (March–November): -0400
+ * EST (November–March): -0500
+ */
+function getEasternOffset(): string {
+  // Create a date and check if it's in EDT or EST by comparing
+  // the timezone offset for a date in the Eastern timezone
+  const now = new Date();
+  const jan = new Date(now.getFullYear(), 0, 1);
+  const jul = new Date(now.getFullYear(), 6, 1);
+  // If standard offset differs from current, DST is active
+  const stdOffset = Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset());
+  // Use a reliable method: check if a known Eastern city is in DST
+  try {
+    const eastern = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      timeZoneName: "short",
+    }).format(now);
+    if (eastern.includes("EDT")) return "-0400";
+    if (eastern.includes("EST")) return "-0500";
+  } catch {
+    // Fallback
+  }
+  // Fallback: assume EDT in summer, EST in winter
+  const month = now.getMonth(); // 0-indexed
+  return month >= 2 && month <= 10 ? "-0400" : "-0500";
+}
+
+/**
  * Parse SongIQ timestamp "13 Mar 2026 15:49:56" → ISO string.
+ * Dynamically detects EST vs EDT.
  */
 function parseSongIQTimestamp(ts: string): string {
   // Format: "DD Mon YYYY HH:MM:SS"
-  const d = new Date(ts + " GMT-0400"); // WCCG is Eastern time
+  const offset = getEasternOffset();
+  const d = new Date(ts + ` GMT${offset}`);
   if (isNaN(d.getTime())) {
     // Fallback — let the browser parse it
     return new Date(ts).toISOString();
@@ -102,6 +135,8 @@ function songIQToEntry(song: SongIQSong, index: number): SongHistoryEntry {
     title: song.title,
     artist: song.artist,
     album_art: song.cover || null,
+    album: song.album || null,
+    duration: song.duration ? parseInt(song.duration, 10) || null : null,
     stream_id: "WCCG",
     played_at: parseSongIQTimestamp(song.programStartTS),
   };
@@ -150,7 +185,10 @@ async function fetchFromSupabase(
     return [];
   }
 
-  return data as SongHistoryEntry[];
+  // Add missing fields with defaults for Supabase rows
+  return (data as Array<Omit<SongHistoryEntry, "album" | "duration">>).map(
+    (row) => ({ ...row, album: null, duration: null }),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -233,7 +271,9 @@ export async function fetchTodaySongs(
     return [];
   }
 
-  return data as SongHistoryEntry[];
+  return (data as Array<Omit<SongHistoryEntry, "album" | "duration">>).map(
+    (row) => ({ ...row, album: null, duration: null }),
+  );
 }
 
 export { formatTime };

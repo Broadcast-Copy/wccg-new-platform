@@ -58,6 +58,11 @@ import {
 } from "@/lib/song-history";
 import { readAllPoints } from "@/lib/points-storage";
 import { reconcileSessionPoints } from "@/hooks/use-listening-points";
+import {
+  SongDetailModal,
+  useSongDetailModal,
+} from "@/components/song-detail-modal";
+import { fetchMusicMetadata } from "@/lib/music-metadata";
 
 // --- Types ---
 
@@ -323,6 +328,9 @@ export default function UserDashboardPage() {
   const [songGroups, setSongGroups] = useState<SongHistoryGroup[]>([]);
   const [songHistoryLoading, setSongHistoryLoading] = useState(true);
   const [loading, setLoading] = useState(true);
+  const songModal = useSongDetailModal();
+  // Map of "title|artist" → album art URL from iTunes
+  const [enrichedArt, setEnrichedArt] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!user) {
@@ -403,11 +411,35 @@ export default function UserDashboardPage() {
 
     fetchStats();
 
-    // Fetch station song history from Supabase
+    // Fetch station song history from SongIQ
     async function fetchSongData() {
       try {
-        const { groups } = await fetchSongHistory("WCCG", 50);
+        const { groups, songs } = await fetchSongHistory("WCCG", 50);
         setSongGroups(groups);
+
+        // Enrich first 12 songs with iTunes album art (async, non-blocking)
+        const toEnrich = songs
+          .filter((s) => !s.album_art)
+          .slice(0, 12);
+        if (toEnrich.length > 0) {
+          // Fire off lookups in parallel (batches of 3)
+          for (let i = 0; i < toEnrich.length; i += 3) {
+            const batch = toEnrich.slice(i, i + 3);
+            const results = await Promise.allSettled(
+              batch.map((s) => fetchMusicMetadata(s.title, s.artist)),
+            );
+            const newArt: Record<string, string> = {};
+            results.forEach((r, idx) => {
+              if (r.status === "fulfilled" && r.value?.artworkUrl) {
+                const s = batch[idx];
+                newArt[`${s.title}|${s.artist}`] = r.value.artworkUrl;
+              }
+            });
+            if (Object.keys(newArt).length > 0) {
+              setEnrichedArt((prev) => ({ ...prev, ...newArt }));
+            }
+          }
+        }
       } catch {
         // ignore — table may not exist yet
       } finally {
@@ -700,42 +732,50 @@ export default function UserDashboardPage() {
                   {group.label}
                 </h3>
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {group.songs.map((song) => (
-                    <div
-                      key={song.id}
-                      className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted/50"
-                    >
-                      {/* Album art or fallback icon */}
-                      {song.album_art ? (
-                        <img
-                          src={song.album_art}
-                          alt=""
-                          className="h-10 w-10 shrink-0 rounded-md object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#7401df]/10">
-                          <Music className="h-5 w-5 text-[#7401df]" />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{song.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
-                        <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-                          {formatTime(song.played_at)}
-                        </p>
-                      </div>
+                  {group.songs.map((song) => {
+                    const artKey = `${song.title}|${song.artist}`;
+                    const artUrl = song.album_art || enrichedArt[artKey] || null;
+                    return (
                       <button
-                        className="flex items-center gap-1 shrink-0 rounded-md px-2 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                        onClick={() => {
-                          const q = encodeURIComponent(`${song.title} ${song.artist}`);
-                          window.open(`https://www.google.com/search?q=${q}`, "_blank", "noopener");
-                        }}
+                        key={song.id}
+                        className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted/50 text-left w-full group"
+                        onClick={() =>
+                          songModal.open({
+                            title: song.title,
+                            artist: song.artist,
+                            playedAt: song.played_at,
+                            albumArt: artUrl,
+                            album: song.album,
+                            duration: song.duration,
+                          })
+                        }
                       >
-                        <Info className="h-3 w-3" />
-                        More Info
+                        {/* Album art or fallback icon */}
+                        {artUrl ? (
+                          <img
+                            src={artUrl}
+                            alt=""
+                            className="h-10 w-10 shrink-0 rounded-md object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#7401df]/10">
+                            <Music className="h-5 w-5 text-[#7401df]" />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{song.title}</p>
+                          <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
+                          <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                            {formatTime(song.played_at)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0 rounded-md px-2 py-1 text-[10px] font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                          <Info className="h-3 w-3" />
+                          Info
+                        </div>
                       </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -757,7 +797,7 @@ export default function UserDashboardPage() {
                 </CardDescription>
               </div>
               <Link
-                href="/my/overview"
+                href="/my/history"
                 className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
               >
                 View all
@@ -853,6 +893,18 @@ export default function UserDashboardPage() {
           </div>
         </section>
       )}
+
+      {/* ═══ Song Detail Modal ═══ */}
+      <SongDetailModal
+        isOpen={songModal.isOpen}
+        onClose={songModal.close}
+        title={songModal.title}
+        artist={songModal.artist}
+        playedAt={songModal.playedAt}
+        albumArt={songModal.albumArt}
+        album={songModal.album}
+        duration={songModal.duration}
+      />
     </div>
   );
 }

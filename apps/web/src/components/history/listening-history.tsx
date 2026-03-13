@@ -48,6 +48,10 @@ import {
   getListeningPoints,
   getListeningProgress,
 } from "@/hooks/use-listening-points";
+import {
+  SongDetailModal,
+  useSongDetailModal,
+} from "@/components/song-detail-modal";
 
 // ─── Types ─────────────────────────────────────────────────────────────
 
@@ -180,6 +184,7 @@ export function ListeningHistory() {
   const [missedLoading, setMissedLoading] = useState(false);
 
   const { open: openStreamPlayer } = useStreamPlayer();
+  const songModal = useSongDetailModal();
 
   // Load history from localStorage
   useEffect(() => {
@@ -456,6 +461,7 @@ export function ListeningHistory() {
         <ActiveSessionsSection
           entries={activeEntries}
           onSessionEnded={() => setRefreshKey((k) => k + 1)}
+          onSongClick={(title, artist) => songModal.open({ title, artist })}
         />
       )}
 
@@ -511,10 +517,16 @@ export function ListeningHistory() {
                       </span>
                       <button
                         className="text-[10px] text-amber-600 hover:text-amber-500 font-medium"
-                        onClick={() => {
-                          const q = encodeURIComponent(`${song.title} ${song.artist}`);
-                          window.open(`https://www.google.com/search?q=${q}`, "_blank", "noopener");
-                        }}
+                        onClick={() =>
+                          songModal.open({
+                            title: song.title,
+                            artist: song.artist,
+                            playedAt: song.played_at,
+                            albumArt: song.album_art,
+                            album: song.album,
+                            duration: song.duration,
+                          })
+                        }
                       >
                         More Info
                       </button>
@@ -613,6 +625,18 @@ export function ListeningHistory() {
           )}
         </div>
       )}
+
+      {/* ─── Song Detail Modal ─────────────────────────────────────── */}
+      <SongDetailModal
+        isOpen={songModal.isOpen}
+        onClose={songModal.close}
+        title={songModal.title}
+        artist={songModal.artist}
+        playedAt={songModal.playedAt}
+        albumArt={songModal.albumArt}
+        album={songModal.album}
+        duration={songModal.duration}
+      />
     </>
   );
 }
@@ -622,9 +646,11 @@ export function ListeningHistory() {
 function ActiveSessionsSection({
   entries,
   onSessionEnded,
+  onSongClick,
 }: {
   entries: HistoryEntry[];
   onSessionEnded: () => void;
+  onSongClick: (title: string, artist: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -656,6 +682,7 @@ function ActiveSessionsSection({
         <ActiveSessionItem
           entry={primary}
           onSessionEnded={onSessionEnded}
+          onSongClick={onSongClick}
         />
 
         {/* If multiple sessions, show accordion toggle */}
@@ -682,6 +709,7 @@ function ActiveSessionsSection({
                     key={entry.id}
                     entry={entry}
                     onSessionEnded={onSessionEnded}
+                    onSongClick={onSongClick}
                   />
                 ))}
               </div>
@@ -704,9 +732,11 @@ function ActiveSessionsSection({
 function ActiveSessionItem({
   entry,
   onSessionEnded,
+  onSongClick,
 }: {
   entry: HistoryEntry;
   onSessionEnded: () => void;
+  onSongClick: (title: string, artist: string) => void;
 }) {
   const { stop } = useAudioPlayer();
   const { close } = useStreamPlayer();
@@ -838,23 +868,30 @@ function ActiveSessionItem({
           </Link>
         </div>
 
-        {/* Track list — songs heard during this session */}
+        {/* Track list — songs heard during this session as individual tiles */}
         {entry.tracks.length > 0 && (
-          <div className="ml-14 space-y-1 border-t border-[#74ddc7]/10 pt-2">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1">
-              Songs This Session
+          <div className="ml-14 space-y-1.5 border-t border-[#74ddc7]/10 pt-2">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1.5">
+              Songs This Session ({entry.tracks.length})
             </p>
-            {entry.tracks.map((track, i) => (
-              <div
-                key={`${track.title}-${i}`}
-                className="flex items-center gap-2 text-xs"
-              >
-                <Music className="h-3 w-3 shrink-0 text-[#74ddc7]/60" />
-                <span className="truncate font-medium">{track.title}</span>
-                <span className="shrink-0 text-muted-foreground">—</span>
-                <span className="truncate text-muted-foreground">{track.artist}</span>
-              </div>
-            ))}
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              {entry.tracks.map((track, i) => (
+                <button
+                  key={`${track.title}-${i}`}
+                  className="flex items-center gap-2.5 rounded-lg border border-[#74ddc7]/15 bg-[#74ddc7]/[0.03] p-2 text-left transition-colors hover:bg-[#74ddc7]/[0.08] group w-full"
+                  onClick={() => onSongClick(track.title, track.artist)}
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#74ddc7]/10">
+                    <Music className="h-3.5 w-3.5 text-[#74ddc7]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium truncate">{track.title}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{track.artist}</p>
+                  </div>
+                  <Info className="h-3 w-3 shrink-0 text-muted-foreground/40 group-hover:text-[#74ddc7] transition-colors" />
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </CardContent>
@@ -963,7 +1000,7 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
           )}
         </div>
 
-        {/* More Info Button / Listening Indicator */}
+        {/* Listening Indicator / Replay */}
         {entry.isActive ? (
           <div className="flex items-center gap-1 shrink-0 text-[#74ddc7]">
             <div className="flex gap-0.5">
@@ -973,17 +1010,11 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
             </div>
           </div>
         ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0 gap-1.5"
-            asChild
-          >
-            <a href={`/shows/${encodeURIComponent(entry.title)}`}>
-              <Info className="h-3 w-3" />
-              <span className="hidden sm:inline">More Info</span>
-            </a>
-          </Button>
+          <div className="flex flex-col items-end shrink-0 gap-1">
+            <Badge variant="outline" className={`text-[10px] ${getContentBadgeStyle(entry.type)}`}>
+              {entry.listenedDuration}
+            </Badge>
+          </div>
         )}
       </CardContent>
     </Card>

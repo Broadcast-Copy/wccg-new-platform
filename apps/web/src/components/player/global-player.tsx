@@ -185,16 +185,24 @@ export function GlobalPlayer() {
   const songArtist = metadata.artist || "WCCG 104.5 FM";
 
   // ---------------------------------------------------------------------------
-  // Maximized mode — full-screen overlay with iframe
+  // Maximized mode — full-screen SecureNet streaming widget
   // ---------------------------------------------------------------------------
   if (playerMode === "maximized") {
     return (
       <div className="fixed inset-0 z-[100] flex flex-col bg-[#0a0a0f]">
         {/* Top bar */}
         <div className="flex h-12 items-center justify-between border-b border-border bg-[#0e0e18] px-4">
-          <span className="text-sm font-semibold text-[#74ddc7]">
-            WCCG 104.5 FM
-          </span>
+          <div className="flex items-center gap-2">
+            {isPlaying && (
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#74ddc7] opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#74ddc7]" />
+              </span>
+            )}
+            <span className="text-sm font-semibold text-[#74ddc7]">
+              WCCG 104.5 FM
+            </span>
+          </div>
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
@@ -216,11 +224,11 @@ export function GlobalPlayer() {
             </Button>
           </div>
         </div>
-        {/* Iframe content */}
+        {/* SecureNet streaming widget */}
         <iframe
-          src="https://securenetsystems.net/v5/WCCG"
+          src="https://streamdb7web.securenetsystems.net/cirruscontent/WCCG&"
           className="w-full flex-1"
-          title="WCCG Player"
+          title="WCCG Streaming Player"
           allow="autoplay"
         />
       </div>
