@@ -57,6 +57,7 @@ import {
   type SongHistoryGroup,
 } from "@/lib/song-history";
 import { readAllPoints } from "@/lib/points-storage";
+import { reconcileSessionPoints } from "@/hooks/use-listening-points";
 
 // --- Types ---
 
@@ -355,6 +356,10 @@ export default function UserDashboardPage() {
               ? historyRes.value.data.slice(0, 5)
               : []
             : [];
+
+        // Reconcile session points before reading localStorage
+        // (catches up any points missed while browser was throttled)
+        reconcileSessionPoints();
 
         // Fall back to localStorage if API returned 0 / empty
         if (pointsBalance === 0 || recentPoints.length === 0) {

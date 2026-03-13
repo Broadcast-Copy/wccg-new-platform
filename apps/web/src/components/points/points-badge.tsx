@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { apiClient } from "@/lib/api-client";
 import { readPointsBalance } from "@/lib/points-storage";
+import { reconcileSessionPoints } from "@/hooks/use-listening-points";
 
 export function PointsBadge() {
   const { user } = useAuth();
@@ -16,6 +17,9 @@ export function PointsBadge() {
     let cancelled = false;
 
     async function fetchBalance() {
+      // Reconcile first to catch up any missed points
+      reconcileSessionPoints();
+
       // Try API if logged in
       if (user) {
         try {

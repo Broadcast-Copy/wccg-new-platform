@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
 import { toast } from "sonner";
 import { readPointsBalance } from "@/lib/points-storage";
+import { reconcileSessionPoints } from "@/hooks/use-listening-points";
 
 interface Reward {
   id: string;
@@ -33,6 +34,7 @@ export function RewardsContent({ rewards }: RewardsContentProps) {
   useEffect(() => {
     // Try API first, fall back to localStorage
     async function fetchBalance() {
+      reconcileSessionPoints();
       if (user) {
         try {
           const data = await apiClient<{ balance: number }>("/points/balance");

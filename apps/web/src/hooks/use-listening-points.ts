@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { getSessions } from "@/lib/listening-history";
 
 /**
  * Hook that awards points for continuous listening.
@@ -59,6 +60,8 @@ interface PointsData {
   streak1hAwarded?: boolean;
   /** Whether the 2-hour streak bonus was awarded this session */
   streak2hAwarded?: boolean;
+  /** Accurate count of listening points awarded in the current session */
+  sessionPointsAwarded?: number;
   history: Array<{
     points: number;
     reason: string;
@@ -245,6 +248,7 @@ function awardListeningBatch(pointsToAward: number, listeningMs: number) {
   const data = loadPointsData();
   data.totalPoints += pointsToAward;
   data.totalListeningMs += listeningMs;
+  data.sessionPointsAwarded = (data.sessionPointsAwarded ?? 0) + pointsToAward;
   data.lastAwardedAt = new Date().toISOString();
   data.history.unshift({
     points: pointsToAward,
@@ -259,67 +263,99 @@ function awardListeningBatch(pointsToAward: number, listeningMs: number) {
 }
 
 /**
+ * Get the authoritative session start time.
+ *
+ * Uses listening-history sessions as the primary source (they persist
+ * correctly across component remounts), falling back to SESSION_START_KEY.
+ */
+function getActiveSessionStart(): number {
+  // Primary: check listening-history for active sessions (endedAt === null)
+  try {
+    const sessions = getSessions();
+    const active = sessions.find((s) => !s.endedAt);
+    if (active) {
+      return new Date(active.startedAt).getTime();
+    }
+  } catch {
+    // ignore
+  }
+
+  // Fallback: the points-specific session start key
+  return loadSessionStart();
+}
+
+/**
  * Reconcile points with session duration — catches up points that were
  * missed while the browser tab was in the background (timer throttled).
  *
- * Compares expected points (from session start timestamp) with what was
- * actually awarded, and grants the difference.
+ * Uses the listening-history session start as the authoritative timestamp
+ * (it persists correctly even when isPlaying toggles briefly).
+ *
+ * Compares expected points with totalPoints and awards the difference.
  */
 export function reconcileSessionPoints() {
-  const sessionStart = loadSessionStart();
+  const sessionStart = getActiveSessionStart();
   if (!sessionStart) return;
+
+  // Also ensure the points session start key is synced
+  saveSessionStart(sessionStart);
 
   const sessionDurationMs = Date.now() - sessionStart;
   const expectedListeningPoints = Math.floor(sessionDurationMs / POINTS_INTERVAL_MS);
 
   const data = loadPointsData();
 
-  // Count only LISTENING points earned since session start
-  const sessionStartISO = new Date(sessionStart).toISOString();
-  let listeningPointsSinceSession = 0;
-  for (const h of data.history) {
-    if (h.reason === "LISTENING" && h.timestamp >= sessionStartISO) {
-      listeningPointsSinceSession += h.points;
-    }
-  }
+  // Use a dedicated counter stored on the data object for accurate tracking.
+  // This avoids the history-truncation problem (history is capped at 100 entries).
+  const sessionPointsAwarded = data.sessionPointsAwarded ?? 0;
 
-  const missed = expectedListeningPoints - listeningPointsSinceSession;
+  const missed = expectedListeningPoints - sessionPointsAwarded;
   if (missed > 0) {
-    awardListeningBatch(missed, missed * POINTS_INTERVAL_MS);
+    data.totalPoints += missed;
+    data.totalListeningMs += missed * POINTS_INTERVAL_MS;
+    data.lastAwardedAt = new Date().toISOString();
+    data.sessionPointsAwarded = expectedListeningPoints;
+    data.history.unshift({
+      points: missed,
+      reason: "LISTENING",
+      timestamp: new Date().toISOString(),
+      program: "WCCG 104.5 FM",
+    });
+    if (data.history.length > 100) {
+      data.history = data.history.slice(0, 100);
+    }
+    savePointsData(data);
     // Reset accumulated since we've reconciled
-    saveAccumulated(
-      sessionDurationMs % POINTS_INTERVAL_MS,
-    );
+    saveAccumulated(sessionDurationMs % POINTS_INTERVAL_MS);
   }
 
   // Also check streak bonuses
-  {
+  if (sessionDurationMs >= TWO_HOURS_MS && !data.streak2hAwarded) {
     const fresh = loadPointsData();
-    if (sessionDurationMs >= TWO_HOURS_MS && !fresh.streak2hAwarded) {
-      fresh.streak2hAwarded = true;
-      fresh.totalPoints += 10;
-      fresh.lastAwardedAt = new Date().toISOString();
-      fresh.history.unshift({
-        points: 10,
-        reason: "STREAK_BONUS",
-        timestamp: new Date().toISOString(),
-        program: "Streak Bonus",
-      });
-      if (fresh.history.length > 100) fresh.history = fresh.history.slice(0, 100);
-      savePointsData(fresh);
-    } else if (sessionDurationMs >= ONE_HOUR_MS && !fresh.streak1hAwarded) {
-      fresh.streak1hAwarded = true;
-      fresh.totalPoints += 5;
-      fresh.lastAwardedAt = new Date().toISOString();
-      fresh.history.unshift({
-        points: 5,
-        reason: "STREAK_BONUS",
-        timestamp: new Date().toISOString(),
-        program: "Streak Bonus",
-      });
-      if (fresh.history.length > 100) fresh.history = fresh.history.slice(0, 100);
-      savePointsData(fresh);
-    }
+    fresh.streak2hAwarded = true;
+    fresh.totalPoints += 10;
+    fresh.lastAwardedAt = new Date().toISOString();
+    fresh.history.unshift({
+      points: 10,
+      reason: "STREAK_BONUS",
+      timestamp: new Date().toISOString(),
+      program: "Streak Bonus",
+    });
+    if (fresh.history.length > 100) fresh.history = fresh.history.slice(0, 100);
+    savePointsData(fresh);
+  } else if (sessionDurationMs >= ONE_HOUR_MS && !data.streak1hAwarded) {
+    const fresh = loadPointsData();
+    fresh.streak1hAwarded = true;
+    fresh.totalPoints += 5;
+    fresh.lastAwardedAt = new Date().toISOString();
+    fresh.history.unshift({
+      points: 5,
+      reason: "STREAK_BONUS",
+      timestamp: new Date().toISOString(),
+      program: "Streak Bonus",
+    });
+    if (fresh.history.length > 100) fresh.history = fresh.history.slice(0, 100);
+    savePointsData(fresh);
   }
 }
 
@@ -434,12 +470,29 @@ export function useListeningPoints(isPlaying: boolean) {
         }
       }, 30_000); // Check every 30 seconds
     } else {
-      // Paused — save any final accumulated time and clear session
+      // Paused — clear the interval but DON'T clear session start yet.
+      // Only clear if there are truly no active listening-history sessions,
+      // because isPlaying can briefly toggle on component remount / audio interruption.
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      clearSessionStart();
+      // Check if there are still active sessions in listening-history
+      try {
+        const sessions = getSessions();
+        const hasActive = sessions.some((s) => !s.endedAt);
+        if (!hasActive) {
+          clearSessionStart();
+          // Reset session points counter for the next session
+          const data = loadPointsData();
+          data.sessionPointsAwarded = 0;
+          data.streak1hAwarded = false;
+          data.streak2hAwarded = false;
+          savePointsData(data);
+        }
+      } catch {
+        // If we can't check, leave session start intact to avoid losing progress
+      }
     }
 
     return () => {

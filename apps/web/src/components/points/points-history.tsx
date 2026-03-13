@@ -15,6 +15,7 @@ import { apiClient } from "@/lib/api-client";
 import { Coins, Loader2, History } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { readAllPoints } from "@/lib/points-storage";
+import { reconcileSessionPoints } from "@/hooks/use-listening-points";
 
 type PointsReason =
   | "LISTENING"
@@ -104,6 +105,7 @@ export function PointsHistory() {
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
+    reconcileSessionPoints();
     setLoading(true);
     try {
       const [balanceRes, historyRes] = await Promise.all([
