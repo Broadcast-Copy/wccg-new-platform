@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   Radio,
   Headphones,
@@ -36,6 +37,11 @@ import {
   getSessions,
   type HistoryEntry,
 } from "@/lib/listening-history";
+import {
+  fetchTodaySongs,
+  formatTime as formatSongTime,
+  type SongHistoryEntry,
+} from "@/lib/song-history";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import {
@@ -150,19 +156,28 @@ export function ListeningHistory() {
   const [contentType, setContentType] = useState<ContentType>("all");
   const [dateRange, setDateRange] = useState<DateRange>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
+  // Initialize with data immediately to avoid flash of empty state on navigation
+  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>(() => {
+    try { return getHistoryEntries(); } catch { return []; }
+  });
   const [showMissed, setShowMissed] = useState(false);
-  const [stats, setStats] = useState({
-    totalHours: 0,
-    remainingMinutes: 0,
-    totalSessions: 0,
-    totalTracks: 0,
-    topArtist: "—",
-    activeSessions: 0,
-    lastSessionDate: null as string | null,
-    lastSessionTimestamp: null as string | null,
+  const [stats, setStats] = useState(() => {
+    try { return getListeningStats(); } catch {
+      return {
+        totalHours: 0,
+        remainingMinutes: 0,
+        totalSessions: 0,
+        totalTracks: 0,
+        topArtist: "—",
+        activeSessions: 0,
+        lastSessionDate: null as string | null,
+        lastSessionTimestamp: null as string | null,
+      };
+    }
   });
   const [refreshKey, setRefreshKey] = useState(0);
+  const [missedSongs, setMissedSongs] = useState<SongHistoryEntry[]>([]);
+  const [missedLoading, setMissedLoading] = useState(false);
 
   const { open: openStreamPlayer } = useStreamPlayer();
 
@@ -171,6 +186,47 @@ export function ListeningHistory() {
     setHistoryEntries(getHistoryEntries());
     setStats(getListeningStats());
   }, [refreshKey]);
+
+  // Fetch "Songs You Missed" when toggled on
+  useEffect(() => {
+    if (!showMissed) return;
+    let cancelled = false;
+    setMissedLoading(true);
+
+    async function load() {
+      try {
+        const stationSongs = await fetchTodaySongs("WCCG", 50);
+
+        // Get all listening sessions to find time ranges when user was listening
+        const sessions = getSessions();
+        const listeningRanges: { start: number; end: number }[] = sessions.map(
+          (s) => ({
+            start: new Date(s.startedAt).getTime(),
+            end: s.endedAt ? new Date(s.endedAt).getTime() : Date.now(),
+          }),
+        );
+
+        // A song is "missed" if it played while the user was NOT in any session
+        const missed = stationSongs.filter((song) => {
+          const playedAt = new Date(song.played_at).getTime();
+          return !listeningRanges.some(
+            (r) => playedAt >= r.start && playedAt <= r.end,
+          );
+        });
+
+        if (!cancelled) setMissedSongs(missed);
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) setMissedLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [showMissed, refreshKey]);
 
   // Refresh history every 10 seconds for real-time updates
   useEffect(() => {
@@ -405,17 +461,68 @@ export function ListeningHistory() {
 
       {/* ─── Songs You Missed ──────────────────────────────────────── */}
       {showMissed && (
-        <Card className="border-dashed border-amber-500/30 bg-amber-500/5">
-          <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10">
-              <Music className="h-6 w-6 text-amber-500" />
-            </div>
-            <div>
-              <h3 className="text-base font-semibold">Songs You Missed</h3>
-              <p className="mt-1 text-sm text-muted-foreground max-w-sm">
-                This feature will show tracks that played on WCCG while you were away. Check back soon as we build out this feature.
-              </p>
-            </div>
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <Music className="h-4 w-4 text-amber-500" />
+              Songs You Missed
+              <Badge variant="outline" className="ml-auto text-[10px] border-amber-500/30 text-amber-600">
+                {missedSongs.length} songs
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {missedLoading ? (
+              <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
+                <RotateCcw className="h-4 w-4 animate-spin mr-2" />
+                Loading station history...
+              </div>
+            ) : missedSongs.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                  You haven&apos;t missed any songs today! Keep listening.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {missedSongs.slice(0, 12).map((song) => (
+                  <div
+                    key={song.id}
+                    className="flex items-center gap-3 rounded-lg border border-amber-500/20 bg-card p-2.5 transition-colors hover:bg-muted/50"
+                  >
+                    {song.album_art ? (
+                      <img
+                        src={song.album_art}
+                        alt=""
+                        className="h-9 w-9 shrink-0 rounded-md object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-amber-500/10">
+                        <Music className="h-4 w-4 text-amber-500" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium truncate">{song.title}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{song.artist}</p>
+                    </div>
+                    <div className="flex flex-col items-end shrink-0 gap-0.5">
+                      <span className="text-[10px] text-muted-foreground">
+                        {formatSongTime(song.played_at)}
+                      </span>
+                      <button
+                        className="text-[10px] text-amber-600 hover:text-amber-500 font-medium"
+                        onClick={() => {
+                          const q = encodeURIComponent(`${song.title} ${song.artist}`);
+                          window.open(`https://www.google.com/search?q=${q}`, "_blank", "noopener");
+                        }}
+                      >
+                        More Info
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -710,23 +817,25 @@ function ActiveSessionItem({
             </span>
           </div>
 
-          {/* Session Points */}
-          <div className="flex items-center gap-1.5 rounded-md bg-[#7401df]/10 px-2.5 py-1">
-            <Award className="h-3.5 w-3.5 text-[#7401df]" />
-            <span className="text-sm font-semibold text-[#7401df]">
-              {sessionPoints}
-            </span>
-            <span className="text-[10px] text-[#7401df]/70 uppercase tracking-wider">
-              {sessionPoints === 1 ? "Point" : "Points"} earned
-            </span>
-            {/* Progress toward next point */}
-            <div className="ml-1 h-1.5 w-12 rounded-full bg-[#7401df]/20">
-              <div
-                className="h-1.5 rounded-full bg-[#7401df] transition-all"
-                style={{ width: `${progressToNext}%` }}
-              />
+          {/* Session Points — links to Points & Rewards */}
+          <Link href="/my/points" className="no-underline">
+            <div className="flex items-center gap-1.5 rounded-md bg-[#7401df]/10 px-2.5 py-1 transition-colors hover:bg-[#7401df]/20 cursor-pointer">
+              <Award className="h-3.5 w-3.5 text-[#7401df]" />
+              <span className="text-sm font-semibold text-[#7401df]">
+                {sessionPoints}
+              </span>
+              <span className="text-[10px] text-[#7401df]/70 uppercase tracking-wider">
+                {sessionPoints === 1 ? "Point" : "Points"} earned
+              </span>
+              {/* Progress toward next point */}
+              <div className="ml-1 h-1.5 w-12 rounded-full bg-[#7401df]/20">
+                <div
+                  className="h-1.5 rounded-full bg-[#7401df] transition-all"
+                  style={{ width: `${progressToNext}%` }}
+                />
+              </div>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Track list — songs heard during this session */}

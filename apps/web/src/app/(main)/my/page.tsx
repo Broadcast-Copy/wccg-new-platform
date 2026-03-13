@@ -6,6 +6,7 @@ import {
   Star,
   Ticket,
   Heart,
+  Info,
   TrendingUp,
   ChevronRight,
   CalendarDays,
@@ -714,10 +715,20 @@ export default function UserDashboardPage() {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium truncate">{song.title}</p>
                         <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
+                        <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                          {formatTime(song.played_at)}
+                        </p>
                       </div>
-                      <span className="text-[10px] text-muted-foreground shrink-0">
-                        {formatTime(song.played_at)}
-                      </span>
+                      <button
+                        className="flex items-center gap-1 shrink-0 rounded-md px-2 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        onClick={() => {
+                          const q = encodeURIComponent(`${song.title} ${song.artist}`);
+                          window.open(`https://www.google.com/search?q=${q}`, "_blank", "noopener");
+                        }}
+                      >
+                        <Info className="h-3 w-3" />
+                        More Info
+                      </button>
                     </div>
                   ))}
                 </div>
