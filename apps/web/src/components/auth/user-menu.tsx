@@ -137,6 +137,9 @@ function getRoleSection(flags: {
 // ---------------------------------------------------------------------------
 const VIEWABLE_ROLES: { value: UserRole; label: string }[] = [
   { value: "promotions", label: "Advertising" },
+  { value: "operations", label: "Operations" },
+  { value: "gm", label: "General Manager" },
+  { value: "traffic", label: "Traffic & Office" },
   { value: "admin", label: "Admin" },
 ];
 

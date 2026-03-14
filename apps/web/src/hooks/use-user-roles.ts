@@ -16,7 +16,10 @@ export type UserRole =
   | "production"
   | "engineering"
   | "management"
-  | "promotions";
+  | "promotions"
+  | "operations"
+  | "gm"
+  | "traffic";
 
 const DEPARTMENT_ROLES: { role: UserRole; department: string }[] = [
   { role: "sales", department: "sales" },

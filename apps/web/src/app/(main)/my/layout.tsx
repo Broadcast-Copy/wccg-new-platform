@@ -110,6 +110,54 @@ const advertisingItems: NavSection[] = [
 // ---------------------------------------------------------------------------
 // Role-specific nav items
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Operations nav items
+// ---------------------------------------------------------------------------
+const operationsItems: NavItem[] = [
+  { href: "/my/admin/operations", label: "Ops Dashboard", icon: Wrench, exact: true },
+  { href: "/my/admin/operations/master-control", label: "Master Control", icon: Radio },
+  { href: "/my/admin/operations/fcc-compliance", label: "FCC Compliance", icon: Shield },
+  { href: "/my/admin/operations/equipment", label: "Equipment", icon: Wrench },
+  { href: "/my/admin/operations/engineering", label: "Engineering", icon: Wrench },
+  { href: "/my/admin/operations/backup", label: "Backup & DR", icon: Shield },
+  { href: "/my/admin/operations/sop", label: "SOP Library", icon: FileText },
+  { href: "/my/admin/operations/shifts", label: "Shift Schedule", icon: CalendarDays },
+];
+
+// ---------------------------------------------------------------------------
+// GM nav items
+// ---------------------------------------------------------------------------
+const gmItems: NavItem[] = [
+  { href: "/my/admin/gm", label: "Executive Dashboard", icon: Building2, exact: true },
+  { href: "/my/admin/gm/revenue", label: "Revenue", icon: DollarSign },
+  { href: "/my/admin/gm/staff", label: "Staff Directory", icon: Building2 },
+  { href: "/my/admin/gm/meetings", label: "Meeting Notes", icon: FileText },
+  { href: "/my/admin/gm/ratings", label: "Ratings", icon: BarChart3 },
+  { href: "/my/admin/gm/competitors", label: "Competitors", icon: Radio },
+  { href: "/my/admin/gm/goals", label: "Strategic Goals", icon: Star },
+  { href: "/my/admin/gm/feedback", label: "Listener Feedback", icon: Heart },
+  { href: "/my/admin/gm/partnerships", label: "Partnerships", icon: Briefcase },
+  { href: "/my/admin/gm/board-reports", label: "Board Reports", icon: FileText },
+];
+
+// ---------------------------------------------------------------------------
+// Traffic nav items
+// ---------------------------------------------------------------------------
+const trafficItems: NavItem[] = [
+  { href: "/my/admin/traffic", label: "Traffic Dashboard", icon: Truck, exact: true },
+  { href: "/my/admin/traffic/log", label: "Traffic Log", icon: FileText },
+  { href: "/my/admin/traffic/copy", label: "Copy Management", icon: FileText },
+  { href: "/my/admin/traffic/billing", label: "Billing", icon: DollarSign },
+  { href: "/my/admin/traffic/ar", label: "Accounts Receivable", icon: Receipt },
+  { href: "/my/admin/traffic/production-orders", label: "Production Orders", icon: Clapperboard },
+  { href: "/my/admin/traffic/continuity", label: "Continuity Log", icon: FileText },
+  { href: "/my/admin/traffic/psa", label: "PSA Rotation", icon: Megaphone },
+  { href: "/my/admin/traffic/makegoods", label: "Makegoods", icon: CalendarDays },
+  { href: "/my/admin/traffic/contracts", label: "Contracts", icon: Briefcase },
+  { href: "/my/admin/traffic/expenses", label: "Expenses", icon: Receipt },
+  { href: "/my/admin/traffic/deadlines", label: "Deadlines", icon: CalendarDays },
+];
+
 function getRoleItems(flags: {
   isSales: boolean;
   isProduction: boolean;
@@ -119,7 +167,7 @@ function getRoleItems(flags: {
   isHost: boolean;
   isAdmin: boolean;
   isSuperAdmin: boolean;
-}): { label: string; items: NavItem[]; sections?: NavSection[] } {
+}, roleOverride: string | null): { label: string; items: NavItem[]; sections?: NavSection[] } {
   const {
     isSales,
     isProduction,
@@ -130,6 +178,17 @@ function getRoleItems(flags: {
     isAdmin,
     isSuperAdmin,
   } = flags;
+
+  // Department-specific role overrides
+  if (roleOverride === "operations") {
+    return { label: "Operations", items: operationsItems };
+  }
+  if (roleOverride === "gm") {
+    return { label: "General Manager", items: gmItems };
+  }
+  if (roleOverride === "traffic") {
+    return { label: "Traffic & Office", items: trafficItems };
+  }
 
   if (isSuperAdmin || isAdmin) {
     return {
@@ -181,6 +240,9 @@ const VIEWABLE_ROLES = [
   { value: "listener", label: "Listener" },
   { value: "content_creator", label: "Creator" },
   { value: "promotions", label: "Advertising" },
+  { value: "operations", label: "Operations" },
+  { value: "gm", label: "General Manager" },
+  { value: "traffic", label: "Traffic & Office" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -310,7 +372,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
     isHost,
     isAdmin,
     isSuperAdmin,
-  });
+  }, roleOverride);
 
   // Determine if the toggle is set to Creator mode
   const isCreatorToggleActive = isOverrideActive && roleOverride === "content_creator";
@@ -346,7 +408,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex flex-1 flex-col gap-0.5 p-2">
+      <nav className="flex flex-col gap-0.5 p-2">
         {/* When Creator toggle is active, show ONLY creator items */}
         {isCreatorToggleActive ? (
           <>
@@ -461,6 +523,9 @@ function SidebarContent({ pathname }: { pathname: string }) {
           </div>
         )}
       </div>
+
+      {/* Spacer pushes admin controls to bottom */}
+      <div className="flex-1" />
 
       {/* Admin controls — very bottom of sidebar */}
       {isRealAdmin && (
