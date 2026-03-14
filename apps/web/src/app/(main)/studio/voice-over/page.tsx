@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Headphones,
   Send,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -142,6 +143,7 @@ function CheckboxOption({
 export default function VoiceOverPage() {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, string[]>>({});
   const [formData, setFormData] = useState({
     // Step 1: Project Information
     projectTitle: "",
@@ -370,10 +372,40 @@ export default function VoiceOverPage() {
                   <Label className="text-foreground/70">
                     Upload Script or Draft
                   </Label>
-                  <div className="mt-2 rounded-lg border border-dashed border-input p-6 text-center cursor-pointer hover:border-foreground/20 transition-colors">
-                    <p className="text-sm text-muted-foreground">
-                      Click or drag a file to upload
-                    </p>
+                  <div
+                    onClick={() => document.getElementById('upload-vo-script')?.click()}
+                    className="mt-2 rounded-lg border-2 border-dashed border-border p-6 text-center cursor-pointer hover:border-[#74ddc7]/50 hover:bg-[#74ddc7]/5 transition-colors"
+                  >
+                    <input
+                      id="upload-vo-script"
+                      type="file"
+                      accept=".pdf,.doc,.docx,.txt"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length > 0) {
+                          setUploadedFiles(prev => ({
+                            ...prev,
+                            script: files.map(f => f.name)
+                          }));
+                        }
+                      }}
+                    />
+                    {uploadedFiles.script?.length ? (
+                      <div className="space-y-1">
+                        {uploadedFiles.script.map((name, i) => (
+                          <p key={i} className="text-xs text-[#74ddc7] font-medium">{name}</p>
+                        ))}
+                        <p className="text-[10px] text-muted-foreground mt-1">Click to change files</p>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                        <p className="text-sm text-muted-foreground">Click to upload or drag files here</p>
+                        <p className="text-[10px] text-muted-foreground/60 mt-1">Documents (PDF, DOC, TXT)</p>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -481,10 +513,40 @@ export default function VoiceOverPage() {
                 <Label className="text-foreground/70">
                   Upload Reference Audio (optional)
                 </Label>
-                <div className="mt-2 rounded-lg border border-dashed border-input p-6 text-center cursor-pointer hover:border-foreground/20 transition-colors">
-                  <p className="text-sm text-muted-foreground">
-                    Click or drag a file to upload
-                  </p>
+                <div
+                  onClick={() => document.getElementById('upload-vo-reference')?.click()}
+                  className="mt-2 rounded-lg border-2 border-dashed border-border p-6 text-center cursor-pointer hover:border-[#74ddc7]/50 hover:bg-[#74ddc7]/5 transition-colors"
+                >
+                  <input
+                    id="upload-vo-reference"
+                    type="file"
+                    accept="audio/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (files.length > 0) {
+                        setUploadedFiles(prev => ({
+                          ...prev,
+                          referenceAudio: files.map(f => f.name)
+                        }));
+                      }
+                    }}
+                  />
+                  {uploadedFiles.referenceAudio?.length ? (
+                    <div className="space-y-1">
+                      {uploadedFiles.referenceAudio.map((name, i) => (
+                        <p key={i} className="text-xs text-[#74ddc7] font-medium">{name}</p>
+                      ))}
+                      <p className="text-[10px] text-muted-foreground mt-1">Click to change files</p>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                      <p className="text-sm text-muted-foreground">Click to upload or drag files here</p>
+                      <p className="text-[10px] text-muted-foreground/60 mt-1">Audio files (MP3, WAV, AIFF)</p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -782,7 +844,7 @@ export default function VoiceOverPage() {
                     alert("Please fill in your name and email before submitting.");
                     return;
                   }
-                  const submission = { ...formData, submittedAt: new Date().toISOString(), type: 'voice-over' };
+                  const submission = { ...formData, uploadedFileNames: uploadedFiles, submittedAt: new Date().toISOString(), type: 'voice-over' };
                   const existing = JSON.parse(localStorage.getItem('wccg-submissions') || '[]');
                   existing.push(submission);
                   localStorage.setItem('wccg-submissions', JSON.stringify(existing));

@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Palette,
   Send,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -151,6 +152,7 @@ function CheckboxOption({
 export default function SocialContentPage() {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, string[]>>({});
   const [formData, setFormData] = useState({
     // Step 1
     projectTitle: "",
@@ -206,7 +208,7 @@ export default function SocialContentPage() {
       return;
     }
 
-    const submission = { ...formData, submittedAt: new Date().toISOString(), type: 'social-content' };
+    const submission = { ...formData, uploadedFileNames: uploadedFiles, submittedAt: new Date().toISOString(), type: 'social-content' };
     const existing = JSON.parse(localStorage.getItem('wccg-submissions') || '[]');
     existing.push(submission);
     localStorage.setItem('wccg-submissions', JSON.stringify(existing));
@@ -452,10 +454,40 @@ export default function SocialContentPage() {
                 <Label className="text-foreground/70">
                   Upload Your Logo or Branding Assets
                 </Label>
-                <div className="mt-2 rounded-lg border border-dashed border-input p-6 text-center cursor-pointer hover:border-foreground/20 transition-colors">
-                  <p className="text-sm text-muted-foreground">
-                    Click or drag a file to upload
-                  </p>
+                <div
+                  onClick={() => document.getElementById('upload-social-logo')?.click()}
+                  className="mt-2 rounded-lg border-2 border-dashed border-border p-6 text-center cursor-pointer hover:border-[#74ddc7]/50 hover:bg-[#74ddc7]/5 transition-colors"
+                >
+                  <input
+                    id="upload-social-logo"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (files.length > 0) {
+                        setUploadedFiles(prev => ({
+                          ...prev,
+                          logo: files.map(f => f.name)
+                        }));
+                      }
+                    }}
+                  />
+                  {uploadedFiles.logo?.length ? (
+                    <div className="space-y-1">
+                      {uploadedFiles.logo.map((name, i) => (
+                        <p key={i} className="text-xs text-[#74ddc7] font-medium">{name}</p>
+                      ))}
+                      <p className="text-[10px] text-muted-foreground mt-1">Click to change files</p>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                      <p className="text-sm text-muted-foreground">Click to upload or drag files here</p>
+                      <p className="text-[10px] text-muted-foreground/60 mt-1">Images (PNG, JPG, SVG)</p>
+                    </>
+                  )}
                 </div>
               </div>
               <div>
@@ -488,10 +520,40 @@ export default function SocialContentPage() {
                       placeholder="Describe your brand colors..."
                       className="bg-foreground/[0.04] border-border text-foreground placeholder:text-muted-foreground/60"
                     />
-                    <div className="rounded-lg border border-dashed border-input p-4 text-center cursor-pointer hover:border-foreground/20 transition-colors">
-                      <p className="text-sm text-muted-foreground">
-                        Upload Brand Guidelines
-                      </p>
+                    <div
+                      onClick={() => document.getElementById('upload-social-brand')?.click()}
+                      className="rounded-lg border-2 border-dashed border-border p-4 text-center cursor-pointer hover:border-[#74ddc7]/50 hover:bg-[#74ddc7]/5 transition-colors"
+                    >
+                      <input
+                        id="upload-social-brand"
+                        type="file"
+                        accept=".pdf,.doc,.docx,image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          if (files.length > 0) {
+                            setUploadedFiles(prev => ({
+                              ...prev,
+                              brandGuidelines: files.map(f => f.name)
+                            }));
+                          }
+                        }}
+                      />
+                      {uploadedFiles.brandGuidelines?.length ? (
+                        <div className="space-y-1">
+                          {uploadedFiles.brandGuidelines.map((name, i) => (
+                            <p key={i} className="text-xs text-[#74ddc7] font-medium">{name}</p>
+                          ))}
+                          <p className="text-[10px] text-muted-foreground mt-1">Click to change files</p>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="h-6 w-6 mx-auto text-muted-foreground/40 mb-1" />
+                          <p className="text-sm text-muted-foreground">Upload Brand Guidelines</p>
+                          <p className="text-[10px] text-muted-foreground/60 mt-1">PDF, DOC, or images</p>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
@@ -509,10 +571,40 @@ export default function SocialContentPage() {
                 <Label className="text-foreground/70">
                   Upload Any Sample Photos, Videos, or Inspiration
                 </Label>
-                <div className="mt-2 rounded-lg border border-dashed border-input p-6 text-center cursor-pointer hover:border-foreground/20 transition-colors">
-                  <p className="text-sm text-muted-foreground">
-                    Click or drag files to upload
-                  </p>
+                <div
+                  onClick={() => document.getElementById('upload-social-samples')?.click()}
+                  className="mt-2 rounded-lg border-2 border-dashed border-border p-6 text-center cursor-pointer hover:border-[#74ddc7]/50 hover:bg-[#74ddc7]/5 transition-colors"
+                >
+                  <input
+                    id="upload-social-samples"
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (files.length > 0) {
+                        setUploadedFiles(prev => ({
+                          ...prev,
+                          sampleContent: files.map(f => f.name)
+                        }));
+                      }
+                    }}
+                  />
+                  {uploadedFiles.sampleContent?.length ? (
+                    <div className="space-y-1">
+                      {uploadedFiles.sampleContent.map((name, i) => (
+                        <p key={i} className="text-xs text-[#74ddc7] font-medium">{name}</p>
+                      ))}
+                      <p className="text-[10px] text-muted-foreground mt-1">Click to change files</p>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                      <p className="text-sm text-muted-foreground">Click to upload or drag files here</p>
+                      <p className="text-[10px] text-muted-foreground/60 mt-1">Images or videos</p>
+                    </>
+                  )}
                 </div>
               </div>
               <div>
@@ -885,10 +977,40 @@ export default function SocialContentPage() {
                 <Label className="text-foreground/70">
                   Upload Any Additional Documents or Notes
                 </Label>
-                <div className="mt-2 rounded-lg border border-dashed border-input p-6 text-center cursor-pointer hover:border-foreground/20 transition-colors">
-                  <p className="text-sm text-muted-foreground">
-                    Click or drag a file to upload
-                  </p>
+                <div
+                  onClick={() => document.getElementById('upload-social-docs')?.click()}
+                  className="mt-2 rounded-lg border-2 border-dashed border-border p-6 text-center cursor-pointer hover:border-[#74ddc7]/50 hover:bg-[#74ddc7]/5 transition-colors"
+                >
+                  <input
+                    id="upload-social-docs"
+                    type="file"
+                    accept=".pdf,.doc,.docx,.txt,image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (files.length > 0) {
+                        setUploadedFiles(prev => ({
+                          ...prev,
+                          documents: files.map(f => f.name)
+                        }));
+                      }
+                    }}
+                  />
+                  {uploadedFiles.documents?.length ? (
+                    <div className="space-y-1">
+                      {uploadedFiles.documents.map((name, i) => (
+                        <p key={i} className="text-xs text-[#74ddc7] font-medium">{name}</p>
+                      ))}
+                      <p className="text-[10px] text-muted-foreground mt-1">Click to change files</p>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                      <p className="text-sm text-muted-foreground">Click to upload or drag files here</p>
+                      <p className="text-[10px] text-muted-foreground/60 mt-1">Documents (PDF, DOC, TXT) or images</p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

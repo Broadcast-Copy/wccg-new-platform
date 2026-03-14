@@ -149,6 +149,134 @@ function bufferFromSnapshot(snap: BufferSnapshot): AudioBuffer {
   return buf;
 }
 
+/** Generate a synthetic impulse response for reverb (simple noise decay) */
+function createReverbImpulse(ctx: BaseAudioContext, duration = 2, decay = 2): AudioBuffer {
+  const len = ctx.sampleRate * duration;
+  const impulse = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = impulse.getChannelData(ch);
+    for (let i = 0; i < len; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+    }
+  }
+  return impulse;
+}
+
+/**
+ * Apply enabled effects to an AudioBuffer using an OfflineAudioContext.
+ * Returns a new processed AudioBuffer.
+ */
+async function applyEffectsToBuffer(
+  source: AudioBuffer,
+  enabledEffectIds: Set<string>
+): Promise<AudioBuffer> {
+  if (enabledEffectIds.size === 0) return source;
+
+  const offline = new OfflineAudioContext(
+    source.numberOfChannels,
+    source.length,
+    source.sampleRate
+  );
+
+  const bufferSource = offline.createBufferSource();
+  bufferSource.buffer = source;
+
+  // Build processing chain
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let currentNode: any = bufferSource;
+
+  // EQ: Parametric peaking filter at 1000 Hz
+  if (enabledEffectIds.has("eq")) {
+    const eq = offline.createBiquadFilter();
+    eq.type = "peaking";
+    eq.frequency.value = 1000;
+    eq.Q.value = 1;
+    eq.gain.value = 3; // +3 dB boost at 1kHz
+    currentNode.connect(eq);
+    currentNode = eq;
+  }
+
+  // Compressor: Dynamic range compression
+  if (enabledEffectIds.has("comp")) {
+    const comp = offline.createDynamicsCompressor();
+    comp.threshold.value = -24;
+    comp.ratio.value = 4;
+    comp.attack.value = 0.003;
+    comp.release.value = 0.25;
+    comp.knee.value = 5;
+    currentNode.connect(comp);
+    currentNode = comp;
+  }
+
+  // Reverb: Convolver with synthetic impulse response
+  if (enabledEffectIds.has("reverb")) {
+    // Mix dry + wet using gain nodes
+    const dryGain = offline.createGain();
+    dryGain.gain.value = 0.7;
+    const wetGain = offline.createGain();
+    wetGain.gain.value = 0.3;
+    const convolver = offline.createConvolver();
+    convolver.buffer = createReverbImpulse(offline, 2, 2);
+    const merger = offline.createGain();
+    merger.gain.value = 1;
+
+    currentNode.connect(dryGain);
+    currentNode.connect(convolver);
+    convolver.connect(wetGain);
+    dryGain.connect(merger);
+    wetGain.connect(merger);
+    currentNode = merger;
+  }
+
+  // Noise Gate: Simple threshold-based gain (applied as gentle expansion)
+  // True noise gating requires real-time level monitoring which OfflineAudioContext
+  // can approximate via a compressor with extreme expansion-like settings.
+  // We use a high-ratio compressor with a low threshold to reduce low-level noise.
+  if (enabledEffectIds.has("gate")) {
+    const gate = offline.createDynamicsCompressor();
+    gate.threshold.value = -40;
+    gate.ratio.value = 12;
+    gate.attack.value = 0.001;
+    gate.release.value = 0.05;
+    gate.knee.value = 0;
+    // Boost makeup gain to compensate
+    const makeup = offline.createGain();
+    makeup.gain.value = 1.5;
+    currentNode.connect(gate);
+    gate.connect(makeup);
+    currentNode = makeup;
+  }
+
+  // De-esser: Notch/peaking filter to reduce sibilance around 6kHz
+  if (enabledEffectIds.has("deesser")) {
+    const deesser = offline.createBiquadFilter();
+    deesser.type = "peaking";
+    deesser.frequency.value = 6000;
+    deesser.Q.value = 2;
+    deesser.gain.value = -6; // -6 dB cut at 6kHz
+    currentNode.connect(deesser);
+    currentNode = deesser;
+  }
+
+  // Limiter: Aggressive dynamics compressor (brick-wall)
+  if (enabledEffectIds.has("limiter")) {
+    const limiter = offline.createDynamicsCompressor();
+    limiter.threshold.value = -1;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.001; // 0 not supported, use near-zero
+    limiter.release.value = 0.01;
+    limiter.knee.value = 0;
+    currentNode.connect(limiter);
+    currentNode = limiter;
+  }
+
+  // Connect the end of the chain to the destination
+  currentNode.connect(offline.destination);
+
+  bufferSource.start(0);
+  return offline.startRendering();
+}
+
 /** Downsample an AudioBuffer channel 0 to peak array for waveform display */
 function computeWaveformPeaks(buf: AudioBuffer, numSamples = 2000): number[] {
   const channelData = buf.getChannelData(0);
@@ -494,7 +622,7 @@ export default function AudioEditorPage() {
 
   // Audio settings
   const [inputSource, setInputSource] = useState("default");
-  const [outputFormat, setOutputFormat] = useState<"WAV" | "MP3" | "FLAC">("WAV");
+  const [outputFormat] = useState<"WAV">("WAV");
   const [isMuted, setIsMuted] = useState(false);
 
   // Real audio state
@@ -605,6 +733,13 @@ export default function AudioEditorPage() {
       const audio = new Audio(url);
       audio.preload = "auto";
       audioRef.current = audio;
+      // Reset media source so effects chain reconnects to new element
+      mediaSourceRef.current = null;
+      if (playbackCtxRef.current) {
+        playbackCtxRef.current.close().catch(() => {});
+        playbackCtxRef.current = null;
+      }
+      reverbBufferRef.current = null;
 
       // Wait for metadata — resolve on timeout for webm blobs with no duration header
       let audioDuration = 0;
@@ -709,6 +844,7 @@ export default function AudioEditorPage() {
       if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach((t) => t.stop());
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       if (liveAudioCtxRef.current) liveAudioCtxRef.current.close().catch(() => {});
+      if (playbackCtxRef.current) playbackCtxRef.current.close().catch(() => {});
     };
   }, []);
 
@@ -760,6 +896,157 @@ export default function AudioEditorPage() {
     { id: "limiter", name: "Limiter", description: "Brick-wall output limiter", enabled: false },
   ]);
 
+  // ── Playback effects chain via Web Audio API ──
+  const playbackCtxRef = useRef<AudioContext | null>(null);
+  const mediaSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const effectNodesRef = useRef<AudioNode[]>([]);
+  const reverbBufferRef = useRef<AudioBuffer | null>(null);
+
+  // Rebuild playback effects chain when effects toggle or audio element changes
+  const rebuildPlaybackChain = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    // Create or reuse playback AudioContext
+    if (!playbackCtxRef.current || playbackCtxRef.current.state === "closed") {
+      playbackCtxRef.current = new AudioContext();
+    }
+    const ctx = playbackCtxRef.current;
+
+    // Create MediaElementSource only once per audio element (can't create twice for same element)
+    if (!mediaSourceRef.current || mediaSourceRef.current.mediaElement !== audio) {
+      try {
+        mediaSourceRef.current = ctx.createMediaElementSource(audio);
+      } catch {
+        // Already connected — need a fresh context
+        playbackCtxRef.current.close().catch(() => {});
+        playbackCtxRef.current = new AudioContext();
+        const newCtx = playbackCtxRef.current;
+        try {
+          mediaSourceRef.current = newCtx.createMediaElementSource(audio);
+        } catch {
+          // Can't connect — fall back to direct playback
+          console.warn("[AudioEditor] Could not create MediaElementSource for effects");
+          return;
+        }
+      }
+    }
+
+    const ctx2 = playbackCtxRef.current;
+
+    // Disconnect all previous nodes
+    try { mediaSourceRef.current.disconnect(); } catch { /* ignore */ }
+    for (const node of effectNodesRef.current) {
+      try { node.disconnect(); } catch { /* ignore */ }
+    }
+    effectNodesRef.current = [];
+
+    const enabledIds = new Set(effects.filter((e) => e.enabled).map((e) => e.id));
+
+    // If no effects enabled, connect source directly to destination
+    if (enabledIds.size === 0) {
+      mediaSourceRef.current.connect(ctx2.destination);
+      return;
+    }
+
+    // Build chain
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let currentNode: any = mediaSourceRef.current;
+
+    if (enabledIds.has("eq")) {
+      const eq = ctx2.createBiquadFilter();
+      eq.type = "peaking";
+      eq.frequency.value = 1000;
+      eq.Q.value = 1;
+      eq.gain.value = 3;
+      currentNode.connect(eq);
+      currentNode = eq;
+      effectNodesRef.current.push(eq);
+    }
+
+    if (enabledIds.has("comp")) {
+      const comp = ctx2.createDynamicsCompressor();
+      comp.threshold.value = -24;
+      comp.ratio.value = 4;
+      comp.attack.value = 0.003;
+      comp.release.value = 0.25;
+      comp.knee.value = 5;
+      currentNode.connect(comp);
+      currentNode = comp;
+      effectNodesRef.current.push(comp);
+    }
+
+    if (enabledIds.has("reverb")) {
+      const dryGain = ctx2.createGain();
+      dryGain.gain.value = 0.7;
+      const wetGain = ctx2.createGain();
+      wetGain.gain.value = 0.3;
+      const convolver = ctx2.createConvolver();
+      if (!reverbBufferRef.current) {
+        reverbBufferRef.current = createReverbImpulse(ctx2, 2, 2);
+      }
+      convolver.buffer = reverbBufferRef.current;
+      const merger = ctx2.createGain();
+      merger.gain.value = 1;
+
+      currentNode.connect(dryGain);
+      currentNode.connect(convolver);
+      convolver.connect(wetGain);
+      dryGain.connect(merger);
+      wetGain.connect(merger);
+      currentNode = merger;
+      effectNodesRef.current.push(dryGain, wetGain, convolver, merger);
+    }
+
+    if (enabledIds.has("gate")) {
+      const gate = ctx2.createDynamicsCompressor();
+      gate.threshold.value = -40;
+      gate.ratio.value = 12;
+      gate.attack.value = 0.001;
+      gate.release.value = 0.05;
+      gate.knee.value = 0;
+      const makeup = ctx2.createGain();
+      makeup.gain.value = 1.5;
+      currentNode.connect(gate);
+      gate.connect(makeup);
+      currentNode = makeup;
+      effectNodesRef.current.push(gate, makeup);
+    }
+
+    if (enabledIds.has("deesser")) {
+      const deesser = ctx2.createBiquadFilter();
+      deesser.type = "peaking";
+      deesser.frequency.value = 6000;
+      deesser.Q.value = 2;
+      deesser.gain.value = -6;
+      currentNode.connect(deesser);
+      currentNode = deesser;
+      effectNodesRef.current.push(deesser);
+    }
+
+    if (enabledIds.has("limiter")) {
+      const limiter = ctx2.createDynamicsCompressor();
+      limiter.threshold.value = -1;
+      limiter.ratio.value = 20;
+      limiter.attack.value = 0.001;
+      limiter.release.value = 0.01;
+      limiter.knee.value = 0;
+      currentNode.connect(limiter);
+      currentNode = limiter;
+      effectNodesRef.current.push(limiter);
+    }
+
+    currentNode.connect(ctx2.destination);
+  }, [effects]);
+
+  // Rebuild effects chain whenever effects change
+  useEffect(() => {
+    // Only rebuild if we have an audio element with a source
+    if (audioRef.current) {
+      rebuildPlaybackChain();
+    }
+  }, [effects, rebuildPlaybackChain]);
+
   // Real audio playback sync
   useEffect(() => {
     if (!isPlaying) return;
@@ -768,6 +1055,12 @@ export default function AudioEditorPage() {
       // No audio loaded — can't play
       setIsPlaying(false);
       return;
+    }
+    // Ensure effects chain is connected before playing
+    rebuildPlaybackChain();
+    // Resume AudioContext if suspended (browser autoplay policy)
+    if (playbackCtxRef.current?.state === "suspended") {
+      playbackCtxRef.current.resume().catch(() => {});
     }
     audio.play().catch((err) => {
       console.error("[AudioEditor] Playback failed:", err);
@@ -1044,6 +1337,13 @@ export default function AudioEditorPage() {
     audio.preload = "auto";
     audioRef.current = audio;
     audioUrlRef.current = file.blobUrl;
+    // Reset media source so effects chain reconnects to new element
+    mediaSourceRef.current = null;
+    if (playbackCtxRef.current) {
+      playbackCtxRef.current.close().catch(() => {});
+      playbackCtxRef.current = null;
+    }
+    reverbBufferRef.current = null;
     setCurrentTime(0);
 
     // Get metadata
@@ -1078,10 +1378,15 @@ export default function AudioEditorPage() {
   }, [showStatus]);
 
   const toggleEffect = useCallback((id: string) => {
-    setEffects((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, enabled: !e.enabled } : e))
-    );
-  }, []);
+    setEffects((prev) => {
+      const updated = prev.map((e) => (e.id === id ? { ...e, enabled: !e.enabled } : e));
+      const toggled = updated.find((e) => e.id === id);
+      if (toggled) {
+        showStatus(`${toggled.name}: ${toggled.enabled ? "ON" : "OFF"}`);
+      }
+      return updated;
+    });
+  }, [showStatus]);
 
   // ── Selection handler (called by WaveformDisplay) ──
   const handleSelectionChange = useCallback((start: number | null, end: number | null) => {
@@ -1109,6 +1414,14 @@ export default function AudioEditorPage() {
       const audio = new Audio(url);
       audio.preload = "auto";
       audioRef.current = audio;
+      // Reset media source so effects chain reconnects to new element
+      mediaSourceRef.current = null;
+      // Close old playback context — a new one will be created on next play
+      if (playbackCtxRef.current) {
+        playbackCtxRef.current.close().catch(() => {});
+        playbackCtxRef.current = null;
+      }
+      reverbBufferRef.current = null;
 
       setCurrentTime((prev) => Math.min(prev, buffer.duration));
     } catch (err) {
@@ -1233,12 +1546,20 @@ export default function AudioEditorPage() {
     showStatus("Redo");
   }, [rebuildFromBuffer, showStatus]);
 
-  // ── EXPORT: Download edited audio as WAV ──
-  const handleExport = useCallback(() => {
+  // ── EXPORT: Download edited audio as WAV (with effects applied) ──
+  const handleExport = useCallback(async () => {
     const buf = audioBufferRef.current;
     if (!buf) { showStatus("No audio to export"); return; }
     try {
-      const wav = audioBufferToWav(buf);
+      // Collect enabled effects
+      const enabledIds = new Set(effects.filter((e) => e.enabled).map((e) => e.id));
+      const hasEffects = enabledIds.size > 0;
+      if (hasEffects) showStatus("Applying effects and exporting...");
+
+      // Process through enabled effects
+      const processed = hasEffects ? await applyEffectsToBuffer(buf, enabledIds) : buf;
+
+      const wav = audioBufferToWav(processed);
       const blob = new Blob([wav], { type: "audio/wav" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -1248,12 +1569,15 @@ export default function AudioEditorPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      showStatus("Exported as WAV");
+      const effectNames = effects.filter((e) => e.enabled).map((e) => e.name);
+      showStatus(hasEffects
+        ? `Exported as WAV with effects: ${effectNames.join(", ")}`
+        : "Exported as WAV");
     } catch (err) {
       console.error("[AudioEditor] Export failed:", err);
       showStatus("Export failed — try again");
     }
-  }, [showStatus]);
+  }, [showStatus, effects]);
 
   // ── SELECT ALL ──
   const handleSelectAll = useCallback(() => {
@@ -1649,12 +1973,13 @@ export default function AudioEditorPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-foreground">{effect.name}</p>
                         <p className="text-[10px] text-muted-foreground">{effect.description}</p>
-                        <p className="text-[8px] text-amber-500/60 uppercase tracking-wider mt-0.5">Coming Soon</p>
+                        {effect.enabled && (
+                          <p className="text-[8px] text-[#74ddc7]/60 uppercase tracking-wider mt-0.5">Active</p>
+                        )}
                       </div>
                       <button
                         onClick={() => toggleEffect(effect.id)}
-                        disabled
-                        className={`ml-2 relative w-8 h-4 rounded-full transition-colors shrink-0 opacity-40 cursor-not-allowed ${
+                        className={`ml-2 relative w-8 h-4 rounded-full transition-colors shrink-0 ${
                           effect.enabled ? "bg-[#74ddc7]" : "bg-foreground/[0.12]"
                         }`}
                       >
@@ -1773,21 +2098,11 @@ export default function AudioEditorPage() {
                     ))}
                   </select>
                 </div>
-                {/* Format selector */}
+                {/* Format indicator — WAV only (browser-native PCM export) */}
                 <div className="hidden sm:flex items-center gap-1 shrink-0">
-                  {(["WAV", "MP3", "FLAC"] as const).map((fmt) => (
-                    <button
-                      key={fmt}
-                      onClick={() => setOutputFormat(fmt)}
-                      className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
-                        outputFormat === fmt
-                          ? "bg-[#74ddc7]/20 text-[#74ddc7] border border-[#74ddc7]/30"
-                          : "text-muted-foreground hover:text-foreground bg-foreground/[0.04] border border-transparent"
-                      }`}
-                    >
-                      {fmt}
-                    </button>
-                  ))}
+                  <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#74ddc7]/20 text-[#74ddc7] border border-[#74ddc7]/30">
+                    WAV
+                  </span>
                 </div>
               </div>
 

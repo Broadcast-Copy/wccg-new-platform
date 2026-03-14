@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Radio,
   Send,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -157,6 +158,7 @@ function CheckboxOption({
 export default function LiveOnSitePage() {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, string[]>>({});
   const [formData, setFormData] = useState({
     // Step 1: Event Details
     eventName: "",
@@ -1044,10 +1046,40 @@ export default function LiveOnSitePage() {
                 <Label className="text-foreground/70">
                   Upload Flyers, Logos, or Branding
                 </Label>
-                <div className="mt-2 rounded-lg border border-dashed border-input p-6 text-center cursor-pointer hover:border-foreground/20 transition-colors">
-                  <p className="text-sm text-muted-foreground">
-                    Click or drag a file to upload
-                  </p>
+                <div
+                  onClick={() => document.getElementById('upload-live-branding')?.click()}
+                  className="mt-2 rounded-lg border-2 border-dashed border-border p-6 text-center cursor-pointer hover:border-[#74ddc7]/50 hover:bg-[#74ddc7]/5 transition-colors"
+                >
+                  <input
+                    id="upload-live-branding"
+                    type="file"
+                    accept="image/*,.pdf"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (files.length > 0) {
+                        setUploadedFiles(prev => ({
+                          ...prev,
+                          branding: files.map(f => f.name)
+                        }));
+                      }
+                    }}
+                  />
+                  {uploadedFiles.branding?.length ? (
+                    <div className="space-y-1">
+                      {uploadedFiles.branding.map((name, i) => (
+                        <p key={i} className="text-xs text-[#74ddc7] font-medium">{name}</p>
+                      ))}
+                      <p className="text-[10px] text-muted-foreground mt-1">Click to change files</p>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                      <p className="text-sm text-muted-foreground">Click to upload or drag files here</p>
+                      <p className="text-[10px] text-muted-foreground/60 mt-1">Images (PNG, JPG, SVG) or PDF</p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -1177,7 +1209,7 @@ export default function LiveOnSitePage() {
                       alert("Please fill in your name and email before submitting.");
                       return;
                     }
-                    const submission = { ...formData, submittedAt: new Date().toISOString(), type: 'live-on-site' };
+                    const submission = { ...formData, uploadedFileNames: uploadedFiles, submittedAt: new Date().toISOString(), type: 'live-on-site' };
                     const existing = JSON.parse(localStorage.getItem('wccg-submissions') || '[]');
                     existing.push(submission);
                     localStorage.setItem('wccg-submissions', JSON.stringify(existing));

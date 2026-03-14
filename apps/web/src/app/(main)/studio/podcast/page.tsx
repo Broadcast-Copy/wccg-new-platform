@@ -471,6 +471,7 @@ function PodcastStudioContent() {
   const chunksRef = useRef<Blob[]>([]);
   const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
   const [recordingBytes, setRecordingBytes] = useState(0);
+  const recordedBlobRef = useRef<Blob | null>(null);
 
   // Chat
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -700,15 +701,6 @@ function PodcastStudioContent() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
-  // ------ Recording bytes tracker ------
-  useEffect(() => {
-    if (!isRecording) return;
-    const iv = setInterval(() => {
-      setRecordingBytes((p) => p + Math.floor(30000 + Math.random() * 20000));
-    }, 1000);
-    return () => clearInterval(iv);
-  }, [isRecording]);
-
   // ------ Handlers ------
 
   const toggleRecording = useCallback(async () => {
@@ -794,7 +786,10 @@ function PodcastStudioContent() {
         chunksRef.current = [];
 
         recorder.ondataavailable = (e) => {
-          if (e.data.size > 0) chunksRef.current.push(e.data);
+          if (e.data.size > 0) {
+            chunksRef.current.push(e.data);
+            setRecordingBytes((prev) => prev + e.data.size);
+          }
         };
 
         recorder.onstop = () => {
@@ -804,6 +799,7 @@ function PodcastStudioContent() {
           });
           const url = URL.createObjectURL(blob);
           setRecordedUrl(url);
+          recordedBlobRef.current = blob;
           setRecordingBytes(blob.size);
         };
 
@@ -878,33 +874,38 @@ function PodcastStudioContent() {
 
   // ------ Save recording to media manager ------
   const handleSaveToMedia = useCallback(() => {
-    if (!recordedUrl) return;
+    const blob = recordedBlobRef.current;
+    if (!blob) return;
 
-    const mediaKey = "wccg_media_manager";
-    const existing = JSON.parse(
-      localStorage.getItem(mediaKey) || '{"folders":[],"files":[]}'
-    );
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string;
+      const mediaKey = "wccg_media_manager";
+      const existing = JSON.parse(
+        localStorage.getItem(mediaKey) || '{"folders":[],"files":[]}'
+      );
 
-    const newFile = {
-      id: `media-${Date.now()}`,
-      name: episodeName,
-      category: "mix",
-      folderId: "root",
-      format: "webm",
-      duration: recordingTime,
-      size: recordingBytes,
-      createdAt: new Date().toISOString(),
-      status: "PUBLISHED",
-      blobUrl: recordedUrl,
+      const newFile = {
+        id: `media-${Date.now()}`,
+        name: episodeName,
+        category: "mix",
+        folderId: "root",
+        format: "webm",
+        duration: recordingTime,
+        size: recordingBytes,
+        createdAt: new Date().toISOString(),
+        status: "PUBLISHED",
+        blobUrl: dataUrl,
+      };
+
+      existing.files = [...(existing.files || []), newFile];
+      localStorage.setItem(mediaKey, JSON.stringify(existing));
+
+      setSavedToMedia(true);
+      setTimeout(() => setSavedToMedia(false), 3000);
     };
-
-    existing.files = [...(existing.files || []), newFile];
-    localStorage.setItem(mediaKey, JSON.stringify(existing));
-
-    // Show confirmation
-    setSavedToMedia(true);
-    setTimeout(() => setSavedToMedia(false), 3000);
-  }, [recordedUrl, episodeName, recordingTime, recordingBytes]);
+    reader.readAsDataURL(blob);
+  }, [episodeName, recordingTime, recordingBytes]);
 
   const handleSendChat = () => {
     if (!chatInput.trim()) return;
@@ -1147,20 +1148,47 @@ function PodcastStudioContent() {
       allTiles.push(
         <div
           key="empty"
-          className="relative w-full h-full rounded-xl overflow-hidden bg-card border-2 border-dashed border-border flex flex-col items-center justify-center gap-3"
+          className="relative w-full h-full rounded-xl overflow-hidden bg-card border-2 border-dashed border-border flex flex-col items-center justify-center gap-4 p-6"
         >
-          <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
-            <UserPlus className="h-7 w-7 text-muted-foreground/60" />
+          <div className="h-14 w-14 rounded-full bg-[#7401df]/10 flex items-center justify-center">
+            <UserPlus className="h-6 w-6 text-[#7401df]" />
           </div>
-          <span className="text-sm text-muted-foreground font-medium">
-            Invite a guest
-          </span>
-          <button
-            onClick={handleCopyLink}
-            className="text-xs bg-[#7401df]/20 text-[#7401df] px-3 py-1.5 rounded-lg hover:bg-[#7401df]/30 transition-colors font-medium"
-          >
-            Copy Invite Link
-          </button>
+          <div className="text-center">
+            <p className="text-sm font-semibold text-foreground">Invite a Guest</p>
+            <p className="text-xs text-muted-foreground mt-1">Share the link or scan the QR code to join</p>
+          </div>
+          {/* QR Code */}
+          <div className="bg-white rounded-lg p-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(
+                typeof window !== "undefined"
+                  ? `${window.location.origin}/studio/podcast?join=true`
+                  : ""
+              )}`}
+              alt="QR code to join studio"
+              className="h-[140px] w-[140px]"
+              width={140}
+              height={140}
+            />
+          </div>
+          <p className="text-[10px] text-muted-foreground">Scan to join from mobile</p>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCopyLink}
+              className="text-xs bg-[#7401df]/20 text-[#7401df] px-4 py-2 rounded-lg hover:bg-[#7401df]/30 transition-colors font-medium flex items-center gap-1.5"
+            >
+              {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              {copied ? "Copied!" : "Copy Link"}
+            </button>
+            <a
+              href={`mailto:?subject=${encodeURIComponent("Join my podcast on WCCG Studio")}&body=${encodeURIComponent(`Join my podcast recording session:\n\n${typeof window !== "undefined" ? `${window.location.origin}/studio/podcast?join=true` : ""}\n\nPowered by WCCG 104.5 FM Studio`)}`}
+              className="text-xs bg-muted text-foreground/70 px-4 py-2 rounded-lg hover:bg-muted/80 transition-colors font-medium flex items-center gap-1.5 border border-border"
+            >
+              <Mail className="h-3 w-3" />
+              Email
+            </a>
+          </div>
         </div>
       );
     }

@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Clapperboard,
   Send,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -174,6 +175,7 @@ function CheckboxOption({
 export default function StudioBookingPage() {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, string[]>>({});
   const [formData, setFormData] = useState({
     // Step 1: Contact
     fullName: "",
@@ -239,6 +241,7 @@ export default function StudioBookingPage() {
 
     const submission = {
       ...formData,
+      uploadedFileNames: uploadedFiles,
       submittedAt: new Date().toISOString(),
       type: "studio-booking",
     };
@@ -803,18 +806,50 @@ export default function StudioBookingPage() {
                 <Label className="text-foreground/70">
                   Upload Files (Logos, Show Notes, Scripts, Reference Content)
                 </Label>
-                {["Logos", "Show Notes", "Scripts", "Reference Content"].map(
-                  (label) => (
+                {([
+                  { key: "logos", label: "Logos", accept: "image/*", hint: "Images (PNG, JPG, SVG)" },
+                  { key: "showNotes", label: "Show Notes", accept: ".pdf,.doc,.docx,.txt", hint: "Documents (PDF, DOC, TXT)" },
+                  { key: "scripts", label: "Scripts", accept: ".pdf,.doc,.docx,.txt", hint: "Documents (PDF, DOC, TXT)" },
+                  { key: "referenceContent", label: "Reference Content", accept: "image/*,audio/*,video/*,.pdf,.doc,.docx", hint: "Images, audio, video, or documents" },
+                ] as const).map((item) => (
+                  <div key={item.key} className="space-y-1">
                     <div
-                      key={label}
-                      className="rounded-lg border border-dashed border-input p-4 text-center cursor-pointer hover:border-foreground/20 transition-colors"
+                      onClick={() => document.getElementById(`upload-booking-${item.key}`)?.click()}
+                      className="rounded-lg border-2 border-dashed border-border p-4 text-center cursor-pointer hover:border-[#74ddc7]/50 hover:bg-[#74ddc7]/5 transition-colors"
                     >
-                      <p className="text-sm text-muted-foreground">
-                        {label} — Click or drag a file to upload
-                      </p>
+                      <input
+                        id={`upload-booking-${item.key}`}
+                        type="file"
+                        accept={item.accept}
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          if (files.length > 0) {
+                            setUploadedFiles(prev => ({
+                              ...prev,
+                              [item.key]: files.map(f => f.name)
+                            }));
+                          }
+                        }}
+                      />
+                      {uploadedFiles[item.key]?.length ? (
+                        <div className="space-y-1">
+                          {uploadedFiles[item.key].map((name, i) => (
+                            <p key={i} className="text-xs text-[#74ddc7] font-medium">{name}</p>
+                          ))}
+                          <p className="text-[10px] text-muted-foreground mt-1">Click to change files</p>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="h-6 w-6 mx-auto text-muted-foreground/40 mb-1" />
+                          <p className="text-sm text-muted-foreground">{item.label} — Click to upload</p>
+                          <p className="text-[10px] text-muted-foreground/60 mt-1">{item.hint}</p>
+                        </>
+                      )}
                     </div>
-                  )
-                )}
+                  </div>
+                ))}
               </div>
             </div>
           )}
