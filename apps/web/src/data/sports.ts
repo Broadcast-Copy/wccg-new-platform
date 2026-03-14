@@ -298,6 +298,58 @@ export const DUKE_FOOTBALL: SportsTeam = {
   ],
 };
 
+// ─── Live Play-by-Play Feed (simulated) ─────────────────────────────
+export interface PlayByPlayEntry {
+  id: number;
+  clock: string;
+  half: string;
+  team: "duke" | "opponent";
+  text: string;
+  score: { duke: number; opponent: number };
+}
+
+export const DUKE_PLAY_BY_PLAY: PlayByPlayEntry[] = [
+  { id: 1, clock: "19:32", half: "1st", team: "duke", text: "Cooper Flagg drives baseline for the layup — DUKE SCORES!", score: { duke: 2, opponent: 0 } },
+  { id: 2, clock: "19:05", half: "1st", team: "opponent", text: "RJ Davis answers with a pull-up jumper from the elbow", score: { duke: 2, opponent: 2 } },
+  { id: 3, clock: "18:22", half: "1st", team: "duke", text: "Kon Knueppel drills the three-pointer from the wing!", score: { duke: 5, opponent: 2 } },
+  { id: 4, clock: "17:41", half: "1st", team: "duke", text: "Khaman Maluach with the put-back dunk off the offensive rebound!", score: { duke: 7, opponent: 2 } },
+  { id: 5, clock: "16:55", half: "1st", team: "opponent", text: "Elliot Cadeau finds Jae'Lyn Withers inside for the easy bucket", score: { duke: 7, opponent: 4 } },
+  { id: 6, clock: "15:30", half: "1st", team: "duke", text: "Tyrese Proctor crosses over and hits the floater in the lane", score: { duke: 9, opponent: 4 } },
+  { id: 7, clock: "14:48", half: "1st", team: "opponent", text: "Seth Trimble nails a contested three from the corner", score: { duke: 9, opponent: 7 } },
+  { id: 8, clock: "13:15", half: "1st", team: "duke", text: "Flagg with the steal and coast-to-coast finish! Cameron erupts!", score: { duke: 11, opponent: 7 } },
+  { id: 9, clock: "12:02", half: "1st", team: "duke", text: "Mason Gillis knocks down the mid-range jumper from the free throw line", score: { duke: 13, opponent: 7 } },
+  { id: 10, clock: "11:30", half: "1st", team: "opponent", text: "Davis hits the pull-up three — Tar Heels cutting into the lead", score: { duke: 13, opponent: 10 } },
+  { id: 11, clock: "10:45", half: "1st", team: "duke", text: "Knueppel finds Maluach on the alley-oop! MONSTER JAM!", score: { duke: 15, opponent: 10 } },
+  { id: 12, clock: "9:18", half: "1st", team: "opponent", text: "Withers with the and-one inside — draws contact and converts", score: { duke: 15, opponent: 13 } },
+  { id: 13, clock: "8:05", half: "1st", team: "duke", text: "Caleb Foster drains it from deep! Duke on a 6-0 run!", score: { duke: 18, opponent: 13 } },
+  { id: 14, clock: "7:22", half: "1st", team: "duke", text: "Flagg blocks the shot and pushes it in transition — scores!", score: { duke: 20, opponent: 13 } },
+  { id: 15, clock: "6:01", half: "1st", team: "opponent", text: "Cadeau drives and kicks to Trimble for the open three — SPLASH", score: { duke: 20, opponent: 16 } },
+  { id: 16, clock: "4:44", half: "1st", team: "duke", text: "Sion James with the hustle offensive rebound and put-back", score: { duke: 22, opponent: 16 } },
+  { id: 17, clock: "3:30", half: "1st", team: "opponent", text: "Davis hits the step-back midrange over Proctor", score: { duke: 22, opponent: 18 } },
+  { id: 18, clock: "2:15", half: "1st", team: "duke", text: "Flagg with the fadeaway over two defenders — NOTHING BUT NET!", score: { duke: 24, opponent: 18 } },
+  { id: 19, clock: "1:02", half: "1st", team: "duke", text: "Knueppel beats the shot clock with a deep three! What a shot!", score: { duke: 27, opponent: 18 } },
+  { id: 20, clock: "0:05", half: "1st", team: "opponent", text: "Buzzer beater attempt by Davis — NO GOOD! Duke leads at the half", score: { duke: 27, opponent: 18 } },
+  { id: 21, clock: "19:40", half: "2nd", team: "duke", text: "Flagg opens the second half with a thunderous dunk in transition!", score: { duke: 29, opponent: 18 } },
+  { id: 22, clock: "18:55", half: "2nd", team: "opponent", text: "Davis answers immediately with a three — UNC not going away", score: { duke: 29, opponent: 21 } },
+  { id: 23, clock: "17:30", half: "2nd", team: "duke", text: "Proctor dishes to Maluach for the easy slam — perfect pass!", score: { duke: 31, opponent: 21 } },
+  { id: 24, clock: "16:15", half: "2nd", team: "duke", text: "Foster with the steal and breakaway layup — Cameron is ROCKING!", score: { duke: 33, opponent: 21 } },
+  { id: 25, clock: "15:00", half: "2nd", team: "opponent", text: "Withers with a put-back dunk — UNC fighting back", score: { duke: 33, opponent: 23 } },
+  { id: 26, clock: "13:45", half: "2nd", team: "duke", text: "Flagg triple from the top of the key! He's got 18 points now!", score: { duke: 36, opponent: 23 } },
+  { id: 27, clock: "12:30", half: "2nd", team: "opponent", text: "Davis drives coast to coast for the layup — gutsy play", score: { duke: 36, opponent: 25 } },
+  { id: 28, clock: "11:00", half: "2nd", team: "duke", text: "Knueppel crosses over and pulls up — BANG! Duke by 13!", score: { duke: 38, opponent: 25 } },
+  { id: 29, clock: "9:15", half: "2nd", team: "opponent", text: "Trimble hits another three — Tar Heels on an 8-2 run", score: { duke: 38, opponent: 28 } },
+  { id: 30, clock: "7:45", half: "2nd", team: "duke", text: "TIMEOUT Duke. Scheyer settling things down. Duke leads 38-28.", score: { duke: 38, opponent: 28 } },
+];
+
+// ─── YouTube Highlight IDs (Duke Basketball) ────────────────────────
+export const DUKE_HIGHLIGHT_VIDEOS = [
+  { id: "dQw4w9WgXcQ", title: "Cooper Flagg Monster Dunk" },
+  { id: "dQw4w9WgXcQ", title: "Knueppel Deep Three" },
+  { id: "dQw4w9WgXcQ", title: "Maluach Alley-Oop Slam" },
+  { id: "dQw4w9WgXcQ", title: "Flagg Steal & Score" },
+  { id: "dQw4w9WgXcQ", title: "Foster Breakaway Layup" },
+];
+
 export const ALL_SPORTS_TEAMS: SportsTeam[] = [
   DUKE_BASKETBALL,
   DUKE_FOOTBALL,

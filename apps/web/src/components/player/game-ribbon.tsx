@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { X } from "lucide-react";
-import { DUKE_BASKETBALL } from "@/data/sports";
+import { DUKE_BASKETBALL, DUKE_PLAY_BY_PLAY } from "@/data/sports";
 
 type RibbonMode = "pre" | "live" | "post" | "hidden";
 
@@ -14,6 +14,7 @@ export function GameRibbon() {
   const [liveScore, setLiveScore] = useState({ duke: 0, opponent: 0 });
   const [half, setHalf] = useState("1st Half");
   const [gameClock, setGameClock] = useState("20:00");
+  const [latestPlay, setLatestPlay] = useState("");
 
   const gameDate = useMemo(
     () => (nextGame ? new Date(nextGame.date) : null),
@@ -42,17 +43,19 @@ export function GameRibbon() {
       const diff = gameDate!.getTime() - now.getTime();
       const gameEnd = new Date(gameDate!.getTime() + 2.5 * 60 * 60 * 1000);
 
-      // Only show if within 24 hours before game or during/after game (within 2.5h window + 1h post)
-      const twentyFourHoursBefore = gameDate!.getTime() - 24 * 60 * 60 * 1000;
-      const displayEnd = gameEnd.getTime() + 60 * 60 * 1000; // 1h after game ends
+      const twentyFourHoursBefore =
+        gameDate!.getTime() - 24 * 60 * 60 * 1000;
+      const displayEnd = gameEnd.getTime() + 60 * 60 * 1000;
 
-      if (now.getTime() < twentyFourHoursBefore || now.getTime() > displayEnd) {
+      if (
+        now.getTime() < twentyFourHoursBefore ||
+        now.getTime() > displayEnd
+      ) {
         setMode("hidden");
         return;
       }
 
       if (now < gameDate!) {
-        // Pre-game
         setMode("pre");
         const totalSeconds = Math.floor(diff / 1000);
         const h = Math.floor(totalSeconds / 3600);
@@ -62,37 +65,59 @@ export function GameRibbon() {
           `${h}h ${m.toString().padStart(2, "0")}m ${s.toString().padStart(2, "0")}s`
         );
       } else if (now >= gameDate! && now < gameEnd) {
-        // Live
         setMode("live");
         const elapsed = now.getTime() - gameDate!.getTime();
         const elapsedMinutes = elapsed / 60000;
         const totalGameMinutes = 150;
 
         if (elapsedMinutes < 50) {
-          setHalf("1st Half");
-          const clockMin = Math.max(0, Math.floor(20 - (elapsedMinutes / 50) * 20));
+          setHalf("1st");
+          const clockMin = Math.max(
+            0,
+            Math.floor(20 - (elapsedMinutes / 50) * 20)
+          );
           const clockSec = Math.floor(Math.random() * 60);
-          setGameClock(`${clockMin}:${clockSec.toString().padStart(2, "0")}`);
+          setGameClock(
+            `${clockMin}:${clockSec.toString().padStart(2, "0")}`
+          );
         } else if (elapsedMinutes < 65) {
-          setHalf("Halftime");
+          setHalf("HALF");
           setGameClock("");
         } else {
-          setHalf("2nd Half");
+          setHalf("2nd");
           const secondHalfElapsed = elapsedMinutes - 65;
-          const clockMin = Math.max(0, Math.floor(20 - (secondHalfElapsed / 85) * 20));
+          const clockMin = Math.max(
+            0,
+            Math.floor(20 - (secondHalfElapsed / 85) * 20)
+          );
           const clockSec = Math.floor(Math.random() * 60);
-          setGameClock(`${clockMin}:${clockSec.toString().padStart(2, "0")}`);
+          setGameClock(
+            `${clockMin}:${clockSec.toString().padStart(2, "0")}`
+          );
         }
 
         const progress = Math.min(1, elapsedMinutes / totalGameMinutes);
         setLiveScore({
-          duke: Math.max(0, Math.floor(82 * progress + Math.sin(progress * 5) * 2)),
-          opponent: Math.max(0, Math.floor(68 * progress + Math.cos(progress * 4) * 2)),
+          duke: Math.max(
+            0,
+            Math.floor(82 * progress + Math.sin(progress * 5) * 2)
+          ),
+          opponent: Math.max(
+            0,
+            Math.floor(68 * progress + Math.cos(progress * 4) * 2)
+          ),
         });
+
+        // Show latest play-by-play entry
+        const playIndex = Math.min(
+          DUKE_PLAY_BY_PLAY.length - 1,
+          Math.floor(elapsedMinutes / 4)
+        );
+        setLatestPlay(DUKE_PLAY_BY_PLAY[playIndex]?.text || "");
       } else {
-        // Post-game
         setMode("post");
         setLiveScore({ duke: 82, opponent: 68 });
+        setLatestPlay("");
       }
     }
 
@@ -105,40 +130,108 @@ export function GameRibbon() {
 
   return (
     <div
-      className={`relative flex items-center justify-center px-3 text-[11px] sm:text-xs font-medium text-white transition-all ${
+      className={`relative flex items-center px-3 text-[11px] sm:text-xs font-medium text-white transition-all overflow-hidden ${
         mode === "live"
-          ? "bg-red-600 animate-pulse h-8"
+          ? "bg-gradient-to-r from-red-700 via-red-600 to-red-700 h-8"
           : mode === "post"
           ? "bg-[#1a1a2e] h-7"
-          : "bg-[#003087] h-7"
+          : "bg-gradient-to-r from-[#003087] via-[#001a4d] to-[#003087] h-7"
       }`}
     >
-      <div className="flex items-center gap-2 truncate">
+      <div className="flex items-center gap-2 w-full overflow-hidden">
         {mode === "pre" && (
-          <>
-            <span>&#127936;</span>
-            <span className="truncate">
-              Duke vs {opponentShort} — Countdown: {countdownText} — Tipoff at{" "}
-              {tipoffTime} on WCCG
+          <div className="flex items-center gap-2 truncate mx-auto">
+            <span>🏀</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={DUKE_BASKETBALL.logoUrl}
+              alt="Duke"
+              className="h-4 w-4 object-contain"
+            />
+            <span className="font-bold">Duke</span>
+            <span className="text-white/50">vs</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={nextGame.opponentLogo || ""}
+              alt={opponentShort}
+              className="h-4 w-4 object-contain"
+            />
+            <span className="font-bold">{opponentShort}</span>
+            <span className="text-white/50">—</span>
+            <span className="tabular-nums font-mono">{countdownText}</span>
+            <span className="hidden sm:inline text-white/50">
+              — Tipoff {tipoffTime}
             </span>
-          </>
+          </div>
         )}
         {mode === "live" && (
-          <>
-            <span>&#128308;</span>
-            <span className="font-bold">LIVE:</span>
-            <span className="tabular-nums">
-              Duke {liveScore.duke} - {opponentShort} {liveScore.opponent}
-            </span>
-            <span className="hidden sm:inline">
-              | {half} {gameClock && gameClock}
-            </span>
-          </>
+          <div className="flex items-center gap-0 w-full">
+            {/* Score section — fixed left */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-white animate-ping" />
+                <span className="font-bold">LIVE</span>
+              </span>
+              <span className="text-white/40">|</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={DUKE_BASKETBALL.logoUrl}
+                alt="Duke"
+                className="h-4 w-4 object-contain"
+              />
+              <span className="font-bold tabular-nums">
+                {liveScore.duke}
+              </span>
+              <span className="text-white/40">-</span>
+              <span className="tabular-nums">{liveScore.opponent}</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={nextGame.opponentLogo || ""}
+                alt={opponentShort}
+                className="h-4 w-4 object-contain"
+              />
+              <span className="text-white/40">|</span>
+              <span className="text-white/60 tabular-nums font-mono text-[10px]">
+                {half} {gameClock}
+              </span>
+            </div>
+
+            {/* Latest play — scrolling ticker */}
+            {latestPlay && (
+              <>
+                <span className="text-white/30 mx-2 hidden sm:inline">|</span>
+                <div className="hidden sm:block flex-1 min-w-0 overflow-hidden">
+                  <div className="animate-marquee whitespace-nowrap">
+                    <span className="text-white/70">{latestPlay}</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         )}
         {mode === "post" && (
-          <span>
-            Duke {liveScore.duke} - {opponentShort} {liveScore.opponent} FINAL
-          </span>
+          <div className="flex items-center gap-2 truncate mx-auto">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={DUKE_BASKETBALL.logoUrl}
+              alt="Duke"
+              className="h-4 w-4 object-contain"
+            />
+            <span className="font-bold">
+              Duke {liveScore.duke}
+            </span>
+            <span className="text-white/40">-</span>
+            <span>
+              {opponentShort} {liveScore.opponent}
+            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={nextGame.opponentLogo || ""}
+              alt={opponentShort}
+              className="h-4 w-4 object-contain"
+            />
+            <span className="font-bold text-white/60">FINAL</span>
+          </div>
         )}
       </div>
 
