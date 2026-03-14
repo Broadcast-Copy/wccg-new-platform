@@ -30,6 +30,7 @@ import {
 import { ListenerCountBadge } from "@/components/player/listener-count-badge";
 import { WeatherStrip } from "@/components/player/weather-strip";
 import { MultiplierBanner } from "@/components/player/multiplier-banner";
+import { GameRibbon } from "@/components/player/game-ribbon";
 
 /** localStorage key for the continuous play preference. */
 const CONTINUOUS_PLAY_KEY = "wccg_continuous_play";
@@ -376,6 +377,7 @@ export function GlobalPlayer() {
   if (playerMode === "minimized") {
     return (
       <div className="fixed bottom-14 left-0 right-0 z-50 border-t border-border bg-[#0e0e18]/95 backdrop-blur-xl">
+        <GameRibbon />
         {/* Connection error banner */}
         {connectionError && (
           <div className="flex items-center justify-center bg-red-600/90 px-3 py-0.5">
@@ -438,6 +440,7 @@ export function GlobalPlayer() {
   // ---------------------------------------------------------------------------
   return (
     <div className="fixed bottom-14 left-0 right-0 z-50 border-t border-border bg-[#0e0e18]/95 backdrop-blur-xl">
+      <GameRibbon />
       {/* Connection error banner */}
       {connectionError && (
         <div className="flex items-center justify-center bg-red-600/90 px-3 py-0.5">

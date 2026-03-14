@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { ListenerOfTheWeek } from "@/components/home/listener-of-the-week";
 import { apiClient } from "@/lib/api-client";
+import { DukeGameTile } from "@/components/sports/duke-game-tile";
 
 interface EventItem {
   id: string;
@@ -182,6 +183,9 @@ export default function HomePage() {
     <div className="space-y-10">
       {/* Hero Ribbon */}
       <Hero />
+
+      {/* Duke Game Day */}
+      <DukeGameTile />
 
       {/* Platform Headline */}
       <section className="text-center py-4">

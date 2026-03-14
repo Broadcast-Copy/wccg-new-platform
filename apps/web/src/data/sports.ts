@@ -33,6 +33,16 @@ export interface UpcomingGame {
   broadcast?: string;
 }
 
+export interface LastGameResult {
+  opponent: string;
+  opponentLogo: string;
+  date: string;
+  result: "W" | "L";
+  score: { duke: number; opponent: number };
+  venue: string;
+  topPerformer: { name: string; points: number; rebounds: number; assists: number };
+}
+
 export interface SportsTeam {
   id: string;
   slug: string;
@@ -62,6 +72,7 @@ export interface SportsTeam {
   gradient: string;
   nextGame?: UpcomingGame;
   schedule?: UpcomingGame[];
+  lastGame?: LastGameResult;
 }
 
 // ─── Duke Men's Basketball ──────────────────────────────────────────
@@ -78,7 +89,7 @@ export const DUKE_BASKETBALL: SportsTeam = {
   location: "Durham, NC",
   primaryColor: "#003087",
   secondaryColor: "#FFFFFF",
-  logoUrl: "/images/sports/duke-logo.svg",
+  logoUrl: "https://a.espncdn.com/i/teamlogos/ncaa/500/150.png",
   heroImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/09/duke-basket-ball.png",
   description: "Duke Men's Basketball is one of the most storied programs in college basketball history. Under legendary coach Mike Krzyzewski and now Jon Scheyer, the Blue Devils have won 5 national championships, made 17 Final Four appearances, and produced countless NBA players. WCCG 104.5 FM brings you complete coverage of Duke basketball throughout the season.",
   youtube: {
@@ -132,7 +143,7 @@ export const DUKE_BASKETBALL: SportsTeam = {
   gradient: "from-[#003087] via-[#001a4d] to-[#0a0a0f]",
   nextGame: {
     opponent: "North Carolina Tar Heels",
-    opponentLogo: "/images/sports/unc-logo.svg",
+    opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/153.png",
     date: "2026-03-14T19:00:00",
     time: "7:00 PM ET",
     venue: "Cameron Indoor Stadium",
@@ -142,7 +153,7 @@ export const DUKE_BASKETBALL: SportsTeam = {
   schedule: [
     {
       opponent: "North Carolina Tar Heels",
-      opponentLogo: "/images/sports/unc-logo.svg",
+      opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/153.png",
       date: "2026-03-14T19:00:00",
       time: "7:00 PM ET",
       venue: "Cameron Indoor Stadium",
@@ -151,6 +162,7 @@ export const DUKE_BASKETBALL: SportsTeam = {
     },
     {
       opponent: "Wake Forest Demon Deacons",
+      opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/154.png",
       date: "2026-03-18T20:00:00",
       time: "8:00 PM ET",
       venue: "Lawrence Joel Veterans Memorial Coliseum",
@@ -159,6 +171,7 @@ export const DUKE_BASKETBALL: SportsTeam = {
     },
     {
       opponent: "Virginia Cavaliers",
+      opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/258.png",
       date: "2026-03-22T14:00:00",
       time: "2:00 PM ET",
       venue: "Cameron Indoor Stadium",
@@ -166,6 +179,15 @@ export const DUKE_BASKETBALL: SportsTeam = {
       broadcast: "CBS / WCCG 104.5 FM",
     },
   ],
+  lastGame: {
+    opponent: "Syracuse Orange",
+    opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/183.png",
+    date: "2026-03-11T19:00:00",
+    result: "W",
+    score: { duke: 82, opponent: 68 },
+    venue: "JMA Wireless Dome",
+    topPerformer: { name: "Cooper Flagg", points: 24, rebounds: 8, assists: 5 },
+  },
 };
 
 // ─── Duke Football ──────────────────────────────────────────────────
@@ -182,7 +204,7 @@ export const DUKE_FOOTBALL: SportsTeam = {
   location: "Durham, NC",
   primaryColor: "#003087",
   secondaryColor: "#FFFFFF",
-  logoUrl: "/images/sports/duke-logo.svg",
+  logoUrl: "https://a.espncdn.com/i/teamlogos/ncaa/500/150.png",
   heroImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/09/DUKE-FB-1.png",
   description: "Duke Blue Devils Football competes in the Atlantic Coast Conference and plays home games at the historic Wallace Wade Stadium in Durham, NC. Under head coach Manny Diaz, the program continues to build on its recent success. WCCG 104.5 FM brings you full coverage of Duke Football including game highlights, player interviews, and analysis.",
   youtube: {
@@ -229,7 +251,7 @@ export const DUKE_FOOTBALL: SportsTeam = {
   gradient: "from-[#003087] via-[#001a4d] to-[#0a0a0f]",
   nextGame: {
     opponent: "NC State Wolfpack",
-    opponentLogo: "/images/sports/ncstate-logo.svg",
+    opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/152.png",
     date: "2026-09-05T15:30:00",
     time: "3:30 PM ET",
     venue: "Wallace Wade Stadium",
@@ -239,7 +261,7 @@ export const DUKE_FOOTBALL: SportsTeam = {
   schedule: [
     {
       opponent: "NC State Wolfpack",
-      opponentLogo: "/images/sports/ncstate-logo.svg",
+      opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/152.png",
       date: "2026-09-05T15:30:00",
       time: "3:30 PM ET",
       venue: "Wallace Wade Stadium",
@@ -248,6 +270,7 @@ export const DUKE_FOOTBALL: SportsTeam = {
     },
     {
       opponent: "Clemson Tigers",
+      opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/228.png",
       date: "2026-09-12T19:00:00",
       time: "7:00 PM ET",
       venue: "Memorial Stadium",
@@ -256,6 +279,7 @@ export const DUKE_FOOTBALL: SportsTeam = {
     },
     {
       opponent: "Virginia Tech Hokies",
+      opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/259.png",
       date: "2026-09-19T12:00:00",
       time: "12:00 PM ET",
       venue: "Wallace Wade Stadium",
@@ -264,6 +288,7 @@ export const DUKE_FOOTBALL: SportsTeam = {
     },
     {
       opponent: "North Carolina Tar Heels",
+      opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/153.png",
       date: "2026-10-03T15:30:00",
       time: "3:30 PM ET",
       venue: "Kenan Memorial Stadium",
