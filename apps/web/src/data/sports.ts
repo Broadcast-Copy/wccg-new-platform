@@ -144,8 +144,8 @@ export const DUKE_BASKETBALL: SportsTeam = {
   nextGame: {
     opponent: "North Carolina Tar Heels",
     opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/153.png",
-    date: "2026-03-14T19:00:00",
-    time: "7:00 PM ET",
+    date: "2026-03-14T19:30:00",
+    time: "7:30 PM ET",
     venue: "Cameron Indoor Stadium",
     isHome: true,
     broadcast: "ESPN / WCCG 104.5 FM",
