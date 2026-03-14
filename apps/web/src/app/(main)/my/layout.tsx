@@ -33,6 +33,10 @@ import {
   Palette,
   MapPin,
   Shield,
+  Wrench,
+  Building2,
+  FileText,
+  Truck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -85,9 +89,11 @@ const advertisingItems: NavSection[] = [
     sectionLabel: "SALES",
     items: [
       { href: "/my/sales", label: "Sales Dashboard", icon: DollarSign },
-      { href: "/my/admin/reports", label: "Reports", icon: BarChart3 },
-      { href: "/my/sales/invoices", label: "Invoices", icon: Receipt },
+      { href: "/my/sales/pipeline", label: "Pipeline", icon: BarChart3 },
       { href: "/my/sales/clients", label: "Client Manager", icon: Briefcase },
+      { href: "/my/sales/invoices", label: "Invoices", icon: Receipt },
+      { href: "/my/sales/rate-cards", label: "Rate Cards", icon: FileText },
+      { href: "/my/sales/commissions", label: "Commissions", icon: DollarSign },
     ],
   },
   {
@@ -135,6 +141,9 @@ function getRoleItems(flags: {
         { href: "/my/events", label: "Events Manager", icon: CalendarDays },
         { href: "/my/studio", label: "Broadcast Studio", icon: Clapperboard },
         { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
+        { href: "/my/admin/operations", label: "Operations", icon: Wrench },
+        { href: "/my/admin/gm", label: "GM Dashboard", icon: Building2 },
+        { href: "/my/admin/traffic", label: "Traffic & Office", icon: Truck },
       ],
     };
   }

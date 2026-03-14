@@ -97,11 +97,19 @@ const promotionsModules: AdminModule[] = [
   { icon: Palette, title: "Social Content", description: "Create and schedule social media content.", href: "/studio/social-content", color: "from-[#7401df] to-[#4c1d95]" },
 ];
 
+const departmentModules: AdminModule[] = [
+  { icon: Settings, title: "Operations", description: "Master control, equipment, FCC compliance, engineering, and backups.", href: "/my/admin/operations", color: "from-[#f59e0b] to-[#d97706]" },
+  { icon: Crown, title: "GM Dashboard", description: "Executive overview, revenue, ratings, staff, goals, and board reports.", href: "/my/admin/gm", color: "from-[#7401df] to-[#4c1d95]" },
+  { icon: Briefcase, title: "Sales Center", description: "Pipeline, rate cards, commissions, proposals, and accounts receivable.", href: "/my/sales", color: "from-[#3b82f6] to-[#1d4ed8]" },
+  { icon: ScrollText, title: "Traffic & Office", description: "Traffic logs, copy management, billing, contracts, and deadlines.", href: "/my/admin/traffic", color: "from-[#ec4899] to-[#be185d]" },
+];
+
 const allModules: AdminModule[] = [
   ...defaultModules,
   { icon: Megaphone, title: "Campaign Builder", description: "Create and manage advertising campaigns.", href: "/my/admin/campaigns", color: "from-[#dc2626] to-[#b91c1c]" },
   { icon: BarChart3, title: "Reports", description: "Revenue tracking, pipeline, and sales analytics.", href: "/my/admin/reports", color: "from-[#f59e0b] to-[#d97706]" },
   { icon: Radio, title: "Programming", description: "Programming schedules, show management, and hosts.", href: "/my/admin/programming", color: "from-[#74ddc7] to-[#0d9488]" },
+  ...departmentModules,
 ];
 
 // ---------------------------------------------------------------------------
