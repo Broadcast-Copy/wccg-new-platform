@@ -20,6 +20,7 @@ interface Reward {
   category?: string;
   stockCount?: number;
   isActive: boolean;
+  sponsor?: { name: string; logo?: string };
   createdAt?: string;
   updatedAt?: string;
 }
@@ -144,6 +145,7 @@ export function RewardsContent({ rewards }: RewardsContentProps) {
               pointsCost={reward.pointsCost}
               category={reward.category}
               stockCount={reward.stockCount}
+              sponsor={reward.sponsor}
               available={
                 reward.isActive &&
                 reward.pointsCost > 0 &&

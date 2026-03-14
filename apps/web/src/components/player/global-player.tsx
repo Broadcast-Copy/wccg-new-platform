@@ -27,6 +27,9 @@ import {
   Minimize2,
   Loader2,
 } from "lucide-react";
+import { ListenerCountBadge } from "@/components/player/listener-count-badge";
+import { WeatherStrip } from "@/components/player/weather-strip";
+import { MultiplierBanner } from "@/components/player/multiplier-banner";
 
 /** localStorage key for the continuous play preference. */
 const CONTINUOUS_PLAY_KEY = "wccg_continuous_play";
@@ -317,6 +320,8 @@ export function GlobalPlayer() {
   if (playerMode === "maximized") {
     return (
       <div className="fixed inset-0 z-[100] flex flex-col bg-[#0a0a0f]">
+        {/* Multiplier banner */}
+        <MultiplierBanner />
         {/* Top bar */}
         <div className="flex h-12 items-center justify-between border-b border-border bg-[#0e0e18] px-4">
           <div className="flex items-center gap-2">
@@ -329,6 +334,7 @@ export function GlobalPlayer() {
             <span className="text-sm font-semibold text-[#74ddc7]">
               WCCG 104.5 FM
             </span>
+            <ListenerCountBadge isPlaying={isPlaying} />
           </div>
           <div className="flex items-center gap-1">
             <Button
@@ -351,6 +357,8 @@ export function GlobalPlayer() {
             </Button>
           </div>
         </div>
+        {/* Weather strip — visible during drive times */}
+        <WeatherStrip />
         {/* SecureNet streaming widget */}
         <iframe
           src="https://streamdb7web.securenetsystems.net/cirruscontent/WCCG&"

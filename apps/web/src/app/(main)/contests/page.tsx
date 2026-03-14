@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { KeywordEntry } from "@/components/contests/keyword-entry";
+import { ActiveKeywordBanner } from "@/components/contests/active-keyword-banner";
 import {
   Trophy,
   Gift,
@@ -464,6 +466,12 @@ export default function ContestsPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Active Keyword Banner ─────────────────────────────────────── */}
+      <ActiveKeywordBanner />
+
+      {/* ── Keyword Entry ──────────────────────────────────────────────── */}
+      <KeywordEntry />
 
       {/* ── How It Works ──────────────────────────────────────────────── */}
       <section className="space-y-4">

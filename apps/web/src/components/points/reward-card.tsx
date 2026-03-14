@@ -5,6 +5,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star } from "lucide-react";
+import { SponsorBadge } from "./sponsor-badge";
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   "Food & Drinks": { bg: "bg-orange-500/10", text: "text-orange-600 dark:text-orange-400", border: "border-orange-500/20" },
@@ -26,6 +27,7 @@ interface RewardCardProps {
   stockCount?: number;
   imageUrl?: string;
   available?: boolean;
+  sponsor?: { name: string; logo?: string };
   onRedeem?: (rewardId: string) => void;
 }
 
@@ -38,6 +40,7 @@ export function RewardCard({
   category,
   stockCount,
   available = true,
+  sponsor,
   onRedeem,
 }: RewardCardProps) {
   const colors = category ? CATEGORY_COLORS[category] : undefined;
@@ -67,6 +70,11 @@ export function RewardCard({
             )}
           </div>
         </div>
+
+        {/* Sponsor badge */}
+        {sponsor && (
+          <SponsorBadge sponsorName={sponsor.name} sponsorLogo={sponsor.logo} />
+        )}
 
         {/* Title & description */}
         <div className="flex-1">

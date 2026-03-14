@@ -29,6 +29,8 @@ import {
   ChevronDown,
   ArrowDownRight,
   ShoppingCart,
+  Music,
+  MessageSquare,
 } from "lucide-react";
 
 // Desktop nav: Home, Discover, [Streaming mega], Support
@@ -54,6 +56,8 @@ const mobileNavLinks = [
   { href: "/schedule", label: "Schedule", icon: CalendarDays },
   { href: "/events", label: "Events", icon: CalendarDays },
   { href: "/contests", label: "Contests", icon: Trophy },
+  { href: "/requests", label: "Requests", icon: Music },
+  { href: "/chat", label: "Live Chat", icon: MessageSquare },
   { href: "/mixes", label: "Mixes", icon: Headphones },
   { href: "/community", label: "Community", icon: Users2 },
   { href: "/contact", label: "Connect", icon: Mail },

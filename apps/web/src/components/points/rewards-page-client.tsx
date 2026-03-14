@@ -16,6 +16,7 @@ interface Reward {
   category?: string;
   stockCount?: number;
   isActive: boolean;
+  sponsor?: { name: string; logo?: string };
 }
 
 type Tab = "rewards" | "points" | "history";

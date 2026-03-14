@@ -1,4 +1,6 @@
 import { RewardsPageClient } from "@/components/points/rewards-page-client";
+import { MultiplierSchedule } from "@/components/points/multiplier-schedule";
+import { MultiplierBanner } from "@/components/player/multiplier-banner";
 import { Gift, Star, Trophy, Headphones, Zap, ShoppingBag, Sparkles } from "lucide-react";
 
 export const metadata = {
@@ -16,25 +18,26 @@ interface Reward {
   category?: string;
   stockCount?: number;
   isActive: boolean;
+  sponsor?: { name: string; logo?: string };
 }
 
 const LOCAL_REWARDS: Reward[] = [
   // ── Food & Drinks ──
-  { id: "reward_coffee", name: "Free Coffee", description: "Complimentary coffee at a WCCG partner cafe. Show your redemption code at pickup.", icon: "\u2615", pointsCost: 150, category: "Food & Drinks", isActive: true },
-  { id: "reward_lunch", name: "Lunch Voucher", description: "$10 lunch credit at participating Charlotte restaurants.", icon: "\uD83C\uDF54", pointsCost: 500, category: "Food & Drinks", isActive: true },
+  { id: "reward_coffee", name: "Free Coffee", description: "Complimentary coffee at a WCCG partner cafe. Show your redemption code at pickup.", icon: "\u2615", pointsCost: 150, category: "Food & Drinks", isActive: true, sponsor: { name: "Biscuitville" } },
+  { id: "reward_lunch", name: "Lunch Voucher", description: "$10 lunch credit at participating Charlotte restaurants.", icon: "\uD83C\uDF54", pointsCost: 500, category: "Food & Drinks", isActive: true, sponsor: { name: "Golden Corral" } },
   { id: "reward_pizza", name: "Pizza Night", description: "Large pizza from a local partner pizzeria. Perfect for game night.", icon: "\uD83C\uDF55", pointsCost: 600, category: "Food & Drinks", isActive: true },
   { id: "reward_soulfood", name: "Soul Food Plate", description: "Full soul food plate at a WCCG partner restaurant in Charlotte.", icon: "\uD83C\uDF57", pointsCost: 800, category: "Food & Drinks", isActive: true },
   { id: "reward_smoothie", name: "Smoothie Bowl", description: "Fresh smoothie bowl from a local health bar. Fuel your day.", icon: "\uD83E\uDD64", pointsCost: 200, category: "Food & Drinks", isActive: true },
 
   // ── Event Tickets ──
-  { id: "reward_friday_concert", name: "Friday Night Concert", description: "GA ticket to a WCCG Friday Night Live event. Music, vibes, community.", icon: "\uD83C\uDFB6", pointsCost: 1000, category: "Event Tickets", isActive: true },
+  { id: "reward_friday_concert", name: "Friday Night Concert", description: "GA ticket to a WCCG Friday Night Live event. Music, vibes, community.", icon: "\uD83C\uDFB6", pointsCost: 1000, category: "Event Tickets", isActive: true, sponsor: { name: "Crown Complex" } },
   { id: "reward_gospel_brunch", name: "Gospel Brunch", description: "Ticket to WCCG's monthly Gospel Brunch — food, fellowship, and live worship.", icon: "\uD83C\uDF1E", pointsCost: 800, category: "Event Tickets", isActive: true },
   { id: "reward_comedy", name: "Comedy Night", description: "Admission to a WCCG-sponsored comedy show. Laughs on us.", icon: "\uD83C\uDFAD", pointsCost: 750, category: "Event Tickets", isActive: true },
   { id: "reward_watch_party", name: "Sports Watch Party", description: "VIP section at a WCCG sports watch party with food and drinks.", icon: "\uD83C\uDFC8", pointsCost: 500, category: "Event Tickets", isActive: true },
   { id: "reward_meet_greet", name: "VIP Meet & Greet", description: "Exclusive meet & greet with a WCCG host or visiting artist.", icon: "\uD83C\uDF1F", pointsCost: 5000, category: "Event Tickets", isActive: true, stockCount: 5 },
 
   // ── Merch & Gear ──
-  { id: "reward_tshirt", name: "WCCG Classic Tee", description: "Official WCCG 104.5 FM branded t-shirt. Available in S-XXL.", icon: "\uD83D\uDC55", pointsCost: 500, category: "Merch & Gear", isActive: true },
+  { id: "reward_tshirt", name: "WCCG Classic Tee", description: "Official WCCG 104.5 FM branded t-shirt. Available in S-XXL.", icon: "\uD83D\uDC55", pointsCost: 500, category: "Merch & Gear", isActive: true, sponsor: { name: "Street Wear NC" } },
   { id: "reward_hoodie", name: "WCCG Hoodie", description: "Premium pullover hoodie with embroidered WCCG logo.", icon: "\uD83E\uDDE5", pointsCost: 1500, category: "Merch & Gear", isActive: true },
   { id: "reward_hat", name: "Snapback Hat", description: "Premium snapback cap with embroidered WCCG logo.", icon: "\uD83E\uDDE2", pointsCost: 350, category: "Merch & Gear", isActive: true },
   { id: "reward_stickers", name: "Sticker Pack", description: "Set of 5 WCCG vinyl stickers for your laptop, car, or water bottle.", icon: "\uD83C\uDFF7\uFE0F", pointsCost: 100, category: "Merch & Gear", isActive: true },
@@ -42,7 +45,7 @@ const LOCAL_REWARDS: Reward[] = [
   { id: "reward_tote", name: "Tote Bag", description: "Canvas WCCG tote bag. Carry your essentials in style.", icon: "\uD83D\uDC5C", pointsCost: 300, category: "Merch & Gear", isActive: true },
 
   // ── Digital Perks ──
-  { id: "reward_adfree", name: "Ad-Free Hour", description: "One hour of uninterrupted listening — no ads, just music.", icon: "\uD83D\uDD07", pointsCost: 50, category: "Digital Perks", isActive: true },
+  { id: "reward_adfree", name: "Ad-Free Hour", description: "One hour of uninterrupted listening — no ads, just music.", icon: "\uD83D\uDD07", pointsCost: 50, category: "Digital Perks", isActive: true, sponsor: { name: "WCCG Digital" } },
   { id: "reward_shoutout", name: "Custom Shoutout", description: "Get a personalized on-air shoutout during your favorite show.", icon: "\uD83D\uDCE2", pointsCost: 250, category: "Digital Perks", isActive: true },
   { id: "reward_song_request", name: "Song Request Priority", description: "Jump the queue — your song request gets played next.", icon: "\u23ED\uFE0F", pointsCost: 150, category: "Digital Perks", isActive: true },
   { id: "reward_dj_mix", name: "DJ Mix Download", description: "Download an exclusive DJ mix curated by WCCG's resident DJs.", icon: "\uD83C\uDFA7", pointsCost: 200, category: "Digital Perks", isActive: true },
@@ -54,7 +57,7 @@ const LOCAL_REWARDS: Reward[] = [
   { id: "reward_gc_50", name: "$50 Gift Card", description: "Digital gift card redeemable at select local Charlotte businesses.", icon: "\uD83D\uDCB3", pointsCost: 3000, category: "Gift Cards", isActive: true },
 
   // ── Experiences ──
-  { id: "reward_studio_tour", name: "Studio Tour", description: "Behind-the-scenes tour of the WCCG studio with a host.", icon: "\uD83C\uDFD9\uFE0F", pointsCost: 1500, category: "Experiences", isActive: true },
+  { id: "reward_studio_tour", name: "Studio Tour", description: "Behind-the-scenes tour of the WCCG studio with a host.", icon: "\uD83C\uDFD9\uFE0F", pointsCost: 1500, category: "Experiences", isActive: true, sponsor: { name: "iHeartMedia" } },
   { id: "reward_cohost", name: "On-Air Co-Host Slot", description: "Co-host a 15-minute segment on your favorite WCCG show.", icon: "\uD83C\uDF99\uFE0F", pointsCost: 8000, category: "Experiences", isActive: true, stockCount: 2 },
   { id: "reward_private_dj", name: "Private DJ Set", description: "A WCCG DJ spins a 1-hour private set for your event.", icon: "\uD83C\uDFB5", pointsCost: 10000, category: "Experiences", isActive: true, stockCount: 3 },
   { id: "reward_backstage", name: "Backstage Pass", description: "Backstage access at a WCCG-sponsored concert.", icon: "\uD83C\uDF9F\uFE0F", pointsCost: 4000, category: "Experiences", isActive: true, stockCount: 10 },
@@ -155,6 +158,18 @@ export default async function RewardsPage() {
             <p className="text-[11px] text-muted-foreground">Pick up at station or digitally</p>
           </div>
         </div>
+      </div>
+
+      {/* Multiplier Banner — shows when active */}
+      <MultiplierBanner />
+
+      {/* Point Multiplier Schedule */}
+      <div className="space-y-4">
+        <h2 className="flex items-center gap-2 text-xl font-bold">
+          <Zap className="h-5 w-5 text-amber-400" />
+          Point Multiplier Schedule
+        </h2>
+        <MultiplierSchedule />
       </div>
 
       <RewardsPageClient rewards={rewards} />

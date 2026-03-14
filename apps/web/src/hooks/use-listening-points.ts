@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { getSessions } from "@/lib/listening-history";
+import { getCurrentMultiplier } from "@/lib/multipliers";
 import { markDirty } from "@/lib/user-sync";
 
 /**
@@ -244,19 +245,27 @@ function saveAccumulated(ms: number) {
 /**
  * Award a batch of listening points and save to storage.
  * Consolidates multiple points into a single history entry to keep history lean.
+ * Applies any active multiplier from the multiplier schedule.
  */
 function awardListeningBatch(pointsToAward: number, listeningMs: number) {
   if (pointsToAward <= 0) return;
+
+  const activeMultiplier = getCurrentMultiplier();
+  const multiplier = activeMultiplier?.multiplier ?? 1;
+  const effectivePoints = pointsToAward * multiplier;
+
   const data = loadPointsData();
-  data.totalPoints += pointsToAward;
+  data.totalPoints += effectivePoints;
   data.totalListeningMs += listeningMs;
   data.sessionPointsAwarded = (data.sessionPointsAwarded ?? 0) + pointsToAward;
   data.lastAwardedAt = new Date().toISOString();
   data.history.unshift({
-    points: pointsToAward,
+    points: effectivePoints,
     reason: "LISTENING",
     timestamp: new Date().toISOString(),
-    program: "WCCG 104.5 FM",
+    program: multiplier > 1
+      ? `WCCG 104.5 FM (${multiplier}x ${activeMultiplier!.label})`
+      : "WCCG 104.5 FM",
   });
   if (data.history.length > 100) {
     data.history = data.history.slice(0, 100);
@@ -755,5 +764,93 @@ export function awardReferralBonus(referralCode: string): boolean {
   }
   savePointsData(data);
   claimBounty(id);
+  return true;
+}
+
+/**
+ * Award 5 points for entering a keyword contest.
+ * Each keywordId can only be claimed once.
+ * Returns true if points were awarded, false if already claimed.
+ */
+export function awardKeywordPoints(keywordId: string): boolean {
+  const id = `keyword_${keywordId}`;
+  if (isBountyClaimed(id)) {
+    return false;
+  }
+
+  const data = loadPointsData();
+  data.totalPoints += 5;
+  data.lastAwardedAt = new Date().toISOString();
+  data.history.unshift({
+    points: 5,
+    reason: "KEYWORD_ENTRY",
+    timestamp: new Date().toISOString(),
+    program: "Keyword Contest",
+  });
+  if (data.history.length > 100) {
+    data.history = data.history.slice(0, 100);
+  }
+  savePointsData(data);
+  claimBounty(id);
+  return true;
+}
+
+/**
+ * Award 10 points for checking in at a street team event.
+ * Each eventId can only be claimed once.
+ * Returns true if points were awarded, false if already claimed.
+ */
+export function awardCheckInPoints(eventId: string): boolean {
+  const id = `checkin_${eventId}`;
+  if (isBountyClaimed(id)) {
+    return false;
+  }
+
+  const data = loadPointsData();
+  data.totalPoints += 10;
+  data.lastAwardedAt = new Date().toISOString();
+  data.history.unshift({
+    points: 10,
+    reason: "EVENT_CHECKIN",
+    timestamp: new Date().toISOString(),
+    program: "Street Team",
+  });
+  if (data.history.length > 100) {
+    data.history = data.history.slice(0, 100);
+  }
+  savePointsData(data);
+  claimBounty(id);
+  return true;
+}
+
+/**
+ * Award a custom bounty with arbitrary points, reason, and program label.
+ * Uses the bounty tracker to prevent double-claiming.
+ * Returns true if points were awarded, false if already claimed.
+ */
+export function awardCustomBounty(
+  bountyId: string,
+  points: number,
+  reason: string,
+  program?: string,
+): boolean {
+  if (isBountyClaimed(bountyId)) {
+    return false;
+  }
+
+  const data = loadPointsData();
+  data.totalPoints += points;
+  data.lastAwardedAt = new Date().toISOString();
+  data.history.unshift({
+    points,
+    reason,
+    timestamp: new Date().toISOString(),
+    program,
+  });
+  if (data.history.length > 100) {
+    data.history = data.history.slice(0, 100);
+  }
+  savePointsData(data);
+  claimBounty(bountyId);
   return true;
 }

@@ -16,6 +16,7 @@ import {
   Plus,
   Upload,
   PieChart,
+  BarChart2,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { apiClient } from "@/lib/api-client";
+import { summaryStats } from "@/data/advertiser-performance";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
@@ -311,7 +313,7 @@ function DashboardView({ account }: { account: AdvertiserAccount }) {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
             href: "/advertise/portal/campaigns",
@@ -337,6 +339,14 @@ function DashboardView({ account }: { account: AdvertiserAccount }) {
             color: "text-amber-400",
             bg: "bg-amber-500/10",
           },
+          {
+            href: "/advertise/portal/performance",
+            label: "Performance",
+            desc: "Campaign analytics & ROI",
+            icon: BarChart2,
+            color: "text-purple-400",
+            bg: "bg-purple-500/10",
+          },
         ].map((action) => (
           <Link
             key={action.href}
@@ -358,6 +368,49 @@ function DashboardView({ account }: { account: AdvertiserAccount }) {
           </Link>
         ))}
       </div>
+
+      {/* Performance Summary Widget */}
+      <Link
+        href="/advertise/portal/performance"
+        className="group block rounded-xl border border-border bg-card p-5 transition-all hover:border-input"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10 shrink-0">
+              <BarChart2 className="h-5 w-5 text-purple-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors">
+                Performance Overview
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                View full analytics dashboard
+              </p>
+            </div>
+          </div>
+          <ArrowRight className="h-4 w-4 text-foreground/20 group-hover:text-[#74ddc7] transition-colors shrink-0" />
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <p className="text-xs text-muted-foreground">Impressions</p>
+            <p className="text-lg font-bold text-foreground">
+              {formatNumber(summaryStats.totalImpressions)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Redemptions</p>
+            <p className="text-lg font-bold text-foreground">
+              {summaryStats.totalRedemptions}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Listen-Through</p>
+            <p className="text-lg font-bold text-foreground">
+              {summaryStats.listenThroughRate}%
+            </p>
+          </div>
+        </div>
+      </Link>
 
       {/* Recent Campaigns Table */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -538,6 +591,12 @@ export default function AdvertiserPortalPage() {
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-full border border-border hover:border-input"
                 >
                   Billing
+                </Link>
+                <Link
+                  href="/advertise/portal/performance"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-full border border-border hover:border-input"
+                >
+                  Performance
                 </Link>
               </div>
             )}

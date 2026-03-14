@@ -1,0 +1,148 @@
+export type RequestStatus = "pending" | "approved" | "playing" | "played";
+
+export interface SongRequest {
+  id: string;
+  title: string;
+  artist: string;
+  albumArt: string;
+  requesterName: string;
+  status: RequestStatus;
+  isPriority: boolean;
+  position: number;
+  timestamp: string;
+}
+
+export const REQUEST_QUEUE: SongRequest[] = [
+  {
+    id: "r01",
+    title: "On The Floor",
+    artist: "IceJJFish",
+    albumArt: "/placeholder-album.png",
+    requesterName: "Marcus J.",
+    status: "playing",
+    isPriority: false,
+    position: 1,
+    timestamp: "2026-03-14T14:30:00Z",
+  },
+  {
+    id: "r02",
+    title: "Pick Up Your Feelings",
+    artist: "Jazmine Sullivan",
+    albumArt: "/placeholder-album.png",
+    requesterName: "Tasha M.",
+    status: "approved",
+    isPriority: true,
+    position: 2,
+    timestamp: "2026-03-14T14:25:00Z",
+  },
+  {
+    id: "r03",
+    title: "Best Part",
+    artist: "Daniel Caesar ft. H.E.R.",
+    albumArt: "/placeholder-album.png",
+    requesterName: "Aaliyah W.",
+    status: "approved",
+    isPriority: false,
+    position: 3,
+    timestamp: "2026-03-14T14:20:00Z",
+  },
+  {
+    id: "r04",
+    title: "Snooze",
+    artist: "SZA",
+    albumArt: "/placeholder-album.png",
+    requesterName: "Keisha B.",
+    status: "approved",
+    isPriority: true,
+    position: 4,
+    timestamp: "2026-03-14T14:15:00Z",
+  },
+  {
+    id: "r05",
+    title: "Come and See Me",
+    artist: "PartyNextDoor ft. Drake",
+    albumArt: "/placeholder-album.png",
+    requesterName: "Demetrius L.",
+    status: "pending",
+    isPriority: false,
+    position: 5,
+    timestamp: "2026-03-14T14:10:00Z",
+  },
+  {
+    id: "r06",
+    title: "Boo'd Up",
+    artist: "Ella Mai",
+    albumArt: "/placeholder-album.png",
+    requesterName: "Crystal D.",
+    status: "pending",
+    isPriority: false,
+    position: 6,
+    timestamp: "2026-03-14T14:05:00Z",
+  },
+  {
+    id: "r07",
+    title: "Here",
+    artist: "Alessia Cara",
+    albumArt: "/placeholder-album.png",
+    requesterName: "Andre T.",
+    status: "pending",
+    isPriority: false,
+    position: 7,
+    timestamp: "2026-03-14T14:00:00Z",
+  },
+  {
+    id: "r08",
+    title: "Angel",
+    artist: "Anita Baker",
+    albumArt: "/placeholder-album.png",
+    requesterName: "LaShonda P.",
+    status: "pending",
+    isPriority: true,
+    position: 8,
+    timestamp: "2026-03-14T13:55:00Z",
+  },
+  {
+    id: "r09",
+    title: "Love Galore",
+    artist: "SZA ft. Travis Scott",
+    albumArt: "/placeholder-album.png",
+    requesterName: "Jerome C.",
+    status: "pending",
+    isPriority: false,
+    position: 9,
+    timestamp: "2026-03-14T13:50:00Z",
+  },
+  {
+    id: "r10",
+    title: "Trip",
+    artist: "Ella Mai",
+    albumArt: "/placeholder-album.png",
+    requesterName: "Tyrone H.",
+    status: "played",
+    isPriority: false,
+    position: 10,
+    timestamp: "2026-03-14T13:30:00Z",
+  },
+  {
+    id: "r11",
+    title: "Earned It",
+    artist: "The Weeknd",
+    albumArt: "/placeholder-album.png",
+    requesterName: "Guest Listener",
+    status: "played",
+    isPriority: false,
+    position: 11,
+    timestamp: "2026-03-14T13:15:00Z",
+  },
+  {
+    id: "r12",
+    title: "Focus",
+    artist: "H.E.R.",
+    albumArt: "/placeholder-album.png",
+    requesterName: "Guest Listener",
+    status: "played",
+    isPriority: true,
+    position: 12,
+    timestamp: "2026-03-14T13:00:00Z",
+  },
+];

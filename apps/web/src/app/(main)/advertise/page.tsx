@@ -1,9 +1,11 @@
 "use client";
 
-import { Megaphone, BarChart3, Users, Radio, Target, TrendingUp, ArrowRight } from "lucide-react";
+import { Megaphone, BarChart3, Users, Radio, Target, TrendingUp, ArrowRight, Package } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { AD_BUNDLES } from "@/data/bundles";
+import { BundleUpsellCard } from "@/components/sales/bundle-upsell-card";
 
 const benefits = [
   {
@@ -115,6 +117,24 @@ export default function AdvertisePage() {
             <ArrowRight className="h-4 w-4 text-foreground/20 group-hover:text-[#74ddc7] transition-colors" />
           </Link>
         ))}
+      </div>
+
+      {/* Advertising Bundles */}
+      <div className="space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#7401df]/10">
+            <Package className="h-5 w-5 text-[#7401df]" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-foreground">Advertising Bundles</h2>
+            <p className="text-sm text-muted-foreground">Save more with bundled spot packages</p>
+          </div>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {AD_BUNDLES.map((bundle) => (
+            <BundleUpsellCard key={bundle.id} bundle={bundle} />
+          ))}
+        </div>
       </div>
 
       {/* Contact Form */}
