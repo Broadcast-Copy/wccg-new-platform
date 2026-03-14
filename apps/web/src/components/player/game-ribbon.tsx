@@ -96,24 +96,22 @@ export function GameRibbon() {
           );
         }
 
-        const progress = Math.min(1, elapsedMinutes / totalGameMinutes);
-        setLiveScore({
-          duke: Math.max(
-            0,
-            Math.floor(82 * progress + Math.sin(progress * 5) * 2)
-          ),
-          opponent: Math.max(
-            0,
-            Math.floor(68 * progress + Math.cos(progress * 4) * 2)
-          ),
-        });
-
-        // Show latest play-by-play entry
-        const playIndex = Math.min(
-          DUKE_PLAY_BY_PLAY.length - 1,
+        // Score and plays come from play-by-play entries — starts at 0-0
+        const playsToShow = Math.min(
+          DUKE_PLAY_BY_PLAY.length,
           Math.floor(elapsedMinutes / 4)
         );
-        setLatestPlay(DUKE_PLAY_BY_PLAY[playIndex]?.text || "");
+        if (playsToShow > 0) {
+          const latest = DUKE_PLAY_BY_PLAY[playsToShow - 1];
+          setLiveScore({
+            duke: latest.score.duke,
+            opponent: latest.score.opponent,
+          });
+          setLatestPlay(latest.text);
+        } else {
+          setLiveScore({ duke: 0, opponent: 0 });
+          setLatestPlay("Game underway — tipoff!");
+        }
       } else {
         setMode("post");
         setLiveScore({ duke: 82, opponent: 68 });

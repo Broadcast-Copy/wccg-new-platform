@@ -144,7 +144,7 @@ export const DUKE_BASKETBALL: SportsTeam = {
   nextGame: {
     opponent: "North Carolina Tar Heels",
     opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/153.png",
-    date: "2026-03-14T19:30:00",
+    date: "2026-03-14T19:30:00-04:00",
     time: "7:30 PM ET",
     venue: "Cameron Indoor Stadium",
     isHome: true,
@@ -154,8 +154,8 @@ export const DUKE_BASKETBALL: SportsTeam = {
     {
       opponent: "North Carolina Tar Heels",
       opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/153.png",
-      date: "2026-03-14T19:00:00",
-      time: "7:00 PM ET",
+      date: "2026-03-14T19:30:00-04:00",
+      time: "7:30 PM ET",
       venue: "Cameron Indoor Stadium",
       isHome: true,
       broadcast: "ESPN / WCCG 104.5 FM",
@@ -163,7 +163,7 @@ export const DUKE_BASKETBALL: SportsTeam = {
     {
       opponent: "Wake Forest Demon Deacons",
       opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/154.png",
-      date: "2026-03-18T20:00:00",
+      date: "2026-03-18T20:00:00-04:00",
       time: "8:00 PM ET",
       venue: "Lawrence Joel Veterans Memorial Coliseum",
       isHome: false,
@@ -172,7 +172,7 @@ export const DUKE_BASKETBALL: SportsTeam = {
     {
       opponent: "Virginia Cavaliers",
       opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/258.png",
-      date: "2026-03-22T14:00:00",
+      date: "2026-03-22T14:00:00-04:00",
       time: "2:00 PM ET",
       venue: "Cameron Indoor Stadium",
       isHome: true,
@@ -182,7 +182,7 @@ export const DUKE_BASKETBALL: SportsTeam = {
   lastGame: {
     opponent: "Syracuse Orange",
     opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/183.png",
-    date: "2026-03-11T19:00:00",
+    date: "2026-03-11T19:00:00-04:00",
     result: "W",
     score: { duke: 82, opponent: 68 },
     venue: "JMA Wireless Dome",
@@ -252,7 +252,7 @@ export const DUKE_FOOTBALL: SportsTeam = {
   nextGame: {
     opponent: "NC State Wolfpack",
     opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/152.png",
-    date: "2026-09-05T15:30:00",
+    date: "2026-09-05T15:30:00-04:00",
     time: "3:30 PM ET",
     venue: "Wallace Wade Stadium",
     isHome: true,
@@ -262,7 +262,7 @@ export const DUKE_FOOTBALL: SportsTeam = {
     {
       opponent: "NC State Wolfpack",
       opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/152.png",
-      date: "2026-09-05T15:30:00",
+      date: "2026-09-05T15:30:00-04:00",
       time: "3:30 PM ET",
       venue: "Wallace Wade Stadium",
       isHome: true,
@@ -271,7 +271,7 @@ export const DUKE_FOOTBALL: SportsTeam = {
     {
       opponent: "Clemson Tigers",
       opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/228.png",
-      date: "2026-09-12T19:00:00",
+      date: "2026-09-12T19:00:00-04:00",
       time: "7:00 PM ET",
       venue: "Memorial Stadium",
       isHome: false,
@@ -280,7 +280,7 @@ export const DUKE_FOOTBALL: SportsTeam = {
     {
       opponent: "Virginia Tech Hokies",
       opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/259.png",
-      date: "2026-09-19T12:00:00",
+      date: "2026-09-19T12:00:00-04:00",
       time: "12:00 PM ET",
       venue: "Wallace Wade Stadium",
       isHome: true,
@@ -289,7 +289,7 @@ export const DUKE_FOOTBALL: SportsTeam = {
     {
       opponent: "North Carolina Tar Heels",
       opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/153.png",
-      date: "2026-10-03T15:30:00",
+      date: "2026-10-03T15:30:00-04:00",
       time: "3:30 PM ET",
       venue: "Kenan Memorial Stadium",
       isHome: false,

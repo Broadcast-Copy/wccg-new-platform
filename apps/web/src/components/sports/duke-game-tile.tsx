@@ -204,26 +204,24 @@ export function DukeGameTile() {
           );
         }
 
-        const progress = Math.min(1, elapsedMinutes / totalGameMinutes);
-        const dukeTarget = 82;
-        const oppTarget = 68;
-        const dukeScore = Math.floor(
-          dukeTarget * progress + Math.sin(progress * 5) * 2
-        );
-        const oppScore = Math.floor(
-          oppTarget * progress + Math.cos(progress * 4) * 2
-        );
-        setLiveScore({
-          duke: Math.max(0, dukeScore),
-          opponent: Math.max(0, oppScore),
-        });
-
-        // Reveal play-by-play entries based on elapsed time
+        // Reveal play-by-play entries based on elapsed time (1 play every ~4 min)
         const playsToShow = Math.min(
           DUKE_PLAY_BY_PLAY.length,
-          Math.floor(elapsedMinutes / 4) + 1
+          Math.floor(elapsedMinutes / 4)
         );
-        setVisiblePlays(DUKE_PLAY_BY_PLAY.slice(0, playsToShow));
+        const currentPlays = DUKE_PLAY_BY_PLAY.slice(0, playsToShow);
+        setVisiblePlays(currentPlays);
+
+        // Score comes from the latest play-by-play entry — starts at 0-0
+        if (currentPlays.length > 0) {
+          const latest = currentPlays[currentPlays.length - 1];
+          setLiveScore({
+            duke: latest.score.duke,
+            opponent: latest.score.opponent,
+          });
+        } else {
+          setLiveScore({ duke: 0, opponent: 0 });
+        }
       } else {
         setLiveScore({ duke: 82, opponent: 68 });
         setVisiblePlays(DUKE_PLAY_BY_PLAY);
@@ -339,15 +337,15 @@ export function DukeGameTile() {
           </div>
         </div>
 
-        {/* 1/3 YouTube + 2/3 Play-by-Play */}
-        <div className="grid grid-cols-1 md:grid-cols-3 rounded-b-2xl overflow-hidden border border-t-0 border-red-500/40 bg-[#0a0e1a]">
-          {/* YouTube Highlights — 1/3 */}
-          <div className="md:col-span-1 border-b md:border-b-0 md:border-r border-white/10 min-h-[280px]">
+        {/* 2/3 YouTube + 1/3 Play-by-Play — always side by side */}
+        <div className="grid grid-cols-3 rounded-b-2xl overflow-hidden border border-t-0 border-red-500/40 bg-[#0a0e1a]">
+          {/* YouTube Highlights — 2/3 left */}
+          <div className="col-span-2 border-r border-white/10 min-h-[320px]">
             <YouTubeHighlights />
           </div>
 
-          {/* Play-by-Play Ticker — 2/3 */}
-          <div className="md:col-span-2 min-h-[280px]">
+          {/* Play-by-Play Ticker — 1/3 right */}
+          <div className="col-span-1 min-h-[320px]">
             <PlayByPlayTicker entries={visiblePlays} />
           </div>
         </div>
