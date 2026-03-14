@@ -17,6 +17,10 @@ import { createClient } from "@/lib/supabase/client";
 const SONGIQ_URL =
   "https://streamdb7web.securenetsystems.net/player_status_update/WCCG_history.txt";
 
+// Module-level cache to avoid redundant network calls
+let _songIQCache: { data: SongHistoryEntry[]; timestamp: number } | null = null;
+const CACHE_TTL_MS = 60_000; // 60 seconds
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -147,19 +151,27 @@ function songIQToEntry(song: SongIQSong, index: number): SongHistoryEntry {
 // ---------------------------------------------------------------------------
 
 async function fetchFromSongIQ(): Promise<SongHistoryEntry[] | null> {
+  // Return cached data if fresh enough
+  if (_songIQCache && Date.now() - _songIQCache.timestamp < CACHE_TTL_MS) {
+    return _songIQCache.data;
+  }
+
   try {
     const resp = await fetch(SONGIQ_URL, {
       signal: AbortSignal.timeout(8000),
     });
-    if (!resp.ok) return null;
+    if (!resp.ok) return _songIQCache?.data ?? null;
 
     const json: SongIQResponse = await resp.json();
     const songs = json?.playHistory?.song;
-    if (!Array.isArray(songs) || songs.length === 0) return null;
+    if (!Array.isArray(songs) || songs.length === 0) return _songIQCache?.data ?? null;
 
-    return songs.map((s, i) => songIQToEntry(s, i));
+    const entries = songs.map((s, i) => songIQToEntry(s, i));
+    _songIQCache = { data: entries, timestamp: Date.now() };
+    return entries;
   } catch {
-    return null;
+    // Return stale cache rather than nothing
+    return _songIQCache?.data ?? null;
   }
 }
 

@@ -7,11 +7,15 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { apiClient } from "@/lib/api-client";
 import { readPointsBalance } from "@/lib/points-storage";
-import { reconcileSessionPoints } from "@/hooks/use-listening-points";
+import { reconcileSessionPoints, usePointsSync } from "@/hooks/use-listening-points";
 
 export function PointsBadge() {
   const { user } = useAuth();
   const [balance, setBalance] = useState<number | null>(null);
+  const [syncTick, setSyncTick] = useState(0);
+
+  // Refresh when another tab updates points
+  usePointsSync(() => setSyncTick((t) => t + 1));
 
   useEffect(() => {
     let cancelled = false;
@@ -39,7 +43,7 @@ export function PointsBadge() {
     fetchBalance();
     const interval = setInterval(fetchBalance, 30_000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [user]);
+  }, [user, syncTick]);
 
   return (
     <Link href="/rewards">

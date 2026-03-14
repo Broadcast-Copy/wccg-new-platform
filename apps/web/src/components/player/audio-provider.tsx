@@ -37,6 +37,10 @@ export interface AudioPlayerContextValue {
   volume: number;
   /** Current stream metadata. */
   metadata: StreamMetadata;
+  /** Whether the audio is currently buffering / waiting for data. */
+  isBuffering: boolean;
+  /** Connection error message, or null if connected fine. */
+  connectionError: string | null;
 }
 
 export const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(
@@ -133,6 +137,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolumeState] = useState(0.8);
   const [metadata, setMetadata] = useState<StreamMetadata>({});
+  const [isBuffering, setIsBuffering] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const restoredRef = useRef(false);
 
   // Initialize the Audio instance once on mount + restore saved stream
@@ -150,12 +156,30 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
     const handleEnded = () => setIsPlaying(false);
-    const handleError = () => setIsPlaying(false);
+    const handleError = () => {
+      setIsPlaying(false);
+      setIsBuffering(false);
+      setConnectionError("Connection lost — retrying...");
+    };
+    const handleWaiting = () => setIsBuffering(true);
+    const handleCanPlay = () => {
+      setIsBuffering(false);
+      setConnectionError(null);
+    };
+    const handlePlaying = () => {
+      setIsBuffering(false);
+      setConnectionError(null);
+    };
+    const handleStalled = () => setIsBuffering(true);
 
     audio.addEventListener("play", handlePlay);
     audio.addEventListener("pause", handlePause);
     audio.addEventListener("ended", handleEnded);
     audio.addEventListener("error", handleError);
+    audio.addEventListener("waiting", handleWaiting);
+    audio.addEventListener("canplay", handleCanPlay);
+    audio.addEventListener("playing", handlePlaying);
+    audio.addEventListener("stalled", handleStalled);
 
     // Restore saved stream on mount (only once)
     if (!restoredRef.current) {
@@ -188,6 +212,10 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       audio.removeEventListener("pause", handlePause);
       audio.removeEventListener("ended", handleEnded);
       audio.removeEventListener("error", handleError);
+      audio.removeEventListener("waiting", handleWaiting);
+      audio.removeEventListener("canplay", handleCanPlay);
+      audio.removeEventListener("playing", handlePlaying);
+      audio.removeEventListener("stalled", handleStalled);
     };
   }, []);
 
@@ -280,6 +308,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         updateMetadata,
         currentStream,
         isPlaying,
+        isBuffering,
+        connectionError,
         volume,
         metadata,
       }}

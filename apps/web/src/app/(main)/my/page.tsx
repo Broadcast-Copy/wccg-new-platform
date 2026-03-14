@@ -10,7 +10,6 @@ import {
   TrendingUp,
   ChevronRight,
   CalendarDays,
-  Building2,
   Mic,
   Music,
   Clock,
@@ -28,10 +27,7 @@ import {
   Briefcase,
   Eye,
   Users,
-  FileText,
-  BarChart3,
-  Settings,
-  Shield,
+  Play,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -63,6 +59,8 @@ import {
   useSongDetailModal,
 } from "@/components/song-detail-modal";
 import { fetchMusicMetadata } from "@/lib/music-metadata";
+import { useAudioPlayer } from "@/hooks/use-audio-player";
+import { Button } from "@/components/ui/button";
 
 // --- Types ---
 
@@ -97,33 +95,6 @@ interface QuickAction {
 
 // --- Helpers ---
 
-function formatDate(dateStr: string) {
-  try {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-  } catch {
-    return dateStr;
-  }
-}
-
-function reasonLabel(reason: string) {
-  switch (reason) {
-    case "LISTENING":
-      return "Listening";
-    case "EVENT_CHECKIN":
-      return "Event Check-in";
-    case "PURCHASE":
-      return "Purchase";
-    case "REDEMPTION":
-      return "Redemption";
-    case "ADMIN_GRANT":
-      return "Admin Grant";
-    default:
-      return reason;
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Role-specific dashboard configuration
@@ -285,14 +256,18 @@ function getRoleDashboardConfig(flags: {
     };
   }
 
-  // Default: Listener (base dashboard) — no role-specific tools
+  // Default: Listener (base dashboard)
   return {
     title: "Dashboard",
     subtitle: "Welcome back — your WCCG activity at a glance",
     badge: null,
     isListener: true,
     stats: [],
-    quickActions: [],
+    quickActions: [
+      { href: "/rewards", label: "Rewards Store", desc: "Redeem points for prizes", icon: Gift, color: "#f59e0b" },
+      { href: "/my/history", label: "Listening History", desc: "Your sessions & stats", icon: Clock, color: "#14b8a6" },
+      { href: "/my/points", label: "Points History", desc: "Transactions & balance", icon: Star, color: "#7401df" },
+    ],
   };
 }
 
@@ -328,6 +303,7 @@ export default function UserDashboardPage() {
   const [songGroups, setSongGroups] = useState<SongHistoryGroup[]>([]);
   const [songHistoryLoading, setSongHistoryLoading] = useState(true);
   const [loading, setLoading] = useState(true);
+  const { currentStream, isPlaying, resume, metadata } = useAudioPlayer();
   const songModal = useSongDetailModal();
   // Map of "title|artist" → album art URL from iTunes
   const [enrichedArt, setEnrichedArt] = useState<Record<string, string>>({});
@@ -567,6 +543,33 @@ export default function UserDashboardPage() {
         </section>
       )}
 
+      {/* ═══ Resume Listening CTA ═══ */}
+      {currentStream && !isPlaying && (
+        <Card className="border-[#7401df]/30 bg-gradient-to-r from-[#7401df]/5 to-transparent">
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#7401df]/10">
+              <Headphones className="h-6 w-6 text-[#7401df]" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">Resume Listening</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {metadata.title
+                  ? `${metadata.title}${metadata.artist ? ` — ${metadata.artist}` : ""}`
+                  : metadata.streamName || "WCCG 104.5 FM"}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              className="shrink-0 gap-1.5 bg-[#7401df] hover:bg-[#7401df]/90"
+              onClick={() => resume()}
+            >
+              <Play className="h-4 w-4" />
+              Play
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* ═══ Listener Base: My Activity stat cards ═══ */}
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">My Activity</h2>
@@ -701,73 +704,6 @@ export default function UserDashboardPage() {
         </Card>
       )}
 
-      {/* ═══ Recent Points Activity ═══ */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Recent Points Activity</CardTitle>
-              <CardDescription>Your latest points transactions</CardDescription>
-            </div>
-            <Link
-              href="/my/points"
-              className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-            >
-              View all
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : stats.recentPoints.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-6 text-center">
-              <TrendingUp className="h-8 w-8 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">
-                No points activity yet. Listen to streams and attend events to start earning!
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {stats.recentPoints.map((tx) => (
-                <div
-                  key={tx.id}
-                  className="flex items-center justify-between rounded-lg border p-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                        tx.amount > 0
-                          ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                          : "bg-red-500/10 text-red-600 dark:text-red-400"
-                      }`}
-                    >
-                      <Star className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{reasonLabel(tx.reason)}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(tx.createdAt)}</p>
-                    </div>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className={
-                      tx.amount > 0
-                        ? "border-green-500/30 text-green-600 dark:text-green-400"
-                        : "border-red-500/30 text-red-600 dark:text-red-400"
-                    }
-                  >
-                    {tx.amount > 0 ? "+" : ""}
-                    {tx.amount}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* ═══ Song History — Station Playlist ═══ */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
@@ -867,7 +803,7 @@ export default function UserDashboardPage() {
       </section>
 
       {/* ═══ Listener Quick Links (only for listener role) ═══ */}
-      {config.isListener && (
+      {config.isListener && config.quickActions.length > 0 && (
         <section className="space-y-4">
           <h2 className="text-lg font-semibold">Quick Links</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

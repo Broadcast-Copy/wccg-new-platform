@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { getSessions } from "@/lib/listening-history";
+import { markDirty } from "@/lib/user-sync";
 
 /**
  * Hook that awards points for continuous listening.
@@ -215,6 +216,7 @@ function savePointsData(data: PointsData) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(storageKey(), JSON.stringify(data));
+    markDirty(); // trigger cross-device sync
   } catch {
     // ignore
   }
@@ -359,9 +361,20 @@ export function reconcileSessionPoints() {
   }
 }
 
-export function useListeningPoints(isPlaying: boolean) {
+export interface BonusEvent {
+  type: string;
+  points: number;
+  message: string;
+}
+
+export function useListeningPoints(
+  isPlaying: boolean,
+  onBonusAwarded?: (bonus: BonusEvent) => void,
+) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastTickRef = useRef<number>(0);
+  const onBonusRef = useRef(onBonusAwarded);
+  onBonusRef.current = onBonusAwarded;
 
   useEffect(() => {
     if (isPlaying) {
@@ -387,7 +400,24 @@ export function useListeningPoints(isPlaying: boolean) {
       {
         const data = loadPointsData();
         const today = todayET();
-        if (data.lastBountyDate !== today) {
+        // Also check user-specific key directly to avoid race where
+        // _currentEmail isn't set yet but user key already has today's bounty
+        let alreadyClaimed = data.lastBountyDate === today;
+        if (!alreadyClaimed && !_currentEmail) {
+          try {
+            for (let i = 0; i < localStorage.length; i++) {
+              const k = localStorage.key(i);
+              if (k && k.startsWith("wccg_listening_points_") && k !== STORAGE_KEY_DEFAULT) {
+                const r = localStorage.getItem(k);
+                if (r) {
+                  const p = JSON.parse(r);
+                  if (p.lastBountyDate === today) { alreadyClaimed = true; break; }
+                }
+              }
+            }
+          } catch { /* ignore */ }
+        }
+        if (!alreadyClaimed) {
           data.lastBountyDate = today;
           data.totalPoints += 3;
           data.lastAwardedAt = new Date().toISOString();
@@ -401,6 +431,7 @@ export function useListeningPoints(isPlaying: boolean) {
             data.history = data.history.slice(0, 100);
           }
           savePointsData(data);
+          onBonusRef.current?.({ type: "DAILY_BOUNTY", points: 3, message: "Daily Bounty! +3 pts" });
         }
       }
 
@@ -450,6 +481,7 @@ export function useListeningPoints(isPlaying: boolean) {
               data.history = data.history.slice(0, 100);
             }
             savePointsData(data);
+            onBonusRef.current?.({ type: "STREAK_2H", points: 10, message: "2-Hour Streak! +10 pts" });
           }
           // 1-hour streak: 5 bonus points
           else if (sessionDuration >= ONE_HOUR_MS && !data.streak1hAwarded) {
@@ -466,6 +498,7 @@ export function useListeningPoints(isPlaying: boolean) {
               data.history = data.history.slice(0, 100);
             }
             savePointsData(data);
+            onBonusRef.current?.({ type: "STREAK_1H", points: 5, message: "1-Hour Streak! +5 pts" });
           }
         }
       }, 30_000); // Check every 30 seconds
@@ -598,6 +631,7 @@ function saveBountyTracker(tracker: BountyTracker) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(bountyTrackerKey(), JSON.stringify(tracker));
+    markDirty(); // trigger cross-device sync
   } catch {
     // ignore
   }
@@ -680,6 +714,25 @@ export function awardVideoWatchPoints(videoId: string): boolean {
   savePointsData(data);
   claimBounty(id);
   return true;
+}
+
+/**
+ * Hook that listens for cross-tab localStorage changes to points data.
+ * When another tab awards points, this tab's callback fires so UI can refresh.
+ */
+export function usePointsSync(onUpdate?: () => void) {
+  const cbRef = useRef(onUpdate);
+  cbRef.current = onUpdate;
+
+  useEffect(() => {
+    function handleStorage(e: StorageEvent) {
+      if (e.key && e.key.startsWith("wccg_listening_points")) {
+        cbRef.current?.();
+      }
+    }
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 }
 
 export function awardReferralBonus(referralCode: string): boolean {

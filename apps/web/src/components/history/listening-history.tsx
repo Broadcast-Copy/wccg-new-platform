@@ -790,6 +790,7 @@ function ActiveSessionItem({
   }, [stop, close, onSessionEnded]);
 
   return (
+    <>
     <Card className="border-[#74ddc7]/30 bg-[#74ddc7]/5 transition-colors hover:bg-accent/50">
       <CardContent className="flex flex-col gap-3 py-3">
         {/* Top row: icon + info + end button */}
@@ -868,34 +869,36 @@ function ActiveSessionItem({
           </Link>
         </div>
 
-        {/* Track list — songs heard during this session as individual tiles */}
-        {entry.tracks.length > 0 && (
-          <div className="ml-14 space-y-1.5 border-t border-[#74ddc7]/10 pt-2">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1.5">
-              Songs This Session ({entry.tracks.length})
-            </p>
-            <div className="grid gap-1.5 sm:grid-cols-2">
-              {entry.tracks.map((track, i) => (
-                <button
-                  key={`${track.title}-${i}`}
-                  className="flex items-center gap-2.5 rounded-lg border border-[#74ddc7]/15 bg-[#74ddc7]/[0.03] p-2 text-left transition-colors hover:bg-[#74ddc7]/[0.08] group w-full"
-                  onClick={() => onSongClick(track.title, track.artist)}
-                >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#74ddc7]/10">
-                    <Music className="h-3.5 w-3.5 text-[#74ddc7]" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium truncate">{track.title}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{track.artist}</p>
-                  </div>
-                  <Info className="h-3 w-3 shrink-0 text-muted-foreground/40 group-hover:text-[#74ddc7] transition-colors" />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
+
+    {/* Track list — songs heard during this session, rendered outside the card */}
+    {entry.tracks.length > 0 && (
+      <div className="space-y-2 mt-3">
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Songs This Session ({entry.tracks.length})
+        </h4>
+        <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+          {entry.tracks.map((track, i) => (
+            <button
+              key={`${track.title}-${i}`}
+              className="flex items-center gap-2.5 rounded-lg border border-border bg-card p-2.5 text-left transition-colors hover:bg-muted/50 group w-full"
+              onClick={() => onSongClick(track.title, track.artist)}
+            >
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#74ddc7]/10">
+                <Music className="h-3.5 w-3.5 text-[#74ddc7]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium truncate">{track.title}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{track.artist}</p>
+              </div>
+              <Info className="h-3 w-3 shrink-0 text-muted-foreground/40 group-hover:text-foreground transition-colors" />
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
+  </>
   );
 }
 

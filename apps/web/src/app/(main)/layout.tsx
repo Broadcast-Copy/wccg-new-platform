@@ -11,6 +11,7 @@ import { ThemeLogo } from "@/components/theme-logo";
 import { AppImage as Image } from "@/components/ui/app-image";
 import { SpotCartProvider } from "@/components/providers/spot-cart-provider";
 import { SpotCartDrawer } from "@/components/sales/spot-cart-drawer";
+import { SyncInitializer } from "@/components/providers/sync-initializer";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 import { useNowPlaying } from "@/hooks/use-now-playing";
 import {
@@ -244,6 +245,7 @@ export default function MainLayout({
     <SpotCartProvider>
     <div className="flex min-h-screen flex-col bg-background">
       <SpotCartDrawer />
+      <SyncInitializer />
       {/* Top Header */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-xl">
         <div className="container flex items-center pt-[10px] pb-[10px]">

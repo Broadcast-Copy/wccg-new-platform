@@ -12,10 +12,11 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/lib/api-client";
-import { Coins, Loader2, History } from "lucide-react";
+import { Coins, Loader2, History, Trophy } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { readAllPoints } from "@/lib/points-storage";
 import { reconcileSessionPoints } from "@/hooks/use-listening-points";
+import { MILESTONES, loadUnlockedMilestones } from "@/lib/milestones";
 
 type PointsReason =
   | "LISTENING"
@@ -103,6 +104,7 @@ export function PointsHistory() {
   const [balance, setBalance] = useState<number | null>(null);
   const [transactions, setTransactions] = useState<PointsTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [unlockedIds, setUnlockedIds] = useState<string[]>([]);
 
   const fetchData = useCallback(async () => {
     reconcileSessionPoints();
@@ -131,6 +133,11 @@ export function PointsHistory() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
+  // Load milestones once
+  useEffect(() => {
+    setUnlockedIds(loadUnlockedMilestones());
+  }, []);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -157,6 +164,45 @@ export function PointsHistory() {
           <p className="mt-1 text-sm text-muted-foreground">
             Current balance
           </p>
+        </CardContent>
+      </Card>
+
+      {/* Listening Milestones */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Trophy className="size-4" />
+            Listening Milestones
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {MILESTONES.map((m) => {
+              const unlocked = unlockedIds.includes(m.id);
+              return (
+                <div
+                  key={m.id}
+                  className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
+                    unlocked
+                      ? "border-[#7401df]/30 bg-[#7401df]/5"
+                      : "border-border opacity-50"
+                  }`}
+                >
+                  <span className="text-2xl" role="img" aria-label={m.name}>
+                    {m.icon}
+                  </span>
+                  <div className="min-w-0">
+                    <p className={`text-sm font-medium truncate ${unlocked ? "" : "text-muted-foreground"}`}>
+                      {m.name}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground truncate">
+                      {m.description}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
 
