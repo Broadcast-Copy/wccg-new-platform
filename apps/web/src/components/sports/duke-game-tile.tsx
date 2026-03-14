@@ -337,15 +337,15 @@ export function DukeGameTile() {
           </div>
         </div>
 
-        {/* 2/3 YouTube + 1/3 Play-by-Play — always side by side */}
+        {/* 1/3 YouTube + 2/3 Play-by-Play — always side by side */}
         <div className="grid grid-cols-3 rounded-b-2xl overflow-hidden border border-t-0 border-red-500/40 bg-[#0a0e1a]">
-          {/* YouTube Highlights — 2/3 left */}
-          <div className="col-span-2 border-r border-white/10 min-h-[320px]">
+          {/* YouTube Highlights — 1/3 left */}
+          <div className="col-span-1 border-r border-white/10 min-h-[320px]">
             <YouTubeHighlights />
           </div>
 
-          {/* Play-by-Play Ticker — 1/3 right */}
-          <div className="col-span-1 min-h-[320px]">
+          {/* Play-by-Play Ticker — 2/3 right */}
+          <div className="col-span-2 min-h-[320px]">
             <PlayByPlayTicker entries={visiblePlays} />
           </div>
         </div>
