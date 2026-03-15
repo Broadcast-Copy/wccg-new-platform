@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Hero } from "@/components/home/hero";
-import { LiveUpNextCards } from "@/components/home/live-upnext-cards";
+
 import { EventCard } from "@/components/events/event-card";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -191,9 +191,6 @@ export default function HomePage() {
         <div className="h-px flex-1 bg-border" />
       </div>
       <DukeGameTile />
-
-      {/* Live Now + Up Next side by side */}
-      <LiveUpNextCards />
 
       {/* Platform Headline */}
       <section className="text-center py-4">

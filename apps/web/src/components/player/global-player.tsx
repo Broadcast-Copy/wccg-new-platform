@@ -13,7 +13,7 @@ import {
 } from "@/hooks/use-listening-points";
 import { getListeningStats } from "@/lib/listening-history";
 import { checkMilestones } from "@/lib/milestones";
-import { resolveNowPlaying } from "@/data/schedule";
+import { resolveNowPlaying, getUpNext, type ScheduleBlock } from "@/data/schedule";
 import { DUKE_BASKETBALL } from "@/data/sports";
 import { Button } from "@/components/ui/button";
 import {
@@ -112,6 +112,8 @@ export function GlobalPlayer() {
 
   // Current show/program name from schedule
   const [currentShow, setCurrentShow] = useState<string | null>(null);
+  const [upNextShow, setUpNextShow] = useState<ScheduleBlock | null>(null);
+  const [showUpNext, setShowUpNext] = useState(false); // toggle between live now / up next
 
   // Track title change animation
   const [titlePop, setTitlePop] = useState(false);
@@ -155,11 +157,13 @@ export function GlobalPlayer() {
     });
   }, []);
 
-  // Resolve currently airing show and refresh every 60s
+  // Resolve currently airing show + up next, refresh every 60s
   useEffect(() => {
     function updateShow() {
       const block = resolveNowPlaying();
       setCurrentShow(block?.showName ?? null);
+      const next = getUpNext(1);
+      setUpNextShow(next[0] ?? null);
     }
     updateShow();
     const timer = setInterval(updateShow, 60_000);
@@ -589,12 +593,32 @@ export function GlobalPlayer() {
           {/* Vertical divider */}
           <div className="mx-2 sm:mx-2.5 h-8 w-px shrink-0 bg-border" />
 
-          {/* Program / show name */}
-          <div className="hidden sm:flex items-center shrink-0 min-w-0 max-w-[120px] sm:max-w-[160px] lg:max-w-[220px]">
-            <span className="truncate text-xs font-medium text-muted-foreground">
-              {dukeOverride ? "Countdown to Crazy" : (currentShow || "WCCG 104.5 FM")}
-            </span>
-          </div>
+          {/* Live Now / Up Next toggle */}
+          <button
+            type="button"
+            onClick={() => setShowUpNext((v) => !v)}
+            className="hidden sm:flex items-center shrink-0 min-w-0 max-w-[180px] lg:max-w-[250px] gap-1.5 rounded-md px-2 py-1 hover:bg-foreground/[0.06] transition-colors cursor-pointer"
+            title={showUpNext ? "Click to see what's on now" : "Click to see what's up next"}
+          >
+            {showUpNext ? (
+              <>
+                <span className="text-[9px] font-bold uppercase tracking-wider text-[#74ddc7] whitespace-nowrap">Next</span>
+                <span className="truncate text-xs font-medium text-muted-foreground">
+                  {upNextShow?.showName || "—"}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="relative flex h-1.5 w-1.5 shrink-0">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" />
+                </span>
+                <span className="truncate text-xs font-medium text-muted-foreground">
+                  {dukeOverride ? "Countdown to Crazy" : (currentShow || "WCCG 104.5 FM")}
+                </span>
+              </>
+            )}
+          </button>
         </div>
 
         {/* Point Countdown Ring — only visible while playing */}
