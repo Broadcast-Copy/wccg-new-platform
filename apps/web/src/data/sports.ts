@@ -161,7 +161,7 @@ export const DUKE_BASKETBALL: SportsTeam = {
     venue: "Spectrum Center, Charlotte, NC",
     isHome: false,
     broadcast: "ESPN / WCCG 104.5 FM",
-    gameTitle: "ACC Championship",
+    gameTitle: "2026 ACC Champions",
     tournamentLogo: "https://a.espncdn.com/i/teamlogos/ncaa_conf/500/1.png",
   },
   schedule: [
@@ -173,7 +173,7 @@ export const DUKE_BASKETBALL: SportsTeam = {
       venue: "Spectrum Center, Charlotte, NC",
       isHome: false,
       broadcast: "ESPN / WCCG 104.5 FM",
-      gameTitle: "ACC Championship",
+      gameTitle: "2026 ACC Champions",
     },
   ],
   lastGame: {

@@ -16,6 +16,7 @@ import {
 } from "@/hooks/use-stream-transcription";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { setDukeGameLive } from "@/lib/multipliers";
+import { useDukeNews } from "@/hooks/use-duke-news";
 
 type GameMode = "pre" | "live" | "post";
 
@@ -590,28 +591,31 @@ function PostGameRecap({
   highlights,
   playerStats,
   playByPlayEntries,
+  news,
 }: {
   highlights: import("@/hooks/use-espn-scores").ESPNHighlight[];
   playerStats: import("@/hooks/use-espn-scores").ESPNPlayerStats[];
   playByPlayEntries: PlayByPlayEntry[];
+  news: import("@/hooks/use-duke-news").DukeNewsItem[];
 }) {
-  const [activeTab, setActiveTab] = useState<"highlights" | "stats" | "plays">("highlights");
+  const [activeTab, setActiveTab] = useState<"news" | "highlights" | "stats" | "plays">("news");
 
   return (
     <div className="flex flex-col h-full">
-      {/* Tabs — Highlights first */}
+      {/* Tabs — News first */}
       <div className="flex items-center border-b border-white/10">
         {(
           [
+            { key: "news", label: "Duke News" },
             { key: "highlights", label: "Highlights" },
-            { key: "stats", label: "Player Stats" },
-            { key: "plays", label: "Play-by-Play" },
+            { key: "stats", label: "Stats" },
+            { key: "plays", label: "Plays" },
           ] as const
         ).map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex-1 px-3 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-colors ${
+            className={`flex-1 px-2 py-1.5 text-[8px] sm:text-[10px] font-bold uppercase tracking-wider transition-colors ${
               activeTab === tab.key
                 ? "text-[#74ddc7] border-b-2 border-[#74ddc7] bg-white/5"
                 : "text-white/40 hover:text-white/60"
@@ -626,7 +630,60 @@ function PostGameRecap({
         className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
         style={{ maxHeight: 320 }}
       >
-        {/* ── Highlights Tab (default) — 2-column grid ── */}
+        {/* ── Duke News Tab (default) — single-line stories with mini thumbnails ── */}
+        {activeTab === "news" && (
+          <div>
+            {news.length > 0 ? (
+              <div className="divide-y divide-white/5">
+                {news.map((item) => (
+                  <a
+                    key={item.id}
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2.5 px-3 py-2 hover:bg-white/5 transition-colors group"
+                  >
+                    {item.thumbnail ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.thumbnail}
+                        alt=""
+                        className="h-10 w-14 rounded object-cover shrink-0 opacity-80 group-hover:opacity-100 transition-opacity bg-[#003087]/20"
+                      />
+                    ) : (
+                      <div className="h-10 w-14 rounded shrink-0 bg-[#003087]/30 flex items-center justify-center">
+                        <span className="text-xs">D</span>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-semibold text-white/90 line-clamp-1 group-hover:text-white transition-colors">
+                        {item.headline}
+                      </p>
+                      <p className="text-[9px] text-white/35 line-clamp-1 mt-0.5">
+                        {item.published ? new Date(item.published).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        }) : "ESPN"}
+                      </p>
+                    </div>
+                    <span className="text-white/20 text-xs shrink-0 group-hover:text-white/40 transition-colors">
+                      ›
+                    </span>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-white/40 text-sm">
+                <span className="text-2xl mb-2">📰</span>
+                Loading Duke news...
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Highlights Tab — 2-column grid ── */}
         {activeTab === "highlights" && (
           <div>
             {highlights.length > 0 ? (
@@ -842,6 +899,29 @@ export function DukeGameTile() {
   // ── ESPN real-time scores ──
   const isGameActive = mode === "live" || mode === "post";
   const { data: espnData, highlights: espnHighlights, playerStats: espnPlayerStats } = useESPNScores(isGameActive);
+
+  // ── Duke news feed ──
+  const dukeNews = useDukeNews();
+
+  // ── Cycle featured video on each page load ──
+  // Filter to only videos with a playable embedUrl or thumbnail
+  const playableHighlights = useMemo(
+    () => espnHighlights.filter((h) => h.embedUrl || h.thumbnail),
+    [espnHighlights]
+  );
+  const featuredVideoIndex = useMemo(() => {
+    if (playableHighlights.length === 0) return 0;
+    try {
+      const key = "wccg_featured_video_idx";
+      const stored = parseInt(localStorage.getItem(key) || "0", 10);
+      const next = (stored + 1) % playableHighlights.length;
+      localStorage.setItem(key, String(next));
+      return stored % playableHighlights.length;
+    } catch {
+      return 0;
+    }
+  }, [playableHighlights.length]);
+  const featuredVideo = playableHighlights[featuredVideoIndex] || null;
 
   // Use ESPN scores when available, fall back to simulated
   useEffect(() => {
@@ -1130,42 +1210,46 @@ export function DukeGameTile() {
               </div>
             </div>
           ) : (
-            /* ── FINAL RECAP: Highlights (default), stats, play-by-play ── */
+            /* ── FINAL RECAP: Featured video (cycles), news, stats, play-by-play ── */
             <div className="grid grid-cols-3">
-              {/* Left 1/3 — Featured video or top performer */}
+              {/* Left 1/3 — Featured video (cycles on refresh) */}
               <div className="col-span-1 border-r border-white/10 min-h-[320px]">
                 <div className="flex flex-col h-full">
-                  <div className="px-3 py-2 border-b border-white/10">
+                  <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
                     <h3 className="text-xs font-bold text-white/80 uppercase tracking-wider">
-                      {espnHighlights.length > 0 ? "Featured" : "Top Performer"}
+                      {featuredVideo ? "Featured" : espnPlayerStats.length > 0 ? "Top Performer" : "Duke"}
                     </h3>
+                    {playableHighlights.length > 1 && (
+                      <span className="text-[9px] text-white/30 tabular-nums">
+                        {featuredVideoIndex + 1}/{playableHighlights.length}
+                      </span>
+                    )}
                   </div>
                   <div className="flex-1 flex flex-col p-3 gap-2">
-                    {/* Featured highlight — embedded video player */}
-                    {espnHighlights.length > 0 ? (
+                    {/* Featured highlight — embedded video player (cycles each refresh) */}
+                    {featuredVideo ? (
                       <div className="w-full flex flex-col gap-2">
-                        {/* Embedded video player */}
                         <div className="relative w-full rounded-lg overflow-hidden bg-black border border-white/10">
-                          {espnHighlights[0].embedUrl ? (
+                          {featuredVideo.embedUrl ? (
                             <iframe
-                              src={espnHighlights[0].embedUrl}
-                              title={espnHighlights[0].title}
+                              src={featuredVideo.embedUrl}
+                              title={featuredVideo.title}
                               className="w-full aspect-video"
                               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                               allowFullScreen
                               style={{ border: 0 }}
                             />
-                          ) : espnHighlights[0].thumbnail ? (
+                          ) : featuredVideo.thumbnail ? (
                             <a
-                              href={espnHighlights[0].mp4Url}
+                              href={featuredVideo.mp4Url}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="group block relative"
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
-                                src={espnHighlights[0].thumbnail}
-                                alt={espnHighlights[0].title}
+                                src={featuredVideo.thumbnail}
+                                alt={featuredVideo.title}
                                 className="w-full aspect-video object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                               />
                               <div className="absolute inset-0 flex items-center justify-center">
@@ -1174,28 +1258,23 @@ export function DukeGameTile() {
                                 </span>
                               </div>
                             </a>
-                          ) : (
-                            <div className="w-full aspect-video bg-gradient-to-br from-[#003087]/40 to-black/60 flex items-center justify-center">
-                              <span className="text-4xl">🎬</span>
-                            </div>
-                          )}
+                          ) : null}
                         </div>
-                        {/* Video info below player */}
                         <div>
                           <p className="text-[10px] sm:text-[11px] font-bold text-white line-clamp-2">
-                            {espnHighlights[0].title}
+                            {featuredVideo.title}
                           </p>
-                          {espnHighlights[0].description && (
+                          {featuredVideo.description && (
                             <p className="text-[9px] text-white/40 line-clamp-2 mt-0.5">
-                              {espnHighlights[0].description}
+                              {featuredVideo.description}
                             </p>
                           )}
                           <span className={`inline-block mt-1 text-[8px] px-1.5 py-0.5 rounded font-bold uppercase ${
-                            espnHighlights[0].source === "youtube"
+                            featuredVideo.source === "youtube"
                               ? "bg-red-500/20 text-red-300"
                               : "bg-[#74ddc7]/20 text-[#74ddc7]"
                           }`}>
-                            {espnHighlights[0].source === "youtube" ? "YouTube" : "ESPN"}
+                            {featuredVideo.source === "youtube" ? "YouTube" : "ESPN"}
                           </span>
                         </div>
                       </div>
@@ -1258,6 +1337,7 @@ export function DukeGameTile() {
                   highlights={espnHighlights}
                   playerStats={espnPlayerStats}
                   playByPlayEntries={visiblePlays}
+                  news={dukeNews}
                 />
               </div>
             </div>
