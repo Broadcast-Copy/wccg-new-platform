@@ -72,7 +72,7 @@ export function GameRibbon() {
 
       const twentyFourHoursBefore =
         gameDate!.getTime() - 24 * 60 * 60 * 1000;
-      const displayEnd = gameEnd.getTime() + 60 * 60 * 1000;
+      const displayEnd = gameEnd.getTime() + 60 * 60 * 1000; // 1 hour post-game show
 
       if (
         now.getTime() < twentyFourHoursBefore ||
@@ -155,6 +155,8 @@ export function GameRibbon() {
     return () => clearInterval(timer);
   }, [gameDate, espnData]);
 
+  const gameTitle = nextGame?.gameTitle || "";
+
   if (dismissed || mode === "hidden" || !nextGame) return null;
 
   return (
@@ -163,14 +165,20 @@ export function GameRibbon() {
         mode === "live"
           ? "bg-gradient-to-r from-red-700 via-red-600 to-red-700 h-8"
           : mode === "post"
-          ? "bg-[#1a1a2e] h-7"
+          ? "bg-gradient-to-r from-[#003087] via-[#001a4d] to-[#003087] h-7"
           : "bg-gradient-to-r from-[#003087] via-[#001a4d] to-[#003087] h-7"
       }`}
     >
       <div className="flex items-center gap-2 w-full overflow-hidden">
         {mode === "pre" && (
           <div className="flex items-center gap-2 truncate mx-auto">
-            <span>🏀</span>
+            {gameTitle ? (
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 font-bold uppercase tracking-wider border border-yellow-500/30 shrink-0">
+                🏆 {gameTitle}
+              </span>
+            ) : (
+              <span>🏀</span>
+            )}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={DUKE_BASKETBALL.logoUrl}
@@ -197,6 +205,11 @@ export function GameRibbon() {
           <div className="flex items-center gap-0 w-full">
             {/* Score section — fixed left */}
             <div className="flex items-center gap-2 shrink-0">
+              {gameTitle && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 font-bold uppercase tracking-wider border border-yellow-500/30 shrink-0 hidden sm:inline">
+                  🏆
+                </span>
+              )}
               <span className="flex items-center gap-1">
                 <span className="h-2 w-2 rounded-full bg-white animate-ping" />
                 <span className="font-bold">LIVE</span>
@@ -260,6 +273,8 @@ export function GameRibbon() {
               className="h-4 w-4 object-contain"
             />
             <span className="font-bold text-white/60">FINAL</span>
+            <span className="text-white/30 hidden sm:inline">|</span>
+            <span className="text-[10px] text-white/50 hidden sm:inline">🎙️ Post-Game Show LIVE on WCCG</span>
           </div>
         )}
       </div>

@@ -29,7 +29,8 @@ type PointsReason =
   | "SHARE"
   | "SHARE_BONUS"
   | "VIDEO_WATCH"
-  | "REFERRAL_BONUS";
+  | "REFERRAL_BONUS"
+  | "KEYWORD_ENTRY";
 
 interface PointsTransaction {
   id: string;
@@ -57,6 +58,7 @@ const REASON_LABELS: Record<string, string> = {
   SHARE_BONUS: "Share Bonus",
   VIDEO_WATCH: "Video Watch",
   REFERRAL_BONUS: "Referral Bonus",
+  KEYWORD_ENTRY: "Keyword Contest",
 };
 
 function reasonIsPositive(reason: string): boolean {

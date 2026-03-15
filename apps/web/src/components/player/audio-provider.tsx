@@ -41,6 +41,8 @@ export interface AudioPlayerContextValue {
   isBuffering: boolean;
   /** Connection error message, or null if connected fine. */
   connectionError: string | null;
+  /** Access the underlying HTMLAudioElement (for audio capture/analysis). */
+  getAudioElement: () => HTMLAudioElement | null;
 }
 
 export const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(
@@ -286,6 +288,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     saveSavedVolume(clamped);
   }, []);
 
+  const getAudioElement = useCallback(() => audioRef.current, []);
+
   const updateMetadata = useCallback((partial: Partial<StreamMetadata>) => {
     setMetadata((prev) => {
       const updated = { ...prev, ...partial };
@@ -306,6 +310,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         stop,
         setVolume,
         updateMetadata,
+        getAudioElement,
         currentStream,
         isPlaying,
         isBuffering,

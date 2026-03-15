@@ -32,6 +32,7 @@ import {
   Music,
   MessageSquare,
 } from "lucide-react";
+import { DUKE_BASKETBALL } from "@/data/sports";
 
 // Desktop nav: Home, Discover, [Streaming mega], Support
 const navLinks = [
@@ -250,6 +251,14 @@ export default function MainLayout({
     <div className="flex min-h-screen flex-col bg-background">
       <SpotCartDrawer />
       <SyncInitializer />
+      {/* ACC Champions mini ribbon */}
+      <Link
+        href="/sports/duke-basketball"
+        className="block bg-gradient-to-r from-[#003087] via-[#001a4d] to-[#003087] text-center py-1 text-[11px] font-bold text-yellow-300 hover:text-yellow-200 transition-colors tracking-wide"
+      >
+        🏆 HOME OF THE 2026 ACC CHAMPIONS — DUKE BLUE DEVILS 🏆
+      </Link>
+
       {/* Top Header */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-xl">
         <div className="container flex items-center pt-[10px] pb-[10px]">
@@ -272,6 +281,16 @@ export default function MainLayout({
             {/* Support */}
             <NavLink href="/contact" label="Support" pathname={pathname} />
           </nav>
+
+          {/* ACC Championship badge (when applicable) */}
+          {DUKE_BASKETBALL.nextGame?.gameTitle && (
+            <Link
+              href="/sports/duke-basketball"
+              className="hidden lg:inline-flex items-center gap-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 px-3 py-1 text-[11px] font-bold text-yellow-400 hover:bg-yellow-500/20 transition-colors ml-2 shrink-0"
+            >
+              🏆 {DUKE_BASKETBALL.nextGame.gameTitle}
+            </Link>
+          )}
 
           {/* Right: Controls */}
           <div className="flex items-center gap-2 ml-auto">

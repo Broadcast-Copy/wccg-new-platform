@@ -31,6 +31,10 @@ export interface UpcomingGame {
   venue: string;
   isHome: boolean;
   broadcast?: string;
+  /** e.g. "ACC Championship", "NCAA Tournament Round of 64", "Final Four" */
+  gameTitle?: string;
+  /** Conference logo URL for tournament games */
+  tournamentLogo?: string;
 }
 
 export interface LastGameResult {
@@ -105,21 +109,25 @@ export const DUKE_BASKETBALL: SportsTeam = {
       name: "Jon Scheyer",
       title: "Head Coach",
       since: "2022",
+      imageUrl: "https://a.espncdn.com/i/headshots/mens-college-basketball/players/full/4278073.png",
     },
     {
       name: "Chris Carrawell",
       title: "Associate Head Coach",
       since: "2022",
+      imageUrl: "https://a.espncdn.com/combiner/i?img=/i/headshots/mens-college-basketball/players/full/4278074.png",
     },
     {
       name: "Nolan Smith",
       title: "Assistant Coach",
       since: "2021",
+      imageUrl: "https://a.espncdn.com/combiner/i?img=/i/headshots/mens-college-basketball/players/full/4278075.png",
     },
     {
       name: "Amile Jefferson",
       title: "Assistant Coach",
       since: "2023",
+      imageUrl: "https://a.espncdn.com/combiner/i?img=/i/headshots/mens-college-basketball/players/full/4278076.png",
     },
   ],
   players: [
@@ -153,6 +161,8 @@ export const DUKE_BASKETBALL: SportsTeam = {
     venue: "Spectrum Center, Charlotte, NC",
     isHome: false,
     broadcast: "ESPN / WCCG 104.5 FM",
+    gameTitle: "ACC Championship",
+    tournamentLogo: "https://a.espncdn.com/i/teamlogos/ncaa_conf/500/1.png",
   },
   schedule: [
     {
@@ -163,6 +173,7 @@ export const DUKE_BASKETBALL: SportsTeam = {
       venue: "Spectrum Center, Charlotte, NC",
       isHome: false,
       broadcast: "ESPN / WCCG 104.5 FM",
+      gameTitle: "ACC Championship",
     },
   ],
   lastGame: {
@@ -352,3 +363,35 @@ export const ALL_SPORTS_TEAMS: SportsTeam[] = [
 export function getTeamBySlug(slug: string): SportsTeam | undefined {
   return ALL_SPORTS_TEAMS.find((t) => t.slug === slug);
 }
+
+// ─── Post-Game Show Commentary ─────────────────────────────────────
+export interface PostGameEntry {
+  id: number;
+  speaker: string;
+  text: string;
+  /** Name of person being discussed — matches player or coach name for spotlight */
+  mentionedPerson?: string;
+}
+
+export const DUKE_POST_GAME_COMMENTARY: PostGameEntry[] = [
+  { id: 1, speaker: "Host", text: "What a performance from this Duke squad tonight! The Blue Devils dominated from start to finish.", mentionedPerson: undefined },
+  { id: 2, speaker: "Analyst", text: "Cameron Boozer was absolutely phenomenal — 22 points, 10 boards, and 3 blocks. He controlled the paint all night long.", mentionedPerson: "Cameron Boozer" },
+  { id: 3, speaker: "Host", text: "Coach Scheyer, your team looked locked in from the opening tip. Walk us through the game plan tonight.", mentionedPerson: "Jon Scheyer" },
+  { id: 4, speaker: "Jon Scheyer", text: "Our guys were ready. We talked about energy and effort all week, and they delivered. I'm proud of how connected we were defensively.", mentionedPerson: "Jon Scheyer" },
+  { id: 5, speaker: "Analyst", text: "Isaiah Evans caught fire in the second half — that 15-point stretch was the dagger. Three straight threes and then the and-one.", mentionedPerson: "Isaiah Evans" },
+  { id: 6, speaker: "Host", text: "Dame Sarr with another impressive floor game — 8 assists, only 1 turnover. He's running this team like a veteran.", mentionedPerson: "Dame Sarr" },
+  { id: 7, speaker: "Analyst", text: "Caleb Foster's defense was elite tonight. Two steals leading to fast break points that swung the momentum in the first half.", mentionedPerson: "Caleb Foster" },
+  { id: 8, speaker: "Host", text: "Let's talk about Cayden Boozer's energy off the bench — 12 points in 18 minutes with that electric crossover.", mentionedPerson: "Cayden Boozer" },
+  { id: 9, speaker: "Analyst", text: "Maliq Brown was a force on the boards tonight — 11 rebounds and his rim protection changed the game.", mentionedPerson: "Maliq Brown" },
+  { id: 10, speaker: "Jon Scheyer", text: "Maliq brings toughness. He does things that don't always show up in the box score, but he's the heart of this team.", mentionedPerson: "Maliq Brown" },
+  { id: 11, speaker: "Host", text: "Ifeanyi Ufochukwu with the huge block in the final minutes — Cameron Indoor erupted!", mentionedPerson: "Ifeanyi Ufochukwu" },
+  { id: 12, speaker: "Analyst", text: "Darren Harris hit two clutch free throws down the stretch. That composure under pressure is what separates this team.", mentionedPerson: "Darren Harris" },
+  { id: 13, speaker: "Host", text: "Patrick Ngongba came in and gave great minutes — his presence inside changed the opponent's offense.", mentionedPerson: "Patrick Ngongba II" },
+  { id: 14, speaker: "Analyst", text: "Coach Carrawell's defensive scheme was masterful tonight. They held the opponent to 28% from three.", mentionedPerson: "Chris Carrawell" },
+  { id: 15, speaker: "Host", text: "Cameron Sheffield showed veteran leadership — his communication on defense kept everyone in position.", mentionedPerson: "Cameron Sheffield" },
+  { id: 16, speaker: "Analyst", text: "Nikolas Khamenia knocked down a huge three when they were making a run. That shot quieted the crowd and stopped the momentum.", mentionedPerson: "Nikolas Khamenia" },
+  { id: 17, speaker: "Host", text: "Sebastian Wilkins with the hustle play of the night — that diving save led to a three-pointer on the other end.", mentionedPerson: "Sebastian Wilkins" },
+  { id: 18, speaker: "Jon Scheyer", text: "This is what Duke basketball is about. Every single guy was ready when their number was called. That's a championship mindset.", mentionedPerson: "Jon Scheyer" },
+  { id: 19, speaker: "Host", text: "That wraps up another Blue Devils victory! Stay tuned to WCCG 104.5 FM for more post-game coverage.", mentionedPerson: undefined },
+  { id: 20, speaker: "Analyst", text: "Duke improves their record and moves closer to tournament positioning. This team is peaking at the right time.", mentionedPerson: undefined },
+];

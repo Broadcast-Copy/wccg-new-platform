@@ -5,6 +5,7 @@ import { useSupabase } from "@/components/providers/supabase-provider";
 import type { User, Session } from "@supabase/supabase-js";
 import { setPointsUserEmail } from "@/hooks/use-listening-points";
 import { setHistoryUserEmail } from "@/lib/listening-history";
+import { seedUserPoints } from "@/lib/seed-user-points";
 
 /**
  * Hook to access the current Supabase auth state.
@@ -28,6 +29,8 @@ export function useAuth() {
       const email = session?.user?.email ?? null;
       setPointsUserEmail(email);
       setHistoryUserEmail(email);
+      // Seed demo user data (idempotent — only runs once)
+      seedUserPoints();
       setIsLoading(false);
     });
 
