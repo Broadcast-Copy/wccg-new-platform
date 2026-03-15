@@ -5,10 +5,68 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { AppImage as Image } from "@/components/ui/app-image";
 import { ArrowDownRight } from "lucide-react";
-import { HERO_SHOWS } from "@/data/shows";
+import { HERO_SHOWS, type ShowData } from "@/data/shows";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 
 const SLIDE_INTERVAL = 8000;
+
+/** Custom hero images (non-show slides) */
+interface HeroImageSlide {
+  id: string;
+  imageUrl: string;
+  label: string;
+  linkHref: string;
+}
+
+const HERO_IMAGES: HeroImageSlide[] = [
+  {
+    id: "duke-basketball-hero",
+    imageUrl: "/images/sports/duke-main.png",
+    label: "Duke Basketball on WCCG 104.5 FM",
+    linkHref: "/sports/duke-basketball",
+  },
+  {
+    id: "duke-football-hero",
+    imageUrl: "/images/sports/duke-main1.png",
+    label: "Duke Football on WCCG 104.5 FM",
+    linkHref: "/sports/duke-football",
+  },
+  {
+    id: "yung-joc-hero",
+    imageUrl: "/images/joc-main1.png",
+    label: "Yung Joc on WCCG 104.5 FM",
+    linkHref: "/shows/show_streetz_morning",
+  },
+  {
+    id: "posted-on-the-corner-hero",
+    imageUrl: "/images/incognito-new.png",
+    label: "Posted on the Corner",
+    linkHref: "/shows/show_posted_corner",
+  },
+  {
+    id: "riich-villianz-hero",
+    imageUrl: "/images/head-01.png",
+    label: "Riich Villianz Radio",
+    linkHref: "/shows/show_riich_villianz",
+  },
+];
+
+type HeroSlide =
+  | { type: "show"; data: ShowData }
+  | { type: "image"; data: HeroImageSlide };
+
+/** Interleave show slides with image slides */
+const ALL_HERO_SLIDES: HeroSlide[] = (() => {
+  const shows = HERO_SHOWS.map((s): HeroSlide => ({ type: "show", data: s }));
+  const images = HERO_IMAGES.map((img): HeroSlide => ({ type: "image", data: img }));
+  const result: HeroSlide[] = [];
+  const max = Math.max(shows.length, images.length);
+  for (let i = 0; i < max; i++) {
+    if (i < shows.length) result.push(shows[i]);
+    if (i < images.length) result.push(images[i]);
+  }
+  return result;
+})();
 
 const TICKER_ITEMS = [
   "WCCG 104.5 FM — Fayetteville's Hip Hop Station",
@@ -25,11 +83,13 @@ export function Hero() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const currentSlide = HERO_SHOWS[activeIndex];
+  const currentHeroSlide = ALL_HERO_SLIDES[activeIndex];
+  // For the overlay text: show slides use show data, image slides use their label
+  const currentShowSlide = currentHeroSlide.type === "show" ? currentHeroSlide.data : null;
 
   const advanceSlide = useCallback(() => {
     setIsTransitioning(true);
-    setActiveIndex((prev) => (prev + 1) % HERO_SHOWS.length);
+    setActiveIndex((prev) => (prev + 1) % ALL_HERO_SLIDES.length);
     setTimeout(() => setIsTransitioning(false), 600);
   }, []);
 
@@ -72,20 +132,33 @@ export function Hero() {
         <div className="relative overflow-hidden rounded-2xl border border-border">
           {/* Sliding image */}
           <div className="relative aspect-[4/3]">
-            {HERO_SHOWS.map((slide, index) => (
+            {ALL_HERO_SLIDES.map((heroSlide, index) => (
               <div
-                key={slide.id}
+                key={heroSlide.data.id}
                 className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
                   index === activeIndex ? "opacity-100 z-10" : "opacity-0 z-0"
                 }`}
               >
-                <div className={`absolute inset-0 bg-gradient-to-br ${slide.gradient}`} />
-                {(slide.imageUrl || slide.showImageUrl) && (
+                {heroSlide.type === "show" ? (
+                  <>
+                    <div className={`absolute inset-0 bg-gradient-to-br ${heroSlide.data.gradient}`} />
+                    {(heroSlide.data.imageUrl || heroSlide.data.showImageUrl) && (
+                      <Image
+                        src={heroSlide.data.imageUrl || heroSlide.data.showImageUrl!}
+                        alt={heroSlide.data.hostNames}
+                        fill
+                        className="object-cover object-top"
+                        sizes="100vw"
+                        priority={index === 0}
+                      />
+                    )}
+                  </>
+                ) : (
                   <Image
-                    src={slide.imageUrl || slide.showImageUrl!}
-                    alt={slide.hostNames}
+                    src={heroSlide.data.imageUrl}
+                    alt={heroSlide.data.label}
                     fill
-                    className="object-cover object-top"
+                    className="object-cover object-center"
                     sizes="100vw"
                     priority={index === 0}
                   />
@@ -98,17 +171,26 @@ export function Hero() {
 
             {/* Show info overlay */}
             <div className="absolute bottom-0 left-0 right-0 z-30 px-5 pb-5">
-              <Link href={`/shows/${currentSlide.id}`} className="group inline-block mb-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-0.5">Now Playing</p>
-                <h3 className="text-base font-black text-white group-hover:text-[#74ddc7] transition-colors">
-                  {currentSlide.name}
-                </h3>
-                <p className="text-xs text-white/60">{currentSlide.hostNames}</p>
-              </Link>
+              {currentShowSlide ? (
+                <Link href={`/shows/${currentShowSlide.id}`} className="group inline-block mb-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-0.5">Now Playing</p>
+                  <h3 className="text-base font-black text-white group-hover:text-[#74ddc7] transition-colors">
+                    {currentShowSlide.name}
+                  </h3>
+                  <p className="text-xs text-white/60">{currentShowSlide.hostNames}</p>
+                </Link>
+              ) : currentHeroSlide.type === "image" ? (
+                <Link href={currentHeroSlide.data.linkHref} className="group inline-block mb-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#74ddc7] mb-0.5">Duke Sports</p>
+                  <h3 className="text-base font-black text-white group-hover:text-[#74ddc7] transition-colors">
+                    {currentHeroSlide.data.label}
+                  </h3>
+                </Link>
+              ) : null}
 
               {/* Dots */}
               <div className="flex items-center gap-1.5">
-                {HERO_SHOWS.map((_, index) => (
+                {ALL_HERO_SLIDES.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => goToSlide(index)}
@@ -188,23 +270,33 @@ export function Hero() {
       <div className="hidden md:grid md:grid-cols-[2fr_3fr] gap-4">
         {/* ── LEFT CARD: Sliding image ── */}
         <div className="relative overflow-hidden rounded-2xl border border-border aspect-[4/3] lg:aspect-auto lg:min-h-[460px]">
-          {HERO_SHOWS.map((slide, index) => (
+          {ALL_HERO_SLIDES.map((heroSlide, index) => (
             <div
-              key={slide.id}
+              key={heroSlide.data.id}
               className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
                 index === activeIndex ? "opacity-100 z-10" : "opacity-0 z-0"
               }`}
             >
-              {/* Gradient fallback */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${slide.gradient}`} />
-
-              {/* Show image */}
-              {(slide.imageUrl || slide.showImageUrl) && (
+              {heroSlide.type === "show" ? (
+                <>
+                  <div className={`absolute inset-0 bg-gradient-to-br ${heroSlide.data.gradient}`} />
+                  {(heroSlide.data.imageUrl || heroSlide.data.showImageUrl) && (
+                    <Image
+                      src={heroSlide.data.imageUrl || heroSlide.data.showImageUrl!}
+                      alt={heroSlide.data.hostNames}
+                      fill
+                      className="object-cover object-top"
+                      sizes="50vw"
+                      priority={index === 0}
+                    />
+                  )}
+                </>
+              ) : (
                 <Image
-                  src={slide.imageUrl || slide.showImageUrl!}
-                  alt={slide.hostNames}
+                  src={heroSlide.data.imageUrl}
+                  alt={heroSlide.data.label}
                   fill
-                  className="object-cover object-top"
+                  className="object-cover object-center"
                   sizes="50vw"
                   priority={index === 0}
                 />
@@ -217,15 +309,24 @@ export function Hero() {
 
           {/* Show info + dots */}
           <div className="absolute bottom-0 left-0 right-0 z-30 px-6 pb-5">
-            <Link href={`/shows/${currentSlide.id}`} className="group inline-block mb-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-0.5">Now Playing</p>
-              <h3 className="text-lg font-black text-white drop-shadow-lg group-hover:text-[#74ddc7] transition-colors">
-                {currentSlide.name}
-              </h3>
-              <p className="text-sm text-white/60 drop-shadow-md">{currentSlide.hostNames}</p>
-            </Link>
+            {currentShowSlide ? (
+              <Link href={`/shows/${currentShowSlide.id}`} className="group inline-block mb-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-0.5">Now Playing</p>
+                <h3 className="text-lg font-black text-white drop-shadow-lg group-hover:text-[#74ddc7] transition-colors">
+                  {currentShowSlide.name}
+                </h3>
+                <p className="text-sm text-white/60 drop-shadow-md">{currentShowSlide.hostNames}</p>
+              </Link>
+            ) : currentHeroSlide.type === "image" ? (
+              <Link href={currentHeroSlide.data.linkHref} className="group inline-block mb-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#74ddc7] mb-0.5">Duke Sports</p>
+                <h3 className="text-lg font-black text-white drop-shadow-lg group-hover:text-[#74ddc7] transition-colors">
+                  {currentHeroSlide.data.label}
+                </h3>
+              </Link>
+            ) : null}
             <div className="flex items-center gap-1.5">
-              {HERO_SHOWS.map((_, index) => (
+              {ALL_HERO_SLIDES.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => goToSlide(index)}
