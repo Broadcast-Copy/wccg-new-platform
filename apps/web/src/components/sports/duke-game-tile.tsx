@@ -50,14 +50,15 @@ function PlayByPlayTicker({
     return () => clearInterval(timer);
   }, [visibleCount, entries.length]);
 
-  // Auto-scroll to latest
+  // Auto-scroll to top (newest first)
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTop = 0;
     }
   }, [visibleCount]);
 
-  const visible = entries.slice(0, visibleCount);
+  // Reverse so newest plays appear at the top
+  const visible = entries.slice(0, visibleCount).slice().reverse();
 
   return (
     <div className="flex flex-col h-full">
@@ -74,11 +75,26 @@ function PlayByPlayTicker({
         className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
         style={{ maxHeight: 320 }}
       >
+        {/* ESPN live play pinned at top */}
+        {espnLastPlay && (
+          <div className="flex items-start gap-2 px-3 py-2 bg-[#003087]/20 border-b border-white/5">
+            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#74ddc7] animate-pulse" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 text-[10px] text-[#74ddc7]/70">
+                <span className="font-mono">LIVE</span>
+                <span className="font-semibold">ESPN</span>
+              </div>
+              <p className="text-[11px] sm:text-xs text-white/90 leading-snug mt-0.5">
+                {espnLastPlay}
+              </p>
+            </div>
+          </div>
+        )}
         {visible.map((entry, i) => (
           <div
             key={entry.id}
             className={`flex items-start gap-2 px-3 py-2 border-b border-white/5 transition-all ${
-              i === visible.length - 1 ? "bg-white/5" : ""
+              i === 0 && !espnLastPlay ? "bg-white/5" : ""
             }`}
           >
             <span
@@ -101,21 +117,6 @@ function PlayByPlayTicker({
             </div>
           </div>
         ))}
-        {/* ESPN live play if available */}
-        {espnLastPlay && (
-          <div className="flex items-start gap-2 px-3 py-2 bg-[#003087]/20 border-b border-white/5">
-            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#74ddc7] animate-pulse" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 text-[10px] text-[#74ddc7]/70">
-                <span className="font-mono">LIVE</span>
-                <span className="font-semibold">ESPN</span>
-              </div>
-              <p className="text-[11px] sm:text-xs text-white/90 leading-snug mt-0.5">
-                {espnLastPlay}
-              </p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
