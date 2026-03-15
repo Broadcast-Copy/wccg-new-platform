@@ -324,10 +324,11 @@ export const DUKE_PLAY_BY_PLAY: PlayByPlayEntry[] = [
 ];
 
 // ─── YouTube Highlight IDs (Duke Basketball — ACC Tournament 2026) ──
-// Filtered to tournament/game-related content from Duke MBB channel
+// Most recent game first, then other tournament content
 export const DUKE_HIGHLIGHT_VIDEOS = [
-  "DLQslQCxHn0", // Duke 73, Clemson 61 | Every Bucket (ACC Semis 3-13-26)
+  "DLQslQCxHn0", // Duke 73, Clemson 61 | Every Bucket (ACC Semis 3-13-26) ← LAST GAME
   "HuPoUS2Rz0Y", // Duke 80, FSU 79 | Every Bucket (ACC Quarters 3-12-26)
+  "2qvUjB72ONg", // Latest Duke MBB upload
   "m8hljl7hr-I", // Clutch 19-2 run
   "LdOY5lMdzoM", // BAKERY'S OPEN (tournament highlights)
   "OnsfRRHdqb8", // Boozer Twins Exclusive | ACC Quarters
