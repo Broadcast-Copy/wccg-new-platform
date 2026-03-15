@@ -177,11 +177,11 @@ export const DUKE_BASKETBALL: SportsTeam = {
     },
   ],
   lastGame: {
-    opponent: "Florida State Seminoles",
-    opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/52.png",
-    date: "2026-03-13T19:00:00-04:00",
+    opponent: "Virginia Cavaliers",
+    opponentLogo: "https://a.espncdn.com/i/teamlogos/ncaa/500/258.png",
+    date: "2026-03-15T20:30:00-04:00",
     result: "W",
-    score: { duke: 80, opponent: 79 },
+    score: { duke: 74, opponent: 70 },
     venue: "Spectrum Center, Charlotte, NC",
     topPerformer: { name: "Cameron Boozer", points: 22, rebounds: 10, assists: 3 },
   },
@@ -338,18 +338,6 @@ export const DUKE_PLAY_BY_PLAY: PlayByPlayEntry[] = [
   { id: 30, clock: "7:45", half: "2nd", team: "duke", text: "Cayden Boozer hits the pull-up jumper! Duke leads 40-28.", score: { duke: 40, opponent: 28 } },
 ];
 
-// ─── YouTube Highlight IDs (Duke Basketball — ACC Tournament 2026) ──
-// Most recent game first, then other tournament content
-export const DUKE_HIGHLIGHT_VIDEOS = [
-  "DLQslQCxHn0", // Duke 73, Clemson 61 | Every Bucket (ACC Semis 3-13-26) ← LAST GAME
-  "HuPoUS2Rz0Y", // Duke 80, FSU 79 | Every Bucket (ACC Quarters 3-12-26)
-  "2qvUjB72ONg", // Latest Duke MBB upload
-  "m8hljl7hr-I", // Clutch 19-2 run
-  "LdOY5lMdzoM", // BAKERY'S OPEN (tournament highlights)
-  "OnsfRRHdqb8", // Boozer Twins Exclusive | ACC Quarters
-  "WOql7Z5ci2s", // BIG BUCKETS (ACC Tournament)
-  "W5G5938nwd0", // Isaiah Evans career-high 32
-];
 
 // ─── ESPN API Config ────────────────────────────────────────────────
 export const ESPN_GAME_ID = "401851183";

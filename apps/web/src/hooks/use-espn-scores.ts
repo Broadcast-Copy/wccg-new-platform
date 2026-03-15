@@ -128,6 +128,8 @@ export function useESPNScores(enabled: boolean) {
         const videos: ESPNHighlight[] = [];
 
         // ── ESPN: gameInfo.news.articles with type "Media" ──
+        // IMPORTANT: Only include articles about Duke / the current game.
+        // ESPN often returns unrelated championship-week articles.
         const articles = (json.gameInfo?.news?.articles || json.news?.articles || []) as Array<
           Record<string, unknown>
         >;
@@ -136,6 +138,10 @@ export function useESPNScores(enabled: boolean) {
           const headline = String(article.headline || article.title || "");
           const desc = String(article.description || "");
           const aId = String(article.id || Math.random());
+
+          // Skip articles that don't mention Duke — avoids unrelated game videos
+          const combined = `${headline} ${desc}`.toLowerCase();
+          if (!combined.includes("duke") && !combined.includes("blue devils")) continue;
 
           // Media-type articles ARE the video
           if (aType === "Media" || aType === "media") {
@@ -166,12 +172,14 @@ export function useESPNScores(enabled: boolean) {
             if (String(img.type || "") === "Media") {
               const imgName = String(img.name || img.caption || "");
               const imgUrl = String(img.url || "");
-              // Only add if we don't already have this as a video
-              if (imgName && !videos.some((v) => v.title === imgName)) {
+              // Only add if we don't already have this as a video and it's Duke-related
+              const imgCombined = `${imgName}`.toLowerCase();
+              if (imgName && !videos.some((v) => v.title === imgName) &&
+                  (imgCombined.includes("duke") || imgCombined.includes("blue devils") || combined.includes("duke"))) {
                 // Link to ESPN video page from parent article
-                const aLinks = (article.links as Record<string, unknown>) || {};
-                const web = (aLinks.web as Record<string, unknown>) || {};
-                const articleUrl = String(web.href || "");
+                const aLinks2 = (article.links as Record<string, unknown>) || {};
+                const web2 = (aLinks2.web as Record<string, unknown>) || {};
+                const articleUrl = String(web2.href || "");
                 videos.push({
                   id: `media-${aId}-${imgName.slice(0, 20)}`,
                   title: imgName,
