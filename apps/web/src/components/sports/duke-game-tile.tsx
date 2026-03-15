@@ -101,7 +101,9 @@ function PlayByPlayTicker({ entries }: { entries: PlayByPlayEntry[] }) {
 
 // ── YouTube Highlights Embed ────────────────────────────────────────
 function YouTubeHighlights() {
+  // Convert channel ID (UC...) to uploads playlist (UU...)
   const channelId = DUKE_BASKETBALL.youtube.channelId;
+  const uploadsPlaylistId = channelId ? channelId.replace(/^UC/, "UU") : null;
 
   return (
     <div className="flex flex-col h-full">
@@ -112,29 +114,32 @@ function YouTubeHighlights() {
       </div>
       <div className="flex-1 min-h-0 p-2">
         <div className="relative w-full h-full min-h-[200px] rounded-lg overflow-hidden bg-black">
-          <iframe
-            src={`https://www.youtube.com/embed?listType=search&list=Duke+Blue+Devils+Basketball+highlights+2026&autoplay=0`}
-            title="Duke Basketball Highlights"
-            className="absolute inset-0 w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-          {/* Fallback if embed doesn't load */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-[#003087] to-[#001a4d] pointer-events-none opacity-0 transition-opacity peer-[.error]:opacity-100">
-            <span className="text-4xl mb-2">🏀</span>
-            <span className="text-xs text-white/60">Highlights loading...</span>
-          </div>
+          {uploadsPlaylistId ? (
+            <iframe
+              src={`https://www.youtube.com/embed/videoseries?list=${uploadsPlaylistId}&autoplay=0`}
+              title="Duke Basketball Highlights"
+              className="absolute inset-0 w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          ) : (
+            <iframe
+              src="https://www.youtube.com/embed?listType=user_uploads&list=DukeBluePlanet"
+              title="Duke Basketball Highlights"
+              className="absolute inset-0 w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          )}
         </div>
-        {channelId && (
-          <a
-            href={DUKE_BASKETBALL.youtube.channelUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block mt-2 text-center text-[10px] text-white/40 hover:text-white/60 transition-colors"
-          >
-            Watch more on YouTube →
-          </a>
-        )}
+        <a
+          href={DUKE_BASKETBALL.youtube.channelUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block mt-2 text-center text-[10px] text-white/40 hover:text-white/60 transition-colors"
+        >
+          Watch more on YouTube →
+        </a>
       </div>
     </div>
   );

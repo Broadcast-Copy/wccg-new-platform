@@ -325,11 +325,7 @@ export const DUKE_PLAY_BY_PLAY: PlayByPlayEntry[] = [
 
 // ─── YouTube Highlight IDs (Duke Basketball) ────────────────────────
 export const DUKE_HIGHLIGHT_VIDEOS = [
-  { id: "dQw4w9WgXcQ", title: "Cooper Flagg Monster Dunk" },
-  { id: "dQw4w9WgXcQ", title: "Knueppel Deep Three" },
-  { id: "dQw4w9WgXcQ", title: "Maluach Alley-Oop Slam" },
-  { id: "dQw4w9WgXcQ", title: "Flagg Steal & Score" },
-  { id: "dQw4w9WgXcQ", title: "Foster Breakaway Layup" },
+  { id: "UU9KCzNMmf0IRcEIsFDgt2bg", title: "Duke Basketball Latest Uploads" },
 ];
 
 export const ALL_SPORTS_TEAMS: SportsTeam[] = [
