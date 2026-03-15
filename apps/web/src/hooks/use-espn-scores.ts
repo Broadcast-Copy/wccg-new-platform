@@ -11,6 +11,7 @@ export interface ESPNGameData {
   status: "pre" | "in" | "post";
   statusText: string;
   lastPlay?: string;
+  possession?: "duke" | "opponent";
 }
 
 const POLL_INTERVAL = 30_000; // 30 seconds
@@ -66,12 +67,31 @@ export function useESPNScores(enabled: boolean) {
         }
       }
 
-      // Try to get last play text
+      // Try to get last play text and possession
       let lastPlay: string | undefined;
+      let possession: "duke" | "opponent" | undefined;
       try {
         const plays = json.plays || [];
         if (plays.length > 0) {
-          lastPlay = plays[plays.length - 1]?.text;
+          const lastPlayObj = plays[plays.length - 1];
+          lastPlay = lastPlayObj?.text;
+          // Check possession from last play's team
+          const playTeamId = String(lastPlayObj?.team?.id || lastPlayObj?.teamId || "");
+          if (playTeamId) {
+            possession = playTeamId === "150" ? "duke" : "opponent";
+          }
+        }
+        // Also check situation / possession from the API
+        const situation = json.situation || json.drives?.current;
+        if (situation?.possession) {
+          possession = String(situation.possession) === "150" ? "duke" : "opponent";
+        }
+        // Check header for possession indicator
+        for (const c of competitors) {
+          const teamId = c.id || c.team?.id;
+          if (c.possession === true || c.hasPossession === true) {
+            possession = teamId === "150" ? "duke" : "opponent";
+          }
         }
       } catch {
         // no plays data
@@ -126,6 +146,7 @@ export function useESPNScores(enabled: boolean) {
         status: state as "pre" | "in" | "post",
         statusText,
         lastPlay,
+        possession,
       });
       setError(false);
     } catch {

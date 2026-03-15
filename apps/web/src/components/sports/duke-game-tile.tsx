@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   DUKE_BASKETBALL,
   DUKE_PLAY_BY_PLAY,
-  DUKE_HIGHLIGHT_VIDEOS,
   type PlayByPlayEntry,
 } from "@/data/sports";
 import { useESPNScores } from "@/hooks/use-espn-scores";
@@ -122,50 +121,101 @@ function PlayByPlayTicker({
   );
 }
 
-// ── Game Highlights — YouTube Duke MBB videos ─────────────────────
-function GameHighlights() {
-  const ROTATE_MS = 3 * 60 * 1000; // 3 minutes
-  const [videoIndex, setVideoIndex] = useState(0);
-  const total = DUKE_HIGHLIGHT_VIDEOS.length;
+// ── Player Spotlight — shows player from last play ────────────────
+function PlayerSpotlight({
+  lastPlayText,
+  lastPlayTeam,
+}: {
+  lastPlayText?: string;
+  lastPlayTeam?: "duke" | "opponent";
+}) {
+  const players = DUKE_BASKETBALL.players.filter((p) => p.imageUrl);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setVideoIndex((prev) => (prev + 1) % total);
-    }, ROTATE_MS);
-    return () => clearInterval(timer);
-  }, [total]);
+  // Find the Duke player mentioned in the last play text
+  const matchedPlayer = useMemo(() => {
+    if (!lastPlayText) return null;
+    const text = lastPlayText.toLowerCase();
+    // Try last name match first (more specific), then first name
+    for (const p of players) {
+      const parts = p.name.split(" ");
+      const lastName = parts[parts.length - 1].toLowerCase();
+      if (text.includes(lastName)) return p;
+    }
+    return null;
+  }, [lastPlayText, players]);
 
-  const videoId = DUKE_HIGHLIGHT_VIDEOS[videoIndex % total];
+  // If opponent has the ball or no Duke player matched, show team logo
+  const showDukeLogo = !matchedPlayer || lastPlayTeam === "opponent";
 
   return (
     <div className="flex flex-col h-full">
       <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
         <h3 className="text-xs font-bold text-white/80 uppercase tracking-wider">
-          Game Highlights
+          {lastPlayTeam === "duke" && matchedPlayer ? "Last Play" : "Possession"}
         </h3>
-        <div className="flex items-center gap-2">
-          <span className="text-[9px] text-white/30 tabular-nums">
-            {(videoIndex % total) + 1}/{total}
+        {lastPlayTeam && (
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+            lastPlayTeam === "duke"
+              ? "bg-[#003087]/50 text-white/70"
+              : "bg-white/10 text-white/50"
+          }`}>
+            {lastPlayTeam === "duke" ? "DUKE BALL" : "OPP BALL"}
           </span>
-          <button
-            onClick={() => setVideoIndex((prev) => (prev + 1) % total)}
-            className="text-[10px] text-white/40 hover:text-white/70 transition-colors"
-            title="Next video"
-          >
-            Next ▶
-          </button>
-        </div>
+        )}
       </div>
-      <div className="flex-1 min-h-0 p-2">
-        <div className="relative w-full h-full min-h-[200px] rounded-lg overflow-hidden bg-black">
-          <iframe
-            key={videoId}
-            src={`https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0`}
-            title="Duke ACC Tournament Highlights"
-            className="absolute inset-0 w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-4 relative">
+        {/* Background glow */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#003087]/30 via-transparent to-transparent" />
+        <div className="relative z-10 flex flex-col items-center gap-3">
+          {showDukeLogo ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={DUKE_BASKETBALL.logoUrl}
+                alt="Duke Blue Devils"
+                className="h-28 w-28 object-contain drop-shadow-lg opacity-80"
+              />
+              <span className="text-sm font-bold text-white/60">
+                {lastPlayTeam === "opponent" ? "Opponent Possession" : "Duke Blue Devils"}
+              </span>
+            </>
+          ) : (
+            <>
+              {/* Player headshot */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                key={matchedPlayer!.name}
+                src={matchedPlayer!.imageUrl!}
+                alt={matchedPlayer!.name}
+                className="h-36 w-auto object-contain drop-shadow-lg"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+              {/* Player info */}
+              <div className="text-center space-y-1">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-2xl font-black text-white/30 tabular-nums">
+                    #{matchedPlayer!.number}
+                  </span>
+                  <span className="text-sm font-bold text-white">
+                    {matchedPlayer!.name}
+                  </span>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-[10px] text-white/50">
+                  <span>{matchedPlayer!.position}</span>
+                  <span className="text-white/20">|</span>
+                  <span>{matchedPlayer!.year}</span>
+                </div>
+              </div>
+            </>
+          )}
+          {/* Last play text */}
+          {lastPlayText && (
+            <p className="text-[10px] text-white/40 text-center leading-snug mt-1 line-clamp-2 px-2">
+              {lastPlayText}
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -317,7 +367,7 @@ export function DukeGameTile() {
   // ── LIVE / POST MODE: Scoreboard + 1/3 YouTube + 2/3 play-by-play ──
   if (mode === "live" || mode === "post") {
     return (
-      <section className="px-0 space-y-0">
+      <section className="px-[50px] space-y-0">
         {/* Scoreboard Header */}
         <div className="relative overflow-hidden rounded-t-2xl bg-gradient-to-r from-[#003087] via-[#001a4d] to-[#003087] border border-b-0 border-red-500/40 p-4 sm:p-5">
           <div className="absolute inset-0 opacity-[0.04]">
@@ -374,9 +424,22 @@ export function DukeGameTile() {
                 </div>
               </div>
 
-              {/* Game Clock */}
+              {/* Game Clock + Possession */}
               <div className="flex flex-col items-center">
-                <span className="text-lg font-black text-white/30">—</span>
+                {mode === "live" && espnData?.possession && (
+                  <div className="flex items-center gap-1 mb-1">
+                    {espnData.possession === "duke" && (
+                      <span className="text-[10px] animate-pulse" title="Duke has possession">◀</span>
+                    )}
+                    <span className="text-sm">🏀</span>
+                    {espnData.possession === "opponent" && (
+                      <span className="text-[10px] animate-pulse" title="Opponent has possession">▶</span>
+                    )}
+                  </div>
+                )}
+                {(!espnData?.possession || mode !== "live") && (
+                  <span className="text-lg font-black text-white/30">—</span>
+                )}
                 <span className="text-[11px] text-white/50 mt-0.5">
                   {half}
                   {gameClock && ` | ${gameClock}`}
@@ -413,9 +476,22 @@ export function DukeGameTile() {
 
         {/* 1/3 YouTube + 2/3 Play-by-Play — always side by side */}
         <div className="grid grid-cols-3 rounded-b-2xl overflow-hidden border border-t-0 border-red-500/40 bg-[#0a0e1a]">
-          {/* Game Highlights — 1/3 left */}
+          {/* Player Spotlight — 1/3 left */}
           <div className="col-span-1 border-r border-white/10 min-h-[320px]">
-            <GameHighlights />
+            <PlayerSpotlight
+              lastPlayText={
+                espnData?.lastPlay ||
+                (visiblePlays.length > 0
+                  ? visiblePlays[visiblePlays.length - 1].text
+                  : undefined)
+              }
+              lastPlayTeam={
+                espnData?.possession ||
+                (visiblePlays.length > 0
+                  ? visiblePlays[visiblePlays.length - 1].team
+                  : undefined)
+              }
+            />
           </div>
 
           {/* Play-by-Play Ticker — 2/3 right */}
@@ -432,7 +508,7 @@ export function DukeGameTile() {
 
   // ── PRE-GAME MODE: Countdown ──
   return (
-    <section className="px-0">
+    <section className="px-[50px]">
       <Link href="/sports/duke-basketball" className="block group">
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#003087] via-[#001a4d] to-[#0a0a0f] p-5 sm:p-7 md:p-8 border border-white/10 hover:border-white/20 transition-all">
           {/* Background pattern */}
