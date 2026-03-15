@@ -32,6 +32,8 @@ import { ListenerCountBadge } from "@/components/player/listener-count-badge";
 import { WeatherStrip } from "@/components/player/weather-strip";
 import { MultiplierBanner } from "@/components/player/multiplier-banner";
 import { GameRibbon } from "@/components/player/game-ribbon";
+import { useAuth } from "@/hooks/use-auth";
+import Link from "next/link";
 
 /** localStorage key for the continuous play preference. */
 const CONTINUOUS_PLAY_KEY = "wccg_continuous_play";
@@ -83,6 +85,30 @@ export function GlobalPlayer() {
     onPause: pause,
     onStop: stop,
   });
+
+  // Auth state — for points nudge banner
+  const { user } = useAuth();
+
+  // Rotating nudge phrases for non-logged-in listeners
+  const [nudgeIndex, setNudgeIndex] = useState(0);
+  const NUDGE_PHRASES = [
+    "You're vibing but not earning — sign in to stack points! 🎯",
+    "Free music, free points… but only if you log in 😏",
+    "Your ears are working, your points aren't — sign in! 💰",
+    "Listening without logging in is like pizza without cheese 🍕",
+    "Points are piling up… in someone else's account 😅",
+    "This stream is fire, your points balance is not 🔥",
+    "DJ's spinning, points aren't — log in to fix that 🎧",
+  ];
+
+  useEffect(() => {
+    if (user || !isPlaying) return;
+    const id = setInterval(() => {
+      setNudgeIndex((i) => (i + 1) % NUDGE_PHRASES.length);
+    }, 15_000); // rotate every 15s
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isPlaying]);
 
   // Current show/program name from schedule
   const [currentShow, setCurrentShow] = useState<string | null>(null);
@@ -477,6 +503,20 @@ export function GlobalPlayer() {
   return (
     <div className="fixed bottom-14 left-0 right-0 z-50 border-t border-border bg-[#0e0e18]/95 backdrop-blur-xl">
       <GameRibbon />
+      {/* Not logged in nudge banner */}
+      {!user && isPlaying && (
+        <Link
+          href="/login"
+          className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#7401df] to-[#3b82f6] px-3 py-1 hover:brightness-110 transition-all cursor-pointer"
+        >
+          <span className="text-[10px] sm:text-[11px] font-medium text-white truncate">
+            {NUDGE_PHRASES[nudgeIndex]}
+          </span>
+          <span className="text-[9px] font-bold text-white/80 bg-white/20 px-2 py-0.5 rounded-full shrink-0">
+            Sign In
+          </span>
+        </Link>
+      )}
       {/* Connection error banner */}
       {connectionError && (
         <div className="flex items-center justify-center bg-red-600/90 px-3 py-0.5">
