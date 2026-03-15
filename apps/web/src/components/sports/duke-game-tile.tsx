@@ -105,32 +105,46 @@ function YouTubeHighlights() {
   const channelId = DUKE_BASKETBALL.youtube.channelId;
   const uploadsPlaylistId = channelId ? channelId.replace(/^UC/, "UU") : null;
 
+  // Rotate to a new video in the playlist every 3 minutes
+  const ROTATE_MS = 3 * 60 * 1000;
+  const [videoIndex, setVideoIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setVideoIndex((prev) => prev + 1);
+    }, ROTATE_MS);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Key forces iframe remount on index change
+  const iframeSrc = uploadsPlaylistId
+    ? `https://www.youtube.com/embed/videoseries?list=${uploadsPlaylistId}&index=${videoIndex}&autoplay=0`
+    : `https://www.youtube.com/embed?listType=user_uploads&list=DukeBluePlanet`;
+
   return (
     <div className="flex flex-col h-full">
-      <div className="px-3 py-2 border-b border-white/10">
+      <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
         <h3 className="text-xs font-bold text-white/80 uppercase tracking-wider">
           Live Highlights
         </h3>
+        <button
+          onClick={() => setVideoIndex((prev) => prev + 1)}
+          className="text-[10px] text-white/40 hover:text-white/70 transition-colors"
+          title="Next video"
+        >
+          Next ▶
+        </button>
       </div>
       <div className="flex-1 min-h-0 p-2">
         <div className="relative w-full h-full min-h-[200px] rounded-lg overflow-hidden bg-black">
-          {uploadsPlaylistId ? (
-            <iframe
-              src={`https://www.youtube.com/embed/videoseries?list=${uploadsPlaylistId}&autoplay=0`}
-              title="Duke Basketball Highlights"
-              className="absolute inset-0 w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          ) : (
-            <iframe
-              src="https://www.youtube.com/embed?listType=user_uploads&list=DukeBluePlanet"
-              title="Duke Basketball Highlights"
-              className="absolute inset-0 w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          )}
+          <iframe
+            key={videoIndex}
+            src={iframeSrc}
+            title="Duke Basketball Highlights"
+            className="absolute inset-0 w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
         </div>
         <a
           href={DUKE_BASKETBALL.youtube.channelUrl}
