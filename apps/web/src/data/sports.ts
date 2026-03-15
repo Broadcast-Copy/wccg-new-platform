@@ -324,9 +324,28 @@ export const DUKE_PLAY_BY_PLAY: PlayByPlayEntry[] = [
 ];
 
 // ─── YouTube Highlight IDs (Duke Basketball) ────────────────────────
+// Real video IDs from Duke MBB YouTube channel RSS feed
 export const DUKE_HIGHLIGHT_VIDEOS = [
-  { id: "UU9KCzNMmf0IRcEIsFDgt2bg", title: "Duke Basketball Latest Uploads" },
+  "2qvUjB72ONg",
+  "DLQslQCxHn0",
+  "LdOY5lMdzoM",
+  "m8hljl7hr-I",
+  "W5G5938nwd0",
+  "HuPoUS2Rz0Y",
+  "WOql7Z5ci2s",
+  "OnsfRRHdqb8",
+  "DOv8nLzJUG0",
+  "PmHSiKeXjag",
+  "Yux3SN4_zoM",
+  "qJInqfECkAk",
+  "HqqXY2s1acU",
+  "RDAAYUm6Wz0",
+  "v7nzQmpvyT8",
 ];
+
+// ─── ESPN API Config ────────────────────────────────────────────────
+export const ESPN_GAME_ID = "401851183";
+export const ESPN_SCOREBOARD_URL = `https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/summary?event=${ESPN_GAME_ID}`;
 
 export const ALL_SPORTS_TEAMS: SportsTeam[] = [
   DUKE_BASKETBALL,

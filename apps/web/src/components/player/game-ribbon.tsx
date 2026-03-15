@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { X } from "lucide-react";
 import { DUKE_BASKETBALL, DUKE_PLAY_BY_PLAY } from "@/data/sports";
+import { useESPNScores } from "@/hooks/use-espn-scores";
 
 type RibbonMode = "pre" | "live" | "post" | "hidden";
 
@@ -34,6 +35,32 @@ export function GameRibbon() {
       minute: "2-digit",
     });
   }, [gameDate]);
+
+  // ── ESPN real-time scores ──
+  const isGameActive = mode === "live" || mode === "post";
+  const { data: espnData } = useESPNScores(isGameActive);
+
+  // Apply ESPN scores when available
+  useEffect(() => {
+    if (espnData && (espnData.status === "in" || espnData.status === "post")) {
+      setLiveScore({
+        duke: espnData.dukeScore,
+        opponent: espnData.opponentScore,
+      });
+      if (espnData.status === "in") {
+        if (espnData.period === 1) setHalf("1st");
+        else if (espnData.period === 2) setHalf("2nd");
+        else setHalf(`OT`);
+        setGameClock(espnData.clock || "");
+      } else {
+        setHalf("FINAL");
+        setGameClock("");
+      }
+      if (espnData.lastPlay) {
+        setLatestPlay(espnData.lastPlay);
+      }
+    }
+  }, [espnData]);
 
   useEffect(() => {
     if (!gameDate) return;
@@ -68,53 +95,57 @@ export function GameRibbon() {
         setMode("live");
         const elapsed = now.getTime() - gameDate!.getTime();
         const elapsedMinutes = elapsed / 60000;
-        const totalGameMinutes = 150;
 
-        if (elapsedMinutes < 50) {
-          setHalf("1st");
-          const clockMin = Math.max(
-            0,
-            Math.floor(20 - (elapsedMinutes / 50) * 20)
-          );
-          const clockSec = Math.floor(Math.random() * 60);
-          setGameClock(
-            `${clockMin}:${clockSec.toString().padStart(2, "0")}`
-          );
-        } else if (elapsedMinutes < 65) {
-          setHalf("HALF");
-          setGameClock("");
-        } else {
-          setHalf("2nd");
-          const secondHalfElapsed = elapsedMinutes - 65;
-          const clockMin = Math.max(
-            0,
-            Math.floor(20 - (secondHalfElapsed / 85) * 20)
-          );
-          const clockSec = Math.floor(Math.random() * 60);
-          setGameClock(
-            `${clockMin}:${clockSec.toString().padStart(2, "0")}`
-          );
-        }
+        // Only use simulated data if ESPN not available
+        if (!espnData || espnData.status === "pre") {
+          if (elapsedMinutes < 50) {
+            setHalf("1st");
+            const clockMin = Math.max(
+              0,
+              Math.floor(20 - (elapsedMinutes / 50) * 20)
+            );
+            const clockSec = Math.floor(Math.random() * 60);
+            setGameClock(
+              `${clockMin}:${clockSec.toString().padStart(2, "0")}`
+            );
+          } else if (elapsedMinutes < 65) {
+            setHalf("HALF");
+            setGameClock("");
+          } else {
+            setHalf("2nd");
+            const secondHalfElapsed = elapsedMinutes - 65;
+            const clockMin = Math.max(
+              0,
+              Math.floor(20 - (secondHalfElapsed / 85) * 20)
+            );
+            const clockSec = Math.floor(Math.random() * 60);
+            setGameClock(
+              `${clockMin}:${clockSec.toString().padStart(2, "0")}`
+            );
+          }
 
-        // Score and plays come from play-by-play entries — starts at 0-0
-        const playsToShow = Math.min(
-          DUKE_PLAY_BY_PLAY.length,
-          Math.floor(elapsedMinutes / 4)
-        );
-        if (playsToShow > 0) {
-          const latest = DUKE_PLAY_BY_PLAY[playsToShow - 1];
-          setLiveScore({
-            duke: latest.score.duke,
-            opponent: latest.score.opponent,
-          });
-          setLatestPlay(latest.text);
-        } else {
-          setLiveScore({ duke: 0, opponent: 0 });
-          setLatestPlay("Game underway — tipoff!");
+          // Simulated scores
+          const playsToShow = Math.min(
+            DUKE_PLAY_BY_PLAY.length,
+            Math.floor(elapsedMinutes / 4)
+          );
+          if (playsToShow > 0) {
+            const latest = DUKE_PLAY_BY_PLAY[playsToShow - 1];
+            setLiveScore({
+              duke: latest.score.duke,
+              opponent: latest.score.opponent,
+            });
+            setLatestPlay(latest.text);
+          } else {
+            setLiveScore({ duke: 0, opponent: 0 });
+            setLatestPlay("Game underway — tipoff!");
+          }
         }
       } else {
         setMode("post");
-        setLiveScore({ duke: 82, opponent: 68 });
+        if (!espnData || espnData.status !== "post") {
+          setLiveScore({ duke: 82, opponent: 68 });
+        }
         setLatestPlay("");
       }
     }
@@ -122,7 +153,7 @@ export function GameRibbon() {
     tick();
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [gameDate]);
+  }, [gameDate, espnData]);
 
   if (dismissed || mode === "hidden" || !nextGame) return null;
 

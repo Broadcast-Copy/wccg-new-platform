@@ -5,8 +5,10 @@ import Link from "next/link";
 import {
   DUKE_BASKETBALL,
   DUKE_PLAY_BY_PLAY,
+  DUKE_HIGHLIGHT_VIDEOS,
   type PlayByPlayEntry,
 } from "@/data/sports";
+import { useESPNScores } from "@/hooks/use-espn-scores";
 
 type GameMode = "pre" | "live" | "post";
 
@@ -29,7 +31,13 @@ function formatCountdown(diffMs: number) {
 }
 
 // ── Play-by-play horizontal ticker ─────────────────────────────────
-function PlayByPlayTicker({ entries }: { entries: PlayByPlayEntry[] }) {
+function PlayByPlayTicker({
+  entries,
+  espnLastPlay,
+}: {
+  entries: PlayByPlayEntry[];
+  espnLastPlay?: string;
+}) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [visibleCount, setVisibleCount] = useState(5);
 
@@ -38,7 +46,7 @@ function PlayByPlayTicker({ entries }: { entries: PlayByPlayEntry[] }) {
     if (visibleCount >= entries.length) return;
     const timer = setInterval(() => {
       setVisibleCount((prev) => Math.min(prev + 1, entries.length));
-    }, 12000); // new play every 12 seconds
+    }, 12000);
     return () => clearInterval(timer);
   }, [visibleCount, entries.length]);
 
@@ -73,7 +81,6 @@ function PlayByPlayTicker({ entries }: { entries: PlayByPlayEntry[] }) {
               i === visible.length - 1 ? "bg-white/5" : ""
             }`}
           >
-            {/* Team indicator dot */}
             <span
               className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
                 entry.team === "duke" ? "bg-[#003087]" : "bg-[#7BAFD4]"
@@ -94,41 +101,50 @@ function PlayByPlayTicker({ entries }: { entries: PlayByPlayEntry[] }) {
             </div>
           </div>
         ))}
+        {/* ESPN live play if available */}
+        {espnLastPlay && (
+          <div className="flex items-start gap-2 px-3 py-2 bg-[#003087]/20 border-b border-white/5">
+            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#74ddc7] animate-pulse" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 text-[10px] text-[#74ddc7]/70">
+                <span className="font-mono">LIVE</span>
+                <span className="font-semibold">ESPN</span>
+              </div>
+              <p className="text-[11px] sm:text-xs text-white/90 leading-snug mt-0.5">
+                {espnLastPlay}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// ── YouTube Highlights Embed ────────────────────────────────────────
+// ── YouTube Highlights — rotates through real Duke MBB videos ──────
 function YouTubeHighlights() {
-  // Convert channel ID (UC...) to uploads playlist (UU...)
-  const channelId = DUKE_BASKETBALL.youtube.channelId;
-  const uploadsPlaylistId = channelId ? channelId.replace(/^UC/, "UU") : null;
-
-  // Rotate to a new video in the playlist every 3 minutes
-  const ROTATE_MS = 3 * 60 * 1000;
+  const ROTATE_MS = 3 * 60 * 1000; // 3 minutes
   const [videoIndex, setVideoIndex] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setVideoIndex((prev) => prev + 1);
+      setVideoIndex((prev) => (prev + 1) % DUKE_HIGHLIGHT_VIDEOS.length);
     }, ROTATE_MS);
     return () => clearInterval(timer);
   }, []);
 
-  // Key forces iframe remount on index change
-  const iframeSrc = uploadsPlaylistId
-    ? `https://www.youtube.com/embed/videoseries?list=${uploadsPlaylistId}&index=${videoIndex}&autoplay=0`
-    : `https://www.youtube.com/embed?listType=user_uploads&list=DukeBluePlanet`;
+  const videoId = DUKE_HIGHLIGHT_VIDEOS[videoIndex % DUKE_HIGHLIGHT_VIDEOS.length];
 
   return (
     <div className="flex flex-col h-full">
       <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
         <h3 className="text-xs font-bold text-white/80 uppercase tracking-wider">
-          Live Highlights
+          Highlights
         </h3>
         <button
-          onClick={() => setVideoIndex((prev) => prev + 1)}
+          onClick={() =>
+            setVideoIndex((prev) => (prev + 1) % DUKE_HIGHLIGHT_VIDEOS.length)
+          }
           className="text-[10px] text-white/40 hover:text-white/70 transition-colors"
           title="Next video"
         >
@@ -138,8 +154,8 @@ function YouTubeHighlights() {
       <div className="flex-1 min-h-0 p-2">
         <div className="relative w-full h-full min-h-[200px] rounded-lg overflow-hidden bg-black">
           <iframe
-            key={videoIndex}
-            src={iframeSrc}
+            key={videoId}
+            src={`https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0`}
             title="Duke Basketball Highlights"
             className="absolute inset-0 w-full h-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -181,6 +197,30 @@ export function DukeGameTile() {
   const [gameClock, setGameClock] = useState("20:00");
   const [visiblePlays, setVisiblePlays] = useState<PlayByPlayEntry[]>([]);
 
+  // ── ESPN real-time scores ──
+  const isGameActive = mode === "live" || mode === "post";
+  const { data: espnData } = useESPNScores(isGameActive);
+
+  // Use ESPN scores when available, fall back to simulated
+  useEffect(() => {
+    if (espnData && (espnData.status === "in" || espnData.status === "post")) {
+      setLiveScore({
+        duke: espnData.dukeScore,
+        opponent: espnData.opponentScore,
+      });
+      // Update period/clock from ESPN
+      if (espnData.status === "in") {
+        if (espnData.period === 1) setHalf("1st Half");
+        else if (espnData.period === 2) setHalf("2nd Half");
+        else setHalf(`OT${espnData.period > 3 ? espnData.period - 2 : ""}`);
+        setGameClock(espnData.clock || "");
+      } else {
+        setHalf("Final");
+        setGameClock("");
+      }
+    }
+  }, [espnData]);
+
   useEffect(() => {
     if (!gameDate) return;
 
@@ -195,54 +235,65 @@ export function DukeGameTile() {
       } else if (currentMode === "live") {
         const elapsed = now.getTime() - gameDate!.getTime();
         const elapsedMinutes = elapsed / 60000;
-        const totalGameMinutes = 150;
 
-        if (elapsedMinutes < 50) {
-          setHalf("1st Half");
-          const clockMin = Math.max(
-            0,
-            Math.floor(20 - (elapsedMinutes / 50) * 20)
+        // Only use simulated clock/scores if ESPN data not available
+        if (!espnData || espnData.status === "pre") {
+          if (elapsedMinutes < 50) {
+            setHalf("1st Half");
+            const clockMin = Math.max(
+              0,
+              Math.floor(20 - (elapsedMinutes / 50) * 20)
+            );
+            const clockSec = Math.floor(Math.random() * 60);
+            setGameClock(
+              `${clockMin}:${clockSec.toString().padStart(2, "0")}`
+            );
+          } else if (elapsedMinutes < 65) {
+            setHalf("Halftime");
+            setGameClock("");
+          } else {
+            setHalf("2nd Half");
+            const secondHalfElapsed = elapsedMinutes - 65;
+            const clockMin = Math.max(
+              0,
+              Math.floor(20 - (secondHalfElapsed / 85) * 20)
+            );
+            const clockSec = Math.floor(Math.random() * 60);
+            setGameClock(
+              `${clockMin}:${clockSec.toString().padStart(2, "0")}`
+            );
+          }
+
+          // Simulated scores from play-by-play
+          const playsToShow = Math.min(
+            DUKE_PLAY_BY_PLAY.length,
+            Math.floor(elapsedMinutes / 4)
           );
-          const clockSec = Math.floor(Math.random() * 60);
-          setGameClock(
-            `${clockMin}:${clockSec.toString().padStart(2, "0")}`
-          );
-        } else if (elapsedMinutes < 65) {
-          setHalf("Halftime");
-          setGameClock("");
+          const currentPlays = DUKE_PLAY_BY_PLAY.slice(0, playsToShow);
+          setVisiblePlays(currentPlays);
+
+          if (currentPlays.length > 0) {
+            const latest = currentPlays[currentPlays.length - 1];
+            setLiveScore({
+              duke: latest.score.duke,
+              opponent: latest.score.opponent,
+            });
+          } else {
+            setLiveScore({ duke: 0, opponent: 0 });
+          }
         } else {
-          setHalf("2nd Half");
-          const secondHalfElapsed = elapsedMinutes - 65;
-          const clockMin = Math.max(
-            0,
-            Math.floor(20 - (secondHalfElapsed / 85) * 20)
+          // ESPN is providing data — still show play-by-play for flavor
+          const playsToShow = Math.min(
+            DUKE_PLAY_BY_PLAY.length,
+            Math.floor(elapsedMinutes / 4)
           );
-          const clockSec = Math.floor(Math.random() * 60);
-          setGameClock(
-            `${clockMin}:${clockSec.toString().padStart(2, "0")}`
-          );
-        }
-
-        // Reveal play-by-play entries based on elapsed time (1 play every ~4 min)
-        const playsToShow = Math.min(
-          DUKE_PLAY_BY_PLAY.length,
-          Math.floor(elapsedMinutes / 4)
-        );
-        const currentPlays = DUKE_PLAY_BY_PLAY.slice(0, playsToShow);
-        setVisiblePlays(currentPlays);
-
-        // Score comes from the latest play-by-play entry — starts at 0-0
-        if (currentPlays.length > 0) {
-          const latest = currentPlays[currentPlays.length - 1];
-          setLiveScore({
-            duke: latest.score.duke,
-            opponent: latest.score.opponent,
-          });
-        } else {
-          setLiveScore({ duke: 0, opponent: 0 });
+          setVisiblePlays(DUKE_PLAY_BY_PLAY.slice(0, playsToShow));
         }
       } else {
-        setLiveScore({ duke: 82, opponent: 68 });
+        // Post-game — use ESPN final scores if available
+        if (!espnData || espnData.status !== "post") {
+          setLiveScore({ duke: 82, opponent: 68 });
+        }
         setVisiblePlays(DUKE_PLAY_BY_PLAY);
       }
     }
@@ -250,7 +301,7 @@ export function DukeGameTile() {
     tick();
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [gameDate]);
+  }, [gameDate, espnData]);
 
   if (!nextGame) return null;
 
@@ -266,7 +317,7 @@ export function DukeGameTile() {
     : "";
   const pad = (n: number) => n.toString().padStart(2, "0");
 
-  // ── LIVE MODE: 1/3 YouTube + 2/3 play-by-play ──
+  // ── LIVE / POST MODE: Scoreboard + 1/3 YouTube + 2/3 play-by-play ──
   if (mode === "live" || mode === "post") {
     return (
       <section className="px-0 space-y-0">
@@ -282,11 +333,18 @@ export function DukeGameTile() {
             />
           </div>
           <div className="relative z-10">
-            {/* LIVE badge + title */}
+            {/* LIVE badge + title + ESPN indicator */}
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
-                COUNTDOWN TO CRAZY
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
+                  COUNTDOWN TO CRAZY
+                </h2>
+                {espnData && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-white/50 font-mono">
+                    ESPN LIVE
+                  </span>
+                )}
+              </div>
               {mode === "live" ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white animate-pulse">
                   <span className="h-2 w-2 rounded-full bg-white animate-ping" />
@@ -365,7 +423,10 @@ export function DukeGameTile() {
 
           {/* Play-by-Play Ticker — 2/3 right */}
           <div className="col-span-2 min-h-[320px]">
-            <PlayByPlayTicker entries={visiblePlays} />
+            <PlayByPlayTicker
+              entries={visiblePlays}
+              espnLastPlay={espnData?.lastPlay}
+            />
           </div>
         </div>
       </section>

@@ -311,10 +311,18 @@ export function GlobalPlayer() {
     if (!game) return null;
     const now = new Date();
     const tipoff = new Date(game.date);
+    const tailgateStart = new Date(tipoff.getTime() - 2 * 60 * 60 * 1000); // 2h before
     const preGameStart = new Date(tipoff.getTime() - 60 * 60 * 1000); // 1h before
     const gameEnd = new Date(tipoff.getTime() + 2.5 * 60 * 60 * 1000);
     const opponent = game.opponent.split(" ").slice(0, -1).join(" ") || game.opponent;
 
+    if (now >= tailgateStart && now < preGameStart) {
+      return {
+        title: "Duke Tailgate Show",
+        artist: "WCCG 104.5 FM — Countdown to Crazy",
+        albumArt: DUKE_BASKETBALL.logoUrl,
+      };
+    }
     if (now >= preGameStart && now < tipoff) {
       return {
         title: "Duke Pregame Tipoff Show",
