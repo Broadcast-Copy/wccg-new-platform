@@ -14,6 +14,7 @@ import {
 import { getListeningStats } from "@/lib/listening-history";
 import { checkMilestones } from "@/lib/milestones";
 import { resolveNowPlaying } from "@/data/schedule";
+import { DUKE_BASKETBALL } from "@/data/sports";
 import { Button } from "@/components/ui/button";
 import {
   Pause,
@@ -304,8 +305,35 @@ export function GlobalPlayer() {
     }
   };
 
-  const songTitle = metadata.title || metadata.streamName || "Unknown Track";
-  const songArtist = metadata.artist || "WCCG 104.5 FM";
+  // ── Duke game override: replace song info with show name during coverage ──
+  const dukeOverride = (() => {
+    const game = DUKE_BASKETBALL.nextGame;
+    if (!game) return null;
+    const now = new Date();
+    const tipoff = new Date(game.date);
+    const preGameStart = new Date(tipoff.getTime() - 60 * 60 * 1000); // 1h before
+    const gameEnd = new Date(tipoff.getTime() + 2.5 * 60 * 60 * 1000);
+    const opponent = game.opponent.split(" ").slice(0, -1).join(" ") || game.opponent;
+
+    if (now >= preGameStart && now < tipoff) {
+      return {
+        title: "Duke Pregame Tipoff Show",
+        artist: "WCCG 104.5 FM — Countdown to Crazy",
+        albumArt: DUKE_BASKETBALL.logoUrl,
+      };
+    }
+    if (now >= tipoff && now < gameEnd) {
+      return {
+        title: `Duke vs ${opponent} LIVE`,
+        artist: "WCCG 104.5 FM — Game Coverage",
+        albumArt: DUKE_BASKETBALL.logoUrl,
+      };
+    }
+    return null;
+  })();
+
+  const songTitle = dukeOverride?.title || metadata.title || metadata.streamName || "Unknown Track";
+  const songArtist = dukeOverride?.artist || metadata.artist || "WCCG 104.5 FM";
 
   // Helper: render the play/pause icon with buffering spinner
   const PlayPauseIcon = ({ size }: { size: "sm" | "md" }) => {
@@ -481,10 +509,10 @@ export function GlobalPlayer() {
           <div className="flex min-w-0 flex-1 items-center gap-2">
             {/* Album Art */}
             <div className="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-[#74ddc7]/20 to-[#7401df]/20 border border-border overflow-hidden">
-              {metadata.albumArt ? (
+              {(dukeOverride?.albumArt || metadata.albumArt) ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
-                  src={metadata.albumArt}
+                  src={dukeOverride?.albumArt || metadata.albumArt}
                   alt="Album art"
                   className="h-9 w-9 rounded-md object-cover"
                 />
@@ -516,7 +544,7 @@ export function GlobalPlayer() {
           {/* Program / show name */}
           <div className="hidden sm:flex items-center shrink-0 min-w-0 max-w-[120px] sm:max-w-[160px] lg:max-w-[220px]">
             <span className="truncate text-xs font-medium text-muted-foreground">
-              {currentShow || "WCCG 104.5 FM"}
+              {dukeOverride ? "Countdown to Crazy" : (currentShow || "WCCG 104.5 FM")}
             </span>
           </div>
         </div>
