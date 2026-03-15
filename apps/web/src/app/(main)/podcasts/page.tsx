@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { Podcast, Headphones, ArrowRight, Sparkles, Rss, Clock, Mic } from "lucide-react";
+import { Podcast, Headphones, ArrowRight, Sparkles, Rss, Clock } from "lucide-react";
 import { AppImage } from "@/components/ui/app-image";
 import { ALL_SHOWS } from "@/data/shows";
-import { getHostsByShowId } from "@/data/hosts";
 import { Button } from "@/components/ui/button";
 
 export const metadata = {
@@ -11,27 +10,27 @@ export const metadata = {
     "Browse podcasts on WCCG 104.5 FM — on-demand shows, interviews, and exclusive audio content.",
 };
 
-// Shows that have podcast RSS feeds or are explicitly podcast-style
+// Exact podcast lineup
+const PODCAST_IDS = [
+  "show_streetz_morning",
+  "show_posted_corner",
+  "show_island_frequency",
+  "show_in_it_big_a",
+  "show_carolina_effect",
+  "show_riich_villianz",
+  "show_inside_the_lines",
+  "show_friday_night_shockwave",
+  "show_sunday_snacks",
+];
+
 function getPodcasts() {
-  // Include shows with podcastRss, plus shows that have "podcast" in the name
-  const podcasts = ALL_SHOWS.filter(
-    (s) => s.podcastRss || s.name.toLowerCase().includes("podcast")
-  );
-
-  // Also include syndicated shows that likely have podcast feeds
-  const syndicated = ALL_SHOWS.filter(
-    (s) => s.isSyndicated && !podcasts.some((p) => p.id === s.id)
-  );
-
-  return [...podcasts, ...syndicated];
+  return PODCAST_IDS
+    .map((id) => ALL_SHOWS.find((s) => s.id === id))
+    .filter((s): s is NonNullable<typeof s> => !!s);
 }
 
 export default function PodcastsPage() {
   const podcasts = getPodcasts();
-  // All remaining shows that air live
-  const allLiveShows = ALL_SHOWS.filter(
-    (s) => s.isActive && !s.name.includes("General Programming") && !s.name.includes("ABC")
-  );
 
   return (
     <div className="space-y-8">
@@ -94,7 +93,6 @@ export default function PodcastsPage() {
         <h2 className="text-xl font-bold text-foreground">Available Podcasts</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {podcasts.map((show) => {
-            const hosts = getHostsByShowId(show.id);
             return (
               <Link
                 key={show.id}
@@ -147,47 +145,6 @@ export default function PodcastsPage() {
               </Link>
             );
           })}
-        </div>
-      </section>
-
-      {/* All Shows available as podcasts */}
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold text-foreground">All Shows</h2>
-        <p className="text-sm text-muted-foreground">
-          Browse all WCCG shows — many are available to stream on-demand after airing live.
-        </p>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {allLiveShows
-            .filter((s) => !podcasts.some((p) => p.id === s.id))
-            .map((show) => (
-              <Link
-                key={show.id}
-                href={`/shows/${show.slug}`}
-                className="group flex items-center gap-3 rounded-xl border border-border bg-card p-3 transition-all hover:border-[#74ddc7]/30"
-              >
-                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${show.gradient}`}>
-                  {(show.showImageUrl || show.imageUrl) ? (
-                    <div className="relative h-12 w-12 rounded-lg overflow-hidden">
-                      <AppImage
-                        src={(show.showImageUrl || show.imageUrl)!}
-                        alt={show.name}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <Mic className="h-5 w-5 text-white" />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-sm font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors truncate">
-                    {show.name}
-                  </h3>
-                  <p className="text-xs text-muted-foreground truncate">{show.hostNames}</p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-[#74ddc7] transition-colors shrink-0" />
-              </Link>
-            ))}
         </div>
       </section>
 

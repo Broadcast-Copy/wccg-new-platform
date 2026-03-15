@@ -587,6 +587,65 @@ export const SHOW_ABC_NEWS: ShowData = {
   category: "weekday",
 };
 
+// ─── Podcast-Only Shows ──────────────────────────────────────────
+
+export const SHOW_CAROLINA_EFFECT: ShowData = {
+  id: "show_carolina_effect",
+  name: "The Carolina Effect with J. Reid",
+  slug: "carolina-effect",
+  hostNames: "J. Reid",
+  hostIds: ["host_j_reid"],
+  timeSlot: "On Demand",
+  days: "Weekly",
+  streamId: "stream_wccg",
+  description: "J. Reid takes listeners on a deep dive into Carolina culture — music, sports, lifestyle, and the people shaping the Carolinas. Real conversations with local influencers, artists, and community leaders.",
+  tagline: "The pulse of Carolina culture",
+  gradient: "from-[#1e3a5f] via-[#0d2137] to-[#0a0a0f]",
+  imageUrl: null,
+  showImageUrl: null,
+  isSyndicated: false,
+  isActive: true,
+  category: "weekday",
+};
+
+export const SHOW_INSIDE_THE_LINES: ShowData = {
+  id: "show_inside_the_lines",
+  name: "Inside The Lines with James Sanders III",
+  slug: "inside-the-lines",
+  hostNames: "James Sanders III",
+  hostIds: ["host_james_sanders"],
+  timeSlot: "On Demand",
+  days: "Weekly",
+  streamId: "stream_wccg",
+  description: "Sports analyst James Sanders III goes beyond the box scores to bring listeners the stories, strategy, and culture behind the games. From college hoops to the NFL, Inside The Lines delivers expert analysis with a Carolina perspective.",
+  tagline: "Beyond the box scores",
+  gradient: "from-[#003087] via-[#001f5c] to-[#0a0a0f]",
+  imageUrl: null,
+  showImageUrl: null,
+  isSyndicated: false,
+  isActive: true,
+  category: "weekday",
+};
+
+export const SHOW_FRIDAY_NIGHT_SHOCKWAVE: ShowData = {
+  id: "show_friday_night_shockwave",
+  name: "Friday Night Shockwave",
+  slug: "friday-night-shockwave",
+  hostNames: "WCCG",
+  hostIds: [],
+  timeSlot: "Friday Nights",
+  days: "Friday",
+  streamId: "stream_wccg",
+  description: "The ultimate Friday night experience — non-stop bangers, exclusive mixes, and high-voltage energy to kick off your weekend. Friday Night Shockwave delivers the hardest-hitting playlist on Carolina radio.",
+  tagline: "High-voltage Friday nights",
+  gradient: "from-[#dc2626] via-[#7401df] to-[#0a0a0f]",
+  imageUrl: null,
+  showImageUrl: null,
+  isSyndicated: false,
+  isActive: true,
+  category: "weekday",
+};
+
 // ─── All Shows ────────────────────────────────────────────────────
 
 export const ALL_SHOWS: ShowData[] = [
@@ -618,6 +677,10 @@ export const ALL_SHOWS: ShowData[] = [
   SHOW_ISLAND_FREQUENCY,
   // 24/7 Stream
   SHOW_MIXSQUAD_RADIO,
+  // Podcast-Only
+  SHOW_CAROLINA_EFFECT,
+  SHOW_INSIDE_THE_LINES,
+  SHOW_FRIDAY_NIGHT_SHOCKWAVE,
 ];
 
 /** Hero slides — the main featured shows for the homepage carousel */
