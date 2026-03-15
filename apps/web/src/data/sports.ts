@@ -323,24 +323,16 @@ export const DUKE_PLAY_BY_PLAY: PlayByPlayEntry[] = [
   { id: 30, clock: "7:45", half: "2nd", team: "duke", text: "TIMEOUT Duke. Scheyer settling things down. Duke leads 38-28.", score: { duke: 38, opponent: 28 } },
 ];
 
-// ─── YouTube Highlight IDs (Duke Basketball) ────────────────────────
-// Real video IDs from Duke MBB YouTube channel RSS feed
+// ─── YouTube Highlight IDs (Duke Basketball — ACC Tournament 2026) ──
+// Filtered to tournament/game-related content from Duke MBB channel
 export const DUKE_HIGHLIGHT_VIDEOS = [
-  "2qvUjB72ONg",
-  "DLQslQCxHn0",
-  "LdOY5lMdzoM",
-  "m8hljl7hr-I",
-  "W5G5938nwd0",
-  "HuPoUS2Rz0Y",
-  "WOql7Z5ci2s",
-  "OnsfRRHdqb8",
-  "DOv8nLzJUG0",
-  "PmHSiKeXjag",
-  "Yux3SN4_zoM",
-  "qJInqfECkAk",
-  "HqqXY2s1acU",
-  "RDAAYUm6Wz0",
-  "v7nzQmpvyT8",
+  "DLQslQCxHn0", // Duke 73, Clemson 61 | Every Bucket (ACC Semis 3-13-26)
+  "HuPoUS2Rz0Y", // Duke 80, FSU 79 | Every Bucket (ACC Quarters 3-12-26)
+  "m8hljl7hr-I", // Clutch 19-2 run
+  "LdOY5lMdzoM", // BAKERY'S OPEN (tournament highlights)
+  "OnsfRRHdqb8", // Boozer Twins Exclusive | ACC Quarters
+  "WOql7Z5ci2s", // BIG BUCKETS (ACC Tournament)
+  "W5G5938nwd0", // Isaiah Evans career-high 32
 ];
 
 // ─── ESPN API Config ────────────────────────────────────────────────

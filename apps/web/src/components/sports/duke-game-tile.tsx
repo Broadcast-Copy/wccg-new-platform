@@ -121,8 +121,8 @@ function PlayByPlayTicker({
   );
 }
 
-// ── YouTube Highlights — rotates through real Duke MBB videos ──────
-function YouTubeHighlights() {
+// ── Game Highlights — rotates through ACC Tournament videos ─────────
+function GameHighlights() {
   const ROTATE_MS = 3 * 60 * 1000; // 3 minutes
   const [videoIndex, setVideoIndex] = useState(0);
 
@@ -133,17 +133,20 @@ function YouTubeHighlights() {
     return () => clearInterval(timer);
   }, []);
 
-  const videoId = DUKE_HIGHLIGHT_VIDEOS[videoIndex % DUKE_HIGHLIGHT_VIDEOS.length];
+  const videoId =
+    DUKE_HIGHLIGHT_VIDEOS[videoIndex % DUKE_HIGHLIGHT_VIDEOS.length];
 
   return (
     <div className="flex flex-col h-full">
       <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
         <h3 className="text-xs font-bold text-white/80 uppercase tracking-wider">
-          Highlights
+          Game Highlights
         </h3>
         <button
           onClick={() =>
-            setVideoIndex((prev) => (prev + 1) % DUKE_HIGHLIGHT_VIDEOS.length)
+            setVideoIndex(
+              (prev) => (prev + 1) % DUKE_HIGHLIGHT_VIDEOS.length
+            )
           }
           className="text-[10px] text-white/40 hover:text-white/70 transition-colors"
           title="Next video"
@@ -156,20 +159,12 @@ function YouTubeHighlights() {
           <iframe
             key={videoId}
             src={`https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0`}
-            title="Duke Basketball Highlights"
+            title="Duke ACC Tournament Highlights"
             className="absolute inset-0 w-full h-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />
         </div>
-        <a
-          href={DUKE_BASKETBALL.youtube.channelUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block mt-2 text-center text-[10px] text-white/40 hover:text-white/60 transition-colors"
-        >
-          Watch more on YouTube →
-        </a>
       </div>
     </div>
   );
@@ -416,9 +411,9 @@ export function DukeGameTile() {
 
         {/* 1/3 YouTube + 2/3 Play-by-Play — always side by side */}
         <div className="grid grid-cols-3 rounded-b-2xl overflow-hidden border border-t-0 border-red-500/40 bg-[#0a0e1a]">
-          {/* YouTube Highlights — 1/3 left */}
+          {/* Game Highlights — 1/3 left */}
           <div className="col-span-1 border-r border-white/10 min-h-[320px]">
-            <YouTubeHighlights />
+            <GameHighlights />
           </div>
 
           {/* Play-by-Play Ticker — 2/3 right */}
