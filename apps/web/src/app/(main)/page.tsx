@@ -184,6 +184,9 @@ export default function HomePage() {
       {/* Hero Ribbon */}
       <Hero />
 
+      {/* Duke Game Day */}
+      <DukeGameTile />
+
       {/* Platform Headline */}
       <section className="text-center py-4">
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground tracking-tight">
@@ -193,9 +196,6 @@ export default function HomePage() {
           Your hub for tickets, streaming, weather &amp; news updates, community discovery, podcast booking, dynamic advertising, and digital media services, all in one place.
         </p>
       </section>
-
-      {/* Duke Game Day */}
-      <DukeGameTile />
 
       {/* Platform Features */}
       <section className="space-y-4">
