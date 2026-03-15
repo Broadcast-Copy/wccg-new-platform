@@ -8,7 +8,7 @@ import {
   DUKE_HIGHLIGHT_VIDEOS,
   type PlayByPlayEntry,
 } from "@/data/sports";
-import { useESPNScores, type ESPNHighlight } from "@/hooks/use-espn-scores";
+import { useESPNScores } from "@/hooks/use-espn-scores";
 
 type GameMode = "pre" | "live" | "post";
 
@@ -122,54 +122,33 @@ function PlayByPlayTicker({
   );
 }
 
-// ── Game Highlights — ESPN live clips when available, YouTube fallback
-function GameHighlights({
-  espnHighlights,
-}: {
-  espnHighlights: ESPNHighlight[];
-}) {
+// ── Game Highlights — YouTube Duke MBB videos ─────────────────────
+function GameHighlights() {
+  const ROTATE_MS = 3 * 60 * 1000; // 3 minutes
   const [videoIndex, setVideoIndex] = useState(0);
-  const hasESPN = espnHighlights.length > 0;
-  const totalVideos = hasESPN
-    ? espnHighlights.length
-    : DUKE_HIGHLIGHT_VIDEOS.length;
-
-  // Auto-advance every 30s for ESPN clips (short), 3 min for YouTube
-  const ROTATE_MS = hasESPN ? 30_000 : 3 * 60 * 1000;
+  const total = DUKE_HIGHLIGHT_VIDEOS.length;
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setVideoIndex((prev) => (prev + 1) % totalVideos);
+      setVideoIndex((prev) => (prev + 1) % total);
     }, ROTATE_MS);
     return () => clearInterval(timer);
-  }, [totalVideos, ROTATE_MS]);
+  }, [total]);
 
-  // Reset index when ESPN highlights change count
-  useEffect(() => {
-    if (hasESPN) setVideoIndex(espnHighlights.length - 1); // show newest
-  }, [espnHighlights.length, hasESPN]);
-
-  const safeIndex = videoIndex % totalVideos;
-  const currentESPN = hasESPN ? espnHighlights[safeIndex] : null;
-  const currentYTId = !hasESPN
-    ? DUKE_HIGHLIGHT_VIDEOS[safeIndex]
-    : null;
+  const videoId = DUKE_HIGHLIGHT_VIDEOS[videoIndex % total];
 
   return (
     <div className="flex flex-col h-full">
       <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
-        <h3 className="text-xs font-bold text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-          {hasESPN && (
-            <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-          )}
-          {hasESPN ? "Live Clips" : "Highlights"}
+        <h3 className="text-xs font-bold text-white/80 uppercase tracking-wider">
+          Game Highlights
         </h3>
         <div className="flex items-center gap-2">
           <span className="text-[9px] text-white/30 tabular-nums">
-            {safeIndex + 1}/{totalVideos}
+            {(videoIndex % total) + 1}/{total}
           </span>
           <button
-            onClick={() => setVideoIndex((prev) => (prev + 1) % totalVideos)}
+            onClick={() => setVideoIndex((prev) => (prev + 1) % total)}
             className="text-[10px] text-white/40 hover:text-white/70 transition-colors"
             title="Next video"
           >
@@ -177,35 +156,17 @@ function GameHighlights({
           </button>
         </div>
       </div>
-      <div className="flex-1 min-h-0 p-2 flex flex-col">
-        <div className="relative w-full flex-1 min-h-[180px] rounded-lg overflow-hidden bg-black">
-          {currentESPN ? (
-            <video
-              key={currentESPN.id}
-              src={currentESPN.mp4Url}
-              controls
-              autoPlay
-              muted
-              playsInline
-              className="absolute inset-0 w-full h-full object-contain bg-black"
-              poster={currentESPN.thumbnail}
-            />
-          ) : currentYTId ? (
-            <iframe
-              key={currentYTId}
-              src={`https://www.youtube.com/embed/${currentYTId}?autoplay=0&rel=0`}
-              title="Duke ACC Tournament Highlights"
-              className="absolute inset-0 w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          ) : null}
+      <div className="flex-1 min-h-0 p-2">
+        <div className="relative w-full h-full min-h-[200px] rounded-lg overflow-hidden bg-black">
+          <iframe
+            key={videoId}
+            src={`https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0`}
+            title="Duke ACC Tournament Highlights"
+            className="absolute inset-0 w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
         </div>
-        {currentESPN && (
-          <p className="text-[10px] text-white/50 mt-1.5 px-1 leading-snug truncate">
-            {currentESPN.title}
-          </p>
-        )}
       </div>
     </div>
   );
@@ -235,7 +196,7 @@ export function DukeGameTile() {
 
   // ── ESPN real-time scores ──
   const isGameActive = mode === "live" || mode === "post";
-  const { data: espnData, highlights: espnHighlights } = useESPNScores(isGameActive);
+  const { data: espnData } = useESPNScores(isGameActive);
 
   // Use ESPN scores when available, fall back to simulated
   useEffect(() => {
@@ -454,7 +415,7 @@ export function DukeGameTile() {
         <div className="grid grid-cols-3 rounded-b-2xl overflow-hidden border border-t-0 border-red-500/40 bg-[#0a0e1a]">
           {/* Game Highlights — 1/3 left */}
           <div className="col-span-1 border-r border-white/10 min-h-[320px]">
-            <GameHighlights espnHighlights={espnHighlights} />
+            <GameHighlights />
           </div>
 
           {/* Play-by-Play Ticker — 2/3 right */}
