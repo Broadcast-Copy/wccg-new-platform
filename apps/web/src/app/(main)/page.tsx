@@ -185,7 +185,7 @@ export default function HomePage() {
       <Hero />
 
       {/* What You Missed + Duke Game Day */}
-      <div className="flex items-center gap-2 mb-[-0.75rem]">
+      <div className="flex items-center gap-2">
         <h2 className="text-lg sm:text-xl font-black text-foreground tracking-tight">
           What You Missed
         </h2>
