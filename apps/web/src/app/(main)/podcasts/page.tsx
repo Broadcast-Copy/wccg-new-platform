@@ -12,8 +12,6 @@ export const metadata = {
 
 // Exact podcast lineup
 const PODCAST_IDS = [
-  "show_streetz_morning",
-  "show_posted_corner",
   "show_island_frequency",
   "show_in_it_big_a",
   "show_carolina_effect",

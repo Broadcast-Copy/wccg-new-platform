@@ -56,9 +56,9 @@ const WEEKDAY_BLOCKS: ScheduleBlock[] = [
     endTime: "10:00",
   },
   {
-    showId: "show_in_it_big_a",
-    showName: "In It w/ Big A",
-    hostNames: "Big A",
+    showId: "show_way_up_angela_yee",
+    showName: "Way Up with Angela Yee",
+    hostNames: "Angela Yee",
     startTime: "10:00",
     endTime: "15:00",
   },

@@ -517,7 +517,7 @@ export function GlobalPlayer() {
             {NUDGE_PHRASES[nudgeIndex]}
           </span>
           <span className="text-[9px] font-bold text-white/80 bg-white/20 px-2 py-0.5 rounded-full shrink-0">
-            Sign In
+            Become a Listener
           </span>
         </Link>
       )}

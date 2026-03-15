@@ -93,7 +93,7 @@ export const HOST_ANGELA_YEE: HostData = {
   id: "host_angela_yee",
   name: "Angela Yee",
   role: "Host",
-  showIds: ["show_in_it_big_a"],
+  showIds: ["show_way_up_angela_yee"],
   bio: "Angela Yee is a media mogul, entrepreneur, and the host of Way Up with Angela Yee, syndicated nationally through Premiere Networks/iHeartRadio. Previously co-hosting the legendary Breakfast Club for over a decade, Angela brings celebrity interviews, relationship advice, trending topics, and cultural commentary to midday radio.",
   imageUrl: "/images/hosts/angela-yee.png",
   socialLinks: [

@@ -108,8 +108,8 @@ export const SHOW_STREETZ_MORNING: ShowData = {
   category: "weekday",
 };
 
-export const SHOW_IN_IT_BIG_A: ShowData = {
-  id: "show_in_it_big_a",
+export const SHOW_WAY_UP_ANGELA_YEE: ShowData = {
+  id: "show_way_up_angela_yee",
   name: "Way Up with Angela Yee",
   slug: "way-up-angela-yee",
   hostNames: "Angela Yee",
@@ -125,6 +125,25 @@ export const SHOW_IN_IT_BIG_A: ShowData = {
   hostImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/11/angela-yee-tamara-beckwith-ny-post-01.webp",
   segments: ["Shine a Light on 'Em", "Tell Us a Secret", "Rumor Report", "Ask Yee"],
   isSyndicated: true,
+  isActive: true,
+  category: "weekday",
+};
+
+export const SHOW_IN_IT_BIG_A: ShowData = {
+  id: "show_in_it_big_a",
+  name: "In It with Big A",
+  slug: "in-it-with-big-a",
+  hostNames: "Big A",
+  hostIds: ["host_big_a"],
+  timeSlot: "On Demand",
+  days: "Weekly",
+  streamId: "stream_wccg",
+  description: "Big A keeps it real with unfiltered conversations, community topics, and the kind of talk that hits different. In It with Big A is the podcast where real life meets real talk.",
+  tagline: "Real life meets real talk",
+  gradient: "from-[#1a0533] via-[#2d1b69] to-[#1a1a2e]",
+  imageUrl: null,
+  showImageUrl: null,
+  isSyndicated: false,
   isActive: true,
   category: "weekday",
 };
@@ -651,7 +670,7 @@ export const SHOW_FRIDAY_NIGHT_SHOCKWAVE: ShowData = {
 export const ALL_SHOWS: ShowData[] = [
   // Weekday
   SHOW_STREETZ_MORNING,
-  SHOW_IN_IT_BIG_A,
+  SHOW_WAY_UP_ANGELA_YEE,
   SHOW_GENERAL_PROGRAMMING_WEEKDAY,
   SHOW_POSTED_CORNER,
   SHOW_BOOTLEG_KEV,
@@ -678,6 +697,7 @@ export const ALL_SHOWS: ShowData[] = [
   // 24/7 Stream
   SHOW_MIXSQUAD_RADIO,
   // Podcast-Only
+  SHOW_IN_IT_BIG_A,
   SHOW_CAROLINA_EFFECT,
   SHOW_INSIDE_THE_LINES,
   SHOW_FRIDAY_NIGHT_SHOCKWAVE,
@@ -686,7 +706,7 @@ export const ALL_SHOWS: ShowData[] = [
 /** Hero slides — the main featured shows for the homepage carousel */
 export const HERO_SHOWS: ShowData[] = [
   SHOW_STREETZ_MORNING,
-  SHOW_IN_IT_BIG_A,
+  SHOW_WAY_UP_ANGELA_YEE,
   SHOW_POSTED_CORNER,
   SHOW_BOOTLEG_KEV,
   SHOW_SUNDAY_SNACKS,
