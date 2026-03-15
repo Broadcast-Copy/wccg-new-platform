@@ -19,8 +19,18 @@ const POLL_INTERVAL = 30_000; // 30 seconds
  * Hook that polls ESPN's public API for real-time Duke game scores.
  * Only polls while the game is in progress. Falls back gracefully.
  */
+export interface ESPNHighlight {
+  id: string;
+  title: string;
+  description: string;
+  mp4Url: string;
+  hlsUrl?: string;
+  thumbnail?: string;
+}
+
 export function useESPNScores(enabled: boolean) {
   const [data, setData] = useState<ESPNGameData | null>(null);
+  const [highlights, setHighlights] = useState<ESPNHighlight[]>([]);
   const [error, setError] = useState(false);
 
   const fetchScores = useCallback(async () => {
@@ -67,6 +77,47 @@ export function useESPNScores(enabled: boolean) {
         // no plays data
       }
 
+      // Extract video highlights
+      try {
+        const videos: ESPNHighlight[] = [];
+        const videoSources = [
+          ...(json.videos || []),
+          ...(json.highlights?.videos || []),
+          ...(json.news?.articles || []).flatMap((a: Record<string, unknown>) =>
+            (a as { video?: unknown[] }).video || []
+          ),
+        ];
+        for (const v of videoSources) {
+          const vid = v as Record<string, unknown>;
+          const id = String(vid.id || vid.guid || Math.random());
+          const title = String(vid.headline || vid.title || vid.name || "");
+          const description = String(vid.description || vid.caption || "");
+          // Find mp4 link
+          const links = (vid.links as Record<string, unknown>) || {};
+          const source = (links.source as Record<string, unknown>) || {};
+          const mezzanine = (links.mezzanine as Record<string, unknown>) || {};
+          const mp4Url = String(
+            source.href || mezzanine.href || vid.url || ""
+          );
+          const mobile = (links.mobile as Record<string, unknown>) || {};
+          const hlsUrl = mobile.href ? String(mobile.href) : undefined;
+          // thumbnail
+          const images = (vid.images || vid.posterImages || []) as Array<
+            Record<string, unknown>
+          >;
+          const thumbnail = images.length > 0 ? String(images[0].url || images[0].href || "") : undefined;
+
+          if (mp4Url && title) {
+            videos.push({ id, title, description, mp4Url, hlsUrl, thumbnail });
+          }
+        }
+        if (videos.length > 0) {
+          setHighlights(videos);
+        }
+      } catch {
+        // no video data
+      }
+
       setData({
         dukeScore,
         opponentScore,
@@ -91,5 +142,5 @@ export function useESPNScores(enabled: boolean) {
     return () => clearInterval(timer);
   }, [enabled, fetchScores]);
 
-  return { data, error, refetch: fetchScores };
+  return { data, highlights, error, refetch: fetchScores };
 }
