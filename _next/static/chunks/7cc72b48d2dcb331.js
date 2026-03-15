@@ -1,1 +1,0 @@
-(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,67594,e=>{"use strict";e.i(34534);var t=e.i(7340);function i(){return(0,t.createBrowserClient)("https://lmoqvvkhibfiwudgdopb.supabase.co","sb_publishable_0QjuxropdHFHa1v9SyD1HA_mxzMWjY6")}e.s(["createClient",()=>i])}]);
