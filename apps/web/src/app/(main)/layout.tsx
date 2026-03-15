@@ -389,13 +389,27 @@ export default function MainLayout({
           {/* Carson Communications Banner */}
           <div className="mt-8 rounded-xl border border-border bg-foreground/[0.03] p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#dc2626]/10 border border-[#dc2626]/20">
-                <span className="text-lg font-black text-[#dc2626]">C</span>
-              </div>
-              <div>
-                <p className="text-sm font-bold text-foreground">Carson Communications</p>
-                <p className="text-xs text-muted-foreground">Your Trusted Partner In Advertising</p>
-              </div>
+              {/* Dark mode: white logo */}
+              <span className="hidden dark:block">
+                <Image
+                  src="/images/logos/carson-communications-logo.png"
+                  alt="Carson Communications"
+                  width={360}
+                  height={120}
+                  style={{ width: "180px", height: "auto" }}
+                />
+              </span>
+              {/* Light mode: inverted (dark) logo */}
+              <span className="block dark:hidden">
+                <Image
+                  src="/images/logos/carson-communications-logo.png"
+                  alt="Carson Communications"
+                  width={360}
+                  height={120}
+                  style={{ width: "180px", height: "auto", filter: "invert(1)" }}
+                />
+              </span>
+              <p className="text-xs text-muted-foreground hidden sm:block">Your Trusted Partner In Advertising</p>
             </div>
             <Link
               href="/advertise"
