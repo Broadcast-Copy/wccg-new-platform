@@ -112,7 +112,7 @@ export default function ShowsPodcastsPage() {
 
         {/* Podcasts Card */}
         <Link
-          href="/creators/podcast"
+          href="/podcasts"
           className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-[#7401df]/40 hover:shadow-2xl hover:shadow-[#7401df]/10 hover:-translate-y-1"
         >
           {/* Gradient accent */}
