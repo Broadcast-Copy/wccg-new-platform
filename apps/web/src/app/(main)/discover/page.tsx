@@ -134,7 +134,7 @@ export default function DiscoverPage() {
           </Link>
 
           {/* Card 2: Live Shows & Podcasts */}
-          <Link href="/shows" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg">
+          <Link href="/shows-podcasts" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg">
             <div className="flex items-center gap-3">
               <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
                 <AppImage src="/images/hosts/angela-yee.png" alt="Host" fill className="object-cover" />
