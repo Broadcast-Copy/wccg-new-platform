@@ -85,7 +85,7 @@ function PlayByPlayTicker({ entries }: { entries: PlayByPlayEntry[] }) {
                   {entry.half} {entry.clock}
                 </span>
                 <span className="tabular-nums font-semibold">
-                  Duke {entry.score.duke} - {entry.score.opponent} UNC
+                  Duke {entry.score.duke} - {entry.score.opponent} OPP
                 </span>
               </div>
               <p className="text-[11px] sm:text-xs text-white/80 leading-snug mt-0.5">
