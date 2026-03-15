@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Hero } from "@/components/home/hero";
-import { LiveNowRail } from "@/components/home/live-now-rail";
-import { UpNextRail } from "@/components/home/up-next-rail";
+
 import { EventCard } from "@/components/events/event-card";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -229,12 +228,6 @@ export default function HomePage() {
           ))}
         </div>
       </section>
-
-      {/* Live Now Rail */}
-      <LiveNowRail />
-
-      {/* Up Next Rail */}
-      <UpNextRail />
 
       {/* Upcoming Events — client-side fetched */}
       <UpcomingEventsSection />
