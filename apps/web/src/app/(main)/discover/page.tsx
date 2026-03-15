@@ -17,8 +17,6 @@ import {
   Disc3,
   CloudSun,
   Newspaper,
-  Dribbble,
-  ShieldCheck,
   Church,
 } from "lucide-react";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
@@ -182,11 +180,11 @@ export default function DiscoverPage() {
           {/* Card 4: Duke Sports */}
           <Link href="/sports" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg">
             <div className="flex items-center gap-3">
-              <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#003087]">
-                <Dribbble className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
+              <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-[#003087]">
+                <AppImage src="/images/sports/duke-basketball-logo.png" alt="Duke Basketball" fill className="object-cover" />
               </div>
-              <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#003087]">
-                <ShieldCheck className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
+              <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-[#003087]">
+                <AppImage src="/images/sports/duke-football-logo.png" alt="Duke Football" fill className="object-cover" />
               </div>
             </div>
             <div className="space-y-1.5">

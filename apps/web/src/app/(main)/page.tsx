@@ -183,14 +183,10 @@ export default function HomePage() {
       {/* Hero Ribbon */}
       <Hero />
 
-      {/* What You Missed + Duke Game Day */}
-      <div className="flex items-center gap-2">
-        <h2 className="text-lg sm:text-xl font-black text-foreground tracking-tight">
-          What You Missed
-        </h2>
-        <div className="h-px flex-1 bg-border" />
+      {/* Duke Game Day */}
+      <div className="mt-6">
+        <DukeGameTile />
       </div>
-      <DukeGameTile />
 
       {/* Platform Headline */}
       <section className="text-center py-4">
