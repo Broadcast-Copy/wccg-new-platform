@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Hero } from "@/components/home/hero";
-import { LiveNowRail } from "@/components/home/live-now-rail";
-import { UpNextRail } from "@/components/home/up-next-rail";
+import { LiveUpNextCards } from "@/components/home/live-upnext-cards";
 import { EventCard } from "@/components/events/event-card";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -193,6 +192,9 @@ export default function HomePage() {
       </div>
       <DukeGameTile />
 
+      {/* Live Now + Up Next side by side */}
+      <LiveUpNextCards />
+
       {/* Platform Headline */}
       <section className="text-center py-4">
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground tracking-tight">
@@ -235,12 +237,6 @@ export default function HomePage() {
           ))}
         </div>
       </section>
-
-      {/* Live Now Rail */}
-      <LiveNowRail />
-
-      {/* Up Next Rail */}
-      <UpNextRail />
 
       {/* Upcoming Events — client-side fetched */}
       <UpcomingEventsSection />
