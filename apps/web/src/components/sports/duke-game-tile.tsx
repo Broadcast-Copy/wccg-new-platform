@@ -1339,16 +1339,9 @@ export function DukeGameTile() {
           <div className="relative z-10 space-y-5">
             {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight">
-                  COUNTDOWN TO CRAZY
-                </h2>
-                {gameTitle && (
-                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 font-bold uppercase tracking-wider border border-yellow-500/30">
-                    🏆 {gameTitle}
-                  </span>
-                )}
-              </div>
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight">
+                COUNTDOWN TO CRAZY
+              </h2>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/80">
                 <span className="text-sm">🏀</span> WCCG 104.5 FM
               </span>

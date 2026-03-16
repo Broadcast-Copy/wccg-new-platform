@@ -15,9 +15,6 @@ import {
   ShoppingBag,
   Mic,
   Disc3,
-  CloudSun,
-  Newspaper,
-  Church,
 } from "lucide-react";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 
@@ -110,13 +107,13 @@ export default function DiscoverPage() {
           <Link href="/mix-squad" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg">
             <div className="flex items-center gap-3">
               <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
-                <AppImage src="/images/shows/crank-corleone.png" alt="DJ" fill className="object-cover" />
+                <AppImage src="/images/hosts/dj-ike-gda.png" alt="DJ Ike GDA" fill className="object-cover" />
               </div>
               <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
-                <AppImage src="/images/shows/bootleg-kev-show.png" alt="DJ" fill className="object-cover" />
+                <AppImage src="/images/hosts/dj-chuck-t.png" alt="DJ Chuck T" fill className="object-cover" />
               </div>
               <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
-                <AppImage src="/images/hosts/incognito.png" alt="DJ" fill className="object-cover" />
+                <AppImage src="/images/hosts/dj-ricoveli.png" alt="DJ Ricoveli" fill className="object-cover" />
               </div>
             </div>
             <div className="space-y-1.5">
@@ -159,14 +156,14 @@ export default function DiscoverPage() {
           {/* Card 3: Diverse News & Weather */}
           <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#00a651] text-white font-bold text-lg sm:text-xl leading-tight text-center px-1">
-                <span>BN<br/>Network</span>
+              <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
+                <AppImage src="/images/bin-news-1.png" alt="BIN News" fill className="object-cover" />
               </div>
-              <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#f47920]">
-                <CloudSun className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
+              <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
+                <AppImage src="/images/accuweather-2.png" alt="AccuWeather" fill className="object-cover" />
               </div>
-              <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#4566b0]">
-                <Newspaper className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
+              <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
+                <AppImage src="/images/abc-news1.png" alt="ABC News" fill className="object-cover" />
               </div>
             </div>
             <div className="space-y-1.5">
@@ -181,10 +178,10 @@ export default function DiscoverPage() {
           <Link href="/sports" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg">
             <div className="flex items-center gap-3">
               <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-[#003087]">
-                <AppImage src="/images/sports/duke-basketball-logo.png" alt="Duke Basketball" fill className="object-cover" />
+                <AppImage src="/images/sports/dukebasketball.jpg" alt="Duke Basketball" fill className="object-cover" />
               </div>
               <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-[#003087]">
-                <AppImage src="/images/sports/duke-football-logo.png" alt="Duke Football" fill className="object-cover" />
+                <AppImage src="/images/sports/FOOTBALL-DUKE.png" alt="Duke Football" fill className="object-cover" />
               </div>
             </div>
             <div className="space-y-1.5">
@@ -202,11 +199,14 @@ export default function DiscoverPage() {
           {/* Card 5: Sunday Gospel Caravan */}
           <Link href="/gospel-caravan" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg">
             <div className="flex items-center gap-3">
-              <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-gradient-to-br from-[#d4a017] to-[#b8860b]">
-                <Church className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
+              <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
+                <AppImage src="/images/gpn1-web1.png" alt="Grace Plus Nothing" fill className="object-cover" />
               </div>
-              <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df] to-[#4c1d95]">
-                <Mic className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
+              <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
+                <AppImage src="/images/pmb-02.png" alt="Progressive Missionary" fill className="object-cover" />
+              </div>
+              <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-border bg-muted">
+                <AppImage src="/images/marvin-sapp-banner.png" alt="Marvin Sapp" fill className="object-cover" />
               </div>
             </div>
             <div className="space-y-1.5">
