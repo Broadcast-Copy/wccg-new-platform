@@ -869,6 +869,7 @@ export function DukeGameTile() {
   const [visiblePlays, setVisiblePlays] = useState<PlayByPlayEntry[]>([]);
   const [currentRevealedPlay, setCurrentRevealedPlay] = useState<PlayByPlayEntry | null>(null);
   const [currentPostGameEntry, setCurrentPostGameEntry] = useState<PostGameEntry | null>(null);
+  const [scoreExpanded, setScoreExpanded] = useState(false);
 
   // Detect post-game show window (up to 1 hour after game ends)
   const isPostGameShow = useMemo(() => {
@@ -1042,8 +1043,8 @@ export function DukeGameTile() {
   // Detect big games
   const gameTitle = nextGame.gameTitle || "";
 
-  // ── LIVE / POST MODE: Scoreboard + 1/3 YouTube + 2/3 play-by-play ──
-  if (mode === "live" || mode === "post") {
+  // ── LIVE MODE: Full scoreboard + play-by-play ──
+  if (mode === "live") {
     return (
       <section className="px-[50px] space-y-0">
         {/* Scoreboard Header */}
@@ -1058,19 +1059,14 @@ export function DukeGameTile() {
             />
           </div>
           <div className="relative z-10">
-            {/* LIVE badge + title + game badge + ESPN indicator */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
-                  {mode === "live"
-                    ? "DUKE BASKETBALL"
-                    : isPostGameShow
-                    ? "POST-GAME SHOW"
-                    : "FINAL SCORE"}
+                  DUKE BASKETBALL
                 </h2>
                 {gameTitle && (
                   <span className="text-[9px] px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 font-bold uppercase tracking-wider border border-yellow-500/30">
-                    🏆 {gameTitle}
+                    {gameTitle}
                   </span>
                 )}
                 {espnData && (
@@ -1079,85 +1075,43 @@ export function DukeGameTile() {
                   </span>
                 )}
               </div>
-              {mode === "live" ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white animate-pulse">
-                  <span className="h-2 w-2 rounded-full bg-white animate-ping" />
-                  LIVE ON WCCG
-                </span>
-              ) : isPostGameShow ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#003087] px-3 py-1 text-xs font-bold text-white border border-white/20 animate-pulse">
-                  <span className="h-2 w-2 rounded-full bg-[#74ddc7] animate-ping" />
-                  🎙️ LIVE ON WCCG
-                </span>
-              ) : (
-                <span className="rounded-full bg-[#003087] px-3 py-1 text-xs font-bold text-white/90 border border-white/20">
-                  FINAL
-                </span>
-              )}
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white animate-pulse">
+                <span className="h-2 w-2 rounded-full bg-white animate-ping" />
+                LIVE ON WCCG
+              </span>
             </div>
 
             {/* Scoreboard */}
             <div className="flex items-center justify-center gap-6 sm:gap-10">
-              {/* Duke */}
               <div className="flex items-center gap-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={DUKE_BASKETBALL.logoUrl}
-                  alt="Duke"
-                  className="h-12 w-12 sm:h-14 sm:w-14 object-contain"
-                />
+                <img src={DUKE_BASKETBALL.logoUrl} alt="Duke" className="h-12 w-12 sm:h-14 sm:w-14 object-contain" />
                 <div className="text-center">
-                  <span className="block text-xs font-bold text-white/70">
-                    DUKE
-                  </span>
-                  <span className="text-3xl sm:text-4xl font-black text-white tabular-nums">
-                    {liveScore.duke}
-                  </span>
+                  <span className="block text-xs font-bold text-white/70">DUKE</span>
+                  <span className="text-3xl sm:text-4xl font-black text-white tabular-nums">{liveScore.duke}</span>
                 </div>
               </div>
-
-              {/* Game Clock + Possession */}
               <div className="flex flex-col items-center">
-                {mode === "live" && espnData?.possession && (
+                {espnData?.possession && (
                   <div className="flex items-center gap-1 mb-1">
-                    {espnData.possession === "duke" && (
-                      <span className="text-[10px] animate-pulse" title="Duke has possession">◀</span>
-                    )}
+                    {espnData.possession === "duke" && <span className="text-[10px] animate-pulse" title="Duke has possession">◀</span>}
                     <span className="text-sm">🏀</span>
-                    {espnData.possession === "opponent" && (
-                      <span className="text-[10px] animate-pulse" title="Opponent has possession">▶</span>
-                    )}
+                    {espnData.possession === "opponent" && <span className="text-[10px] animate-pulse" title="Opponent has possession">▶</span>}
                   </div>
                 )}
-                {(!espnData?.possession || mode !== "live") && (
-                  <span className="text-lg font-black text-white/30">—</span>
-                )}
-                <span className="text-[11px] text-white/50 mt-0.5">
-                  {half}
-                  {gameClock && ` | ${gameClock}`}
-                </span>
+                {!espnData?.possession && <span className="text-lg font-black text-white/30">—</span>}
+                <span className="text-[11px] text-white/50 mt-0.5">{half}{gameClock && ` | ${gameClock}`}</span>
               </div>
-
-              {/* Opponent */}
               <div className="flex items-center gap-3">
                 <div className="text-center">
-                  <span className="block text-xs font-bold text-white/70">
-                    {opponentShort.toUpperCase()}
-                  </span>
-                  <span className="text-3xl sm:text-4xl font-black text-white/80 tabular-nums">
-                    {liveScore.opponent}
-                  </span>
+                  <span className="block text-xs font-bold text-white/70">{opponentShort.toUpperCase()}</span>
+                  <span className="text-3xl sm:text-4xl font-black text-white/80 tabular-nums">{liveScore.opponent}</span>
                 </div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={nextGame.opponentLogo || ""}
-                  alt={nextGame.opponent}
-                  className="h-12 w-12 sm:h-14 sm:w-14 object-contain"
-                />
+                <img src={nextGame.opponentLogo || ""} alt={nextGame.opponent} className="h-12 w-12 sm:h-14 sm:w-14 object-contain" />
               </div>
             </div>
 
-            {/* Game info */}
             <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-3 text-[11px] text-white/40">
               <span>{nextGame.venue}</span>
               <span>|</span>
@@ -1166,183 +1120,202 @@ export function DukeGameTile() {
           </div>
         </div>
 
-        {/* Bottom section — live → post-game show → recap */}
+        {/* Bottom section — play-by-play */}
         <div className="rounded-b-2xl overflow-hidden border border-t-0 border-[#003087]/60 bg-[#0a0e1a]">
-          {mode === "live" ? (
-            /* ── LIVE: Play-by-play + Player Spotlight ── */
-            <div className="grid grid-cols-3">
-              <div className="col-span-1 border-r border-white/10 min-h-[320px]">
-                <PlayerSpotlight
-                  lastPlayText={
-                    espnData?.lastPlay ||
-                    currentRevealedPlay?.text
-                  }
-                  lastPlayTeam={
-                    espnData?.possession ||
-                    currentRevealedPlay?.team
-                  }
-                />
-              </div>
-              <div className="col-span-2 min-h-[320px]">
-                <PlayByPlayTicker
-                  entries={visiblePlays}
-                  espnLastPlay={espnData?.lastPlay}
-                  onRevealedPlayChange={setCurrentRevealedPlay}
-                />
-              </div>
+          <div className="grid grid-cols-3">
+            <div className="col-span-1 border-r border-white/10 min-h-[320px]">
+              <PlayerSpotlight
+                lastPlayText={espnData?.lastPlay || currentRevealedPlay?.text}
+                lastPlayTeam={espnData?.possession || currentRevealedPlay?.team}
+              />
             </div>
-          ) : isPostGameShow ? (
-            /* ── POST-GAME SHOW: Live captions + play-by-play ── */
-            <div className="grid grid-cols-3">
-              <div className="col-span-1 border-r border-white/10 min-h-[320px]">
-                <PostGameSpotlight currentEntry={currentPostGameEntry} />
-              </div>
-              <div className="col-span-2 min-h-[320px]">
-                <PostGameCaptions
-                  onCurrentEntryChange={setCurrentPostGameEntry}
-                  transcriptLines={transcriptLines}
-                  currentTranscriptLine={currentTranscriptLine}
-                  isListening={isListening}
-                  transcriptError={transcriptError}
-                  playByPlayEntries={visiblePlays}
-                  espnLastPlay={espnData?.lastPlay}
-                />
-              </div>
+            <div className="col-span-2 min-h-[320px]">
+              <PlayByPlayTicker
+                entries={visiblePlays}
+                espnLastPlay={espnData?.lastPlay}
+                onRevealedPlayChange={setCurrentRevealedPlay}
+              />
             </div>
-          ) : (
-            /* ── FINAL RECAP: Featured video (cycles), news, stats, play-by-play ── */
-            <div className="grid grid-cols-3">
-              {/* Left 1/3 — Featured video (cycles on refresh) */}
-              <div className="col-span-1 border-r border-white/10 min-h-[320px]">
-                <div className="flex flex-col h-full">
-                  <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
-                    <h3 className="text-xs font-bold text-white/80 uppercase tracking-wider">
-                      {featuredVideo ? "Featured" : espnPlayerStats.length > 0 ? "Top Performer" : "Duke"}
-                    </h3>
-                    {playableHighlights.length > 1 && (
-                      <span className="text-[9px] text-white/30 tabular-nums">
-                        {featuredVideoIndex + 1}/{playableHighlights.length}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex-1 flex flex-col p-3 gap-2">
-                    {/* Featured highlight — embedded video player (cycles each refresh) */}
-                    {featuredVideo ? (
-                      <div className="w-full flex flex-col gap-2">
-                        <div className="relative w-full rounded-lg overflow-hidden bg-black border border-white/10">
-                          {featuredVideo.embedUrl ? (
-                            <iframe
-                              src={featuredVideo.embedUrl}
-                              title={featuredVideo.title}
-                              className="w-full aspect-video"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                              style={{ border: 0 }}
-                            />
-                          ) : featuredVideo.thumbnail ? (
-                            <a
-                              href={featuredVideo.mp4Url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="group block relative"
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={featuredVideo.thumbnail}
-                                alt={featuredVideo.title}
-                                className="w-full aspect-video object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                              />
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="h-12 w-12 rounded-full bg-black/60 flex items-center justify-center text-white group-hover:bg-[#003087] transition-colors text-lg">
-                                  ▶
-                                </span>
-                              </div>
-                            </a>
-                          ) : null}
-                        </div>
-                        <div>
-                          <p className="text-[10px] sm:text-[11px] font-bold text-white line-clamp-2">
-                            {featuredVideo.title}
-                          </p>
-                          {featuredVideo.description && (
-                            <p className="text-[9px] text-white/40 line-clamp-2 mt-0.5">
-                              {featuredVideo.description}
-                            </p>
-                          )}
-                          <span className={`inline-block mt-1 text-[8px] px-1.5 py-0.5 rounded font-bold uppercase ${
-                            featuredVideo.source === "youtube"
-                              ? "bg-red-500/20 text-red-300"
-                              : "bg-[#74ddc7]/20 text-[#74ddc7]"
-                          }`}>
-                            {featuredVideo.source === "youtube" ? "YouTube" : "ESPN"}
-                          </span>
-                        </div>
-                      </div>
-                    ) : espnPlayerStats.length > 0 ? (
-                      <div className="flex flex-col items-center gap-3 animate-[fadeIn_0.5s_ease-in-out]">
-                        {espnPlayerStats[0].headshot && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={espnPlayerStats[0].headshot}
-                            alt={espnPlayerStats[0].name}
-                            className="h-24 w-24 rounded-full object-cover border-2 border-[#74ddc7]/40 shadow-lg"
-                          />
-                        )}
-                        <span className="text-sm font-bold text-white">
-                          {espnPlayerStats[0].name}
-                        </span>
-                        <div className="flex items-center gap-3 text-center">
-                          <div>
-                            <span className="block text-xl font-black text-[#74ddc7]">
-                              {espnPlayerStats[0].points}
-                            </span>
-                            <span className="text-[9px] text-white/40 uppercase">PTS</span>
-                          </div>
-                          <div>
-                            <span className="block text-xl font-black text-white/80">
-                              {espnPlayerStats[0].rebounds}
-                            </span>
-                            <span className="text-[9px] text-white/40 uppercase">REB</span>
-                          </div>
-                          <div>
-                            <span className="block text-xl font-black text-white/80">
-                              {espnPlayerStats[0].assists}
-                            </span>
-                            <span className="text-[9px] text-white/40 uppercase">AST</span>
-                          </div>
-                        </div>
-                        <span className="text-[10px] text-white/30">
-                          {espnPlayerStats[0].fgMade}-{espnPlayerStats[0].fgAtt} FG | {espnPlayerStats[0].threeMade}-{espnPlayerStats[0].threeAtt} 3PT | {espnPlayerStats[0].ftMade}-{espnPlayerStats[0].ftAtt} FT
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-3">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={DUKE_BASKETBALL.logoUrl}
-                          alt="Duke"
-                          className="h-28 w-28 object-contain drop-shadow-lg opacity-80"
-                        />
-                        <span className="text-sm font-bold text-white/60">
-                          Game Recap
-                        </span>
-                      </div>
-                    )}
-                  </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // ── POST MODE: Mini ribbon (collapsible) ──
+  if (mode === "post") {
+    const lastGameDate = lastGame
+      ? new Date(lastGame.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+      : "";
+
+    return (
+      <section className="px-[50px]">
+        {/* Mini ribbon — always visible */}
+        <button
+          onClick={() => setScoreExpanded((prev) => !prev)}
+          className={`w-full relative overflow-hidden bg-gradient-to-r from-[#003087] via-[#001a4d] to-[#003087] border border-[#003087]/60 px-4 py-2.5 flex items-center justify-between cursor-pointer hover:border-white/20 transition-all ${
+            scoreExpanded ? "rounded-t-2xl border-b-0" : "rounded-2xl"
+          }`}
+        >
+          <div className="flex items-center gap-4 sm:gap-6 flex-1 justify-center">
+            {/* Duke */}
+            <div className="flex items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={DUKE_BASKETBALL.logoUrl} alt="Duke" className="h-7 w-7 sm:h-8 sm:w-8 object-contain" />
+              <span className="text-xs sm:text-sm font-bold text-white">Duke</span>
+            </div>
+
+            {/* VS + last game date */}
+            <div className="flex flex-col items-center">
+              <span className="text-xs font-black text-white/40">VS</span>
+              {lastGameDate && (
+                <span className="text-[9px] text-white/30">{lastGameDate}</span>
+              )}
+            </div>
+
+            {/* Opponent */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs sm:text-sm font-bold text-white">{opponentShort}</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={nextGame.opponentLogo || ""} alt={nextGame.opponent} className="h-7 w-7 sm:h-8 sm:w-8 object-contain" />
+            </div>
+
+            {/* Last game result badge */}
+            {lastGame && (
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                lastGame.result === "W"
+                  ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                  : "bg-red-500/20 text-red-400 border border-red-500/30"
+              }`}>
+                {lastGame.result} {lastGame.score.duke}-{lastGame.score.opponent}
+              </span>
+            )}
+          </div>
+
+          {/* Expand/collapse arrow */}
+          <span className="text-white/40 text-xs ml-2 shrink-0">
+            {scoreExpanded ? "▲" : "▼"}
+          </span>
+        </button>
+
+        {/* Expanded scoreboard + recap */}
+        {scoreExpanded && (
+          <div className="rounded-b-2xl overflow-hidden border border-t-0 border-[#003087]/60 bg-[#0a0e1a]">
+            {isPostGameShow ? (
+              <div className="grid grid-cols-3">
+                <div className="col-span-1 border-r border-white/10 min-h-[320px]">
+                  <PostGameSpotlight currentEntry={currentPostGameEntry} />
+                </div>
+                <div className="col-span-2 min-h-[320px]">
+                  <PostGameCaptions
+                    onCurrentEntryChange={setCurrentPostGameEntry}
+                    transcriptLines={transcriptLines}
+                    currentTranscriptLine={currentTranscriptLine}
+                    isListening={isListening}
+                    transcriptError={transcriptError}
+                    playByPlayEntries={visiblePlays}
+                    espnLastPlay={espnData?.lastPlay}
+                  />
                 </div>
               </div>
-              {/* Recap tabs — 2/3 right */}
-              <div className="col-span-2 min-h-[320px]">
-                <PostGameRecap
-                  highlights={espnHighlights}
-                  playerStats={espnPlayerStats}
-                  playByPlayEntries={visiblePlays}
-                  news={dukeNews}
-                />
+            ) : (
+              <div className="grid grid-cols-3">
+                {/* Left 1/3 — Featured video */}
+                <div className="col-span-1 border-r border-white/10 min-h-[320px]">
+                  <div className="flex flex-col h-full">
+                    <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
+                      <h3 className="text-xs font-bold text-white/80 uppercase tracking-wider">
+                        {featuredVideo ? "Featured" : espnPlayerStats.length > 0 ? "Top Performer" : "Duke"}
+                      </h3>
+                      {playableHighlights.length > 1 && (
+                        <span className="text-[9px] text-white/30 tabular-nums">
+                          {featuredVideoIndex + 1}/{playableHighlights.length}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 flex flex-col p-3 gap-2">
+                      {featuredVideo ? (
+                        <div className="w-full flex flex-col gap-2">
+                          <div className="relative w-full rounded-lg overflow-hidden bg-black border border-white/10">
+                            {featuredVideo.embedUrl ? (
+                              <iframe
+                                src={featuredVideo.embedUrl}
+                                title={featuredVideo.title}
+                                className="w-full aspect-video"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                style={{ border: 0 }}
+                              />
+                            ) : featuredVideo.thumbnail ? (
+                              <a href={featuredVideo.mp4Url} target="_blank" rel="noopener noreferrer" className="group block relative">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={featuredVideo.thumbnail} alt={featuredVideo.title} className="w-full aspect-video object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <span className="h-12 w-12 rounded-full bg-black/60 flex items-center justify-center text-white group-hover:bg-[#003087] transition-colors text-lg">▶</span>
+                                </div>
+                              </a>
+                            ) : null}
+                          </div>
+                          <div>
+                            <p className="text-[10px] sm:text-[11px] font-bold text-white line-clamp-2">{featuredVideo.title}</p>
+                            {featuredVideo.description && (
+                              <p className="text-[9px] text-white/40 line-clamp-2 mt-0.5">{featuredVideo.description}</p>
+                            )}
+                            <span className={`inline-block mt-1 text-[8px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                              featuredVideo.source === "youtube" ? "bg-red-500/20 text-red-300" : "bg-[#74ddc7]/20 text-[#74ddc7]"
+                            }`}>
+                              {featuredVideo.source === "youtube" ? "YouTube" : "ESPN"}
+                            </span>
+                          </div>
+                        </div>
+                      ) : espnPlayerStats.length > 0 ? (
+                        <div className="flex flex-col items-center gap-3 animate-[fadeIn_0.5s_ease-in-out]">
+                          {espnPlayerStats[0].headshot && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={espnPlayerStats[0].headshot} alt={espnPlayerStats[0].name} className="h-24 w-24 rounded-full object-cover border-2 border-[#74ddc7]/40 shadow-lg" />
+                          )}
+                          <span className="text-sm font-bold text-white">{espnPlayerStats[0].name}</span>
+                          <div className="flex items-center gap-3 text-center">
+                            <div>
+                              <span className="block text-xl font-black text-[#74ddc7]">{espnPlayerStats[0].points}</span>
+                              <span className="text-[9px] text-white/40 uppercase">PTS</span>
+                            </div>
+                            <div>
+                              <span className="block text-xl font-black text-white/80">{espnPlayerStats[0].rebounds}</span>
+                              <span className="text-[9px] text-white/40 uppercase">REB</span>
+                            </div>
+                            <div>
+                              <span className="block text-xl font-black text-white/80">{espnPlayerStats[0].assists}</span>
+                              <span className="text-[9px] text-white/40 uppercase">AST</span>
+                            </div>
+                          </div>
+                          <span className="text-[10px] text-white/30">
+                            {espnPlayerStats[0].fgMade}-{espnPlayerStats[0].fgAtt} FG | {espnPlayerStats[0].threeMade}-{espnPlayerStats[0].threeAtt} 3PT | {espnPlayerStats[0].ftMade}-{espnPlayerStats[0].ftAtt} FT
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-3">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={DUKE_BASKETBALL.logoUrl} alt="Duke" className="h-28 w-28 object-contain drop-shadow-lg opacity-80" />
+                          <span className="text-sm font-bold text-white/60">Game Recap</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {/* Recap tabs — 2/3 right */}
+                <div className="col-span-2 min-h-[320px]">
+                  <PostGameRecap
+                    highlights={espnHighlights}
+                    playerStats={espnPlayerStats}
+                    playByPlayEntries={visiblePlays}
+                    news={dukeNews}
+                  />
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </section>
     );
   }

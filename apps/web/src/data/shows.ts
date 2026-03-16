@@ -179,9 +179,9 @@ export const SHOW_POSTED_CORNER: ShowData = {
   description: "The syndicated weeknight Hip-Hop and R&B party show featuring high-energy vibes, exclusive celebrity interviews, fan-voted Top 7 Countdowns, wild Trending on the Timeline segments, and interactive trivia that turns listeners into the real stars of the show. Airing in over 20 markets including Atlanta, Houston, Dallas, Cleveland, Baltimore, Detroit, Indianapolis, and Raleigh.",
   tagline: "The syndicated weeknight Hip-Hop party in 20+ markets",
   gradient: "from-[#0a1628] via-[#1a0a2e] to-[#162447]",
-  imageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/11/incog-new-1.png",
-  showImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/10/27e86769d0fecd2b17374095975a3091.png",
-  hostImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/11/incog-new-1.png",
+  imageUrl: "/images/incognito-new.png",
+  showImageUrl: "/images/incognito-new.png",
+  hostImageUrl: "/images/incognito-new.png",
   youtube: {
     channelName: "Posted On The Corner",
     channelUrl: "https://www.youtube.com/@PostedOnTheCorner",
@@ -534,9 +534,9 @@ export const SHOW_SUNDAY_SNACKS: ShowData = {
   description: "The Wright Brothers of the turntables deliver five straight hours of soul food for your speakers: classic throwbacks, brand-new heat, exclusive remixes, and live scratches that make the subs knock. DJ Ike GDA, a veteran turntablist and Carolina Trendsetter with three decades in Southern hip-hop, teams with DJ IzzyNice, a high-octane mixer with 20+ years in Carolina nightlife.",
   tagline: "Five hours of soul food for your speakers",
   gradient: "from-[#302b63] via-[#0f0c29] to-[#24243e]",
-  imageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/10/cundaysnacks-new11.png",
-  showImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/10/cundaysnacks-new11.png",
-  hostImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/10/wrightbros-1024x743-1.png",
+  imageUrl: "/images/WRIGHT-BROS.png",
+  showImageUrl: "/images/WRIGHT-BROS.png",
+  hostImageUrl: "/images/WRIGHT-BROS.png",
   isSyndicated: false,
   isActive: true,
   category: "sunday",
@@ -706,8 +706,6 @@ export const ALL_SHOWS: ShowData[] = [
 /** Hero slides — the main featured shows for the homepage carousel */
 export const HERO_SHOWS: ShowData[] = [
   SHOW_STREETZ_MORNING,
-  SHOW_WAY_UP_ANGELA_YEE,
-  SHOW_POSTED_CORNER,
   SHOW_BOOTLEG_KEV,
   SHOW_SUNDAY_SNACKS,
 ];

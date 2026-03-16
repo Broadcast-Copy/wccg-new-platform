@@ -15,6 +15,7 @@ interface HeroImageSlide {
   id: string;
   imageUrl: string;
   label: string;
+  category?: string;
   linkHref: string;
 }
 
@@ -23,30 +24,21 @@ const HERO_IMAGES: HeroImageSlide[] = [
     id: "duke-basketball-hero",
     imageUrl: "/images/sports/duke-main.png",
     label: "Duke Basketball on WCCG 104.5 FM",
+    category: "Duke Sports",
     linkHref: "/sports/duke-basketball",
   },
   {
     id: "duke-football-hero",
     imageUrl: "/images/sports/duke-main1.png",
     label: "Duke Football on WCCG 104.5 FM",
+    category: "Duke Sports",
     linkHref: "/sports/duke-football",
-  },
-  {
-    id: "yung-joc-hero",
-    imageUrl: "/images/joc-main1.png",
-    label: "Yung Joc on WCCG 104.5 FM",
-    linkHref: "/shows/show_streetz_morning",
-  },
-  {
-    id: "posted-on-the-corner-hero",
-    imageUrl: "/images/incognito-new.png",
-    label: "Posted on the Corner",
-    linkHref: "/shows/show_posted_corner",
   },
   {
     id: "riich-villianz-hero",
     imageUrl: "/images/head-01.png",
     label: "Riich Villianz Radio",
+    category: "Podcast",
     linkHref: "/shows/show_riich_villianz",
   },
 ];
@@ -181,7 +173,7 @@ export function Hero() {
                 </Link>
               ) : currentHeroSlide.type === "image" ? (
                 <Link href={currentHeroSlide.data.linkHref} className="group inline-block mb-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#74ddc7] mb-0.5">Duke Sports</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#74ddc7] mb-0.5">{currentHeroSlide.data.category || "Featured"}</p>
                   <h3 className="text-base font-black text-white group-hover:text-[#74ddc7] transition-colors">
                     {currentHeroSlide.data.label}
                   </h3>
@@ -319,7 +311,7 @@ export function Hero() {
               </Link>
             ) : currentHeroSlide.type === "image" ? (
               <Link href={currentHeroSlide.data.linkHref} className="group inline-block mb-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#74ddc7] mb-0.5">Duke Sports</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#74ddc7] mb-0.5">{currentHeroSlide.data.category || "Featured"}</p>
                 <h3 className="text-lg font-black text-white drop-shadow-lg group-hover:text-[#74ddc7] transition-colors">
                   {currentHeroSlide.data.label}
                 </h3>

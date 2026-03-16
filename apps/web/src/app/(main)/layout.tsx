@@ -251,14 +251,6 @@ export default function MainLayout({
     <div className="flex min-h-screen flex-col bg-background">
       <SpotCartDrawer />
       <SyncInitializer />
-      {/* ACC Champions mini ribbon */}
-      <Link
-        href="/sports/duke-basketball"
-        className="block bg-gradient-to-r from-[#003087] via-[#001a4d] to-[#003087] text-center py-1 text-[11px] font-bold text-yellow-300 hover:text-yellow-200 transition-colors tracking-wide"
-      >
-        🏆 HOME OF THE 2026 ACC CHAMPIONS — DUKE BLUE DEVILS 🏆
-      </Link>
-
       {/* Top Header */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-xl">
         <div className="container flex items-center pt-[10px] pb-[10px]">
