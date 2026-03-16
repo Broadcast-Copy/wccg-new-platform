@@ -139,7 +139,7 @@ export function Hero() {
                         src={heroSlide.data.imageUrl || heroSlide.data.showImageUrl!}
                         alt={heroSlide.data.hostNames}
                         fill
-                        className="object-cover object-top"
+                        className="object-contain object-center"
                         sizes="100vw"
                         priority={index === 0}
                       />
@@ -277,7 +277,7 @@ export function Hero() {
                       src={heroSlide.data.imageUrl || heroSlide.data.showImageUrl!}
                       alt={heroSlide.data.hostNames}
                       fill
-                      className="object-cover object-top"
+                      className="object-contain object-center"
                       sizes="50vw"
                       priority={index === 0}
                     />

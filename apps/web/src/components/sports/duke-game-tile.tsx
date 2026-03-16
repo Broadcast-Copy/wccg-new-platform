@@ -1108,7 +1108,7 @@ export function DukeGameTile() {
                   <span className="text-3xl sm:text-4xl font-black text-white/80 tabular-nums">{liveScore.opponent}</span>
                 </div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={nextGame.opponentLogo || ""} alt={nextGame.opponent} className="h-12 w-12 sm:h-14 sm:w-14 object-contain" />
+                {nextGame.opponentLogo && <img src={nextGame.opponentLogo} alt={nextGame.opponent} className="h-12 w-12 sm:h-14 sm:w-14 object-contain" />}
               </div>
             </div>
 
@@ -1177,7 +1177,7 @@ export function DukeGameTile() {
             <div className="flex items-center gap-2">
               <span className="text-xs sm:text-sm font-bold text-white">{opponentShort}</span>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={nextGame.opponentLogo || ""} alt={nextGame.opponent} className="h-7 w-7 sm:h-8 sm:w-8 object-contain" />
+              {nextGame.opponentLogo && <img src={nextGame.opponentLogo} alt={nextGame.opponent} className="h-7 w-7 sm:h-8 sm:w-8 object-contain" />}
             </div>
 
             {/* Last game result badge */}
@@ -1374,12 +1374,18 @@ export function DukeGameTile() {
 
               {/* Opponent */}
               <div className="flex flex-col items-center gap-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={nextGame.opponentLogo || ""}
-                  alt={nextGame.opponent}
-                  className="h-16 w-16 sm:h-20 sm:w-20 object-contain drop-shadow-lg"
-                />
+                {nextGame.opponentLogo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={nextGame.opponentLogo}
+                    alt={nextGame.opponent}
+                    className="h-16 w-16 sm:h-20 sm:w-20 object-contain drop-shadow-lg"
+                  />
+                ) : (
+                  <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-white/10 flex items-center justify-center">
+                    <span className="text-2xl sm:text-3xl font-black text-white/30">?</span>
+                  </div>
+                )}
                 <span className="text-sm font-bold text-white">
                   {opponentShort}
                 </span>
