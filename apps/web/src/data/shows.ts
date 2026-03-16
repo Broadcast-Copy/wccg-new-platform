@@ -18,6 +18,7 @@ export interface ShowData {
   imageUrl: string | null;
   showImageUrl: string | null;
   hostImageUrl?: string | null;
+  heroImageClass?: string;
   youtube?: {
     channelName: string;
     channelUrl: string;
@@ -537,6 +538,7 @@ export const SHOW_SUNDAY_SNACKS: ShowData = {
   imageUrl: "/images/WRIGHT-BROS.png",
   showImageUrl: "/images/WRIGHT-BROS.png",
   hostImageUrl: "/images/WRIGHT-BROS.png",
+  heroImageClass: "object-cover object-center",
   isSyndicated: false,
   isActive: true,
   category: "sunday",
