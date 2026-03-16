@@ -1,0 +1,1 @@
+self.__SSG_MANIFEST=new Set(["\u002Fchannels\u002F[streamId]","\u002Fevents\u002F[eventId]","\u002Fhosts\u002F[hostId]","\u002Fmy\u002Fevents\u002F[eventId]","\u002Fshows\u002F[showId]"]);self.__SSG_MANIFEST_CB&&self.__SSG_MANIFEST_CB()
