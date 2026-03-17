@@ -6,9 +6,7 @@ import Link from "next/link";
 import {
   User,
   Clock,
-  Calendar,
   Info,
-  Lock,
   Megaphone,
   Play,
   Radio,
@@ -63,6 +61,72 @@ function dayPartStyle(dayPart?: string): { bg: string; text: string } {
 }
 
 // ---------------------------------------------------------------------------
+// ON AIR detection — checks if a show is currently live based on EST time
+// ---------------------------------------------------------------------------
+
+function isShowOnAir(timeSlot?: string, days?: string): boolean {
+  if (!timeSlot || !days) return false;
+  if (timeSlot === "24/7") return true;
+  if (timeSlot === "Hourly" || timeSlot === "On Demand") return false;
+
+  const now = new Date();
+  // Get current EST time
+  const estStr = now.toLocaleString("en-US", { timeZone: "America/New_York" });
+  const est = new Date(estStr);
+  const currentDay = est.getDay(); // 0=Sun, 1=Mon, ...
+  const currentHour = est.getHours();
+  const currentMin = est.getMinutes();
+  const currentMinutes = currentHour * 60 + currentMin;
+
+  // Check day match
+  const dayLower = days.toLowerCase();
+  const dayMap: Record<number, string[]> = {
+    0: ["sunday", "every day"],
+    1: ["monday", "monday - friday", "every day"],
+    2: ["tuesday", "monday - friday", "every day"],
+    3: ["wednesday", "monday - friday", "every day"],
+    4: ["thursday", "monday - friday", "every day"],
+    5: ["friday", "monday - friday", "every day"],
+    6: ["saturday", "every day"],
+  };
+  const validDays = dayMap[currentDay] || [];
+  if (!validDays.some((d) => dayLower.includes(d))) return false;
+
+  // Parse time slot
+  const parseTime = (t: string): number => {
+    const m = t.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!m) return -1;
+    let h = parseInt(m[1], 10);
+    const min = parseInt(m[2], 10);
+    const ampm = m[3].toUpperCase();
+    if (ampm === "PM" && h !== 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    return h * 60 + min;
+  };
+
+  const parts = timeSlot.split(" - ");
+  if (parts.length !== 2) return false;
+  const start = parseTime(parts[0]);
+  let end = parseTime(parts[1]);
+  if (start < 0 || end < 0) {
+    // Handle "Midnight"
+    if (parts[1].trim().toLowerCase() === "midnight") {
+      return currentMinutes >= start;
+    }
+    if (parts[0].trim().toLowerCase() === "midnight") {
+      return currentMinutes < end;
+    }
+    return false;
+  }
+
+  // Handle overnight shows (e.g. 7 PM - Midnight, Midnight - 6 AM)
+  if (end <= start) {
+    return currentMinutes >= start || currentMinutes < end;
+  }
+  return currentMinutes >= start && currentMinutes < end;
+}
+
+// ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
@@ -76,21 +140,17 @@ interface ShowCardProps {
   title: string;
   description?: string;
   hostName?: string;
-  /** e.g. "6:00 AM - 10:00 AM" */
   timeSlot?: string;
-  /** e.g. "Monday - Friday" */
   days?: string;
-  /** e.g. "Morning Drive", "Midday", "Gospel" */
   dayPart?: string;
   imageUrl?: string;
   genre?: string;
   hosts?: HostAvatar[];
-  /** Show category for daypart badge color */
   category?: "weekday" | "saturday" | "sunday" | "gospel" | "mixsquad";
-  /** Stream ID this show airs on */
   streamId?: string;
-  /** Whether show is syndicated */
   isSyndicated?: boolean;
+  youtubeUrl?: string;
+  podcastRss?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -111,14 +171,20 @@ export function ShowCard({
   category,
   streamId,
   isSyndicated,
+  youtubeUrl,
+  podcastRss,
 }: ShowCardProps) {
   const { open } = useStreamPlayer();
   const primaryHost = hosts?.find((h) => h.avatarUrl) ?? hosts?.[0];
   const avatarUrl = primaryHost?.avatarUrl ?? imageUrl;
   const dpStyle = dayPartStyle(dayPart);
   const stream = streamId ? STREAM_INFO[streamId] : null;
+  const onAir = isShowOnAir(timeSlot, days);
 
-  // Format schedule line, e.g. "Weekdays: 6:00 AM – 10:00 AM, EST"
+  // Host avatars — show up to 3 unique hosts with images
+  const hostAvatars = hosts?.filter((h) => h.avatarUrl).slice(0, 3) ?? [];
+
+  // Format schedule line
   const scheduleLine = (() => {
     if (!timeSlot && !days) return null;
     const dayLabel =
@@ -139,7 +205,18 @@ export function ShowCard({
   };
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-border bg-card/60 transition-all duration-300 hover:bg-card hover:border-input hover:shadow-lg hover:shadow-primary/5">
+    <div className={`group relative overflow-hidden rounded-2xl border transition-all duration-300 hover:bg-card hover:border-input hover:shadow-lg hover:shadow-primary/5 ${onAir ? "border-primary/40 bg-card/80" : "border-border bg-card/60"}`}>
+      {/* ON AIR pulse indicator */}
+      {onAir && (
+        <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 rounded-full bg-red-500 px-2.5 py-1 shadow-lg shadow-red-500/30">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+          </span>
+          <span className="text-[10px] font-bold text-white uppercase tracking-wider">On Air</span>
+        </div>
+      )}
+
       {/* Favorite button */}
       <div
         className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -163,24 +240,52 @@ export function ShowCard({
               sizes="(max-width: 640px) 100vw, 208px"
             />
           ) : (
-            <div
-              className={`flex h-full w-full items-center justify-center bg-gradient-to-br from-pink-500/20 to-purple-600/20`}
-            >
-              <User className="h-12 w-12 text-muted-foreground/40" />
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-pink-500/20 to-purple-600/20">
+              <Radio className="h-12 w-12 text-muted-foreground/40" />
             </div>
           )}
           {/* Gradient overlay on mobile */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent sm:hidden" />
+          {/* Program Info ribbon */}
+          <div className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-sm px-3 py-1.5 flex items-center justify-center gap-1.5">
+            <Info className="h-3 w-3 text-white/70" />
+            <span className="text-[11px] font-semibold text-white/90 uppercase tracking-wider">Program Info</span>
+          </div>
         </Link>
 
         {/* ── Center: Details ─────────────────────────────────────── */}
         <div className="flex-1 min-w-0 p-4 sm:p-5 md:p-6 space-y-2.5">
-          {/* Title */}
-          <Link href={`/shows/${showId}`}>
-            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground leading-tight group-hover:text-primary transition-colors line-clamp-2 uppercase tracking-wide">
-              {title}
-            </h3>
-          </Link>
+          {/* Title + host avatars row */}
+          <div className="flex items-start gap-3">
+            <div className="flex-1 min-w-0">
+              <Link href={`/shows/${showId}`}>
+                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground leading-tight group-hover:text-primary transition-colors line-clamp-2 uppercase tracking-wide">
+                  {title}
+                </h3>
+              </Link>
+            </div>
+            {/* Host avatar stack */}
+            {hostAvatars.length > 0 && (
+              <div className="flex -space-x-2 flex-shrink-0">
+                {hostAvatars.map((host, i) => (
+                  <div
+                    key={host.name}
+                    className="relative h-8 w-8 rounded-full overflow-hidden border-2 border-card ring-1 ring-border"
+                    style={{ zIndex: hostAvatars.length - i }}
+                    title={host.name}
+                  >
+                    <AppImage
+                      src={host.avatarUrl!}
+                      alt={host.name}
+                      fill
+                      className="object-cover"
+                      sizes="32px"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Host name */}
           {hostName && (
@@ -195,9 +300,9 @@ export function ShowCard({
             </div>
           )}
 
-          {/* Description */}
+          {/* Description / tagline */}
           {description && (
-            <p className="text-sm text-muted-foreground/80 line-clamp-2 leading-relaxed">
+            <p className="text-sm text-muted-foreground/80 line-clamp-1 leading-relaxed italic">
               {description}
             </p>
           )}
@@ -225,28 +330,30 @@ export function ShowCard({
                 Syndicated
               </Badge>
             )}
+            {/* Stream channel badge — always visible */}
+            {stream && (
+              <Link href={`/channels/${streamId}`} className="inline-flex">
+                <Badge
+                  variant="outline"
+                  className="bg-foreground/[0.04] text-muted-foreground border-border/50 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 gap-1.5 hover:bg-foreground/[0.08] transition-colors"
+                >
+                  <div className="relative h-3.5 w-3.5 rounded overflow-hidden">
+                    <AppImage
+                      src={stream.logo}
+                      alt={stream.name}
+                      fill
+                      className="object-cover"
+                      sizes="14px"
+                    />
+                  </div>
+                  {stream.name}
+                </Badge>
+              </Link>
+            )}
           </div>
 
           {/* Action links row */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-4 pt-1">
-            <Link
-              href={`/shows/${showId}`}
-              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Info className="h-3 w-3" />
-              <span className="underline underline-offset-2">Program Info</span>
-            </Link>
-
-            <Link
-              href={`/rewards`}
-              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-            >
-              <Lock className="h-3 w-3" />
-              <span className="underline underline-offset-2 uppercase tracking-wider font-semibold text-[11px]">
-                Unlock Exclusive Content
-              </span>
-            </Link>
-
             <Link
               href={`/advertise?show=${showId}`}
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground/70 hover:text-primary transition-colors"
@@ -259,47 +366,58 @@ export function ShowCard({
           </div>
         </div>
 
-        {/* ── Right: Stream Channel + Play ────────────────────────── */}
-        <div className="flex sm:flex-col items-center justify-between sm:justify-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t sm:border-t-0 sm:border-l border-border bg-foreground/[0.02] sm:min-w-[140px] md:min-w-[160px]">
-          {/* Channel badge */}
-          {stream && (
-            <Link
-              href={`/channels/${streamId}`}
-              className="flex items-center gap-2 group/channel"
+        {/* ── Right: Square Thumbnail ─────────────────────────────── */}
+        <div className="flex items-center justify-center border-t sm:border-t-0 sm:border-l border-border bg-foreground/[0.02] px-3 py-3 sm:px-4 sm:py-4">
+          {youtubeUrl ? (
+            <a
+              href={youtubeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="relative aspect-square w-36 sm:w-32 md:w-40 rounded-xl overflow-hidden bg-muted group/thumb"
             >
-              <div className="relative h-8 w-8 rounded-lg overflow-hidden bg-foreground/[0.06] border border-border">
+              {avatarUrl && (
                 <AppImage
-                  src={stream.logo}
-                  alt={stream.name}
+                  src={avatarUrl}
+                  alt={`${title} latest`}
                   fill
-                  className="object-cover"
-                  sizes="32px"
+                  className="object-cover opacity-80 group-hover/thumb:opacity-100 transition-opacity"
+                  sizes="160px"
                 />
+              )}
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 group-hover/thumb:bg-black/20 transition-colors rounded-xl">
+                <Play className="h-8 w-8 text-white drop-shadow-md" />
+                <span className="mt-1 text-[10px] font-semibold text-white uppercase tracking-wider drop-shadow-md">
+                  Latest Episode
+                </span>
               </div>
-              <div className="hidden md:block">
-                <p className="text-[11px] font-bold text-foreground/80 group-hover/channel:text-primary transition-colors leading-tight">
-                  {stream.name}
-                </p>
-                <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">
-                  Stream
-                </p>
+            </a>
+          ) : (
+            <button
+              onClick={handlePlay}
+              className="relative aspect-square w-36 sm:w-32 md:w-40 rounded-xl overflow-hidden bg-muted group/thumb"
+              aria-label="Listen Live"
+            >
+              {avatarUrl ? (
+                <AppImage
+                  src={avatarUrl}
+                  alt={title}
+                  fill
+                  className="object-cover opacity-60 group-hover/thumb:opacity-80 transition-opacity"
+                  sizes="160px"
+                />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-pink-500/20 to-purple-600/20" />
+              )}
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 group-hover/thumb:bg-black/20 transition-colors rounded-xl">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+                  <Play className="h-5 w-5 text-white ml-0.5" />
+                </div>
+                <span className="mt-2 text-[10px] font-semibold text-white uppercase tracking-wider drop-shadow-md">
+                  Listen Live
+                </span>
               </div>
-            </Link>
+            </button>
           )}
-
-          {/* Play button */}
-          <button
-            onClick={handlePlay}
-            className="relative group/play"
-            aria-label="Listen Live"
-          >
-            <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-xl transition-all bg-foreground/[0.06] text-muted-foreground hover:bg-primary/20 hover:text-primary">
-              <Play className="h-5 w-5 sm:h-6 sm:w-6 ml-0.5" />
-            </div>
-          </button>
-          <span className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-            Listen
-          </span>
         </div>
       </div>
     </div>
