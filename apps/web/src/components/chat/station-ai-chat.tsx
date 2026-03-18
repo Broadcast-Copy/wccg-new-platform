@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { MessageCircle, X } from "lucide-react";
 import { useNowPlaying } from "@/hooks/use-now-playing";
+import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { ALL_SHOWS, getDayPart } from "@/data/shows";
 import { ALL_HOSTS } from "@/data/hosts";
 import { DUKE_BASKETBALL, DUKE_FOOTBALL } from "@/data/sports";
@@ -376,6 +377,7 @@ export function StationAIChat() {
   const ref = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { data: nowPlaying } = useNowPlaying(true);
+  const { isPlaying } = useAudioPlayer();
 
   // Show welcome nudge after 3 seconds, auto-hide after 6 more
   useEffect(() => {
@@ -432,7 +434,7 @@ export function StationAIChat() {
   );
 
   return (
-    <div ref={ref} className="fixed bottom-20 right-4 z-50 flex flex-col items-end gap-2">
+    <div ref={ref} className={`fixed right-4 z-50 flex flex-col items-end gap-2 transition-all duration-300 ${isPlaying ? "bottom-[168px]" : "bottom-20"}`}>
       {open && (
         <div
           className="w-80 sm:w-96 rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col"
