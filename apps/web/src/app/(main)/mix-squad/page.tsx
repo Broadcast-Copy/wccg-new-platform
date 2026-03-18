@@ -175,7 +175,7 @@ export default function MixSquadPage() {
                   asChild
                   className="rounded-full bg-[#74ddc7] text-[#0a0a0f] font-bold hover:bg-[#74ddc7]/80 px-5"
                 >
-                  <Link href="/channels/stream_mixsquad">
+                  <Link href="/shows?stream=stream_mixsquad">
                     <Play className="mr-2 h-3.5 w-3.5" />
                     Listen to MixxSquadd Radio
                   </Link>
@@ -331,7 +331,7 @@ export default function MixSquadPage() {
               asChild
               className="rounded-full border-white/30 text-white hover:bg-foreground/10 px-6"
             >
-              <Link href="/channels/stream_mixsquad">Listen Live</Link>
+              <Link href="/shows?stream=stream_mixsquad">Listen Live</Link>
             </Button>
           </div>
         </div>

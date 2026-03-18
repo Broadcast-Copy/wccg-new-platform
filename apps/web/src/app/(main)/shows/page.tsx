@@ -307,12 +307,12 @@ export default async function ShowsPage() {
       <div className="flex items-center gap-3 rounded-xl bg-foreground/[0.03] border border-border px-4 py-3">
         <Radio className="h-4 w-4 text-primary/60 flex-shrink-0" />
         <p className="text-sm text-muted-foreground">
-          All shows air on our streaming channels.{" "}
+          All shows air on our streaming channels. Use the station filter below to browse by channel, or{" "}
           <Link
             href="/channels"
             className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors font-medium"
           >
-            Browse all channels
+            view the stream guide
           </Link>
         </p>
       </div>

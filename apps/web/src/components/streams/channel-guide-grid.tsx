@@ -138,7 +138,7 @@ function ChannelTile({ stream }: { stream: Stream }) {
         {/* ── Left: Logo ── */}
         <div className="flex items-center p-3 sm:p-4">
           <Link
-            href={`/channels/${stream.id}`}
+            href={`/shows?stream=${stream.id}`}
             className="relative flex-shrink-0 h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24 rounded-lg overflow-hidden bg-foreground/[0.03] border border-border"
           >
             {logo ? (
@@ -159,7 +159,7 @@ function ChannelTile({ stream }: { stream: Stream }) {
 
         {/* ── Center: Info ── */}
         <div className="flex-1 min-w-0 py-3 sm:py-4 pr-3 space-y-1 sm:space-y-1.5">
-          <Link href={`/channels/${stream.id}`}>
+          <Link href={`/shows?stream=${stream.id}`}>
             <h3 className="text-base sm:text-lg lg:text-xl font-bold text-foreground group-hover:text-[#74ddc7] transition-colors">
               {stream.name}
             </h3>
@@ -185,7 +185,7 @@ function ChannelTile({ stream }: { stream: Stream }) {
           {isLive && (
             <div className="pt-2">
               <Link
-                href={`/channels/${stream.id}#schedule`}
+                href={`/shows?stream=${stream.id}`}
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
               >
                 Show Information & Schedules

@@ -70,7 +70,7 @@ const initialShows: Show[] = [
 const quickActions: { icon: LucideIcon; title: string; href: string; color: string }[] = [
   { icon: Radio, title: "All Shows", href: "/shows", color: "from-[#7401df] to-[#4c1d95]" },
   { icon: Users, title: "Manage Hosts", href: "/hosts", color: "from-[#3b82f6] to-[#1d4ed8]" },
-  { icon: CalendarDays, title: "Full Schedule", href: "/schedule", color: "from-[#74ddc7] to-[#0d9488]" },
+  { icon: CalendarDays, title: "Full Schedule", href: "/shows", color: "from-[#74ddc7] to-[#0d9488]" },
   { icon: ArrowLeft, title: "Back to Admin", href: "/my/admin", color: "from-[#dc2626] to-[#b91c1c]" },
 ];
 

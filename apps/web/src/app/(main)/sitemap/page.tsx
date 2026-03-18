@@ -17,7 +17,7 @@ const sections = [
       { label: "Hosts & DJs", href: "/hosts" },
       { label: "Mix Squad", href: "/mix-squad" },
       { label: "DJ Mixes", href: "/mixes" },
-      { label: "Schedule", href: "/schedule" },
+      { label: "Schedule", href: "/shows" },
     ],
   },
   {

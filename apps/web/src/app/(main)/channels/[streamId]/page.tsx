@@ -1,4 +1,4 @@
-import StreamDetailPage from "./stream-detail-client";
+import { ChannelRedirect } from "./channel-redirect";
 
 export async function generateStaticParams() {
   return [
@@ -11,6 +11,6 @@ export async function generateStaticParams() {
   ];
 }
 
-export default function Page() {
-  return <StreamDetailPage />;
+export default function ChannelDetailPage() {
+  return <ChannelRedirect />;
 }

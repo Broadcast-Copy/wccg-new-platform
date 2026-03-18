@@ -13,6 +13,7 @@ import { SpotCartProvider } from "@/components/providers/spot-cart-provider";
 import { SpotCartDrawer } from "@/components/sales/spot-cart-drawer";
 import { SyncInitializer } from "@/components/providers/sync-initializer";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
+import { StationAIChat } from "@/components/chat/station-ai-chat";
 import { useNowPlaying } from "@/hooks/use-now-playing";
 import {
   Compass,
@@ -25,14 +26,10 @@ import {
   Search,
   Mic,
   Gift,
-  Trophy,
   ChevronDown,
   ArrowDownRight,
   ShoppingCart,
-  Music,
-  MessageSquare,
 } from "lucide-react";
-import { DUKE_BASKETBALL } from "@/data/sports";
 
 // Desktop nav: Home, Discover, [Streaming mega], Support
 const navLinks = [
@@ -43,10 +40,10 @@ const navLinks = [
 ];
 
 const streamingChannels = [
-  { href: "/channels/stream_wccg", label: "WCCG 104.5 FM", badge: "/images/channels/wccg-badge.png" },
-  { href: "/channels/stream_soul", label: "SOUL 104.5 FM", badge: "/images/channels/soul-badge.png" },
-  { href: "/channels/stream_hot", label: "HOT 104.5 FM", badge: "/images/channels/hot-badge.png" },
-  { href: "/channels/stream_vibe", label: "104.5 THE VIBE", badge: "/images/channels/vibe-badge.png" },
+  { href: "/shows?stream=stream_wccg", label: "WCCG 104.5 FM", badge: "/images/channels/wccg-badge.png" },
+  { href: "/shows?stream=stream_soul", label: "SOUL 104.5 FM", badge: "/images/channels/soul-badge.png" },
+  { href: "/shows?stream=stream_hot", label: "HOT 104.5 FM", badge: "/images/channels/hot-badge.png" },
+  { href: "/shows?stream=stream_vibe", label: "104.5 THE VIBE", badge: "/images/channels/vibe-badge.png" },
 ];
 
 // Full nav links for mobile drawer (keep full navigation there)
@@ -54,12 +51,8 @@ const mobileNavLinks = [
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/channels", label: "Listen", icon: Headphones },
   { href: "/shows", label: "Shows", icon: Mic },
-  { href: "/schedule", label: "Schedule", icon: CalendarDays },
+  { href: "/shows", label: "Schedule", icon: CalendarDays },
   { href: "/events", label: "Events", icon: CalendarDays },
-  { href: "/contests", label: "Contests", icon: Trophy },
-  { href: "/requests", label: "Requests", icon: Music },
-  { href: "/chat", label: "Live Chat", icon: MessageSquare },
-  { href: "/mixes", label: "Mixes", icon: Headphones },
   { href: "/community", label: "Community", icon: Users2 },
   { href: "/contact", label: "Connect", icon: Mail },
 ];
@@ -239,6 +232,8 @@ function ListenLiveButton() {
   );
 }
 
+// HelpButton replaced by StationAIChat
+
 export default function MainLayout({
   children,
 }: {
@@ -273,16 +268,6 @@ export default function MainLayout({
             {/* Support */}
             <NavLink href="/contact" label="Support" pathname={pathname} />
           </nav>
-
-          {/* ACC Championship badge (when applicable) */}
-          {DUKE_BASKETBALL.nextGame?.gameTitle && (
-            <Link
-              href="/sports/duke-basketball"
-              className="hidden lg:inline-flex items-center gap-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 px-3 py-1 text-[11px] font-bold text-yellow-400 hover:bg-yellow-500/20 transition-colors ml-2 shrink-0"
-            >
-              🏆 {DUKE_BASKETBALL.nextGame.gameTitle}
-            </Link>
-          )}
 
           {/* Right: Controls */}
           <div className="flex items-center gap-2 ml-auto">
@@ -473,6 +458,9 @@ export default function MainLayout({
           </div>
         </div>
       </footer>
+
+      {/* AI Station Assistant */}
+      <StationAIChat />
 
       {/* Bottom Tab Bar — iHeartRadio-inspired, fixed (hidden on studio editor pages) */}
       <nav className={`fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-xl ${

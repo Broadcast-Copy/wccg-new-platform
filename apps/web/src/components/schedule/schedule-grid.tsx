@@ -228,7 +228,7 @@ function ShowTile({ show }: { show: ShowData }) {
           {/* Channel badge */}
           {stream && (
             <Link
-              href={`/channels/${show.streamId}`}
+              href={`/shows?stream=${show.streamId}`}
               className="flex items-center gap-2 group/channel"
             >
               <div className="relative h-7 w-7 sm:h-8 sm:w-8 rounded-lg overflow-hidden bg-foreground/[0.06] border border-border">

@@ -96,6 +96,7 @@ export const SHOW_STREETZ_MORNING: ShowData = {
   imageUrl: "/images/hosts/yung-joc.png",
   showImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/09/streetz.png",
   hostImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/11/attachment-thumbnail_new-streetz-pix.png",
+  heroImageClass: "object-cover object-top",
   youtube: {
     channelName: "WCCG 104.5 FM",
     channelUrl: "https://youtube.com/@WCCG1045FM",

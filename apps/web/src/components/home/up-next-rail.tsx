@@ -98,7 +98,7 @@ export function UpNextRail() {
             <div className="flex h-32 w-full items-center justify-center rounded-lg border bg-muted/50">
               <p className="text-sm text-muted-foreground">
                 Check the{" "}
-                <a href="/schedule" className="underline hover:text-foreground">
+                <a href="/shows" className="underline hover:text-foreground">
                   full schedule
                 </a>{" "}
                 for upcoming shows.

@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
-export default function SchedulePage() {
+export function ChannelRedirect() {
+  const params = useParams<{ streamId: string }>();
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/shows");
-  }, [router]);
+    router.replace(`/shows?stream=${params.streamId}`);
+  }, [router, params.streamId]);
 
   return (
     <div className="flex h-48 items-center justify-center">

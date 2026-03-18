@@ -10,7 +10,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Menu, Radio, type LucideIcon } from "lucide-react";
+import { Menu, type LucideIcon } from "lucide-react";
+import { ThemeLogo } from "@/components/theme-logo";
 
 interface NavLink {
   href: string;
@@ -33,14 +34,13 @@ export function MobileNav({ navLinks }: MobileNavProps) {
           <span className="sr-only">Toggle menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-72">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <Radio className="h-5 w-5 text-primary" />
-            WCCG 104.5
+      <SheetContent side="left" className="w-72 overflow-y-auto">
+        <SheetHeader className="pb-0">
+          <SheetTitle className="flex justify-center">
+            <ThemeLogo width={140} />
           </SheetTitle>
         </SheetHeader>
-        <nav className="mt-6 flex flex-col gap-1">
+        <nav className="-mt-2 flex flex-col gap-1">
           {navLinks.map((link) => (
             <Link
               key={link.href}

@@ -184,7 +184,7 @@ export default function HomePage() {
       <Hero />
 
       {/* Duke Game Day */}
-      <div className="mt-6">
+      <div className="mt-[75px]">
         <DukeGameTile />
       </div>
 

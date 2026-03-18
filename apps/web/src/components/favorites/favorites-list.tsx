@@ -94,7 +94,7 @@ function FavoriteCard({
   const name = favorite.target?.name ?? "Unknown";
   const slug = favorite.target?.slug ?? "";
   const imageUrl = favorite.target?.imageUrl ?? null;
-  const href = isStream ? `/channels/${slug}` : `/shows/${slug}`;
+  const href = isStream ? `/shows?stream=${slug}` : `/shows/${slug}`;
 
   const handleRemove = async () => {
     setRemoving(true);

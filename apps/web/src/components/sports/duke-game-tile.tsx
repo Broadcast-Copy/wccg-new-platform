@@ -847,6 +847,120 @@ function PostGameRecap({
 }
 
 // ── Main DukeGameTile ───────────────────────────────────────────────
+// ── Duke News & Videos Panel ─────────────────────────────────────────
+function DukeNewsAndVideos() {
+  const news = useDukeNews();
+  const [latestVideoId, setLatestVideoId] = useState<string | null>(null);
+
+  // Fetch latest video from Duke Basketball YouTube channel via RSS
+  useEffect(() => {
+    const channelId = DUKE_BASKETBALL.youtube.channelId;
+    if (!channelId) return;
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await fetch(
+          `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`,
+          { signal: controller.signal }
+        );
+        if (!res.ok) return;
+        const text = await res.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, "text/xml");
+        const firstEntry = doc.querySelector("entry");
+        if (firstEntry) {
+          const videoId = firstEntry.querySelector("yt\\:videoId, videoId")?.textContent;
+          if (videoId) setLatestVideoId(videoId);
+        }
+      } catch {
+        // Silently fail — CORS may block this, fall back to channel embed
+      }
+    })();
+    return () => controller.abort();
+  }, []);
+
+  // Fallback: embed the channel's uploads playlist (UC→UU)
+  const channelId = DUKE_BASKETBALL.youtube.channelId;
+  const uploadsPlaylistId = channelId ? channelId.replace(/^UC/, "UU") : "";
+  const embedSrc = latestVideoId
+    ? `https://www.youtube.com/embed/${latestVideoId}`
+    : `https://www.youtube.com/embed/videoseries?list=${uploadsPlaylistId}`;
+
+  return (
+    <div className="flex flex-col sm:flex-row">
+      {/* Left: Latest Video */}
+      <div className="sm:w-[45%] p-4 sm:p-5 sm:border-r border-b sm:border-b-0 border-border">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Latest Video</h4>
+        <div className="relative w-full rounded-xl overflow-hidden bg-black border border-border">
+          <iframe
+            src={embedSrc}
+            title="Duke Basketball — Latest Video"
+            className="w-full aspect-video"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            style={{ border: 0 }}
+          />
+        </div>
+        <a
+          href={DUKE_BASKETBALL.youtube.channelUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#003087] hover:text-[#003087]/80 transition-colors pt-3"
+        >
+          Duke Basketball YouTube →
+        </a>
+      </div>
+
+      {/* Right: News */}
+      <div className="sm:w-[55%] p-4 sm:p-5">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">News</h4>
+        <div className="space-y-3">
+          {news.length > 0 ? (
+            news.slice(0, 4).map((item) => (
+              <a
+                key={item.id}
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start gap-3 group"
+              >
+                {item.thumbnail && (
+                  <div className="relative h-14 w-20 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.thumbnail}
+                      alt=""
+                      className="h-full w-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-semibold text-foreground group-hover:text-[#003087] transition-colors line-clamp-2 leading-snug">
+                    {item.headline}
+                  </h4>
+                  <p className="text-[11px] text-muted-foreground/60 mt-1">
+                    {item.published ? new Date(item.published).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "ESPN"}
+                  </p>
+                </div>
+              </a>
+            ))
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground/50">
+              <p className="text-sm">Loading Duke news...</p>
+            </div>
+          )}
+          <Link
+            href="/sports/duke-basketball"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#003087] hover:text-[#003087]/80 transition-colors pt-1"
+          >
+            View all Duke coverage →
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DukeGameTile() {
   const nextGame = DUKE_BASKETBALL.nextGame;
   const lastGame = DUKE_BASKETBALL.lastGame;
@@ -1320,150 +1434,97 @@ export function DukeGameTile() {
     );
   }
 
-  // ── PRE-GAME MODE: Countdown ──
+  // ── PRE-GAME MODE: Countdown ribbon + News & Video below ──
   return (
-    <section className="px-[50px]">
+    <section className="px-[50px] mt-[25px] space-y-0">
+      {/* ── Countdown Ribbon ── */}
       <Link href="/sports/duke-basketball" className="block group">
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#003087] via-[#001a4d] to-[#0a0a0f] p-5 sm:p-7 md:p-8 border border-white/10 hover:border-white/20 transition-all">
-          {/* Background pattern */}
+        <div className="relative overflow-hidden rounded-t-2xl bg-gradient-to-r from-[#003087] via-[#001a4d] to-[#003087] border border-b-0 border-[#003087]/60 px-4 sm:px-6 py-3 sm:py-4">
           <div className="absolute inset-0 opacity-[0.04]">
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage:
-                  "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(255,255,255,0.15) 0%, transparent 40%)",
-              }}
-            />
+            <div className="absolute inset-0" style={{
+              backgroundImage: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.3) 0%, transparent 50%)",
+            }} />
           </div>
-
-          <div className="relative z-10 space-y-5">
-            {/* Header */}
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight">
-                COUNTDOWN TO CRAZY
+          <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap">
+            {/* Left: Title + matchup */}
+            <div className="flex items-center gap-4">
+              <h2 className="text-base sm:text-lg md:text-xl font-black text-white tracking-tight uppercase">
+                Countdown to Crazy
               </h2>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/80">
-                <span className="text-sm">🏀</span> WCCG 104.5 FM
-              </span>
-            </div>
-
-            {/* Team Matchup */}
-            <div className="flex items-center justify-center gap-4 sm:gap-8 md:gap-12">
-              {/* Duke */}
-              <div className="flex flex-col items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={DUKE_BASKETBALL.logoUrl}
-                  alt="Duke Blue Devils"
-                  className="h-16 w-16 sm:h-20 sm:w-20 object-contain drop-shadow-lg"
-                />
-                <span className="text-sm font-bold text-white">Duke</span>
-              </div>
-
-              {/* VS */}
-              <span className="text-2xl sm:text-3xl font-black text-white/40">
-                VS
-              </span>
-
-              {/* Opponent */}
-              <div className="flex flex-col items-center gap-2">
+                <img src={DUKE_BASKETBALL.logoUrl} alt="Duke" className="h-7 w-7 object-contain" />
+                <span className="text-xs font-bold text-white/60">VS</span>
                 {nextGame.opponentLogo ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={nextGame.opponentLogo}
-                    alt={nextGame.opponent}
-                    className="h-16 w-16 sm:h-20 sm:w-20 object-contain drop-shadow-lg"
-                  />
+                  <img src={nextGame.opponentLogo} alt={nextGame.opponent} className="h-7 w-7 object-contain" />
                 ) : (
-                  <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-white/10 flex items-center justify-center">
-                    <span className="text-2xl sm:text-3xl font-black text-white/30">?</span>
-                  </div>
+                  <span className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white/30">?</span>
                 )}
-                <span className="text-sm font-bold text-white">
-                  {opponentShort}
-                </span>
+                <span className="text-xs font-semibold text-white/50">{opponentShort}</span>
               </div>
             </div>
 
-            {/* Countdown Timer */}
-            <div className="space-y-3">
-              <div className="grid grid-cols-4 gap-2 sm:gap-3 max-w-sm mx-auto">
-                {[
-                  { value: countdown.days, label: "DAYS" },
-                  { value: countdown.hours, label: "HRS" },
-                  { value: countdown.minutes, label: "MIN" },
-                  { value: countdown.seconds, label: "SEC" },
-                ].map((unit) => (
-                  <div
-                    key={unit.label}
-                    className="flex flex-col items-center rounded-xl bg-white/10 backdrop-blur-sm py-3 px-2"
-                  >
-                    <span className="text-2xl sm:text-3xl md:text-4xl font-black text-white tabular-nums leading-none">
+            {/* Center: Countdown */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              {[
+                { value: countdown.days, label: "D" },
+                { value: countdown.hours, label: "H" },
+                { value: countdown.minutes, label: "M" },
+                { value: countdown.seconds, label: "S" },
+              ].map((unit, i) => (
+                <div key={unit.label} className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-0.5 rounded-lg bg-white/10 px-2 py-1.5">
+                    <span className="text-lg sm:text-xl font-black text-white tabular-nums leading-none">
                       {pad(unit.value)}
                     </span>
-                    <span className="mt-1 text-[10px] sm:text-[11px] font-semibold text-white/50 tracking-widest">
-                      {unit.label}
-                    </span>
+                    <span className="text-[9px] font-bold text-white/40">{unit.label}</span>
                   </div>
-                ))}
-              </div>
-              <p className="text-center text-xs text-white/40">
-                Pre-game coverage starts 1 hour before tipoff on WCCG 104.5 FM
-              </p>
+                  {i < 3 && <span className="text-white/30 font-bold">:</span>}
+                </div>
+              ))}
             </div>
 
-            {/* Game Info Bar */}
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 rounded-xl bg-white/5 px-4 py-2.5 text-xs text-white/60">
+            {/* Right: Game info */}
+            <div className="hidden md:flex items-center gap-3 text-[11px] text-white/50">
               <span>{formattedDate}</span>
-              <span className="hidden sm:inline">|</span>
+              <span>|</span>
               <span>{nextGame.time}</span>
-              <span className="hidden sm:inline">|</span>
-              <span>{nextGame.venue}</span>
               {nextGame.broadcast && (
                 <>
-                  <span className="hidden sm:inline">|</span>
+                  <span>|</span>
                   <span>{nextGame.broadcast}</span>
                 </>
               )}
             </div>
-
-            {/* Last Game Result */}
-            {lastGame && (
-              <div className="rounded-xl bg-white/5 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={lastGame.opponentLogo}
-                    alt={lastGame.opponent}
-                    className="h-8 w-8 object-contain opacity-60"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 text-xs text-white/60">
-                      <span>Last Game vs {lastGame.opponent}</span>
-                      <span
-                        className={`font-bold px-1.5 py-0.5 rounded text-[10px] ${
-                          lastGame.result === "W"
-                            ? "bg-green-500/20 text-green-400"
-                            : "bg-red-500/20 text-red-400"
-                        }`}
-                      >
-                        {lastGame.result} {lastGame.score.duke}-
-                        {lastGame.score.opponent}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-white/40 mt-0.5">
-                      {lastGame.topPerformer.name}:{" "}
-                      {lastGame.topPerformer.points} pts,{" "}
-                      {lastGame.topPerformer.rebounds} reb,{" "}
-                      {lastGame.topPerformer.assists} ast
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </Link>
+
+      {/* ── News & Video Section ── */}
+      <div className="rounded-b-2xl border border-t-0 border-border bg-card/60 overflow-hidden">
+        {/* Last Game Result bar */}
+        {lastGame && (
+          <div className="flex items-center gap-3 px-4 sm:px-6 py-2.5 bg-foreground/[0.03] border-b border-border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={lastGame.opponentLogo} alt={lastGame.opponent} className="h-6 w-6 object-contain opacity-60" />
+            <span className="text-xs text-muted-foreground">
+              Last Game vs {lastGame.opponent}
+            </span>
+            <span className={`font-bold px-1.5 py-0.5 rounded text-[10px] ${
+              lastGame.result === "W" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
+            }`}>
+              {lastGame.result} {lastGame.score.duke}-{lastGame.score.opponent}
+            </span>
+            <span className="text-[11px] text-muted-foreground/60">
+              {lastGame.topPerformer.name}: {lastGame.topPerformer.points} pts, {lastGame.topPerformer.rebounds} reb
+            </span>
+          </div>
+        )}
+
+        {/* News + Videos grid */}
+        <DukeNewsAndVideos />
+      </div>
     </section>
   );
 }

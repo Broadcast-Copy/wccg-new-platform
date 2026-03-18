@@ -332,7 +332,7 @@ export function ShowCard({
             )}
             {/* Stream channel badge — always visible */}
             {stream && (
-              <Link href={`/channels/${streamId}`} className="inline-flex">
+              <Link href={`/shows?stream=${streamId}`} className="inline-flex">
                 <Badge
                   variant="outline"
                   className="bg-foreground/[0.04] text-muted-foreground border-border/50 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 gap-1.5 hover:bg-foreground/[0.08] transition-colors"
