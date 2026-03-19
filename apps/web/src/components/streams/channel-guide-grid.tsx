@@ -202,6 +202,13 @@ function ChannelTile({ stream }: { stream: Stream }) {
       id={`channel-${stream.id}`}
       className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:shadow-lg"
     >
+      {/* LIVE NOW badge — upper right corner of card */}
+      {isLive && (
+        <span className="absolute top-1.5 right-1.5 z-10 inline-flex items-center gap-0.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-white shadow-sm">
+          <span className="h-1 w-1 rounded-full bg-white animate-pulse" />
+          Live
+        </span>
+      )}
       <div className="flex items-stretch">
         {/* ── Left: Logo ── */}
         <div className="flex items-center p-3 sm:p-4">
@@ -289,11 +296,6 @@ function ChannelTile({ stream }: { stream: Stream }) {
                     className="object-cover"
                     sizes="72px"
                   />
-                  {/* LIVE NOW badge — upper right corner */}
-                  <span className="absolute top-0.5 right-0.5 z-10 inline-flex items-center gap-0.5 rounded bg-red-600/90 px-1 py-px text-[7px] sm:text-[8px] font-bold uppercase tracking-wider text-white shadow-sm backdrop-blur-sm">
-                    <span className="h-1 w-1 rounded-full bg-white animate-pulse" />
-                    Live
-                  </span>
                 </button>
               ) : (
                 <button
