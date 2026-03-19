@@ -207,7 +207,7 @@ function ChannelTile({ stream }: { stream: Stream }) {
         <div className="flex items-center p-3 sm:p-4">
           <Link
             href={`/shows?stream=${stream.id}`}
-            className="relative flex-shrink-0 h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24 rounded-lg overflow-hidden bg-foreground/[0.03] border border-border"
+            className="relative flex-shrink-0 h-20 w-20 sm:h-24 sm:w-24 lg:h-28 lg:w-28 rounded-lg overflow-hidden bg-foreground/[0.03] border border-border"
           >
             {logo ? (
               <Image
