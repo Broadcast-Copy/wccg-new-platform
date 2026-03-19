@@ -173,13 +173,16 @@ function ChannelTile({ stream }: { stream: Stream }) {
   const isLive = channelStatus.status === "live";
 
   // Tick every minute so currentShow updates in real-time
-  const [, setTick] = useState(0);
+  const [tick, setTick] = useState(0);
   useEffect(() => {
+    // Force a tick on mount so client-side picks up the real time
+    setTick(1);
     const interval = setInterval(() => setTick((t) => t + 1), 60_000);
     return () => clearInterval(interval);
   }, []);
 
-  const currentShow = useMemo(() => isLive ? getCurrentShowForStream(stream.id) : null, [isLive, stream.id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const currentShow = useMemo(() => isLive ? getCurrentShowForStream(stream.id) : null, [isLive, stream.id, tick]);
   const showImage =
     (currentShow?.showImageUrl || currentShow?.imageUrl) ||
     stream.metadata?.currentShowImage ||
