@@ -364,8 +364,8 @@ export default function MainLayout({
           </div>
 
           {/* Carson Communications Banner */}
-          <div className="mt-8 rounded-xl border border-border bg-foreground/[0.03] p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
+          <div className="mt-8 rounded-xl border border-border bg-foreground/[0.03] p-5 flex flex-col items-center gap-3">
+            <div className="flex items-center gap-3">
               {/* Dark mode: white logo */}
               <span className="hidden dark:block shrink-0">
                 <Image
@@ -386,8 +386,8 @@ export default function MainLayout({
                   style={{ width: "200px", height: "auto", objectFit: "contain", filter: "invert(1)" }}
                 />
               </span>
-              <p className="text-xs text-muted-foreground hidden sm:block text-center">Your Trusted Partner In Advertising</p>
             </div>
+            <p className="text-xs text-muted-foreground">Your Trusted Partner In Advertising</p>
             <Link
               href="/advertise"
               className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-1.5 text-xs font-semibold text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground transition-colors"
