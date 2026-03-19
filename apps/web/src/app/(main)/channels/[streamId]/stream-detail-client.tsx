@@ -276,7 +276,7 @@ function ProgramTile({ show }: { show: ShowData }) {
           )}
 
           {/* Action links */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-4 pt-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-1.5 sm:gap-4 pt-1">
             <Link
               href="/rewards"
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
@@ -341,6 +341,13 @@ export default function StreamDetailPage() {
   const [dayFilter, setDayFilter] = useState<DayFilter>("all");
 
   const { play, pause, isPlaying, currentStream } = useAudioPlayer();
+
+  // Tick every minute so currentShow updates in real-time
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!streamId) return;
@@ -587,10 +594,10 @@ export default function StreamDetailPage() {
             <div className="flex-1 space-y-3">
               {/* Badges */}
               <div className="flex flex-wrap items-center gap-2">
-                {metadata?.isLive && (
+                {(metadata?.isLive || currentShow) && (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/20 px-3 py-1 text-xs font-bold text-green-300 ring-1 ring-green-400/30 backdrop-blur-sm">
                     <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-                    LIVE NOW
+                    {currentShow ? `LIVE NOW: ${currentShow.name}` : "LIVE NOW"}
                   </span>
                 )}
                 <Badge variant="outline" className="border-white/30 text-white/90 backdrop-blur-sm">

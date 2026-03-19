@@ -353,7 +353,7 @@ export function ShowCard({
           </div>
 
           {/* Action links row */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-4 pt-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-1.5 sm:gap-4 pt-1">
             <Link
               href={`/advertise?show=${showId}`}
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground/70 hover:text-primary transition-colors"
