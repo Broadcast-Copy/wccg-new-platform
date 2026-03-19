@@ -19,9 +19,7 @@ import {
   Sparkles,
   Music,
   Mail,
-  Trophy,
 } from "lucide-react";
-import { ListenerOfTheWeek } from "@/components/home/listener-of-the-week";
 import { apiClient } from "@/lib/api-client";
 import { DukeGameTile } from "@/components/sports/duke-game-tile";
 
@@ -233,42 +231,6 @@ export default function HomePage() {
 
       {/* Upcoming Events — client-side fetched */}
       <UpcomingEventsSection />
-
-      {/* Engagement Widgets */}
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold text-foreground">Community Spotlight</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <ListenerOfTheWeek />
-          <Link
-            href="/leaderboard"
-            className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg hover:shadow-black/20"
-          >
-            <div className="flex items-start gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#f59e0b] to-[#d97706]">
-                <Trophy className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors">Weekly Leaderboard</h3>
-                <p className="mt-1 text-sm text-muted-foreground">See who&apos;s earning the most points this week</p>
-              </div>
-            </div>
-          </Link>
-          <Link
-            href="/requests"
-            className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg hover:shadow-black/20"
-          >
-            <div className="flex items-start gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#ec4899] to-[#be185d]">
-                <Music className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors">Song Requests</h3>
-                <p className="mt-1 text-sm text-muted-foreground">Request your favorite songs to play on air</p>
-              </div>
-            </div>
-          </Link>
-        </div>
-      </section>
 
       {/* CTA Toggle — show one at a time */}
       <div className="relative">

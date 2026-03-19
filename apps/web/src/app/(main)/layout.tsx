@@ -386,7 +386,7 @@ export default function MainLayout({
                   style={{ width: "200px", height: "auto", objectFit: "contain", filter: "invert(1)" }}
                 />
               </span>
-              <p className="text-xs text-muted-foreground hidden sm:block">Your Trusted Partner In Advertising</p>
+              <p className="text-xs text-muted-foreground hidden sm:block text-center">Your Trusted Partner In Advertising</p>
             </div>
             <Link
               href="/advertise"
