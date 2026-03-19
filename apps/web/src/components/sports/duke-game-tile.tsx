@@ -1524,6 +1524,11 @@ export function DukeGameTile() {
 
         {/* News + Videos grid */}
         <DukeNewsAndVideos />
+
+        {/* Blue ribbon */}
+        <Link href="/sports/duke-basketball" className="flex items-center justify-center gap-2 py-1.5 bg-gradient-to-r from-[#003087] via-[#0047cc] to-[#003087] hover:via-[#0055ee] transition-all">
+          <span className="text-[10px] font-bold text-white/90 uppercase tracking-widest">🏆 2026 ACC Champions 🏆</span>
+        </Link>
       </div>
     </section>
   );
