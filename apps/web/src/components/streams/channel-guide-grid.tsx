@@ -97,7 +97,10 @@ const DEFAULT_SHOW_IMAGE = "/images/shows/streetz-morning-takeover.png";
 // ---------------------------------------------------------------------------
 
 function parseTime12h(timeStr: string): number {
-  const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  const trimmed = timeStr.trim().toLowerCase();
+  if (trimmed === "midnight" || trimmed === "12:00 am") return 0;
+  if (trimmed === "noon" || trimmed === "12:00 pm") return 720;
+  const match = trimmed.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
   if (!match) return -1;
   let hours = parseInt(match[1], 10);
   const minutes = parseInt(match[2], 10);
