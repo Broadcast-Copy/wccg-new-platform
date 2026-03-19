@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AppImage as Image } from "@/components/ui/app-image";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 import Link from "next/link";
 import { Radio, Sparkles, Lock, Unlock, Megaphone } from "lucide-react";
+import { ALL_SHOWS } from "@/data/shows";
+import type { ShowData } from "@/data/shows";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -91,6 +93,55 @@ const CHANNEL_STATUS: Record<
 const DEFAULT_SHOW_IMAGE = "/images/shows/streetz-morning-takeover.png";
 
 // ---------------------------------------------------------------------------
+// Schedule-based current show detection
+// ---------------------------------------------------------------------------
+
+function parseTime12h(timeStr: string): number {
+  const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return -1;
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const period = match[3].toUpperCase();
+  if (period === "AM" && hours === 12) hours = 0;
+  if (period === "PM" && hours !== 12) hours += 12;
+  return hours * 60 + minutes;
+}
+
+function getCurrentShowForStream(streamId: string): ShowData | null {
+  const now = new Date();
+  const dayIndex = now.getDay();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const currentDay = dayNames[dayIndex];
+
+  const shows = ALL_SHOWS.filter((s) => s.streamId === streamId && s.isActive);
+
+  for (const show of shows) {
+    let matchesDay = false;
+    if (show.days === "Every Day") matchesDay = true;
+    else if (show.days === "Monday - Friday") matchesDay = dayIndex >= 1 && dayIndex <= 5;
+    else if (show.days === "Saturday") matchesDay = dayIndex === 6;
+    else if (show.days === "Sunday") matchesDay = dayIndex === 0;
+    else if (show.days === currentDay) matchesDay = true;
+    if (!matchesDay) continue;
+
+    if (!show.timeSlot) continue;
+    const parts = show.timeSlot.split(" - ");
+    if (parts.length !== 2) continue;
+    const startMin = parseTime12h(parts[0]);
+    const endMin = parseTime12h(parts[1]);
+    if (startMin < 0 || endMin < 0) continue;
+
+    if (endMin <= startMin) {
+      if (currentMinutes >= startMin || currentMinutes < endMin) return show;
+    } else {
+      if (currentMinutes >= startMin && currentMinutes < endMin) return show;
+    }
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // Category config
 // ---------------------------------------------------------------------------
 
@@ -120,8 +171,19 @@ function ChannelTile({ stream }: { stream: Stream }) {
     comingSoon: "Coming 2026",
   };
   const isLive = channelStatus.status === "live";
+
+  // Tick every minute so currentShow updates in real-time
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const currentShow = useMemo(() => isLive ? getCurrentShowForStream(stream.id) : null, [isLive, stream.id]);
   const showImage =
-    stream.metadata?.currentShowImage || (isLive ? DEFAULT_SHOW_IMAGE : null);
+    (currentShow?.showImageUrl || currentShow?.imageUrl) ||
+    stream.metadata?.currentShowImage ||
+    (isLive ? DEFAULT_SHOW_IMAGE : null);
 
   const handleTogglePlay = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -230,8 +292,8 @@ function ChannelTile({ stream }: { stream: Stream }) {
                   <Radio className="h-5 w-5 text-muted-foreground" />
                 </button>
               )}
-              <span className="text-[10px] sm:text-[11px] font-semibold text-foreground uppercase tracking-wider">
-                Live Now
+              <span className="text-[10px] sm:text-[11px] font-semibold text-foreground uppercase tracking-wider text-center leading-tight max-w-[140px]">
+                {currentShow ? currentShow.name : "Live Now"}
               </span>
             </>
           ) : channelStatus.status === "unlocked" ? (

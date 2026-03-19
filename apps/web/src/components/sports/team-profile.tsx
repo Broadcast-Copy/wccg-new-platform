@@ -32,19 +32,20 @@ import type { YouTubeVideo } from "@/lib/youtube-rss";
 // Tabs
 // ---------------------------------------------------------------------------
 
-type TabKey = "overview" | "stats" | "players" | "schedule" | "news" | "videos";
+type TabKey = "highlights" | "broadcast" | "overview" | "stats" | "players" | "schedule" | "news";
 
 const TABS: {
   key: TabKey;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
+  { key: "highlights", label: "Highlights", icon: Youtube },
+  { key: "broadcast", label: "Broadcast Info", icon: Radio },
   { key: "overview", label: "Overview", icon: Shield },
   { key: "stats", label: "Stats", icon: BarChart3 },
   { key: "players", label: "Players", icon: Users },
   { key: "schedule", label: "Schedule", icon: Calendar },
   { key: "news", label: "News", icon: Newspaper },
-  { key: "videos", label: "Videos", icon: Youtube },
 ];
 
 // ---------------------------------------------------------------------------
@@ -220,7 +221,7 @@ function NextGameCountdown({
 // ---------------------------------------------------------------------------
 
 export function TeamProfile({ team, youtubeVideos }: { team: SportsTeam; youtubeVideos?: YouTubeVideo[] }) {
-  const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const [activeTab, setActiveTab] = useState<TabKey>("highlights");
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -333,12 +334,13 @@ export function TeamProfile({ team, youtubeVideos }: { team: SportsTeam; youtube
         </div>
 
         {/* Tab Content */}
+        {activeTab === "highlights" && <HighlightsTab team={team} videos={youtubeVideos} />}
+        {activeTab === "broadcast" && <BroadcastTab team={team} />}
         {activeTab === "overview" && <OverviewTab team={team} />}
         {activeTab === "stats" && <StatsTab team={team} />}
         {activeTab === "players" && <PlayersTab team={team} />}
         {activeTab === "schedule" && <ScheduleTab team={team} />}
         {activeTab === "news" && <NewsTab team={team} />}
-        {activeTab === "videos" && <VideosTab team={team} videos={youtubeVideos} />}
       </div>
     </div>
   );
@@ -936,10 +938,113 @@ function NewsTab({ team }: { team: SportsTeam }) {
 }
 
 // ---------------------------------------------------------------------------
-// Videos Tab (uses YouTubeGrid component)
+// Broadcast Info Tab (commentators + broadcast description)
 // ---------------------------------------------------------------------------
 
-function VideosTab({ team, videos }: { team: SportsTeam; videos?: YouTubeVideo[] }) {
+function BroadcastTab({ team }: { team: SportsTeam }) {
+  return (
+    <div className="space-y-6">
+      {/* Broadcast Description */}
+      <div className="rounded-2xl border border-border bg-foreground/[0.03] p-6">
+        <h2 className="text-lg font-bold text-foreground mb-3">
+          {team.fullName} on WCCG 104.5 FM
+        </h2>
+        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+          {team.broadcastDescription || team.description}
+        </p>
+      </div>
+
+      {/* Listen Live CTA */}
+      <div className="rounded-2xl border border-[#74ddc7]/20 bg-[#74ddc7]/[0.04] p-5">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-[#74ddc7]/15 flex items-center justify-center flex-shrink-0">
+            <Radio className="h-6 w-6 text-[#74ddc7]" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-foreground">
+              Listen Live on WCCG 104.5 FM
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Catch every game with live play-by-play coverage
+            </p>
+          </div>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#74ddc7]/15 border border-[#74ddc7]/30 px-4 py-2 text-xs font-semibold text-[#74ddc7] hover:bg-[#74ddc7]/25 transition-colors"
+          >
+            Listen
+            <ChevronRight className="h-3 w-3" />
+          </Link>
+        </div>
+      </div>
+
+      {/* Commentators */}
+      {team.commentators && team.commentators.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-bold text-foreground">Commentators</h2>
+          <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-1">
+            {team.commentators.map((commentator) => (
+              <div
+                key={commentator.name}
+                className="group flex flex-col sm:flex-row items-start gap-4 rounded-2xl border border-border bg-foreground/[0.03] p-5 hover:bg-foreground/[0.05] transition-colors"
+              >
+                {/* Avatar */}
+                <div
+                  className="flex-shrink-0 h-20 w-20 rounded-xl flex items-center justify-center border border-border overflow-hidden"
+                  style={{ backgroundColor: `${team.primaryColor}15` }}
+                >
+                  {commentator.imageUrl ? (
+                    <AppImage
+                      src={commentator.imageUrl}
+                      alt={commentator.name}
+                      width={80}
+                      height={80}
+                      className="object-cover h-full w-full"
+                    />
+                  ) : (
+                    <User className="h-10 w-10 text-muted-foreground/50" />
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-bold text-foreground">
+                    {commentator.name}
+                  </p>
+                  <p className="text-sm font-medium text-[#74ddc7]/80 mb-2">
+                    {commentator.role}
+                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {commentator.bio}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Contact */}
+      <div className="rounded-2xl border border-border bg-foreground/[0.03] p-6 text-center">
+        <p className="text-sm text-muted-foreground">
+          For broadcast inquiries, contact{" "}
+          <a
+            href="mailto:programming@wccg1045fm.com"
+            className="text-[#74ddc7] hover:underline"
+          >
+            programming@wccg1045fm.com
+          </a>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Highlights Tab (uses YouTubeGrid component — default tab)
+// ---------------------------------------------------------------------------
+
+function HighlightsTab({ team, videos }: { team: SportsTeam; videos?: YouTubeVideo[] }) {
   return (
     <div className="space-y-6">
       {/* Reuse the YouTubeGrid component */}
