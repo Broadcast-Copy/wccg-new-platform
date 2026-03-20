@@ -23,6 +23,7 @@ import {
   Tv,
   MapPinIcon,
 } from "lucide-react";
+import { isTeamLive } from "@/data/sports";
 import type { SportsTeam, UpcomingGame } from "@/data/sports";
 import { AppImage } from "@/components/ui/app-image";
 import { YouTubeGrid } from "@/components/youtube/youtube-grid";
@@ -223,6 +224,14 @@ function NextGameCountdown({
 export function TeamProfile({ team, youtubeVideos }: { team: SportsTeam; youtubeVideos?: YouTubeVideo[] }) {
   const [activeTab, setActiveTab] = useState<TabKey>("highlights");
 
+  // Force client-side re-evaluation so isTeamLive() uses real client time
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    setTick(1);
+    const id = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Hero */}
@@ -270,7 +279,7 @@ export function TeamProfile({ team, youtubeVideos }: { team: SportsTeam; youtube
                 <span className="inline-block rounded-full bg-white/[0.15] px-3 py-1 text-xs font-semibold text-white/80 uppercase tracking-wider">
                   {team.sport}
                 </span>
-                {team.isLive && (
+                {isTeamLive(team) && (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-2.5 py-1 text-[10px] font-bold text-white uppercase tracking-wider shadow-lg animate-pulse">
                     <span className="h-1.5 w-1.5 rounded-full bg-white" />
                     LIVE NOW

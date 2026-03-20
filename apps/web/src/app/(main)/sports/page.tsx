@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Trophy,
@@ -9,10 +10,18 @@ import {
   Megaphone,
   Shield,
 } from "lucide-react";
-import { ALL_SPORTS_TEAMS } from "@/data/sports";
+import { ALL_SPORTS_TEAMS, isTeamLive } from "@/data/sports";
 import { AppImage } from "@/components/ui/app-image";
 
 export default function SportsPage() {
+  // Force client-side re-evaluation so isTeamLive() uses real client time
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    setTick(1);
+    const id = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Hero Banner */}
@@ -69,7 +78,7 @@ export default function SportsPage() {
                 </div>
 
                 {/* LIVE badge */}
-                {team.isLive && (
+                {isTeamLive(team) && (
                   <div className="absolute top-4 right-4">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-[10px] font-bold text-white uppercase tracking-wider shadow-lg animate-pulse">
                       <span className="h-2 w-2 rounded-full bg-white" />

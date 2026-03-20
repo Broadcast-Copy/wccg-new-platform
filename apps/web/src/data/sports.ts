@@ -89,12 +89,26 @@ export interface SportsTeam {
   isLive?: boolean;
 }
 
+/**
+ * Check if a team is currently live based on their nextGame schedule.
+ * A game is considered "live" from 15 minutes before start until 3 hours after start.
+ */
+export function isTeamLive(team: SportsTeam): boolean {
+  if (team.isLive) return true; // manual override
+  const game = team.nextGame;
+  if (!game?.date) return false;
+  const now = Date.now();
+  const gameStart = new Date(game.date).getTime();
+  const PRE_GAME = 15 * 60 * 1000; // 15 minutes before
+  const GAME_DURATION = 3 * 60 * 60 * 1000; // 3 hours
+  return now >= gameStart - PRE_GAME && now <= gameStart + GAME_DURATION;
+}
+
 // ─── Duke Men's Basketball ──────────────────────────────────────────
 
 export const DUKE_BASKETBALL: SportsTeam = {
   id: "duke_basketball",
   slug: "duke-basketball",
-  isLive: true,
   sport: "Men's Basketball",
   name: "Duke Blue Devils",
   fullName: "Duke University Men's Basketball",
