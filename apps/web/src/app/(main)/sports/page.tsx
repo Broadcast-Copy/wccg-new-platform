@@ -67,6 +67,16 @@ export default function SportsPage() {
                     {team.sport}
                   </span>
                 </div>
+
+                {/* LIVE badge */}
+                {team.isLive && (
+                  <div className="absolute top-4 right-4">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-[10px] font-bold text-white uppercase tracking-wider shadow-lg animate-pulse">
+                      <span className="h-2 w-2 rounded-full bg-white" />
+                      LIVE NOW
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Card Content */}

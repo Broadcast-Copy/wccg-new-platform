@@ -266,9 +266,17 @@ export function TeamProfile({ team, youtubeVideos }: { team: SportsTeam; youtube
             </div>
 
             <div className="flex-1 min-w-0">
-              <span className="inline-block rounded-full bg-white/[0.15] px-3 py-1 text-xs font-semibold text-white/80 uppercase tracking-wider mb-2">
-                {team.sport}
-              </span>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="inline-block rounded-full bg-white/[0.15] px-3 py-1 text-xs font-semibold text-white/80 uppercase tracking-wider">
+                  {team.sport}
+                </span>
+                {team.isLive && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-2.5 py-1 text-[10px] font-bold text-white uppercase tracking-wider shadow-lg animate-pulse">
+                    <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                    LIVE NOW
+                  </span>
+                )}
+              </div>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-1">
                 {team.name}
               </h1>

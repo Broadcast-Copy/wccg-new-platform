@@ -86,6 +86,7 @@ export interface SportsTeam {
   nextGame?: UpcomingGame;
   schedule?: UpcomingGame[];
   lastGame?: LastGameResult;
+  isLive?: boolean;
 }
 
 // ─── Duke Men's Basketball ──────────────────────────────────────────
@@ -93,6 +94,7 @@ export interface SportsTeam {
 export const DUKE_BASKETBALL: SportsTeam = {
   id: "duke_basketball",
   slug: "duke-basketball",
+  isLive: true,
   sport: "Men's Basketball",
   name: "Duke Blue Devils",
   fullName: "Duke University Men's Basketball",
