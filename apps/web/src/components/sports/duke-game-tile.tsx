@@ -1072,7 +1072,7 @@ export function DukeGameTile() {
   const [visiblePlays, setVisiblePlays] = useState<PlayByPlayEntry[]>([]);
   const [currentRevealedPlay, setCurrentRevealedPlay] = useState<PlayByPlayEntry | null>(null);
   const [currentPostGameEntry, setCurrentPostGameEntry] = useState<PostGameEntry | null>(null);
-  const [scoreExpanded, setScoreExpanded] = useState(false);
+  const [scoreExpanded, setScoreExpanded] = useState(true);
 
   // Detect post-game show window (up to 1 hour after game ends)
   const isPostGameShow = useMemo(() => {
@@ -1417,8 +1417,8 @@ export function DukeGameTile() {
           </div>
 
           {/* Expand/collapse arrow */}
-          <span className="text-white/40 text-xs ml-2 shrink-0">
-            {scoreExpanded ? "▲" : "▼"}
+          <span className="text-white/40 text-[10px] ml-2 shrink-0 flex items-center gap-1">
+            {scoreExpanded ? "Minimize" : "Expand Coverage"} {scoreExpanded ? "▲" : "▼"}
           </span>
         </button>
 
@@ -1548,8 +1548,8 @@ export function DukeGameTile() {
   return (
     <section className="px-[50px] mt-[25px] space-y-0">
       {/* ── Countdown Ribbon ── */}
-      <Link href="/sports/duke-basketball" className="block group">
-        <div className="relative overflow-hidden rounded-t-2xl bg-gradient-to-r from-[#003087] via-[#001a4d] to-[#003087] border border-b-0 border-[#003087]/60 px-4 sm:px-6 py-3 sm:py-4">
+      <div className={`relative overflow-hidden ${scoreExpanded ? "rounded-t-2xl" : "rounded-2xl"} bg-gradient-to-r from-[#003087] via-[#001a4d] to-[#003087] border ${scoreExpanded ? "border-b-0" : ""} border-[#003087]/60 px-4 sm:px-6 py-3 sm:py-4`}>
+        <Link href="/sports/duke-basketball" className="block group">
           <div className="absolute inset-0 opacity-[0.04]">
             <div className="absolute inset-0" style={{
               backgroundImage: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.3) 0%, transparent 50%)",
@@ -1608,38 +1608,48 @@ export function DukeGameTile() {
               )}
             </div>
           </div>
-        </div>
-      </Link>
-
-      {/* ── News & Video Section ── */}
-      <div className="rounded-b-2xl border border-t-0 border-border bg-card/60 overflow-hidden">
-        {/* Last Game Result bar */}
-        {lastGame && (
-          <div className="flex items-center gap-3 px-4 sm:px-6 py-2.5 bg-foreground/[0.03] border-b border-border">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={lastGame.opponentLogo} alt={lastGame.opponent} className="h-6 w-6 object-contain opacity-60" />
-            <span className="text-xs text-muted-foreground">
-              Last Game vs {lastGame.opponent}
-            </span>
-            <span className={`font-bold px-1.5 py-0.5 rounded text-[10px] ${
-              lastGame.result === "W" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
-            }`}>
-              {lastGame.result} {lastGame.score.duke}-{lastGame.score.opponent}
-            </span>
-            <span className="text-[11px] text-muted-foreground/60">
-              {lastGame.topPerformer.name}: {lastGame.topPerformer.points} pts, {lastGame.topPerformer.rebounds} reb
-            </span>
-          </div>
-        )}
-
-        {/* News + Videos grid */}
-        <DukeNewsAndVideos />
-
-        {/* Blue ribbon */}
-        <Link href="/sports/duke-basketball" className="flex items-center justify-center gap-2 py-1.5 bg-gradient-to-r from-[#003087] via-[#0047cc] to-[#003087] hover:via-[#0055ee] transition-all">
-          <span className="text-[10px] font-bold text-white/90 uppercase tracking-widest">🏆 2026 ACC Champions 🏆</span>
         </Link>
+        {/* Toggle arrow */}
+        <button
+          onClick={() => setScoreExpanded((prev) => !prev)}
+          className="absolute top-2 right-2 z-20 flex items-center gap-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white/60 text-[10px] font-semibold px-2.5 py-1"
+          aria-label={scoreExpanded ? "Minimize" : "Expand"}
+        >
+          {scoreExpanded ? "Minimize" : "Expand Coverage"} {scoreExpanded ? "▲" : "▼"}
+        </button>
       </div>
+
+      {/* ── News & Video Section (collapsible) ── */}
+      {scoreExpanded && (
+        <div className="rounded-b-2xl border border-t-0 border-border bg-card/60 overflow-hidden">
+          {/* Last Game Result bar */}
+          {lastGame && (
+            <div className="flex items-center gap-3 px-4 sm:px-6 py-2.5 bg-foreground/[0.03] border-b border-border">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={lastGame.opponentLogo} alt={lastGame.opponent} className="h-6 w-6 object-contain opacity-60" />
+              <span className="text-xs text-muted-foreground">
+                Last Game vs {lastGame.opponent}
+              </span>
+              <span className={`font-bold px-1.5 py-0.5 rounded text-[10px] ${
+                lastGame.result === "W" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
+              }`}>
+                {lastGame.result} {lastGame.score.duke}-{lastGame.score.opponent}
+              </span>
+              <span className="text-[11px] text-muted-foreground/60">
+                {lastGame.topPerformer.name}: {lastGame.topPerformer.points} pts, {lastGame.topPerformer.rebounds} reb
+              </span>
+            </div>
+          )}
+
+          {/* News + Videos grid */}
+          <DukeNewsAndVideos />
+
+          {/* Blue ribbon */}
+          <Link href="/sports/duke-basketball" className="flex items-center justify-center gap-2 py-1.5 bg-gradient-to-r from-[#003087] via-[#0047cc] to-[#003087] hover:via-[#0055ee] transition-all">
+            <span className="text-[10px] font-bold text-white/90 uppercase tracking-widest">🏆 2026 ACC Champions 🏆</span>
+          </Link>
+        </div>
+      )}
     </section>
   );
 }
