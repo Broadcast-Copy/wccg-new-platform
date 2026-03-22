@@ -73,16 +73,14 @@ jobs:
           name: knownhost-build
           path: out
 
-      - name: Setup SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.KNOWNHOST_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p ${{ secrets.KNOWNHOST_SSH_PORT }} ${{ secrets.KNOWNHOST_SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Install sshpass
+        run: sudo apt-get install -y sshpass
 
       - name: Deploy to KnownHost via rsync
+        env:
+          SSHPASS: ${{ secrets.KNOWNHOST_SSH_PASSWORD }}
         run: |
-          rsync -avz --delete \
-            -e "ssh -p ${{ secrets.KNOWNHOST_SSH_PORT }} -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+          sshpass -e rsync -avz --delete \
+            -e "ssh -p ${{ secrets.KNOWNHOST_SSH_PORT }} -o StrictHostKeyChecking=no" \
             out/ \
             ${{ secrets.KNOWNHOST_SSH_USER }}@${{ secrets.KNOWNHOST_SSH_HOST }}:/home/${{ secrets.KNOWNHOST_SSH_USER }}/public_html/
