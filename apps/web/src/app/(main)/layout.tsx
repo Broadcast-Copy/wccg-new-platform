@@ -364,36 +364,38 @@ export default function MainLayout({
           </div>
 
           {/* Carson Communications Banner */}
-          <div className="mt-8 rounded-xl border border-border bg-foreground/[0.03] p-5 flex flex-col items-center gap-3">
-            <div className="flex items-center gap-3">
-              {/* Dark mode: white logo */}
-              <span className="hidden dark:block shrink-0">
-                <Image
-                  src="/images/logos/carson-communications-logo.png"
-                  alt="Carson Communications"
-                  width={540}
-                  height={180}
-                  style={{ width: "200px", height: "auto", objectFit: "contain" }}
-                />
-              </span>
-              {/* Light mode: inverted (dark) logo */}
-              <span className="block dark:hidden shrink-0">
-                <Image
-                  src="/images/logos/carson-communications-logo.png"
-                  alt="Carson Communications"
-                  width={540}
-                  height={180}
-                  style={{ width: "200px", height: "auto", objectFit: "contain", filter: "invert(1)" }}
-                />
-              </span>
+          <div className="mt-8 rounded-xl border border-border bg-foreground/[0.03] p-5">
+            <div className="flex flex-col items-center gap-3 md:flex-row md:justify-between md:gap-4">
+              <div className="flex items-center gap-3 shrink-0">
+                {/* Dark mode: white logo */}
+                <span className="hidden dark:block shrink-0">
+                  <Image
+                    src="/images/logos/carson-communications-logo.png"
+                    alt="Carson Communications"
+                    width={540}
+                    height={180}
+                    style={{ width: "180px", height: "auto", objectFit: "contain" }}
+                  />
+                </span>
+                {/* Light mode: inverted (dark) logo */}
+                <span className="block dark:hidden shrink-0">
+                  <Image
+                    src="/images/logos/carson-communications-logo.png"
+                    alt="Carson Communications"
+                    width={540}
+                    height={180}
+                    style={{ width: "180px", height: "auto", objectFit: "contain", filter: "invert(1)" }}
+                  />
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground text-center md:text-left flex-1">Your Trusted Partner In Advertising</p>
+              <Link
+                href="/advertise"
+                className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-1.5 text-xs font-semibold text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground transition-colors shrink-0"
+              >
+                Get Started
+              </Link>
             </div>
-            <p className="text-xs text-muted-foreground">Your Trusted Partner In Advertising</p>
-            <Link
-              href="/advertise"
-              className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-1.5 text-xs font-semibold text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground transition-colors"
-            >
-              Get Started
-            </Link>
           </div>
 
           {/* Legal Links Row */}
