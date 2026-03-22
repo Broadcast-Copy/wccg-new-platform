@@ -962,8 +962,97 @@ function DukeNewsAndVideos() {
 }
 
 export function DukeGameTile() {
-  const nextGame = DUKE_BASKETBALL.nextGame;
-  const lastGame = DUKE_BASKETBALL.lastGame;
+  // Fetch latest schedule from ESPN client-side to override hardcoded data
+  const [espnNextGame, setEspnNextGame] = useState(DUKE_BASKETBALL.nextGame);
+  const [espnLastGame, setEspnLastGame] = useState(DUKE_BASKETBALL.lastGame);
+  const [espnRecord, setEspnRecord] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/teams/150/schedule",
+          { cache: "no-store" }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // Extract record
+        setEspnRecord(data.team?.recordSummary ?? null);
+
+        // Parse events
+        const events = data.events ?? [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        for (const event of events) {
+          const comp = event.competitions?.[0];
+          if (!comp) continue;
+          const status = comp.status?.type;
+          const isCompleted = status?.completed === true;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const competitors = comp.competitors ?? [] as any[];
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const duke = competitors.find((c: any) => String(c.id) === "150");
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const opp = competitors.find((c: any) => String(c.id) !== "150");
+          if (!duke || !opp) continue;
+
+          if (!isCompleted && !espnNextGame?.espnEventId) {
+            // First upcoming game
+            setEspnNextGame({
+              opponent: opp.team?.displayName ?? "TBD",
+              opponentLogo: opp.team?.logos?.[0]?.href,
+              date: event.date,
+              time: new Date(event.date).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/New_York" }) + " ET",
+              venue: [comp.venue?.fullName, comp.venue?.address?.city, comp.venue?.address?.state].filter(Boolean).join(", "),
+              isHome: duke.homeAway === "home",
+              broadcast: comp.broadcasts?.[0]?.media?.shortName,
+              gameTitle: comp.notes?.[0]?.headline,
+              espnEventId: event.id,
+            });
+          }
+        }
+
+        // Find last completed game (iterate in reverse)
+        for (let i = events.length - 1; i >= 0; i--) {
+          const event = events[i];
+          const comp = event.competitions?.[0];
+          if (!comp) continue;
+          if (comp.status?.type?.completed !== true) continue;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const competitors = comp.competitors ?? [] as any[];
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const duke = competitors.find((c: any) => String(c.id) === "150");
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const opp = competitors.find((c: any) => String(c.id) !== "150");
+          if (!duke || !opp) continue;
+          const dukeScore = Number(duke.score?.value ?? 0);
+          const oppScore = Number(opp.score?.value ?? 0);
+          // Get top performer
+          const ptsLeader = duke.leaders?.find((l: { name: string }) => l.name === "points")?.leaders?.[0];
+          setEspnLastGame({
+            opponent: opp.team?.displayName ?? "Unknown",
+            opponentLogo: opp.team?.logos?.[0]?.href ?? "",
+            date: event.date,
+            result: duke.winner ? "W" : "L",
+            score: { duke: dukeScore, opponent: oppScore },
+            venue: [comp.venue?.fullName, comp.venue?.address?.city, comp.venue?.address?.state].filter(Boolean).join(", "),
+            topPerformer: {
+              name: ptsLeader?.athlete?.displayName ?? "Unknown",
+              points: Number(ptsLeader?.displayValue ?? 0),
+              rebounds: 0,
+              assists: 0,
+            },
+          });
+          break;
+        }
+      } catch {
+        // Keep hardcoded fallback
+      }
+    })();
+  }, []);
+
+  const nextGame = espnNextGame;
+  const lastGame = espnLastGame;
 
   const gameDate = useMemo(
     () => (nextGame ? new Date(nextGame.date) : null),
@@ -1264,7 +1353,28 @@ export function DukeGameTile() {
 
     return (
       <section className="px-[50px]">
-        {/* Mini ribbon — always visible */}
+        {/* Header with team info, record, and next game */}
+        <div className="flex items-center justify-between mb-3">
+          <Link href="/sports/duke-basketball" className="flex items-center gap-2 group">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={DUKE_BASKETBALL.logoUrl} alt="Duke" className="h-8 w-8 object-contain" />
+            <div>
+              <h2 className="text-sm font-bold text-foreground group-hover:text-[#74ddc7] transition-colors">Duke Basketball</h2>
+              {espnRecord && <span className="text-[10px] font-bold text-[#74ddc7]">{espnRecord}</span>}
+            </div>
+          </Link>
+          {nextGame && (
+            <Link href="/sports/duke-basketball" className="text-right hover:opacity-80 transition-opacity">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Next Game</p>
+              <p className="text-xs font-bold text-foreground">{nextGame.isHome ? "vs" : "@"} {nextGame.opponent}</p>
+              <p className="text-[10px] text-muted-foreground">
+                {new Date(nextGame.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {nextGame.time}
+              </p>
+            </Link>
+          )}
+        </div>
+
+        {/* Last Game ribbon — always visible */}
         <button
           onClick={() => setScoreExpanded((prev) => !prev)}
           className={`w-full relative overflow-hidden bg-gradient-to-r from-[#003087] via-[#001a4d] to-[#003087] border border-[#003087]/60 px-4 py-2.5 flex items-center justify-between cursor-pointer hover:border-white/20 transition-all ${
