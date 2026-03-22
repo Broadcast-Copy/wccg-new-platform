@@ -343,25 +343,34 @@ export function TeamProfile({ team, youtubeVideos }: { team: SportsTeam; youtube
       {/* Content */}
       <div className="mx-auto max-w-5xl px-4 py-8">
         {/* Tabs */}
-        <div className="flex items-center gap-1 overflow-x-auto pb-4 mb-6 border-b border-border scrollbar-none">
-          {TABS.map((tab) => {
-            const isActive = activeTab === tab.key;
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all whitespace-nowrap ${
-                  isActive
-                    ? "bg-[#74ddc7]/15 text-[#74ddc7]"
-                    : "text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.04]"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {tab.label}
-              </button>
-            );
-          })}
+        <div className="relative pb-4 mb-6 border-b border-border">
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+            {TABS.map((tab) => {
+              const isActive = activeTab === tab.key;
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all whitespace-nowrap ${
+                    isActive
+                      ? "bg-[#74ddc7]/15 text-[#74ddc7]"
+                      : "text-muted-foreground hover:text-foreground/70 hover:bg-foreground/[0.04]"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+          {/* Scroll hint — fade + text on the right */}
+          <div className="absolute right-0 top-0 bottom-4 flex items-center pointer-events-none md:hidden">
+            <div className="w-12 h-full bg-gradient-to-l from-background to-transparent" />
+            <span className="bg-background text-[10px] font-semibold text-muted-foreground uppercase tracking-wider pr-1 flex items-center gap-0.5">
+              More <ChevronRight className="h-3 w-3" />
+            </span>
+          </div>
         </div>
 
         {/* Tab Content */}
