@@ -205,6 +205,12 @@
   background-clip: text;
 }
 
+/* Light mode card shadows — adds depth to bordered cards */
+:root:not(.dark) .rounded-2xl[class*="border-border"],
+:root:not(.dark) .rounded-xl[class*="border-border"] {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
 /* Player spotlight real-time transitions */
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.95); }
