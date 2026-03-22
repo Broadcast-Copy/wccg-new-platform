@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Deploy to GitHub Pages & KnownHost
 
 on:
   push:
@@ -46,6 +46,12 @@ jobs:
         with:
           path: apps/web/out
 
+      - name: Upload build for KnownHost
+        uses: actions/upload-artifact@v4
+        with:
+          name: knownhost-build
+          path: apps/web/out
+
   deploy:
     environment:
       name: github-pages
@@ -56,3 +62,27 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  deploy-knownhost:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: knownhost-build
+          path: out
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.KNOWNHOST_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p ${{ secrets.KNOWNHOST_SSH_PORT }} ${{ secrets.KNOWNHOST_SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy to KnownHost via rsync
+        run: |
+          rsync -avz --delete \
+            -e "ssh -p ${{ secrets.KNOWNHOST_SSH_PORT }} -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            out/ \
+            ${{ secrets.KNOWNHOST_SSH_USER }}@${{ secrets.KNOWNHOST_SSH_HOST }}:/home/${{ secrets.KNOWNHOST_SSH_USER }}/public_html/
