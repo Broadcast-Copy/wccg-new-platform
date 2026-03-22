@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { ESPN_SCOREBOARD_URL } from "@/data/sports";
 
 export interface ESPNGameData {
   dukeScore: number;
@@ -54,7 +53,7 @@ export interface ESPNPlayerStats {
   ftAtt: number;
 }
 
-export function useESPNScores(enabled: boolean) {
+export function useESPNScores(enabled: boolean, espnEventId?: string | null) {
   const [data, setData] = useState<ESPNGameData | null>(null);
   const [highlights, setHighlights] = useState<ESPNHighlight[]>([]);
   const [playerStats, setPlayerStats] = useState<ESPNPlayerStats[]>([]);
@@ -62,7 +61,9 @@ export function useESPNScores(enabled: boolean) {
 
   const fetchScores = useCallback(async () => {
     try {
-      const res = await fetch(ESPN_SCOREBOARD_URL, {
+      const gameId = espnEventId || "401851183"; // fallback to hardcoded
+      const scoreboardUrl = `https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/summary?event=${gameId}`;
+      const res = await fetch(scoreboardUrl, {
         signal: AbortSignal.timeout(8000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -326,7 +327,7 @@ export function useESPNScores(enabled: boolean) {
       setError(true);
       // Keep last known data
     }
-  }, []);
+  }, [espnEventId]);
 
   useEffect(() => {
     if (!enabled) return;

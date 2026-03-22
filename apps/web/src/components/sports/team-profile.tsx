@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { isTeamLive } from "@/data/sports";
 import type { SportsTeam, UpcomingGame } from "@/data/sports";
+import { useESPNLive } from "@/hooks/use-espn-live";
 import { AppImage } from "@/components/ui/app-image";
 import { YouTubeGrid } from "@/components/youtube/youtube-grid";
 import type { YouTubeVideo } from "@/lib/youtube-rss";
@@ -224,6 +225,10 @@ function NextGameCountdown({
 export function TeamProfile({ team, youtubeVideos }: { team: SportsTeam; youtubeVideos?: YouTubeVideo[] }) {
   const [activeTab, setActiveTab] = useState<TabKey>("highlights");
 
+  // ESPN live game detection — polls scoreboard for real Duke game status
+  const espnLive = useESPNLive(team.espnSport ?? "mens-college-basketball");
+  const live = espnLive.isLive || isTeamLive(team);
+
   // Force client-side re-evaluation so isTeamLive() uses real client time
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -279,7 +284,7 @@ export function TeamProfile({ team, youtubeVideos }: { team: SportsTeam; youtube
                 <span className="inline-block rounded-full bg-white/[0.15] px-3 py-1 text-xs font-semibold text-white/80 uppercase tracking-wider">
                   {team.sport}
                 </span>
-                {isTeamLive(team) && (
+                {live && (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-2.5 py-1 text-[10px] font-bold text-white uppercase tracking-wider shadow-lg animate-pulse">
                     <span className="h-1.5 w-1.5 rounded-full bg-white" />
                     LIVE NOW
@@ -289,9 +294,18 @@ export function TeamProfile({ team, youtubeVideos }: { team: SportsTeam; youtube
               <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-1">
                 {team.name}
               </h1>
-              <p className="text-sm sm:text-base text-white/50 mb-3">
+              <p className="text-sm sm:text-base text-white/50 mb-2">
                 {team.conference}
               </p>
+              {/* Live Score Ticker */}
+              {espnLive.isLive && espnLive.opponent && (
+                <div className="inline-flex items-center gap-3 rounded-xl bg-black/40 backdrop-blur-sm border border-red-500/30 px-4 py-2 mb-2">
+                  <span className="text-sm font-bold text-white">DUKE {espnLive.dukeScore}</span>
+                  <span className="text-xs text-white/50">-</span>
+                  <span className="text-sm font-bold text-white">{espnLive.opponentScore} {espnLive.opponent}</span>
+                  <span className="text-[10px] font-bold text-red-400 uppercase">{espnLive.statusText} {espnLive.clock}</span>
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-4 text-xs text-white/40">
                 <span className="flex items-center gap-1.5">
                   <MapPin className="h-3 w-3" />
@@ -501,6 +515,15 @@ function OverviewTab({ team }: { team: SportsTeam }) {
 function StatsTab({ team }: { team: SportsTeam }) {
   return (
     <div className="space-y-6">
+      {/* Season Record from ESPN */}
+      {team.seasonRecord && (
+        <div className="rounded-2xl border border-[#74ddc7]/20 bg-[#74ddc7]/[0.04] p-6 text-center">
+          <p className="text-xs font-bold text-[#74ddc7] uppercase tracking-widest mb-1">Current Season Record</p>
+          <p className="text-5xl font-black text-foreground">{team.seasonRecord}</p>
+          <p className="text-xs text-muted-foreground mt-1">Updated from ESPN</p>
+        </div>
+      )}
+
       <h2 className="text-lg font-bold text-foreground">Program Statistics</h2>
 
       {/* Stats Grid */}
@@ -634,7 +657,7 @@ function PlayersTab({ team }: { team: SportsTeam }) {
       </div>
 
       <p className="text-xs text-muted-foreground/60 text-center pt-2">
-        Roster may not reflect the current season. Visit{" "}
+        Roster data provided by ESPN. Visit{" "}
         <a
           href={team.website}
           target="_blank"
@@ -655,9 +678,57 @@ function PlayersTab({ team }: { team: SportsTeam }) {
 
 function ScheduleTab({ team }: { team: SportsTeam }) {
   const schedule = team.schedule ?? [];
+  const gameResults = team.gameResults ?? [];
 
   return (
     <div className="space-y-6">
+      {/* Recent Results from ESPN */}
+      {gameResults.length > 0 && (
+        <>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-foreground">Recent Results</h2>
+            {team.seasonRecord && (
+              <span className="text-xs font-bold text-[#74ddc7]">{team.seasonRecord}</span>
+            )}
+          </div>
+          <div className="space-y-2">
+            {gameResults.slice(0, 10).map((game) => {
+              const gameDate = new Date(game.date);
+              const dateStr = gameDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+              return (
+                <div
+                  key={game.espnEventId}
+                  className="flex items-center gap-3 rounded-xl border border-border bg-foreground/[0.03] p-3 hover:bg-foreground/[0.05] transition-colors"
+                >
+                  <span className={`flex-shrink-0 w-8 text-center text-sm font-black ${game.result === "W" ? "text-green-500" : "text-red-500"}`}>
+                    {game.result}
+                  </span>
+                  <div className="flex-shrink-0 h-8 w-8 rounded-lg overflow-hidden bg-foreground/[0.06] border border-border flex items-center justify-center">
+                    {game.opponentLogo ? (
+                      <AppImage src={game.opponentLogo} alt={game.opponent} width={32} height={32} className="object-contain" />
+                    ) : (
+                      <Shield className="h-4 w-4 text-muted-foreground/50" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-foreground truncate">
+                      {game.isHome ? "vs" : "@"} {game.opponent}
+                    </p>
+                    {game.gameTitle && (
+                      <p className="text-[10px] text-[#74ddc7]/70 truncate">{game.gameTitle}</p>
+                    )}
+                  </div>
+                  <span className="text-sm font-bold text-foreground tabular-nums">
+                    {game.score.duke}-{game.score.opponent}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground w-14 text-right">{dateStr}</span>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-foreground">
           Upcoming Schedule
