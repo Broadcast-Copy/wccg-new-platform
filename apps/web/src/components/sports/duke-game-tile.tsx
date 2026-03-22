@@ -1612,7 +1612,7 @@ export function DukeGameTile() {
         {/* Toggle arrow */}
         <button
           onClick={() => setScoreExpanded((prev) => !prev)}
-          className="absolute top-2 right-2 z-20 flex items-center gap-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white/60 text-[10px] font-semibold px-2.5 py-1"
+          className="absolute top-3 right-3 z-20 flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white/60 text-[10px] font-semibold px-3 py-1.5"
           aria-label={scoreExpanded ? "Minimize" : "Expand"}
         >
           {scoreExpanded ? "Minimize" : "Expand Coverage"} {scoreExpanded ? "▲" : "▼"}
