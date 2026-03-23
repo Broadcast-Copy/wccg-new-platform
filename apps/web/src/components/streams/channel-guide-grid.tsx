@@ -200,7 +200,7 @@ function ChannelTile({ stream }: { stream: Stream }) {
   return (
     <div
       id={`channel-${stream.id}`}
-      className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:shadow-lg"
+      className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:shadow-lg shadow-sm dark:shadow-none"
     >
       {/* LIVE NOW badge — upper right corner of card */}
       {isLive && (

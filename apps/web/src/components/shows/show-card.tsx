@@ -205,7 +205,7 @@ export function ShowCard({
   };
 
   return (
-    <div className={`group relative overflow-hidden rounded-2xl border transition-all duration-300 hover:bg-card hover:border-input hover:shadow-lg hover:shadow-primary/5 ${onAir ? "border-primary/40 bg-card/80" : "border-border bg-card/60"}`}>
+    <div className={`group relative overflow-hidden rounded-2xl border transition-all duration-300 hover:bg-card hover:border-input hover:shadow-lg hover:shadow-primary/5 shadow-sm dark:shadow-none ${onAir ? "border-primary/40 bg-card/80" : "border-border bg-card/60"}`}>
       {/* ON AIR pulse indicator */}
       {onAir && (
         <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 rounded-full bg-red-500 px-2.5 py-1 shadow-lg shadow-red-500/30">

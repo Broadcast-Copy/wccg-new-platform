@@ -206,7 +206,7 @@ export default function HomePage() {
             <Link
               key={feature.href + feature.title}
               href={feature.href}
-              className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:border-input hover:shadow-lg hover:shadow-black/20"
+              className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:border-input hover:shadow-lg hover:shadow-black/20 shadow-sm dark:shadow-none"
             >
               <div className="flex items-start gap-4">
                 <div
