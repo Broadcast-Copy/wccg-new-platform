@@ -1555,7 +1555,7 @@ export function DukeGameTile() {
               backgroundImage: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.3) 0%, transparent 50%)",
             }} />
           </div>
-          <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap">
+          <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap pr-28">
             {/* Left: Title + matchup */}
             <div className="flex items-center gap-4">
               <h2 className="text-base sm:text-lg md:text-xl font-black text-white tracking-tight uppercase">
@@ -1576,15 +1576,15 @@ export function DukeGameTile() {
             </div>
 
             {/* Center: Countdown */}
-            <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-2 sm:gap-3">
               {[
                 { value: countdown.days, label: "D" },
                 { value: countdown.hours, label: "H" },
                 { value: countdown.minutes, label: "M" },
                 { value: countdown.seconds, label: "S" },
               ].map((unit, i) => (
-                <div key={unit.label} className="flex items-center gap-1.5">
-                  <div className="flex items-center gap-0.5 rounded-lg bg-white/10 px-2 py-1.5">
+                <div key={unit.label} className="flex items-center gap-2">
+                  <div className="flex items-center gap-0.5 rounded-lg bg-white/10 px-2.5 py-2">
                     <span className="text-lg sm:text-xl font-black text-white tabular-nums leading-none">
                       {pad(unit.value)}
                     </span>
