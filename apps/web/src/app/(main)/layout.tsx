@@ -365,7 +365,7 @@ export default function MainLayout({
 
           {/* Carson Communications Banner */}
           <div className="mt-8 rounded-xl border border-border bg-foreground/[0.03] p-5">
-            <div className="flex flex-col items-center gap-3 md:flex-row md:justify-between md:gap-4">
+            <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between sm:gap-4">
               <div className="flex items-center gap-3 shrink-0">
                 {/* Dark mode: white logo */}
                 <span className="hidden dark:block shrink-0">
@@ -388,7 +388,7 @@ export default function MainLayout({
                   />
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground text-center md:text-left flex-1">Your Trusted Partner In Advertising</p>
+              <p className="text-xs text-muted-foreground text-center sm:text-left flex-1">Your Trusted Partner In Advertising</p>
               <Link
                 href="/advertise"
                 className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-1.5 text-xs font-semibold text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground transition-colors shrink-0"

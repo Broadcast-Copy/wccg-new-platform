@@ -89,7 +89,7 @@ export function ChannelCard({
   return (
     <Link href={`/shows?stream=${streamId}`} className="block group">
       <div
-        className={`relative overflow-hidden rounded-2xl border border-border/50 bg-card transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 hover:-translate-y-1 ${
+        className={`relative overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm dark:shadow-none transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 hover:-translate-y-1 ${
           isThisStreamPlaying ? "ring-2 ring-primary/40 border-primary/30 shadow-lg shadow-primary/10" : ""
         }`}
       >
