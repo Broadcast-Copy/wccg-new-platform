@@ -1546,7 +1546,7 @@ export function DukeGameTile() {
 
   // ── PRE-GAME MODE: Countdown ribbon + News & Video below ──
   return (
-    <section className="px-[50px] mt-[25px] space-y-0">
+    <section className="px-4 sm:px-[50px] mt-[25px] space-y-0">
       {/* ── Countdown Ribbon ── */}
       <div className={`relative overflow-hidden ${scoreExpanded ? "rounded-t-2xl" : "rounded-2xl"} bg-gradient-to-r from-[#003087] via-[#001a4d] to-[#003087] border ${scoreExpanded ? "border-b-0" : ""} border-[#003087]/60 px-4 sm:px-6 py-3 sm:py-4`}>
         <Link href="/sports/duke-basketball" className="block group">
@@ -1555,54 +1555,57 @@ export function DukeGameTile() {
               backgroundImage: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.3) 0%, transparent 50%)",
             }} />
           </div>
-          <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap pr-28">
-            {/* Left: Title + matchup */}
-            <div className="flex items-center gap-4">
-              <h2 className="text-base sm:text-lg md:text-xl font-black text-white tracking-tight uppercase">
-                Countdown to Crazy
-              </h2>
-              <div className="hidden sm:flex items-center gap-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={DUKE_BASKETBALL.logoUrl} alt="Duke" className="h-7 w-7 object-contain" />
-                <span className="text-xs font-bold text-white/60">VS</span>
-                {nextGame.opponentLogo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={nextGame.opponentLogo} alt={nextGame.opponent} className="h-7 w-7 object-contain" />
-                ) : (
-                  <span className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white/30">?</span>
-                )}
-                <span className="text-xs font-semibold text-white/50">{opponentShort}</span>
-              </div>
-            </div>
+          <div className="relative z-10 flex flex-col items-center gap-2 sm:gap-3">
+            {/* Row 1: Title */}
+            <h2 className="text-sm sm:text-base md:text-lg font-black text-white tracking-tight uppercase text-center">
+              Countdown to Crazy
+            </h2>
 
-            {/* Center: Countdown */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              {[
-                { value: countdown.days, label: "D" },
-                { value: countdown.hours, label: "H" },
-                { value: countdown.minutes, label: "M" },
-                { value: countdown.seconds, label: "S" },
-              ].map((unit, i) => (
-                <div key={unit.label} className="flex items-center gap-2">
-                  <div className="flex items-center gap-0.5 rounded-lg bg-white/10 px-2.5 py-2">
-                    <span className="text-lg sm:text-xl font-black text-white tabular-nums leading-none">
-                      {pad(unit.value)}
-                    </span>
-                    <span className="text-[9px] font-bold text-white/40">{unit.label}</span>
+            {/* Row 2: Matchup + Countdown */}
+            <div className="flex items-center justify-center gap-3 sm:gap-5 w-full">
+              {/* Duke logo */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={DUKE_BASKETBALL.logoUrl} alt="Duke" className="h-6 w-6 sm:h-8 sm:w-8 object-contain shrink-0" />
+
+              {/* Countdown digits */}
+              <div className="flex items-center gap-1 sm:gap-2">
+                {[
+                  { value: countdown.days, label: "D" },
+                  { value: countdown.hours, label: "H" },
+                  { value: countdown.minutes, label: "M" },
+                  { value: countdown.seconds, label: "S" },
+                ].map((unit, i) => (
+                  <div key={unit.label} className="flex items-center gap-0.5 sm:gap-1.5">
+                    <div className="flex items-center gap-0.5 rounded-lg bg-white/10 px-1.5 sm:px-2.5 py-1 sm:py-2">
+                      <span className="text-sm sm:text-xl font-black text-white tabular-nums leading-none">
+                        {pad(unit.value)}
+                      </span>
+                      <span className="text-[7px] sm:text-[9px] font-bold text-white/40">{unit.label}</span>
+                    </div>
+                    {i < 3 && <span className="text-white/30 font-bold text-xs sm:text-sm">:</span>}
                   </div>
-                  {i < 3 && <span className="text-white/30 font-bold">:</span>}
-                </div>
-              ))}
+                ))}
+              </div>
+
+              {/* Opponent logo */}
+              {nextGame.opponentLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={nextGame.opponentLogo} alt={nextGame.opponent} className="h-6 w-6 sm:h-8 sm:w-8 object-contain shrink-0" />
+              ) : (
+                <span className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-white/10 flex items-center justify-center text-[8px] sm:text-xs font-bold text-white/30 shrink-0">?</span>
+              )}
             </div>
 
-            {/* Right: Game info */}
-            <div className="hidden md:flex items-center gap-3 text-[11px] text-white/50">
+            {/* Row 3: Game details */}
+            <div className="flex items-center justify-center gap-2 text-[9px] sm:text-[11px] text-white/40">
+              <span className="font-semibold text-white/60">{opponentShort}</span>
+              <span className="text-white/20">|</span>
               <span>{formattedDate}</span>
-              <span>|</span>
+              <span className="text-white/20">|</span>
               <span>{nextGame.time}</span>
               {nextGame.broadcast && (
                 <>
-                  <span>|</span>
+                  <span className="text-white/20">|</span>
                   <span>{nextGame.broadcast}</span>
                 </>
               )}
@@ -1612,10 +1615,10 @@ export function DukeGameTile() {
         {/* Toggle arrow */}
         <button
           onClick={() => setScoreExpanded((prev) => !prev)}
-          className="absolute top-3 right-3 z-20 flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white/60 text-[10px] font-semibold px-3 py-1.5"
+          className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20 flex items-center gap-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white/60 text-[9px] sm:text-[10px] font-semibold px-2 sm:px-3 py-1 sm:py-1.5"
           aria-label={scoreExpanded ? "Minimize" : "Expand"}
         >
-          {scoreExpanded ? "Minimize" : "Expand Coverage"} {scoreExpanded ? "▲" : "▼"}
+          {scoreExpanded ? "▲" : "▼"}
         </button>
       </div>
 
