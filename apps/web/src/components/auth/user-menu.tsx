@@ -43,7 +43,12 @@ import {
   Shield,
   ShoppingBag,
   Star,
+  Store,
   Ticket,
+  Lock,
+  Package,
+  Music,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -163,21 +168,26 @@ function ListenerCreatorToggle({
 
   return (
     <div className="inline-flex w-full items-center justify-center rounded-full border border-border bg-muted/50 p-px">
-      {modes.map(({ value, label, activeColor }) => (
-        <button
-          key={value}
-          type="button"
-          onClick={() => onModeChange(value)}
-          className="flex-1 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-all text-center"
-          style={
-            activeMode === value
-              ? { backgroundColor: activeColor, color: value === "vendor" ? "#0a0a0f" : value === "creator" ? "#fff" : "#0a0a0f" }
-              : undefined
-          }
-        >
-          {label}
-        </button>
-      ))}
+      {modes.map(({ value, label, activeColor }) => {
+        const isActive = activeMode === value;
+        const needsLock = value !== "listener" && !isActive;
+        return (
+          <button
+            key={value}
+            type="button"
+            onClick={() => onModeChange(value)}
+            className="flex-1 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-all text-center inline-flex items-center justify-center gap-0.5"
+            style={
+              isActive
+                ? { backgroundColor: activeColor, color: value === "creator" ? "#fff" : "#0a0a0f" }
+                : undefined
+            }
+          >
+            {needsLock && <Lock className="h-2.5 w-2.5 opacity-40" />}
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -247,6 +257,13 @@ export function UserMenu() {
     isSuperAdmin,
   });
 
+  const currentActiveMode: ViewMode =
+    isOverrideActive && roleOverride === "content_creator"
+      ? "creator"
+      : isOverrideActive && roleOverride === "vendor"
+        ? "vendor"
+        : "listener";
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -271,13 +288,7 @@ export function UserMenu() {
         {/* Listener / Creator toggle */}
         <div className="px-2 py-1.5">
           <ListenerCreatorToggle
-            activeMode={
-              isOverrideActive && roleOverride === "content_creator"
-                ? "creator"
-                : isOverrideActive && roleOverride === "vendor"
-                  ? "vendor"
-                  : "listener"
-            }
+            activeMode={currentActiveMode}
             onModeChange={(mode) => {
               if (mode === "listener") {
                 setRoleOverride(null);
@@ -291,48 +302,130 @@ export function UserMenu() {
         </div>
         <DropdownMenuSeparator />
 
-        {/* Base navigation */}
+        {/* Mode-specific navigation */}
         <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
-            <Link href="/my">
-              <LayoutDashboard className="mr-2 h-4 w-4" />
-              Dashboard
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/my/points">
-              <Star className="mr-2 h-4 w-4" />
-              Points & Rewards
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/my/favorites">
-              <Heart className="mr-2 h-4 w-4" />
-              Favorites
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/my/places">
-              <MapPin className="mr-2 h-4 w-4" />
-              My Places
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/my/tickets">
-              <Ticket className="mr-2 h-4 w-4" />
-              My Tickets
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/my/history">
-              <Clock className="mr-2 h-4 w-4" />
-              Listening History
-            </Link>
-          </DropdownMenuItem>
+          {currentActiveMode === "listener" ? (
+            <>
+              <DropdownMenuItem asChild>
+                <Link href="/my">
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  Dashboard
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/points">
+                  <Star className="mr-2 h-4 w-4" />
+                  Points & Rewards
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/favorites">
+                  <Heart className="mr-2 h-4 w-4" />
+                  Favorites
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/places">
+                  <MapPin className="mr-2 h-4 w-4" />
+                  My Places
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/tickets">
+                  <Ticket className="mr-2 h-4 w-4" />
+                  My Tickets
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/history">
+                  <Clock className="mr-2 h-4 w-4" />
+                  Listening History
+                </Link>
+              </DropdownMenuItem>
+            </>
+          ) : currentActiveMode === "creator" ? (
+            <>
+              <DropdownMenuItem asChild>
+                <Link href="/my/admin/production">
+                  <Clapperboard className="mr-2 h-4 w-4" />
+                  Production Queue
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/studio">
+                  <Mic className="mr-2 h-4 w-4" />
+                  Broadcast Studio
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/mixes">
+                  <FolderOpen className="mr-2 h-4 w-4" />
+                  Media Manager
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/creators">
+                  <Palette className="mr-2 h-4 w-4" />
+                  Creator Hub
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/events">
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  Events Manager
+                </Link>
+              </DropdownMenuItem>
+            </>
+          ) : (
+            <>
+              <DropdownMenuItem asChild>
+                <Link href="/my/vendor/storefront">
+                  <Store className="mr-2 h-4 w-4" />
+                  Storefront Manager
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/vendor/products">
+                  <Package className="mr-2 h-4 w-4" />
+                  Products
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/vendor/bookings">
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  Bookings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/vendor/events">
+                  <Megaphone className="mr-2 h-4 w-4" />
+                  Events
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/vendor/tokens">
+                  <Gift className="mr-2 h-4 w-4" />
+                  Listener Tokens
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/vendor/customers">
+                  <Users className="mr-2 h-4 w-4" />
+                  Customers
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/vendor/songs">
+                  <Music className="mr-2 h-4 w-4" />
+                  Song Tracking
+                </Link>
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuGroup>
 
-        {/* Role-specific section */}
-        {roleSection.items.length > 0 && (
+        {/* Role-specific section (admin overrides) */}
+        {currentActiveMode === "listener" && roleSection.items.length > 0 && (
           <>
             <DropdownMenuSeparator />
             {roleSection.label && (
