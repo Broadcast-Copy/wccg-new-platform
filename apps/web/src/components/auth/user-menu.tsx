@@ -415,9 +415,9 @@ export function UserMenu() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/my/vendor/songs">
-                  <Music className="mr-2 h-4 w-4" />
-                  Song Tracking
+                <Link href="/my/vendor/media">
+                  <FolderOpen className="mr-2 h-4 w-4" />
+                  Media Tracking
                 </Link>
               </DropdownMenuItem>
             </>
