@@ -275,11 +275,36 @@ export function UserMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-60" align="end">
-        {/* User info */}
-        <div className="flex items-center gap-2 px-2 py-1.5">
-          <div className="flex flex-col space-y-0.5">
-            <p className="text-sm font-medium">{displayName}</p>
-            <p className="text-xs text-muted-foreground">{user.email}</p>
+        {/* User info + Admin toggle */}
+        <div className="px-2 py-1.5">
+          <div className="flex items-start justify-between mb-0.5">
+            <div className="flex flex-col space-y-0.5">
+              <p className="text-sm font-medium">{displayName}</p>
+              <p className="text-xs text-muted-foreground">{user.email}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (isAdminMode) {
+                  setRoleOverride(null);
+                } else {
+                  setRoleOverride("production");
+                }
+              }}
+              className={`relative inline-flex items-center gap-1 rounded-md px-2 py-1 text-[9px] font-semibold transition-all shrink-0 ${
+                isAdminMode
+                  ? "bg-[#dc2626] text-white"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <Shield className="h-2.5 w-2.5" />
+              {isAdminMode ? "Exit" : "Admin"}
+              {!isAdminMode && totalAdminNotifications > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#dc2626] text-[7px] font-bold text-white px-0.5 ring-1 ring-card">
+                  {totalAdminNotifications}
+                </span>
+              )}
+            </button>
           </div>
         </div>
         <DropdownMenuSeparator />
@@ -488,38 +513,13 @@ export function UserMenu() {
 
         <DropdownMenuSeparator />
 
-        {/* Settings + Admin toggle row */}
-        <div className="flex items-center gap-1 px-1 py-0.5">
-          <DropdownMenuItem asChild className="flex-1">
-            <Link href="/my/settings">
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </Link>
-          </DropdownMenuItem>
-          <button
-            type="button"
-            onClick={() => {
-              if (isAdminMode) {
-                setRoleOverride(null);
-              } else {
-                setRoleOverride("production");
-              }
-            }}
-            className={`relative inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[10px] font-semibold transition-all ${
-              isAdminMode
-                ? "bg-[#dc2626] text-white"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            <Shield className="h-3 w-3" />
-            {!isAdminMode && totalAdminNotifications > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#dc2626] text-[8px] font-bold text-white px-0.5 ring-1 ring-card">
-                {totalAdminNotifications}
-              </span>
-            )}
-            {isAdminMode ? "Exit" : "Admin"}
-          </button>
-        </div>
+        {/* Settings */}
+        <DropdownMenuItem asChild>
+          <Link href="/my/settings">
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
           Sign Out
