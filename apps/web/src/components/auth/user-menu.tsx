@@ -146,41 +146,38 @@ const VIEWABLE_ROLES: { value: UserRole; label: string }[] = [
 // ---------------------------------------------------------------------------
 // Listener / Creator Toggle (inline for the dropdown)
 // ---------------------------------------------------------------------------
+type ViewMode = "listener" | "creator" | "vendor";
+
 function ListenerCreatorToggle({
-  isCreatorMode,
-  onListenerClick,
-  onCreatorClick,
+  activeMode,
+  onModeChange,
 }: {
-  isCreatorMode: boolean;
-  onListenerClick: () => void;
-  onCreatorClick: () => void;
+  activeMode: ViewMode;
+  onModeChange: (mode: ViewMode) => void;
 }) {
+  const modes: { value: ViewMode; label: string; activeColor: string }[] = [
+    { value: "creator", label: "Creator", activeColor: "#7401df" },
+    { value: "listener", label: "Listener", activeColor: "#74ddc7" },
+    { value: "vendor", label: "Vendor", activeColor: "#f59e0b" },
+  ];
+
   return (
     <div className="inline-flex w-full items-center justify-center rounded-full border border-border bg-muted/50 p-px">
-      <button
-        type="button"
-        onClick={onListenerClick}
-        className="flex-1 rounded-full px-3 py-1 text-[10px] font-semibold transition-all text-center"
-        style={
-          !isCreatorMode
-            ? { backgroundColor: "#74ddc7", color: "#0a0a0f" }
-            : undefined
-        }
-      >
-        Listener
-      </button>
-      <button
-        type="button"
-        onClick={onCreatorClick}
-        className="flex-1 rounded-full px-3 py-1 text-[10px] font-semibold transition-all text-center"
-        style={
-          isCreatorMode
-            ? { backgroundColor: "#74ddc7", color: "#0a0a0f" }
-            : undefined
-        }
-      >
-        Creator
-      </button>
+      {modes.map(({ value, label, activeColor }) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => onModeChange(value)}
+          className="flex-1 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-all text-center"
+          style={
+            activeMode === value
+              ? { backgroundColor: activeColor, color: value === "vendor" ? "#0a0a0f" : value === "creator" ? "#fff" : "#0a0a0f" }
+              : undefined
+          }
+        >
+          {label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -274,15 +271,20 @@ export function UserMenu() {
         {/* Listener / Creator toggle */}
         <div className="px-2 py-1.5">
           <ListenerCreatorToggle
-            isCreatorMode={isOverrideActive && roleOverride === "content_creator"}
-            onListenerClick={() => {
-              if (isOverrideActive && roleOverride === "content_creator") {
+            activeMode={
+              isOverrideActive && roleOverride === "content_creator"
+                ? "creator"
+                : isOverrideActive && roleOverride === "vendor"
+                  ? "vendor"
+                  : "listener"
+            }
+            onModeChange={(mode) => {
+              if (mode === "listener") {
                 setRoleOverride(null);
-              }
-            }}
-            onCreatorClick={() => {
-              if (!isOverrideActive || roleOverride !== "content_creator") {
+              } else if (mode === "creator") {
                 setRoleOverride("content_creator");
+              } else if (mode === "vendor") {
+                setRoleOverride("vendor");
               }
             }}
           />
