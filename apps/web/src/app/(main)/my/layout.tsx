@@ -37,6 +37,10 @@ import {
   Building2,
   FileText,
   Truck,
+  Store,
+  Music,
+  Users,
+  Package,
   type LucideIcon,
 } from "lucide-react";
 
@@ -74,6 +78,29 @@ const creatorItems: NavItem[] = [
 
 const creatorEventsItems: NavItem[] = [
   { href: "/my/events", label: "Events Manager", icon: CalendarDays },
+];
+
+// ---------------------------------------------------------------------------
+// Vendor nav items (used when toggle is set to Vendor)
+// ---------------------------------------------------------------------------
+const vendorItems: NavSection[] = [
+  {
+    sectionLabel: "STOREFRONT",
+    items: [
+      { href: "/my/directory", label: "My Listings", icon: Store },
+      { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
+      { href: "/deals", label: "Deals & Offers", icon: Gift },
+    ],
+  },
+  {
+    sectionLabel: "TRACKING & ANALYTICS",
+    items: [
+      { href: "/my/vendor/customers", label: "Customer Tracking", icon: Users },
+      { href: "/my/vendor/products", label: "Product Marketing", icon: Package },
+      { href: "/my/vendor/media", label: "Media Tracking", icon: FolderOpen },
+      { href: "/my/vendor/songs", label: "Song Tracking", icon: Music },
+    ],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -280,47 +307,40 @@ function NavLink({
 }
 
 // ---------------------------------------------------------------------------
-// Listener / Creator Toggle (pill in the content area header)
+// Creator / Listener / Vendor Toggle (pill in the sidebar header)
 // ---------------------------------------------------------------------------
-function ListenerCreatorToggle() {
+function SidebarModeToggle() {
   const { roleOverride, isOverrideActive, setRoleOverride } = useUserRoles();
 
-  const isCreatorMode = isOverrideActive && roleOverride === "content_creator";
+  const activeMode = isOverrideActive && roleOverride === "content_creator"
+    ? "creator"
+    : isOverrideActive && roleOverride === "vendor"
+      ? "vendor"
+      : "listener";
+
+  const modes: { value: string; label: string; role: string | null; activeColor: string; textColor: string }[] = [
+    { value: "creator", label: "Creator", role: "content_creator", activeColor: "#7401df", textColor: "#fff" },
+    { value: "listener", label: "Listener", role: null, activeColor: "#74ddc7", textColor: "#0a0a0f" },
+    { value: "vendor", label: "Vendor", role: "vendor", activeColor: "#f59e0b", textColor: "#0a0a0f" },
+  ];
 
   return (
-    <div className="inline-flex items-center rounded-full border border-border bg-muted/50 p-px">
-      <button
-        type="button"
-        onClick={() => {
-          if (isCreatorMode) {
-            setRoleOverride(null);
+    <div className="inline-flex w-full items-center rounded-full border border-border bg-muted/50 p-px">
+      {modes.map(({ value, label, role, activeColor, textColor }) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => setRoleOverride(role as UserRole | null)}
+          className="flex-1 rounded-full px-2 py-px text-[9px] font-semibold transition-all text-center"
+          style={
+            activeMode === value
+              ? { backgroundColor: activeColor, color: textColor }
+              : undefined
           }
-        }}
-        className="rounded-full px-2 py-px text-[9px] font-semibold transition-all"
-        style={
-          !isCreatorMode
-            ? { backgroundColor: "#74ddc7", color: "#0a0a0f" }
-            : undefined
-        }
-      >
-        Listener
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          if (!isCreatorMode) {
-            setRoleOverride("content_creator");
-          }
-        }}
-        className="rounded-full px-2 py-px text-[9px] font-semibold transition-all"
-        style={
-          isCreatorMode
-            ? { backgroundColor: "#74ddc7", color: "#0a0a0f" }
-            : undefined
-        }
-      >
-        Creator
-      </button>
+        >
+          {label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -376,13 +396,15 @@ function SidebarContent({ pathname }: { pathname: string }) {
 
   // Determine if the toggle is set to Creator mode
   const isCreatorToggleActive = isOverrideActive && roleOverride === "content_creator";
+  const isVendorToggleActive = isOverrideActive && roleOverride === "vendor";
 
   // Determine if the override is a non-toggle role (Marketing, Sales, Admin, etc.)
-  // These are roles OTHER than "content_creator" and "listener"
+  // These are roles OTHER than "content_creator", "vendor", and "listener"
   const isNonToggleOverride =
     isOverrideActive &&
     roleOverride !== null &&
     roleOverride !== "content_creator" &&
+    roleOverride !== "vendor" &&
     roleOverride !== "listener";
 
   return (
@@ -390,7 +412,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
       {/* Toggle + User info */}
       <div className="border-b border-border px-4 py-4 space-y-2">
         <div className="flex justify-end">
-          <ListenerCreatorToggle />
+          <SidebarModeToggle />
         </div>
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#74ddc7]/30 to-[#7401df]/30 border border-border">
@@ -416,7 +438,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
               Creator
             </p>
             {creatorItems.map((item) => (
-              <NavLink key={item.href + item.label} item={item} pathname={pathname} />
+              <NavLink key={item.href + item.label} item={item} pathname={pathname} color="#7401df" />
             ))}
 
             {/* Events section with divider */}
@@ -425,7 +447,21 @@ function SidebarContent({ pathname }: { pathname: string }) {
               Events
             </p>
             {creatorEventsItems.map((item) => (
-              <NavLink key={item.href + item.label} item={item} pathname={pathname} />
+              <NavLink key={item.href + item.label} item={item} pathname={pathname} color="#7401df" />
+            ))}
+          </>
+        ) : isVendorToggleActive ? (
+          <>
+            {vendorItems.map((section) => (
+              <div key={section.sectionLabel}>
+                <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                  {section.sectionLabel}
+                </p>
+                {section.items.map((item) => (
+                  <NavLink key={item.href + item.label} item={item} pathname={pathname} color="#f59e0b" />
+                ))}
+                <div className="my-2 border-t border-border" />
+              </div>
             ))}
           </>
         ) : (
