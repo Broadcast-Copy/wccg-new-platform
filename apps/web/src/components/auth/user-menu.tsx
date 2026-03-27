@@ -247,12 +247,17 @@ export function UserMenu() {
     isSuperAdmin,
   });
 
+  const adminRoles = ["operations", "production", "sales"];
+  const isAdminMode = isOverrideActive && roleOverride !== null && adminRoles.includes(roleOverride);
+
   const currentActiveMode: ViewMode =
     isOverrideActive && roleOverride === "content_creator"
       ? "creator"
       : isOverrideActive && roleOverride === "vendor"
         ? "vendor"
         : "listener";
+
+  const currentAdminMode = isAdminMode ? (roleOverride as string) : "production";
 
   return (
     <DropdownMenu>
@@ -275,34 +280,109 @@ export function UserMenu() {
         </div>
         <DropdownMenuSeparator />
 
-        {/* Listener / Creator toggle */}
-        <div className="px-2 py-1.5">
-          <ListenerCreatorToggle
-            activeMode={currentActiveMode}
-            onModeChange={(mode) => {
-              if (mode === "listener") {
+        {/* Toggle section */}
+        <div className="px-2 py-1.5 space-y-2">
+          {isAdminMode ? (
+            /* Admin mode toggle: Operations | Production | Sales */
+            <div className="inline-flex w-full items-center justify-center rounded-full border border-[#dc2626]/30 bg-[#dc2626]/5 p-px">
+              {([
+                { value: "operations", label: "Operations", needsLock: true },
+                { value: "production", label: "Production", needsLock: false },
+                { value: "sales", label: "Sales", needsLock: true },
+              ] as const).map(({ value, label, needsLock }) => {
+                const active = roleOverride === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setRoleOverride(value)}
+                    className="flex-1 rounded-full px-2 py-1 text-[10px] font-semibold transition-all text-center inline-flex items-center justify-center gap-0.5"
+                    style={active ? { backgroundColor: "#dc2626", color: "#fff" } : undefined}
+                  >
+                    {needsLock && !active && <Lock className="h-2.5 w-2.5 opacity-40" />}
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            /* User mode toggle: Creator | Listener | Vendor */
+            <ListenerCreatorToggle
+              activeMode={currentActiveMode}
+              onModeChange={(mode) => {
+                if (mode === "listener") {
+                  setRoleOverride(null);
+                } else if (mode === "creator") {
+                  setRoleOverride("content_creator");
+                } else if (mode === "vendor") {
+                  setRoleOverride("vendor");
+                }
+              }}
+            />
+          )}
+          {/* Admin on/off toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              if (isAdminMode) {
                 setRoleOverride(null);
-              } else if (mode === "creator") {
-                setRoleOverride("content_creator");
-              } else if (mode === "vendor") {
-                setRoleOverride("vendor");
+              } else {
+                setRoleOverride("production");
               }
             }}
-          />
+            className={`flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-1 text-[9px] font-semibold uppercase tracking-wider transition-all ${
+              isAdminMode
+                ? "bg-[#dc2626] text-white"
+                : "border border-border bg-muted/30 text-muted-foreground hover:bg-muted/60"
+            }`}
+          >
+            <Shield className="h-2.5 w-2.5" />
+            {isAdminMode ? "Exit Admin" : "Admin"}
+          </button>
         </div>
         <DropdownMenuSeparator />
 
         {/* Mode-specific navigation */}
         <DropdownMenuGroup
           className={
-            currentActiveMode === "creator"
-              ? "[&_[data-slot=dropdown-menu-item]:focus]:bg-[#7401df]/10 [&_[data-slot=dropdown-menu-item]:focus]:text-[#7401df]"
-              : currentActiveMode === "vendor"
-                ? "[&_[data-slot=dropdown-menu-item]:focus]:bg-[#f59e0b]/10 [&_[data-slot=dropdown-menu-item]:focus]:text-[#f59e0b]"
-                : "[&_[data-slot=dropdown-menu-item]:focus]:bg-[#74ddc7]/10 [&_[data-slot=dropdown-menu-item]:focus]:text-[#0a0a0f]"
+            isAdminMode
+              ? "[&_[data-slot=dropdown-menu-item]:focus]:bg-[#dc2626]/10 [&_[data-slot=dropdown-menu-item]:focus]:text-[#dc2626]"
+              : currentActiveMode === "creator"
+                ? "[&_[data-slot=dropdown-menu-item]:focus]:bg-[#7401df]/10 [&_[data-slot=dropdown-menu-item]:focus]:text-[#7401df]"
+                : currentActiveMode === "vendor"
+                  ? "[&_[data-slot=dropdown-menu-item]:focus]:bg-[#f59e0b]/10 [&_[data-slot=dropdown-menu-item]:focus]:text-[#f59e0b]"
+                  : "[&_[data-slot=dropdown-menu-item]:focus]:bg-[#74ddc7]/10 [&_[data-slot=dropdown-menu-item]:focus]:text-[#0a0a0f]"
           }
         >
-          {currentActiveMode === "listener" ? (
+          {isAdminMode ? (
+            <>
+              {roleOverride === "operations" ? (
+                <>
+                  <DropdownMenuItem asChild><Link href="/my/admin"><Shield className="mr-2 h-4 w-4" />Admin Dashboard</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/directory"><Store className="mr-2 h-4 w-4" />Listings</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/admin/programming"><Users className="mr-2 h-4 w-4" />Users</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/admin/operations/shifts"><CalendarDays className="mr-2 h-4 w-4" />Scheduling</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/admin/operations"><Settings className="mr-2 h-4 w-4" />System Control</Link></DropdownMenuItem>
+                </>
+              ) : roleOverride === "sales" ? (
+                <>
+                  <DropdownMenuItem asChild><Link href="/my/sales"><BarChart3 className="mr-2 h-4 w-4" />Sales Dashboard</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/sales/clients"><Briefcase className="mr-2 h-4 w-4" />Advertisers</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/marketing/campaigns"><Megaphone className="mr-2 h-4 w-4" />Campaigns</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/admin/gm/revenue"><DollarSign className="mr-2 h-4 w-4" />Revenue</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/sales/pipeline"><Receipt className="mr-2 h-4 w-4" />Proposals</Link></DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  <DropdownMenuItem asChild><Link href="/my/admin/production"><Clapperboard className="mr-2 h-4 w-4" />Content</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/studio"><Mic className="mr-2 h-4 w-4" />Audio Studio</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/mixes"><FolderOpen className="mr-2 h-4 w-4" />Media Manager</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/creators"><Palette className="mr-2 h-4 w-4" />Creators</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/vendor/media"><Music className="mr-2 h-4 w-4" />Uploads</Link></DropdownMenuItem>
+                </>
+              )}
+            </>
+          ) : currentActiveMode === "listener" ? (
             <>
               <DropdownMenuItem asChild>
                 <Link href="/my">
@@ -421,41 +501,6 @@ export function UserMenu() {
             </>
           )}
         </DropdownMenuGroup>
-
-        {/* Admin section — only for admin/superadmin users */}
-        {(isAdmin || isSuperAdmin) && (
-          <>
-            <DropdownMenuSeparator />
-            <div className="px-2 py-1.5">
-              <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/50 mb-1.5 text-center">Admin</p>
-              <div className="inline-flex w-full items-center justify-center rounded-full border border-[#dc2626]/30 bg-[#dc2626]/5 p-px">
-                {([
-                  { value: "operations", label: "Operations", needsLock: true },
-                  { value: "production", label: "Production", needsLock: false },
-                  { value: "sales", label: "Sales", needsLock: true },
-                ] as const).map(({ value, label, needsLock }) => {
-                  const isAdminActive = roleOverride === value;
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setRoleOverride(isAdminActive ? null : value)}
-                      className="flex-1 rounded-full px-2 py-px text-[9px] font-semibold transition-all text-center inline-flex items-center justify-center gap-0.5"
-                      style={
-                        isAdminActive
-                          ? { backgroundColor: "#dc2626", color: "#fff" }
-                          : undefined
-                      }
-                    >
-                      {needsLock && !isAdminActive && <Lock className="h-2.5 w-2.5 opacity-40" />}
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </>
-        )}
 
         <DropdownMenuSeparator />
 
