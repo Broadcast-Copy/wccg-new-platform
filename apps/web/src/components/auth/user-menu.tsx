@@ -1,6 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useSupabase } from "@/components/providers/supabase-provider";
 import { useUserRoles, type UserRole } from "@/hooks/use-user-roles";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -190,6 +192,7 @@ function ListenerCreatorToggle({
 
 export function UserMenu() {
   const { user, signOut, isLoading } = useAuth();
+  const { supabase } = useSupabase();
   const {
     isAdmin,
     isSuperAdmin,
@@ -252,8 +255,37 @@ export function UserMenu() {
   const adminRoles = ["operations", "production", "sales"];
   const isAdminMode = isOverrideActive && roleOverride !== null && adminRoles.includes(roleOverride);
 
-  // Mock notification counts for admin sections
-  const adminNotifications = { production: 3, sales: 2 };
+  // Real notification counts from Supabase
+  const [adminNotifications, setAdminNotifications] = useState({ production: 0, sales: 0 });
+
+  useEffect(() => {
+    if (!user) return;
+    async function fetchCounts() {
+      try {
+        const { count: prodCount } = await supabase
+          .from('productions')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending_review');
+
+        const { count: salesCount } = await supabase
+          .from('vendor_events')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'upcoming');
+
+        setAdminNotifications({
+          production: prodCount || 0,
+          sales: salesCount || 0,
+        });
+      } catch {
+        // Keep defaults
+      }
+    }
+    fetchCounts();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchCounts, 30000);
+    return () => clearInterval(interval);
+  }, [user, supabase]);
+
   const totalAdminNotifications = adminNotifications.production + adminNotifications.sales;
 
   const currentActiveMode: ViewMode =

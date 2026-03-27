@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Megaphone,
   Eye,
@@ -16,6 +16,8 @@ import {
   Play,
   CheckCircle2,
 } from "lucide-react";
+import { useSupabase } from "@/components/providers/supabase-provider";
+import { useAuth } from "@/hooks/use-auth";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -47,52 +49,52 @@ const CAMPAIGN_TYPES: CampaignType[] = [
   "Event Sponsor",
 ];
 
-const SEED_CAMPAIGNS: Campaign[] = [
-  {
-    id: "cm1",
-    name: "Spring Sale Radio Blast",
-    type: "Radio Spot",
-    status: "Active",
-    startDate: "2026-03-01",
-    endDate: "2026-03-31",
-    impressions: 45200,
-    clicks: 1820,
-    spend: 750,
-  },
-  {
-    id: "cm2",
-    name: "Instagram Growth Push",
-    type: "Social Media",
-    status: "Active",
-    startDate: "2026-03-10",
-    endDate: "2026-04-10",
-    impressions: 28400,
-    clicks: 2130,
-    spend: 320,
-  },
-  {
-    id: "cm3",
-    name: "Crown City Festival Sponsor",
-    type: "Event Sponsor",
-    status: "Completed",
-    startDate: "2026-02-14",
-    endDate: "2026-02-16",
-    impressions: 12800,
-    clicks: 640,
-    spend: 1200,
-  },
-  {
-    id: "cm4",
-    name: "Google Display Network",
-    type: "Digital Ad",
-    status: "Paused",
-    startDate: "2026-02-01",
-    endDate: "2026-03-15",
-    impressions: 62100,
-    clicks: 1490,
-    spend: 540,
-  },
-];
+// const SEED_CAMPAIGNS: Campaign[] = [
+//   {
+//     id: "cm1",
+//     name: "Spring Sale Radio Blast",
+//     type: "Radio Spot",
+//     status: "Active",
+//     startDate: "2026-03-01",
+//     endDate: "2026-03-31",
+//     impressions: 45200,
+//     clicks: 1820,
+//     spend: 750,
+//   },
+//   {
+//     id: "cm2",
+//     name: "Instagram Growth Push",
+//     type: "Social Media",
+//     status: "Active",
+//     startDate: "2026-03-10",
+//     endDate: "2026-04-10",
+//     impressions: 28400,
+//     clicks: 2130,
+//     spend: 320,
+//   },
+//   {
+//     id: "cm3",
+//     name: "Crown City Festival Sponsor",
+//     type: "Event Sponsor",
+//     status: "Completed",
+//     startDate: "2026-02-14",
+//     endDate: "2026-02-16",
+//     impressions: 12800,
+//     clicks: 640,
+//     spend: 1200,
+//   },
+//   {
+//     id: "cm4",
+//     name: "Google Display Network",
+//     type: "Digital Ad",
+//     status: "Paused",
+//     startDate: "2026-02-01",
+//     endDate: "2026-03-15",
+//     impressions: 62100,
+//     clicks: 1490,
+//     spend: 540,
+//   },
+// ];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -109,7 +111,9 @@ const statusConfig: Record<CampaignStatus, { bg: string; text: string; icon: typ
 // ---------------------------------------------------------------------------
 
 export default function VendorMediaPage() {
-  const [campaigns, setCampaigns] = useState(SEED_CAMPAIGNS);
+  const { supabase } = useSupabase();
+  const { user, isLoading: authLoading } = useAuth();
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [showForm, setShowForm] = useState(false);
 
   // Form state
@@ -120,6 +124,42 @@ export default function VendorMediaPage() {
   const [formEnd, setFormEnd] = useState("");
   const [formAudience, setFormAudience] = useState("");
 
+  // --- Fetch campaigns from Supabase ---
+  useEffect(() => {
+    if (!user) return;
+    async function fetchCampaigns() {
+      const { data, error } = await supabase
+        .from('media_campaigns')
+        .select('*')
+        .eq('vendor_id', user!.id)
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        setCampaigns(
+          data.map((row: any) => ({
+            id: row.id,
+            name: row.name,
+            type: row.type ?? 'Radio Spot',
+            status: row.status ?? 'Active',
+            startDate: row.start_date ?? '',
+            endDate: row.end_date ?? '',
+            impressions: row.impressions ?? 0,
+            clicks: row.clicks ?? 0,
+            spend: row.budget ?? row.spend ?? 0,
+          }))
+        );
+      }
+    }
+    fetchCampaigns();
+  }, [user, supabase]);
+
+  // --- Auth guard ---
+  if (authLoading) {
+    return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>;
+  }
+  if (!user) {
+    return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Please sign in to manage campaigns.</div>;
+  }
+
   // Aggregate stats
   const totalImpressions = campaigns.reduce((s, c) => s + c.impressions, 0);
   const totalClicks = campaigns.reduce((s, c) => s + c.clicks, 0);
@@ -127,22 +167,37 @@ export default function VendorMediaPage() {
   const totalSpend = campaigns.reduce((s, c) => s + c.spend, 0);
 
   // Bar chart data (max height 120px)
-  const maxImpressions = Math.max(...campaigns.map((c) => c.impressions));
+  const maxImpressions = Math.max(...campaigns.map((c) => c.impressions), 0);
 
-  const handleCreate = () => {
-    if (!formName.trim() || !formStart || !formEnd) return;
-    const newCampaign: Campaign = {
-      id: `cm${Date.now()}`,
-      name: formName,
-      type: formType,
-      status: "Active",
-      startDate: formStart,
-      endDate: formEnd,
-      impressions: 0,
-      clicks: 0,
-      spend: parseInt(formBudget, 10) || 0,
-    };
-    setCampaigns((prev) => [newCampaign, ...prev]);
+  const handleCreate = async () => {
+    if (!formName.trim() || !formStart || !formEnd || !user) return;
+    const { data, error } = await supabase
+      .from('media_campaigns')
+      .insert({
+        vendor_id: user.id,
+        name: formName,
+        type: formType,
+        budget: parseInt(formBudget, 10) || 0,
+        start_date: formStart,
+        end_date: formEnd,
+      })
+      .select();
+
+    if (!error && data?.[0]) {
+      const row = data[0];
+      const newCampaign: Campaign = {
+        id: row.id,
+        name: row.name,
+        type: row.type ?? formType,
+        status: "Active",
+        startDate: row.start_date ?? formStart,
+        endDate: row.end_date ?? formEnd,
+        impressions: 0,
+        clicks: 0,
+        spend: row.budget ?? (parseInt(formBudget, 10) || 0),
+      };
+      setCampaigns((prev) => [newCampaign, ...prev]);
+    }
     setFormName("");
     setFormType("Radio Spot");
     setFormBudget("");

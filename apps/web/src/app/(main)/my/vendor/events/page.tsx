@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSupabase } from "@/components/providers/supabase-provider";
+import { useAuth } from "@/hooks/use-auth";
 import {
   CalendarDays,
   Plus,
@@ -39,102 +41,20 @@ interface VendorEvent {
 }
 
 // ---------------------------------------------------------------------------
-// Mock data
+// Mock data (commented fallback)
 // ---------------------------------------------------------------------------
 
-const SEED_EVENTS: VendorEvent[] = [
-  {
-    id: "e1",
-    title: "Crown City Block Party",
-    description:
-      "Live DJs, food trucks, and local vendors celebrating Fayetteville culture.",
-    date: "2026-04-18",
-    time: "4:00 PM",
-    venue: "Festival Park, Fayetteville",
-    capacity: 500,
-    sold: 312,
-    price: 15,
-    ticketType: "Paid",
-    tokenReward: 25,
-    status: "On Sale",
-  },
-  {
-    id: "e2",
-    title: "Open Mic Night",
-    description:
-      "Community open mic at the WCCG lounge. Poetry, music, and comedy welcome.",
-    date: "2026-04-05",
-    time: "7:00 PM",
-    venue: "WCCG Studio Lounge",
-    capacity: 50,
-    sold: 50,
-    price: 0,
-    ticketType: "Free",
-    tokenReward: 10,
-    status: "Sold Out",
-  },
-  {
-    id: "e3",
-    title: "Vinyl Swap Meet",
-    description:
-      "Bring your records and trade with fellow collectors. Hosted by DJ Crown.",
-    date: "2026-05-10",
-    time: "11:00 AM",
-    venue: "Cross Creek Mall Atrium",
-    capacity: 100,
-    sold: 28,
-    price: 5,
-    ticketType: "Paid",
-    tokenReward: 15,
-    status: "Upcoming",
-  },
-  {
-    id: "e4",
-    title: "Token Holder Exclusive Listening Party",
-    description:
-      "First listen of the new Crown City Compilation. Token holders only.",
-    date: "2026-05-25",
-    time: "8:00 PM",
-    venue: "WCCG Studio A",
-    capacity: 30,
-    sold: 12,
-    price: 0,
-    ticketType: "Token-Redeemable",
-    tokenReward: 50,
-    status: "Upcoming",
-  },
-];
+// const SEED_EVENTS: VendorEvent[] = [
+//   { id: "e1", title: "Crown City Block Party", description: "Live DJs, food trucks, and local vendors celebrating Fayetteville culture.", date: "2026-04-18", time: "4:00 PM", venue: "Festival Park, Fayetteville", capacity: 500, sold: 312, price: 15, ticketType: "Paid", tokenReward: 25, status: "On Sale" },
+//   { id: "e2", title: "Open Mic Night", description: "Community open mic at the WCCG lounge. Poetry, music, and comedy welcome.", date: "2026-04-05", time: "7:00 PM", venue: "WCCG Studio Lounge", capacity: 50, sold: 50, price: 0, ticketType: "Free", tokenReward: 10, status: "Sold Out" },
+//   { id: "e3", title: "Vinyl Swap Meet", description: "Bring your records and trade with fellow collectors. Hosted by DJ Crown.", date: "2026-05-10", time: "11:00 AM", venue: "Cross Creek Mall Atrium", capacity: 100, sold: 28, price: 5, ticketType: "Paid", tokenReward: 15, status: "Upcoming" },
+//   { id: "e4", title: "Token Holder Exclusive Listening Party", description: "First listen of the new Crown City Compilation. Token holders only.", date: "2026-05-25", time: "8:00 PM", venue: "WCCG Studio A", capacity: 30, sold: 12, price: 0, ticketType: "Token-Redeemable", tokenReward: 50, status: "Upcoming" },
+// ];
 
-const PAST_EVENTS: VendorEvent[] = [
-  {
-    id: "pe1",
-    title: "Winter Jam 2025",
-    description: "Annual winter concert featuring local hip-hop and R&B artists.",
-    date: "2025-12-14",
-    time: "6:00 PM",
-    venue: "Crown Complex Arena",
-    capacity: 2000,
-    sold: 1847,
-    price: 25,
-    ticketType: "Paid",
-    tokenReward: 30,
-    status: "Past",
-  },
-  {
-    id: "pe2",
-    title: "New Year Countdown Broadcast",
-    description: "Live broadcast with audience participation and giveaways.",
-    date: "2025-12-31",
-    time: "10:00 PM",
-    venue: "WCCG Studio",
-    capacity: 75,
-    sold: 75,
-    price: 0,
-    ticketType: "Free",
-    tokenReward: 20,
-    status: "Past",
-  },
-];
+// const PAST_EVENTS: VendorEvent[] = [
+//   { id: "pe1", title: "Winter Jam 2025", description: "Annual winter concert featuring local hip-hop and R&B artists.", date: "2025-12-14", time: "6:00 PM", venue: "Crown Complex Arena", capacity: 2000, sold: 1847, price: 25, ticketType: "Paid", tokenReward: 30, status: "Past" },
+//   { id: "pe2", title: "New Year Countdown Broadcast", description: "Live broadcast with audience participation and giveaways.", date: "2025-12-31", time: "10:00 PM", venue: "WCCG Studio", capacity: 75, sold: 75, price: 0, ticketType: "Free", tokenReward: 20, status: "Past" },
+// ];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -190,30 +110,124 @@ const EMPTY_FORM = {
 };
 
 export default function VendorEventsPage() {
-  const [events, setEvents] = useState<VendorEvent[]>(SEED_EVENTS);
+  const { supabase } = useSupabase();
+  const { user } = useAuth();
+
+  const [events, setEvents] = useState<VendorEvent[]>([]);
+  const [pastEvents, setPastEvents] = useState<VendorEvent[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [distributeTokens, setDistributeTokens] = useState(true);
 
-  function handleCreate() {
+  // Fetch events from Supabase
+  useEffect(() => {
+    if (!user) return;
+    async function fetchEvents() {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('vendor_events')
+        .select('*')
+        .eq('vendor_id', user!.id)
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        const mapRow = (row: any): VendorEvent => ({
+          id: row.id,
+          title: row.title ?? '',
+          description: row.description ?? '',
+          date: row.date ?? '',
+          time: row.time ?? 'TBD',
+          venue: row.venue ?? 'TBD',
+          capacity: row.capacity ?? 50,
+          sold: row.sold ?? 0,
+          price: row.price ?? 0,
+          ticketType: row.ticket_type ?? 'Paid',
+          tokenReward: row.token_reward ?? 0,
+          status: row.status ?? 'Upcoming',
+        });
+        setEvents(data.filter((r: any) => r.status !== 'Past').map(mapRow));
+        setPastEvents(data.filter((r: any) => r.status === 'Past').map(mapRow));
+      }
+      setLoading(false);
+    }
+    fetchEvents();
+  }, [user, supabase]);
+
+  // Auth guard
+  if (!user) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <p className="text-lg text-muted-foreground">Please sign in to access this page.</p>
+      </div>
+    );
+  }
+
+  async function handleCreate() {
     if (!form.title.trim() || !form.date) return;
-    const newEvent: VendorEvent = {
-      id: `e_${Date.now()}`,
-      title: form.title.trim(),
-      description: form.description.trim(),
-      date: form.date,
-      time: form.time || "TBD",
-      venue: form.venue.trim() || "TBD",
-      capacity: parseInt(form.capacity) || 50,
-      sold: 0,
-      price: parseFloat(form.price) || 0,
-      ticketType: form.ticketType,
-      tokenReward: distributeTokens ? parseInt(form.tokenReward) || 0 : 0,
-      status: "Upcoming",
-    };
-    setEvents((prev) => [newEvent, ...prev]);
+
+    const { data, error } = await supabase
+      .from('vendor_events')
+      .insert({
+        vendor_id: user!.id,
+        title: form.title.trim(),
+        description: form.description.trim(),
+        date: form.date,
+        time: form.time || "TBD",
+        venue: form.venue.trim() || "TBD",
+        capacity: parseInt(form.capacity) || 50,
+        sold: 0,
+        price: parseFloat(form.price) || 0,
+        ticket_type: form.ticketType,
+        token_reward: distributeTokens ? parseInt(form.tokenReward) || 0 : 0,
+        status: "Upcoming",
+      })
+      .select();
+
+    if (!error && data?.[0]) {
+      const row = data[0];
+      const newEvent: VendorEvent = {
+        id: row.id,
+        title: row.title ?? '',
+        description: row.description ?? '',
+        date: row.date ?? '',
+        time: row.time ?? 'TBD',
+        venue: row.venue ?? 'TBD',
+        capacity: row.capacity ?? 50,
+        sold: row.sold ?? 0,
+        price: row.price ?? 0,
+        ticketType: row.ticket_type ?? 'Paid',
+        tokenReward: row.token_reward ?? 0,
+        status: row.status ?? 'Upcoming',
+      };
+      setEvents((prev) => [newEvent, ...prev]);
+    }
     setShowForm(false);
     setForm(EMPTY_FORM);
+  }
+
+  async function handleDeleteEvent(id: string) {
+    const { error } = await supabase
+      .from('vendor_events')
+      .delete()
+      .eq('id', id)
+      .eq('vendor_id', user!.id);
+    if (!error) {
+      setEvents((prev) => prev.filter((e) => e.id !== id));
+      setPastEvents((prev) => prev.filter((e) => e.id !== id));
+    }
+  }
+
+  async function handleUpdateEventStatus(id: string, status: EventStatus) {
+    const { error } = await supabase
+      .from('vendor_events')
+      .update({ status })
+      .eq('id', id)
+      .eq('vendor_id', user!.id);
+    if (!error) {
+      setEvents((prev) =>
+        prev.map((e) => (e.id === id ? { ...e, status } : e))
+      );
+    }
   }
 
   function capacityPercent(sold: number, capacity: number) {
@@ -523,7 +537,7 @@ export default function VendorEventsPage() {
           Past Events
         </h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          {PAST_EVENTS.map((event) => {
+          {pastEvents.map((event) => {
             const pct = capacityPercent(event.sold, event.capacity);
             return (
               <div

@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSupabase } from "@/components/providers/supabase-provider";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Package,
   Plus,
@@ -41,61 +43,16 @@ const CATEGORIES: ProductCategory[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Mock data
+// Mock data (commented fallback)
 // ---------------------------------------------------------------------------
 
-const SEED_PRODUCTS: Product[] = [
-  {
-    id: "p1",
-    name: "Crown City Hot Sauce",
-    description: "Locally crafted hot sauce with Carolina Reaper peppers.",
-    price: 12.99,
-    category: "Food",
-    imageUrl: "",
-    inventory: 48,
-    tokenEligible: true,
-  },
-  {
-    id: "p2",
-    name: "WCCG Logo Tee",
-    description: "Premium cotton t-shirt with the WCCG 104.5 FM logo.",
-    price: 24.99,
-    category: "Fashion",
-    imageUrl: "",
-    inventory: 120,
-    tokenEligible: true,
-  },
-  {
-    id: "p3",
-    name: "DJ Workshop Pass",
-    description: "Two-hour hands-on DJ workshop in the Crown City studio.",
-    price: 49.99,
-    category: "Services",
-    imageUrl: "",
-    inventory: 15,
-    tokenEligible: false,
-  },
-  {
-    id: "p4",
-    name: "Vinyl Sticker Pack",
-    description: "Set of 6 WCCG-themed vinyl stickers, weatherproof.",
-    price: 7.99,
-    category: "Other",
-    imageUrl: "",
-    inventory: 200,
-    tokenEligible: true,
-  },
-  {
-    id: "p5",
-    name: "Live Show VIP Ticket",
-    description: "Front-row VIP access to the next WCCG live broadcast.",
-    price: 35.0,
-    category: "Entertainment",
-    imageUrl: "",
-    inventory: 30,
-    tokenEligible: false,
-  },
-];
+// const SEED_PRODUCTS: Product[] = [
+//   { id: "p1", name: "Crown City Hot Sauce", description: "Locally crafted hot sauce with Carolina Reaper peppers.", price: 12.99, category: "Food", imageUrl: "", inventory: 48, tokenEligible: true },
+//   { id: "p2", name: "WCCG Logo Tee", description: "Premium cotton t-shirt with the WCCG 104.5 FM logo.", price: 24.99, category: "Fashion", imageUrl: "", inventory: 120, tokenEligible: true },
+//   { id: "p3", name: "DJ Workshop Pass", description: "Two-hour hands-on DJ workshop in the Crown City studio.", price: 49.99, category: "Services", imageUrl: "", inventory: 15, tokenEligible: false },
+//   { id: "p4", name: "Vinyl Sticker Pack", description: "Set of 6 WCCG-themed vinyl stickers, weatherproof.", price: 7.99, category: "Other", imageUrl: "", inventory: 200, tokenEligible: true },
+//   { id: "p5", name: "Live Show VIP Ticket", description: "Front-row VIP access to the next WCCG live broadcast.", price: 35.0, category: "Entertainment", imageUrl: "", inventory: 30, tokenEligible: false },
+// ];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -131,11 +88,51 @@ const EMPTY_FORM = {
 };
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>(SEED_PRODUCTS);
+  const { supabase } = useSupabase();
+  const { user } = useAuth();
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
+
+  // Fetch products from Supabase
+  useEffect(() => {
+    if (!user) return;
+    async function fetchProducts() {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('vendor_products')
+        .select('*')
+        .eq('vendor_id', user!.id)
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        setProducts(data.map((row: any) => ({
+          id: row.id,
+          name: row.name,
+          description: row.description ?? '',
+          price: row.price ?? 0,
+          category: row.category ?? 'Other',
+          imageUrl: row.image_url ?? '',
+          inventory: row.inventory ?? 0,
+          tokenEligible: row.token_eligible ?? false,
+        })));
+      }
+      setLoading(false);
+    }
+    fetchProducts();
+  }, [user, supabase]);
+
+  // Auth guard
+  if (!user) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <p className="text-lg text-muted-foreground">Please sign in to access this page.</p>
+      </div>
+    );
+  }
 
   // Search filter
   const filtered = products.filter((p) => {
@@ -167,49 +164,88 @@ export default function ProductsPage() {
     setShowForm(true);
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const price = parseFloat(form.price) || 0;
     const inventory = parseInt(form.inventory) || 0;
 
     if (!form.name.trim()) return;
 
     if (editingId) {
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.id === editingId
-            ? {
-                ...p,
-                name: form.name.trim(),
-                description: form.description.trim(),
-                price,
-                category: form.category,
-                imageUrl: form.imageUrl.trim(),
-                inventory,
-                tokenEligible: form.tokenEligible,
-              }
-            : p
-        )
-      );
+      const { data, error } = await supabase
+        .from('vendor_products')
+        .update({
+          name: form.name.trim(),
+          description: form.description.trim(),
+          price,
+          category: form.category,
+          image_url: form.imageUrl.trim(),
+          inventory,
+          token_eligible: form.tokenEligible,
+        })
+        .eq('id', editingId)
+        .eq('vendor_id', user!.id)
+        .select();
+      if (!error && data?.[0]) {
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === editingId
+              ? {
+                  ...p,
+                  name: form.name.trim(),
+                  description: form.description.trim(),
+                  price,
+                  category: form.category,
+                  imageUrl: form.imageUrl.trim(),
+                  inventory,
+                  tokenEligible: form.tokenEligible,
+                }
+              : p
+          )
+        );
+      }
     } else {
-      const newProduct: Product = {
-        id: `p_${Date.now()}`,
-        name: form.name.trim(),
-        description: form.description.trim(),
-        price,
-        category: form.category,
-        imageUrl: form.imageUrl.trim(),
-        inventory,
-        tokenEligible: form.tokenEligible,
-      };
-      setProducts((prev) => [newProduct, ...prev]);
+      const { data, error } = await supabase
+        .from('vendor_products')
+        .insert({
+          vendor_id: user!.id,
+          name: form.name.trim(),
+          description: form.description.trim(),
+          price,
+          category: form.category,
+          image_url: form.imageUrl.trim(),
+          inventory,
+          token_eligible: form.tokenEligible,
+        })
+        .select();
+      if (!error && data?.[0]) {
+        const row = data[0];
+        const newProduct: Product = {
+          id: row.id,
+          name: row.name,
+          description: row.description ?? '',
+          price: row.price ?? 0,
+          category: row.category ?? 'Other',
+          imageUrl: row.image_url ?? '',
+          inventory: row.inventory ?? 0,
+          tokenEligible: row.token_eligible ?? false,
+        };
+        setProducts((prev) => [newProduct, ...prev]);
+      }
     }
     setShowForm(false);
     setEditingId(null);
     setForm(EMPTY_FORM);
   }
 
-  function handleDelete(id: string) {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+  async function handleDelete(id: string) {
+    const { error } = await supabase
+      .from('vendor_products')
+      .delete()
+      .eq('id', id)
+      .eq('vendor_id', user!.id);
+    if (!error) {
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+    }
   }
 
   return (

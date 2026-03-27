@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSupabase } from "@/components/providers/supabase-provider";
+import { useAuth } from "@/hooks/use-auth";
 import {
   CalendarCheck,
   Plus,
@@ -46,114 +48,24 @@ interface UpcomingBooking {
 }
 
 // ---------------------------------------------------------------------------
-// Mock data
+// Mock data (commented fallback)
 // ---------------------------------------------------------------------------
 
-const SEED_SLOTS: BookingSlot[] = [
-  {
-    id: "s1",
-    serviceName: "Studio Recording Session",
-    type: "Appointment",
-    duration: "1 hour",
-    price: 75,
-    capacity: 1,
-    available: true,
-    description: "One-on-one studio session with professional audio setup.",
-  },
-  {
-    id: "s2",
-    serviceName: "DJ Masterclass",
-    type: "Class",
-    duration: "2 hours",
-    price: 45,
-    capacity: 12,
-    available: true,
-    description: "Group class covering DJ techniques, mixing, and live performance.",
-  },
-  {
-    id: "s3",
-    serviceName: "Event PA System",
-    type: "Rental",
-    duration: "Full day",
-    price: 150,
-    capacity: 1,
-    available: false,
-    description: "Professional PA system rental for outdoor and indoor events.",
-  },
-  {
-    id: "s4",
-    serviceName: "Podcast Coaching",
-    type: "Appointment",
-    duration: "45 min",
-    price: 60,
-    capacity: 1,
-    available: true,
-    description: "One-on-one coaching for aspiring podcasters.",
-  },
-  {
-    id: "s5",
-    serviceName: "Music Production Workshop",
-    type: "Class",
-    duration: "3 hours",
-    price: 55,
-    capacity: 8,
-    available: true,
-    description: "Hands-on beat-making and production techniques.",
-  },
-];
+// const SEED_SLOTS: BookingSlot[] = [
+//   { id: "s1", serviceName: "Studio Recording Session", type: "Appointment", duration: "1 hour", price: 75, capacity: 1, available: true, description: "One-on-one studio session with professional audio setup." },
+//   { id: "s2", serviceName: "DJ Masterclass", type: "Class", duration: "2 hours", price: 45, capacity: 12, available: true, description: "Group class covering DJ techniques, mixing, and live performance." },
+//   { id: "s3", serviceName: "Event PA System", type: "Rental", duration: "Full day", price: 150, capacity: 1, available: false, description: "Professional PA system rental for outdoor and indoor events." },
+//   { id: "s4", serviceName: "Podcast Coaching", type: "Appointment", duration: "45 min", price: 60, capacity: 1, available: true, description: "One-on-one coaching for aspiring podcasters." },
+//   { id: "s5", serviceName: "Music Production Workshop", type: "Class", duration: "3 hours", price: 55, capacity: 8, available: true, description: "Hands-on beat-making and production techniques." },
+// ];
 
-const SEED_BOOKINGS: UpcomingBooking[] = [
-  {
-    id: "b1",
-    slotId: "s1",
-    customerName: "Marcus Johnson",
-    date: "2026-03-30",
-    time: "10:00 AM",
-    status: "Confirmed",
-    serviceName: "Studio Recording Session",
-    type: "Appointment",
-  },
-  {
-    id: "b2",
-    slotId: "s2",
-    customerName: "Aisha Williams",
-    date: "2026-04-02",
-    time: "2:00 PM",
-    status: "Pending",
-    serviceName: "DJ Masterclass",
-    type: "Class",
-  },
-  {
-    id: "b3",
-    slotId: "s4",
-    customerName: "Derek Thomas",
-    date: "2026-04-05",
-    time: "11:00 AM",
-    status: "Confirmed",
-    serviceName: "Podcast Coaching",
-    type: "Appointment",
-  },
-  {
-    id: "b4",
-    slotId: "s3",
-    customerName: "Faith Community Church",
-    date: "2026-04-12",
-    time: "8:00 AM",
-    status: "Cancelled",
-    serviceName: "Event PA System",
-    type: "Rental",
-  },
-  {
-    id: "b5",
-    slotId: "s5",
-    customerName: "Tyler Brooks",
-    date: "2026-04-08",
-    time: "6:00 PM",
-    status: "Pending",
-    serviceName: "Music Production Workshop",
-    type: "Class",
-  },
-];
+// const SEED_BOOKINGS: UpcomingBooking[] = [
+//   { id: "b1", slotId: "s1", customerName: "Marcus Johnson", date: "2026-03-30", time: "10:00 AM", status: "Confirmed", serviceName: "Studio Recording Session", type: "Appointment" },
+//   { id: "b2", slotId: "s2", customerName: "Aisha Williams", date: "2026-04-02", time: "2:00 PM", status: "Pending", serviceName: "DJ Masterclass", type: "Class" },
+//   { id: "b3", slotId: "s4", customerName: "Derek Thomas", date: "2026-04-05", time: "11:00 AM", status: "Confirmed", serviceName: "Podcast Coaching", type: "Appointment" },
+//   { id: "b4", slotId: "s3", customerName: "Faith Community Church", date: "2026-04-12", time: "8:00 AM", status: "Cancelled", serviceName: "Event PA System", type: "Rental" },
+//   { id: "b5", slotId: "s5", customerName: "Tyler Brooks", date: "2026-04-08", time: "6:00 PM", status: "Pending", serviceName: "Music Production Workshop", type: "Class" },
+// ];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -216,11 +128,73 @@ const EMPTY_FORM = {
 };
 
 export default function BookingsPage() {
-  const [slots, setSlots] = useState<BookingSlot[]>(SEED_SLOTS);
-  const [bookings] = useState<UpcomingBooking[]>(SEED_BOOKINGS);
+  const { supabase } = useSupabase();
+  const { user } = useAuth();
+
+  const [slots, setSlots] = useState<BookingSlot[]>([]);
+  const [bookings, setBookings] = useState<UpcomingBooking[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabFilter>("All");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+
+  // Fetch booking slots and bookings from Supabase
+  useEffect(() => {
+    if (!user) return;
+    async function fetchBookings() {
+      setLoading(true);
+      const [slotsRes, bookingsRes] = await Promise.all([
+        supabase
+          .from('vendor_bookings')
+          .select('*')
+          .eq('vendor_id', user!.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('vendor_bookings')
+          .select('*')
+          .eq('vendor_id', user!.id)
+          .order('created_at', { ascending: false }),
+      ]);
+
+      if (!slotsRes.error && slotsRes.data) {
+        // Map rows that represent slots (have service_name)
+        const slotRows = slotsRes.data.filter((row: any) => row.record_type === 'slot' || !row.record_type);
+        setSlots(slotRows.map((row: any) => ({
+          id: row.id,
+          serviceName: row.service_name ?? '',
+          type: row.type ?? 'Appointment',
+          duration: row.duration ?? '1 hour',
+          price: row.price ?? 0,
+          capacity: row.capacity ?? 1,
+          available: row.available ?? true,
+          description: row.description ?? '',
+        })));
+
+        const bookingRows = slotsRes.data.filter((row: any) => row.record_type === 'booking');
+        setBookings(bookingRows.map((row: any) => ({
+          id: row.id,
+          slotId: row.slot_id ?? '',
+          customerName: row.customer_name ?? '',
+          date: row.date ?? '',
+          time: row.time ?? '',
+          status: row.status ?? 'Pending',
+          serviceName: row.service_name ?? '',
+          type: row.type ?? 'Appointment',
+        })));
+      }
+      setLoading(false);
+    }
+    fetchBookings();
+  }, [user, supabase]);
+
+  // Auth guard
+  if (!user) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <p className="text-lg text-muted-foreground">Please sign in to access this page.</p>
+      </div>
+    );
+  }
 
   const TABS: TabFilter[] = ["All", "Appointments", "Classes", "Rentals"];
 
@@ -229,21 +203,64 @@ export default function BookingsPage() {
     return mapped ? s.type === mapped : true;
   });
 
-  function handleCreateSlot() {
+  async function handleCreateSlot() {
     if (!form.serviceName.trim()) return;
-    const newSlot: BookingSlot = {
-      id: `s_${Date.now()}`,
-      serviceName: form.serviceName.trim(),
-      type: form.type,
-      duration: form.duration.trim() || "1 hour",
-      price: parseFloat(form.price) || 0,
-      capacity: parseInt(form.capacity) || 1,
-      available: true,
-      description: form.description.trim(),
-    };
-    setSlots((prev) => [newSlot, ...prev]);
+
+    const { data, error } = await supabase
+      .from('vendor_bookings')
+      .insert({
+        vendor_id: user!.id,
+        service_name: form.serviceName.trim(),
+        type: form.type,
+        duration: form.duration.trim() || "1 hour",
+        price: parseFloat(form.price) || 0,
+        capacity: parseInt(form.capacity) || 1,
+        available: true,
+        description: form.description.trim(),
+        record_type: 'slot',
+      })
+      .select();
+
+    if (!error && data?.[0]) {
+      const row = data[0];
+      const newSlot: BookingSlot = {
+        id: row.id,
+        serviceName: row.service_name ?? '',
+        type: row.type ?? 'Appointment',
+        duration: row.duration ?? '1 hour',
+        price: row.price ?? 0,
+        capacity: row.capacity ?? 1,
+        available: row.available ?? true,
+        description: row.description ?? '',
+      };
+      setSlots((prev) => [newSlot, ...prev]);
+    }
     setShowForm(false);
     setForm(EMPTY_FORM);
+  }
+
+  async function handleDeleteSlot(id: string) {
+    const { error } = await supabase
+      .from('vendor_bookings')
+      .delete()
+      .eq('id', id)
+      .eq('vendor_id', user!.id);
+    if (!error) {
+      setSlots((prev) => prev.filter((s) => s.id !== id));
+    }
+  }
+
+  async function handleUpdateBookingStatus(id: string, status: BookingStatus) {
+    const { error } = await supabase
+      .from('vendor_bookings')
+      .update({ status })
+      .eq('id', id)
+      .eq('vendor_id', user!.id);
+    if (!error) {
+      setBookings((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, status } : b))
+      );
+    }
   }
 
   return (

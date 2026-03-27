@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSupabase } from "@/components/providers/supabase-provider";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Coins,
   Send,
@@ -57,22 +59,26 @@ const REASONS: DistributionReason[] = [
   "Loyalty Bonus",
 ];
 
-const SEED_DISTRIBUTIONS: DistributionEntry[] = [
-  { id: "d1", recipient: "james.walker@email.com", amount: 500, reason: "Purchase Reward", date: "2026-03-25" },
-  { id: "d2", recipient: "tasha.brown@email.com", amount: 1000, reason: "Event Attendance", date: "2026-03-22" },
-  { id: "d3", recipient: "derek.miles@email.com", amount: 250, reason: "Promotion", date: "2026-03-20" },
-  { id: "d4", recipient: "keisha.johnson@email.com", amount: 750, reason: "Loyalty Bonus", date: "2026-03-18" },
-  { id: "d5", recipient: "marcus.davis@email.com", amount: 300, reason: "Purchase Reward", date: "2026-03-15" },
-];
+// const SEED_DISTRIBUTIONS: DistributionEntry[] = [
+//   { id: "d1", recipient: "james.walker@email.com", amount: 500, reason: "Purchase Reward", date: "2026-03-25" },
+//   { id: "d2", recipient: "tasha.brown@email.com", amount: 1000, reason: "Event Attendance", date: "2026-03-22" },
+//   { id: "d3", recipient: "derek.miles@email.com", amount: 250, reason: "Promotion", date: "2026-03-20" },
+//   { id: "d4", recipient: "keisha.johnson@email.com", amount: 750, reason: "Loyalty Bonus", date: "2026-03-18" },
+//   { id: "d5", recipient: "marcus.davis@email.com", amount: 300, reason: "Purchase Reward", date: "2026-03-15" },
+// ];
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export default function VendorTokensPage() {
-  const [distributions, setDistributions] = useState(SEED_DISTRIBUTIONS);
-  const [totalPurchased, setTotalPurchased] = useState(22200);
-  const [totalDistributed] = useState(2800);
+  const { supabase } = useSupabase();
+  const { user } = useAuth();
+
+  const [distributions, setDistributions] = useState<DistributionEntry[]>([]);
+  const [totalPurchased, setTotalPurchased] = useState(0);
+  const [totalDistributed, setTotalDistributed] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   // Deploy form state
   const [deployEmail, setDeployEmail] = useState("");
@@ -80,25 +86,98 @@ export default function VendorTokensPage() {
   const [deployReason, setDeployReason] = useState<DistributionReason>("Purchase Reward");
   const [showDeployForm, setShowDeployForm] = useState(false);
 
+  // Fetch token transactions from Supabase and calculate balance
+  useEffect(() => {
+    if (!user) return;
+    async function fetchTransactions() {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('token_transactions')
+        .select('*')
+        .eq('vendor_id', user!.id)
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        let purchased = 0;
+        let distributed = 0;
+        const distEntries: DistributionEntry[] = [];
+
+        for (const row of data) {
+          if (row.type === 'purchase') {
+            purchased += row.amount ?? 0;
+          } else if (row.type === 'distribute') {
+            distributed += row.amount ?? 0;
+            distEntries.push({
+              id: row.id,
+              recipient: row.recipient_id ?? '',
+              amount: row.amount ?? 0,
+              reason: row.reason ?? 'Purchase Reward',
+              date: row.created_at ? row.created_at.slice(0, 10) : '',
+            });
+          }
+        }
+        setTotalPurchased(purchased);
+        setTotalDistributed(distributed);
+        setDistributions(distEntries);
+      }
+      setLoading(false);
+    }
+    fetchTransactions();
+  }, [user, supabase]);
+
+  // Auth guard
+  if (!user) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <p className="text-lg text-muted-foreground">Please sign in to access this page.</p>
+      </div>
+    );
+  }
+
   const availableBalance = totalPurchased - totalDistributed;
 
-  const handlePurchase = (tier: PurchaseTier) => {
-    setTotalPurchased((prev) => prev + tier.tokens);
+  const handlePurchase = async (tier: PurchaseTier) => {
+    const { data, error } = await supabase
+      .from('token_transactions')
+      .insert({
+        vendor_id: user!.id,
+        type: 'purchase',
+        amount: tier.tokens,
+        price_paid: tier.price,
+      })
+      .select();
+    if (!error && data?.[0]) {
+      setTotalPurchased((prev) => prev + tier.tokens);
+    }
   };
 
-  const handleDeploy = () => {
+  const handleDeploy = async () => {
     if (!deployEmail.trim() || !deployAmount.trim()) return;
     const amount = parseInt(deployAmount, 10);
     if (isNaN(amount) || amount <= 0) return;
 
-    const entry: DistributionEntry = {
-      id: `d${Date.now()}`,
-      recipient: deployEmail,
-      amount,
-      reason: deployReason,
-      date: new Date().toISOString().slice(0, 10),
-    };
-    setDistributions((prev) => [entry, ...prev]);
+    const { data, error } = await supabase
+      .from('token_transactions')
+      .insert({
+        vendor_id: user!.id,
+        type: 'distribute',
+        amount,
+        recipient_id: deployEmail,
+        reason: deployReason,
+      })
+      .select();
+
+    if (!error && data?.[0]) {
+      const row = data[0];
+      const entry: DistributionEntry = {
+        id: row.id,
+        recipient: deployEmail,
+        amount,
+        reason: deployReason,
+        date: row.created_at ? row.created_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      };
+      setDistributions((prev) => [entry, ...prev]);
+      setTotalDistributed((prev) => prev + amount);
+    }
     setDeployEmail("");
     setDeployAmount("");
     setDeployReason("Purchase Reward");

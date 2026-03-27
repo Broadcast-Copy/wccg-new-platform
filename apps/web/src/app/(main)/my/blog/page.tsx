@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSupabase } from "@/components/providers/supabase-provider";
+import { useAuth } from "@/hooks/use-auth";
 import {
   PenLine,
   Plus,
@@ -32,63 +34,19 @@ interface BlogPost {
 }
 
 // ---------------------------------------------------------------------------
-// Mock data
+// Mock data (kept as fallback reference)
 // ---------------------------------------------------------------------------
 
 const CATEGORIES = ["Hip-Hop", "Culture", "Music News", "Community", "Opinion"];
 
-const initialPosts: BlogPost[] = [
-  {
-    id: "bp-001",
-    title: "The Rise of Durham's Hip-Hop Scene",
-    excerpt: "Exploring how local artists are putting the Bull City on the map with fresh sounds and authentic storytelling.",
-    status: "Published",
-    publishDate: "2026-03-20",
-    views: 1842,
-    category: "Hip-Hop",
-    featuredImage: "",
-  },
-  {
-    id: "bp-002",
-    title: "Behind the Boards: Producers Shaping the Sound",
-    excerpt: "A deep dive into the producers creating beats that define the next generation of Carolina hip-hop.",
-    status: "Published",
-    publishDate: "2026-03-18",
-    views: 1205,
-    category: "Music News",
-    featuredImage: "",
-  },
-  {
-    id: "bp-003",
-    title: "Community Spotlight: Youth Music Programs",
-    excerpt: "How local organizations are nurturing the next wave of talent through mentorship and studio access.",
-    status: "Draft",
-    publishDate: "",
-    views: 0,
-    category: "Community",
-    featuredImage: "",
-  },
-  {
-    id: "bp-004",
-    title: "Opinion: Why Radio Still Matters in the Streaming Era",
-    excerpt: "In a world of algorithms, local radio provides something streaming never can — community connection.",
-    status: "Scheduled",
-    publishDate: "2026-04-01",
-    views: 0,
-    category: "Opinion",
-    featuredImage: "",
-  },
-  {
-    id: "bp-005",
-    title: "Festival Season Preview: What to Expect This Summer",
-    excerpt: "A roundup of the hottest festivals, block parties, and live events hitting the Triangle this summer.",
-    status: "Published",
-    publishDate: "2026-03-15",
-    views: 2310,
-    category: "Culture",
-    featuredImage: "",
-  },
-];
+// Fallback mock data – used only when Supabase fetch returns empty or errors
+// const initialPosts: BlogPost[] = [
+//   { id: "bp-001", title: "The Rise of Durham's Hip-Hop Scene", excerpt: "...", status: "Published", publishDate: "2026-03-20", views: 1842, category: "Hip-Hop", featuredImage: "" },
+//   { id: "bp-002", title: "Behind the Boards: Producers Shaping the Sound", excerpt: "...", status: "Published", publishDate: "2026-03-18", views: 1205, category: "Music News", featuredImage: "" },
+//   { id: "bp-003", title: "Community Spotlight: Youth Music Programs", excerpt: "...", status: "Draft", publishDate: "", views: 0, category: "Community", featuredImage: "" },
+//   { id: "bp-004", title: "Opinion: Why Radio Still Matters in the Streaming Era", excerpt: "...", status: "Scheduled", publishDate: "2026-04-01", views: 0, category: "Opinion", featuredImage: "" },
+//   { id: "bp-005", title: "Festival Season Preview: What to Expect This Summer", excerpt: "...", status: "Published", publishDate: "2026-03-15", views: 2310, category: "Culture", featuredImage: "" },
+// ];
 
 // ---------------------------------------------------------------------------
 // Status badge styles
@@ -105,12 +63,52 @@ const STATUS_STYLES: Record<PostStatus, string> = {
 // ---------------------------------------------------------------------------
 
 export default function BlogManagerPage() {
-  const [posts, setPosts] = useState<BlogPost[]>(initialPosts);
+  const { supabase } = useSupabase();
+  const { user } = useAuth();
+
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formTitle, setFormTitle] = useState("");
   const [formContent, setFormContent] = useState("");
   const [formCategory, setFormCategory] = useState(CATEGORIES[0]);
   const [formImage, setFormImage] = useState("");
+
+  // -- Fetch blog posts from Supabase --------------------------------------
+  const fetchPosts = useCallback(async () => {
+    if (!supabase || !user) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("blog_posts")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Failed to fetch blog posts:", error);
+    } else if (data) {
+      setPosts(
+        data.map((row: Record<string, unknown>) => ({
+          id: (row.id as string) ?? "",
+          title: (row.title as string) ?? "",
+          excerpt: (row.excerpt as string) ?? "",
+          status: (row.status as PostStatus) ?? "Draft",
+          publishDate: (row.published_at as string)?.split("T")[0] ?? "",
+          views: (row.views as number) ?? 0,
+          category: (row.category as string) ?? "",
+          featuredImage: (row.featured_image_url as string) ?? "",
+        }))
+      );
+    }
+    setLoading(false);
+  }, [supabase, user]);
+
+  useEffect(() => {
+    fetchPosts();
+  }, [fetchPosts]);
 
   const published = posts.filter((p) => p.status === "Published");
   const drafts = posts.filter((p) => p.status === "Draft");
@@ -124,36 +122,129 @@ export default function BlogManagerPage() {
     setShowForm(false);
   }
 
-  function handlePublish() {
-    if (!formTitle.trim()) return;
-    const newPost: BlogPost = {
-      id: `bp-${Date.now()}`,
-      title: formTitle.trim(),
-      excerpt: formContent.slice(0, 140),
-      status: "Published",
-      publishDate: new Date().toISOString().split("T")[0],
-      views: 0,
-      category: formCategory,
-      featuredImage: formImage,
-    };
-    setPosts([newPost, ...posts]);
+  async function handlePublish() {
+    if (!formTitle.trim() || !supabase || !user) return;
+
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+      .from("blog_posts")
+      .insert({
+        user_id: user.id,
+        title: formTitle.trim(),
+        content: formContent,
+        excerpt: formContent.slice(0, 140),
+        category: formCategory,
+        featured_image_url: formImage || null,
+        status: "Published",
+        published_at: now,
+      })
+      .select();
+
+    if (error) {
+      console.error("Failed to publish post:", error);
+      return;
+    }
+
+    if (data && data[0]) {
+      const row = data[0] as Record<string, unknown>;
+      const newPost: BlogPost = {
+        id: (row.id as string) ?? "",
+        title: (row.title as string) ?? "",
+        excerpt: (row.excerpt as string) ?? "",
+        status: "Published",
+        publishDate: now.split("T")[0],
+        views: 0,
+        category: (row.category as string) ?? "",
+        featuredImage: (row.featured_image_url as string) ?? "",
+      };
+      setPosts((prev) => [newPost, ...prev]);
+    }
     resetForm();
   }
 
-  function handleSaveDraft() {
-    if (!formTitle.trim()) return;
-    const newPost: BlogPost = {
-      id: `bp-${Date.now()}`,
-      title: formTitle.trim(),
-      excerpt: formContent.slice(0, 140),
-      status: "Draft",
-      publishDate: "",
-      views: 0,
-      category: formCategory,
-      featuredImage: formImage,
-    };
-    setPosts([newPost, ...posts]);
+  async function handleSaveDraft() {
+    if (!formTitle.trim() || !supabase || !user) return;
+
+    const { data, error } = await supabase
+      .from("blog_posts")
+      .insert({
+        user_id: user.id,
+        title: formTitle.trim(),
+        content: formContent,
+        excerpt: formContent.slice(0, 140),
+        category: formCategory,
+        featured_image_url: formImage || null,
+        status: "Draft",
+      })
+      .select();
+
+    if (error) {
+      console.error("Failed to save draft:", error);
+      return;
+    }
+
+    if (data && data[0]) {
+      const row = data[0] as Record<string, unknown>;
+      const newPost: BlogPost = {
+        id: (row.id as string) ?? "",
+        title: (row.title as string) ?? "",
+        excerpt: (row.excerpt as string) ?? "",
+        status: "Draft",
+        publishDate: "",
+        views: 0,
+        category: (row.category as string) ?? "",
+        featuredImage: (row.featured_image_url as string) ?? "",
+      };
+      setPosts((prev) => [newPost, ...prev]);
+    }
     resetForm();
+  }
+
+  async function handleDeletePost(id: string) {
+    if (!supabase) return;
+    const { error } = await supabase.from("blog_posts").delete().eq("id", id);
+    if (error) {
+      console.error("Failed to delete post:", error);
+      return;
+    }
+    setPosts((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  async function handleUpdatePost(id: string, updates: Partial<BlogPost>) {
+    if (!supabase) return;
+    const dbUpdates: Record<string, unknown> = {};
+    if (updates.title !== undefined) dbUpdates.title = updates.title;
+    if (updates.excerpt !== undefined) dbUpdates.excerpt = updates.excerpt;
+    if (updates.category !== undefined) dbUpdates.category = updates.category;
+    if (updates.featuredImage !== undefined) dbUpdates.featured_image_url = updates.featuredImage;
+    if (updates.status !== undefined) {
+      dbUpdates.status = updates.status;
+      if (updates.status === "Published") {
+        dbUpdates.published_at = new Date().toISOString();
+      }
+    }
+
+    const { error } = await supabase
+      .from("blog_posts")
+      .update(dbUpdates)
+      .eq("id", id);
+
+    if (error) {
+      console.error("Failed to update post:", error);
+      return;
+    }
+    setPosts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
+    );
+  }
+
+  // -- Auth guard -----------------------------------------------------------
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] text-muted-foreground">
+        Please sign in to manage your blog posts.
+      </div>
+    );
   }
 
   return (

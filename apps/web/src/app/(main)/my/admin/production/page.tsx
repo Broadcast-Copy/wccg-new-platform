@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useSupabase } from "@/components/providers/supabase-provider";
 import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
 import {
@@ -48,7 +49,7 @@ interface Studio {
 }
 
 // ---------------------------------------------------------------------------
-// Seed data
+// Seed data (kept as fallback reference)
 // ---------------------------------------------------------------------------
 
 // Mock broadcast studio projects for the dropdown
@@ -60,16 +61,17 @@ const STUDIO_PROJECTS = [
   { id: "proj_5", name: "Event Recap Video" },
 ];
 
-const initialJobs: ProductionJob[] = [
-  { id: "PQ-1042", client: "Metro Auto Group", type: "Audio Spot", due: "2026-03-05", status: "In Progress", assignedTo: "Marcus T.", project: "Spring Auto Campaign Mix" },
-  { id: "PQ-1043", client: "City Health Clinic", type: "Audio Spot", due: "2026-03-06", status: "Pending", assignedTo: "Unassigned" },
-  { id: "PQ-1044", client: "WCCG Internal", type: "Promo", due: "2026-03-05", status: "Review", assignedTo: "Keisha W.", project: "Morning Show Bumpers" },
-  { id: "PQ-1045", client: "Carolina BBQ Fest", type: "Audio Spot", due: "2026-03-08", status: "In Progress", assignedTo: "Marcus T.", project: "BBQ Fest Jingles" },
-  { id: "PQ-1046", client: "First National Bank", type: "Video", due: "2026-03-10", status: "Pending", assignedTo: "Devon R.", project: "Bank Holiday Promo" },
-  { id: "PQ-1047", client: "WCCG Morning Show", type: "Promo", due: "2026-03-04", status: "Completed", assignedTo: "Keisha W.", project: "Morning Show Bumpers" },
-  { id: "PQ-1048", client: "Johnson Law Firm", type: "Audio Spot", due: "2026-03-07", status: "In Progress", assignedTo: "Marcus T." },
-  { id: "PQ-1049", client: "WCCG Events", type: "Video", due: "2026-03-12", status: "Pending", assignedTo: "Devon R.", project: "Event Recap Video" },
-];
+// Fallback mock data – used only when Supabase fetch returns empty or errors
+// const initialJobs: ProductionJob[] = [
+//   { id: "PQ-1042", client: "Metro Auto Group", type: "Audio Spot", due: "2026-03-05", status: "In Progress", assignedTo: "Marcus T.", project: "Spring Auto Campaign Mix" },
+//   { id: "PQ-1043", client: "City Health Clinic", type: "Audio Spot", due: "2026-03-06", status: "Pending", assignedTo: "Unassigned" },
+//   { id: "PQ-1044", client: "WCCG Internal", type: "Promo", due: "2026-03-05", status: "Review", assignedTo: "Keisha W.", project: "Morning Show Bumpers" },
+//   { id: "PQ-1045", client: "Carolina BBQ Fest", type: "Audio Spot", due: "2026-03-08", status: "In Progress", assignedTo: "Marcus T.", project: "BBQ Fest Jingles" },
+//   { id: "PQ-1046", client: "First National Bank", type: "Video", due: "2026-03-10", status: "Pending", assignedTo: "Devon R.", project: "Bank Holiday Promo" },
+//   { id: "PQ-1047", client: "WCCG Morning Show", type: "Promo", due: "2026-03-04", status: "Completed", assignedTo: "Keisha W.", project: "Morning Show Bumpers" },
+//   { id: "PQ-1048", client: "Johnson Law Firm", type: "Audio Spot", due: "2026-03-07", status: "In Progress", assignedTo: "Marcus T." },
+//   { id: "PQ-1049", client: "WCCG Events", type: "Video", due: "2026-03-12", status: "Pending", assignedTo: "Devon R.", project: "Event Recap Video" },
+// ];
 
 const initialStudios: Studio[] = [
   { name: "Studio A", activity: "Recording", status: "In Use", color: "from-[#dc2626] to-[#b91c1c]" },
@@ -144,10 +146,12 @@ const FILTER_OPTIONS: (JobStatus | "All")[] = ["All", ...STATUS_ORDER];
 // ---------------------------------------------------------------------------
 
 export default function ProductionPage() {
+  const { supabase } = useSupabase();
   const { user } = useAuth();
 
   // -- State ----------------------------------------------------------------
-  const [jobs, setJobs] = useState<ProductionJob[]>(initialJobs);
+  const [jobs, setJobs] = useState<ProductionJob[]>([]);
+  const [loading, setLoading] = useState(true);
   const [studios, setStudios] = useState<Studio[]>(initialStudios);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<JobStatus | "All">("All");
@@ -160,6 +164,38 @@ export default function ProductionPage() {
   const [newDue, setNewDue] = useState("");
   const [newAssigned, setNewAssigned] = useState("");
   const [newProject, setNewProject] = useState("");
+
+  // -- Fetch productions from Supabase -------------------------------------
+  const fetchJobs = useCallback(async () => {
+    if (!supabase) return;
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("productions")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Failed to fetch productions:", error);
+      toast.error("Failed to load production jobs");
+    } else if (data) {
+      setJobs(
+        data.map((row: Record<string, unknown>) => ({
+          id: (row.id as string) ?? "",
+          client: (row.client as string) ?? "",
+          type: (row.type as string) ?? "",
+          due: (row.due as string) ?? "",
+          status: (row.status as JobStatus) ?? "Pending",
+          assignedTo: (row.assigned_to as string) ?? "Unassigned",
+          project: (row.project as string) ?? undefined,
+        }))
+      );
+    }
+    setLoading(false);
+  }, [supabase]);
+
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs]);
 
   // -- Helpers --------------------------------------------------------------
   const showToast = useCallback((msg: string) => {
@@ -188,25 +224,94 @@ export default function ProductionPage() {
     return matchesSearch && matchesStatus;
   });
 
-  // -- Handlers -------------------------------------------------------------
-  function handleToggleStatus(id: string) {
-    setJobs((prev) =>
-      prev.map((j) => {
-        if (j.id !== id) return j;
-        const ns = nextStatus(j.status);
-        showToast(`${j.id} status changed to ${ns}`);
-        return { ...j, status: ns };
+  // -- Approve / Reject helpers --------------------------------------------
+  async function handleApprove(id: string) {
+    if (!supabase || !user) return;
+    const { error } = await supabase
+      .from("productions")
+      .update({
+        status: "approved",
+        reviewer_id: user.id,
+        reviewed_at: new Date().toISOString(),
       })
-    );
+      .eq("id", id);
+
+    if (error) {
+      toast.error("Failed to approve production");
+      console.error(error);
+    } else {
+      showToast(`Production ${id} approved`);
+      fetchJobs();
+    }
   }
 
-  function handleDeleteJob(id: string) {
+  async function handleReject(id: string, reason: string) {
+    if (!supabase || !user) return;
+    const { error } = await supabase
+      .from("productions")
+      .update({
+        status: "rejected",
+        reviewer_id: user.id,
+        reviewed_at: new Date().toISOString(),
+        review_notes: reason,
+      })
+      .eq("id", id);
+
+    if (error) {
+      toast.error("Failed to reject production");
+      console.error(error);
+    } else {
+      showToast(`Production ${id} rejected`);
+      fetchJobs();
+    }
+  }
+
+  // -- Handlers -------------------------------------------------------------
+  async function handleToggleStatus(id: string) {
+    const job = jobs.find((j) => j.id === id);
+    if (!job) return;
+    const ns = nextStatus(job.status);
+
+    // Optimistic update
+    setJobs((prev) =>
+      prev.map((j) => (j.id !== id ? j : { ...j, status: ns }))
+    );
+    showToast(`${job.id} status changed to ${ns}`);
+
+    if (supabase) {
+      const { error } = await supabase
+        .from("productions")
+        .update({ status: ns })
+        .eq("id", id);
+
+      if (error) {
+        console.error("Failed to update status:", error);
+        toast.error("Failed to save status change");
+        fetchJobs(); // revert on error
+      }
+    }
+  }
+
+  async function handleDeleteJob(id: string) {
     const job = jobs.find((j) => j.id === id);
     setJobs((prev) => prev.filter((j) => j.id !== id));
     showToast(`Deleted job ${job?.id ?? id}`);
+
+    if (supabase) {
+      const { error } = await supabase
+        .from("productions")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.error("Failed to delete production:", error);
+        toast.error("Failed to delete job");
+        fetchJobs(); // revert on error
+      }
+    }
   }
 
-  function handleAddJob() {
+  async function handleAddJob() {
     if (!newClient.trim()) {
       toast.error("Client name is required");
       return;
@@ -215,8 +320,10 @@ export default function ProductionPage() {
       toast.error("Due date is required");
       return;
     }
+
+    const jobId = nextJobId();
     const job: ProductionJob = {
-      id: nextJobId(),
+      id: jobId,
       client: newClient.trim(),
       type: newType,
       due: newDue,
@@ -224,6 +331,25 @@ export default function ProductionPage() {
       assignedTo: newAssigned.trim() || "Unassigned",
       project: newProject || undefined,
     };
+
+    if (supabase) {
+      const { error } = await supabase.from("productions").insert({
+        id: jobId,
+        client: job.client,
+        type: job.type,
+        due: job.due,
+        status: job.status,
+        assigned_to: job.assignedTo,
+        project: job.project ?? null,
+      });
+
+      if (error) {
+        console.error("Failed to create production:", error);
+        toast.error("Failed to create job");
+        return;
+      }
+    }
+
     setJobs((prev) => [job, ...prev]);
     setShowNewForm(false);
     setNewClient("");
@@ -249,6 +375,15 @@ export default function ProductionPage() {
         toast.error(`${studioName} is currently in use`);
         return s;
       })
+    );
+  }
+
+  // -- Auth guard -----------------------------------------------------------
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] text-muted-foreground">
+        Please sign in to view the production queue.
+      </div>
     );
   }
 

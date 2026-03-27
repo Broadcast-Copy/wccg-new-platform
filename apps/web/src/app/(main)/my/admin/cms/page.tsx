@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Globe,
   Pencil,
@@ -15,6 +15,8 @@ import {
   Type,
   MousePointerClick,
 } from "lucide-react";
+import { useSupabase } from "@/components/providers/supabase-provider";
+import { useAuth } from "@/hooks/use-auth";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,22 +39,22 @@ interface SitePage {
 }
 
 // ---------------------------------------------------------------------------
-// Mock data
+// Mock data (kept as fallback)
 // ---------------------------------------------------------------------------
 
-const initialPages: SitePage[] = [
-  { id: "pg-01", name: "Home", urlPath: "/", lastModified: "2026-03-25", status: "Published", metaDescription: "WCCG — Durham's premier hip-hop and community radio.", sections: { hero: "Welcome to WCCG Radio", body: "Your source for the best hip-hop, culture, and community news.", sidebar: "Now Playing widget" } },
-  { id: "pg-02", name: "About", urlPath: "/about", lastModified: "2026-03-20", status: "Published", metaDescription: "Learn about WCCG's mission and history.", sections: { hero: "About WCCG", body: "Founded in Durham, WCCG has served the community since day one.", sidebar: "Team highlights" } },
-  { id: "pg-03", name: "Shows", urlPath: "/shows", lastModified: "2026-03-22", status: "Published", metaDescription: "Browse our lineup of live and on-demand shows.", sections: { hero: "Our Shows", body: "Explore the full lineup of programming.", sidebar: "Schedule widget" } },
-  { id: "pg-04", name: "Channels", urlPath: "/channels", lastModified: "2026-03-18", status: "Published", metaDescription: "Explore WCCG's curated channels.", sections: { hero: "Channels", body: "Stream curated music channels 24/7.", sidebar: "Featured channels" } },
-  { id: "pg-05", name: "Sports", urlPath: "/sports", lastModified: "2026-03-15", status: "Published", metaDescription: "Durham sports coverage and live broadcasts.", sections: { hero: "Sports Central", body: "Live scores, game recaps, and exclusive interviews.", sidebar: "Upcoming games" } },
-  { id: "pg-06", name: "Advertise", urlPath: "/advertise", lastModified: "2026-03-12", status: "Published", metaDescription: "Reach Durham's audience with WCCG advertising.", sections: { hero: "Advertise With Us", body: "Connect with our engaged audience across radio and digital.", sidebar: "Rate card download" } },
-  { id: "pg-07", name: "Careers", urlPath: "/careers", lastModified: "2026-03-10", status: "Draft", metaDescription: "Join the WCCG team.", sections: { hero: "Careers at WCCG", body: "We're always looking for passionate people.", sidebar: "Open positions" } },
-  { id: "pg-08", name: "Contact", urlPath: "/contact", lastModified: "2026-03-08", status: "Published", metaDescription: "Get in touch with WCCG.", sections: { hero: "Contact Us", body: "Reach out to our team for inquiries and partnerships.", sidebar: "Address and hours" } },
-  { id: "pg-09", name: "FAQ", urlPath: "/faq", lastModified: "2026-02-28", status: "Published", metaDescription: "Frequently asked questions about WCCG.", sections: { hero: "FAQ", body: "Answers to common questions about listening, advertising, and more.", sidebar: "Support links" } },
-  { id: "pg-10", name: "Events", urlPath: "/events", lastModified: "2026-03-24", status: "Published", metaDescription: "Upcoming WCCG events and community gatherings.", sections: { hero: "Events", body: "Stay up to date with community events and live broadcasts.", sidebar: "Calendar widget" } },
-  { id: "pg-11", name: "Contests", urlPath: "/contests", lastModified: "2026-03-05", status: "Draft", metaDescription: "Enter WCCG contests and win prizes.", sections: { hero: "Contests", body: "Participate in our latest giveaways and competitions.", sidebar: "Current prizes" } },
-];
+// const initialPages: SitePage[] = [
+//   { id: "pg-01", name: "Home", urlPath: "/", lastModified: "2026-03-25", status: "Published", metaDescription: "WCCG — Durham's premier hip-hop and community radio.", sections: { hero: "Welcome to WCCG Radio", body: "Your source for the best hip-hop, culture, and community news.", sidebar: "Now Playing widget" } },
+//   { id: "pg-02", name: "About", urlPath: "/about", lastModified: "2026-03-20", status: "Published", metaDescription: "Learn about WCCG's mission and history.", sections: { hero: "About WCCG", body: "Founded in Durham, WCCG has served the community since day one.", sidebar: "Team highlights" } },
+//   { id: "pg-03", name: "Shows", urlPath: "/shows", lastModified: "2026-03-22", status: "Published", metaDescription: "Browse our lineup of live and on-demand shows.", sections: { hero: "Our Shows", body: "Explore the full lineup of programming.", sidebar: "Schedule widget" } },
+//   { id: "pg-04", name: "Channels", urlPath: "/channels", lastModified: "2026-03-18", status: "Published", metaDescription: "Explore WCCG's curated channels.", sections: { hero: "Channels", body: "Stream curated music channels 24/7.", sidebar: "Featured channels" } },
+//   { id: "pg-05", name: "Sports", urlPath: "/sports", lastModified: "2026-03-15", status: "Published", metaDescription: "Durham sports coverage and live broadcasts.", sections: { hero: "Sports Central", body: "Live scores, game recaps, and exclusive interviews.", sidebar: "Upcoming games" } },
+//   { id: "pg-06", name: "Advertise", urlPath: "/advertise", lastModified: "2026-03-12", status: "Published", metaDescription: "Reach Durham's audience with WCCG advertising.", sections: { hero: "Advertise With Us", body: "Connect with our engaged audience across radio and digital.", sidebar: "Rate card download" } },
+//   { id: "pg-07", name: "Careers", urlPath: "/careers", lastModified: "2026-03-10", status: "Draft", metaDescription: "Join the WCCG team.", sections: { hero: "Careers at WCCG", body: "We're always looking for passionate people.", sidebar: "Open positions" } },
+//   { id: "pg-08", name: "Contact", urlPath: "/contact", lastModified: "2026-03-08", status: "Published", metaDescription: "Get in touch with WCCG.", sections: { hero: "Contact Us", body: "Reach out to our team for inquiries and partnerships.", sidebar: "Address and hours" } },
+//   { id: "pg-09", name: "FAQ", urlPath: "/faq", lastModified: "2026-02-28", status: "Published", metaDescription: "Frequently asked questions about WCCG.", sections: { hero: "FAQ", body: "Answers to common questions about listening, advertising, and more.", sidebar: "Support links" } },
+//   { id: "pg-10", name: "Events", urlPath: "/events", lastModified: "2026-03-24", status: "Published", metaDescription: "Upcoming WCCG events and community gatherings.", sections: { hero: "Events", body: "Stay up to date with community events and live broadcasts.", sidebar: "Calendar widget" } },
+//   { id: "pg-11", name: "Contests", urlPath: "/contests", lastModified: "2026-03-05", status: "Draft", metaDescription: "Enter WCCG contests and win prizes.", sections: { hero: "Contests", body: "Participate in our latest giveaways and competitions.", sidebar: "Current prizes" } },
+// ];
 
 const SECTION_BLOCKS = [
   { label: "Header", icon: Layout, color: "border-[#dc2626]/30 bg-[#dc2626]/5" },
@@ -75,13 +77,48 @@ const STATUS_STYLES: Record<PageStatus, string> = {
 // ---------------------------------------------------------------------------
 
 export default function CmsPage() {
-  const [pages, setPages] = useState<SitePage[]>(initialPages);
+  const { supabase } = useSupabase();
+  const { user, isLoading: authLoading } = useAuth();
+  const [pages, setPages] = useState<SitePage[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editMeta, setEditMeta] = useState("");
   const [editHero, setEditHero] = useState("");
   const [editBody, setEditBody] = useState("");
   const [editSidebar, setEditSidebar] = useState("");
+
+  // --- Fetch CMS pages from Supabase (admin sees all) ---
+  useEffect(() => {
+    if (!user) return;
+    async function fetchPages() {
+      const { data, error } = await supabase
+        .from('cms_pages')
+        .select('*')
+        .order('updated_at', { ascending: false });
+      if (!error && data) {
+        setPages(
+          data.map((row: any) => ({
+            id: row.id,
+            name: row.title ?? row.slug,
+            urlPath: `/${row.slug}`,
+            lastModified: row.updated_at?.split('T')[0] ?? '',
+            status: row.status === 'published' ? 'Published' : 'Draft',
+            metaDescription: row.meta_description ?? '',
+            sections: row.sections ?? { hero: '', body: '', sidebar: '' },
+          }))
+        );
+      }
+    }
+    fetchPages();
+  }, [user, supabase]);
+
+  // --- Auth guard ---
+  if (authLoading) {
+    return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>;
+  }
+  if (!user) {
+    return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Please sign in to access the CMS.</div>;
+  }
 
   const publishedCount = pages.filter((p) => p.status === "Published").length;
   const lastUpdated = pages
@@ -107,22 +144,40 @@ export default function CmsPage() {
     setEditSidebar("");
   }
 
-  function saveEditing() {
-    if (!editingId) return;
-    setPages((prev) =>
-      prev.map((p) =>
-        p.id === editingId
-          ? {
-              ...p,
-              name: editTitle,
-              metaDescription: editMeta,
-              sections: { hero: editHero, body: editBody, sidebar: editSidebar },
-              lastModified: new Date().toISOString().split("T")[0],
-              status: "Published" as PageStatus,
-            }
-          : p,
-      ),
-    );
+  async function saveEditing() {
+    if (!editingId || !user) return;
+    const page = pages.find((p) => p.id === editingId);
+    if (!page) return;
+    const slug = page.urlPath.replace(/^\//, '') || page.name.toLowerCase().replace(/\s+/g, '-');
+    const sections = { hero: editHero, body: editBody, sidebar: editSidebar };
+
+    const { error } = await supabase.from('cms_pages').upsert({
+      id: editingId,
+      slug,
+      title: editTitle,
+      meta_description: editMeta,
+      sections,
+      status: 'published',
+      updated_by: user.id,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (!error) {
+      setPages((prev) =>
+        prev.map((p) =>
+          p.id === editingId
+            ? {
+                ...p,
+                name: editTitle,
+                metaDescription: editMeta,
+                sections,
+                lastModified: new Date().toISOString().split("T")[0],
+                status: "Published" as PageStatus,
+              }
+            : p,
+        ),
+      );
+    }
     cancelEditing();
   }
 

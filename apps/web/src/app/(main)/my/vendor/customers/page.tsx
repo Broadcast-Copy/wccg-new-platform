@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSupabase } from "@/components/providers/supabase-provider";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Users,
   Search,
@@ -45,165 +47,141 @@ interface Customer {
 type FilterOption = "All" | "Recent" | "Top Spenders" | "Token Recipients";
 
 // ---------------------------------------------------------------------------
-// Mock data
+// Mock data (commented fallback)
 // ---------------------------------------------------------------------------
 
 const FILTERS: FilterOption[] = ["All", "Recent", "Top Spenders", "Token Recipients"];
 
-const SEED_CUSTOMERS: Customer[] = [
-  {
-    id: "c1",
-    name: "James Walker",
-    email: "james.walker@email.com",
-    totalPurchases: 347.5,
-    tokensReceived: 2500,
-    lastVisit: "2026-03-26",
-    visitCount: 12,
-    purchases: [
-      { item: "Crown City Hot Sauce", amount: 12.99, date: "2026-03-26" },
-      { item: "WCCG Logo Tee", amount: 24.99, date: "2026-03-20" },
-      { item: "Vinyl Sticker Pack", amount: 7.99, date: "2026-03-10" },
-    ],
-    tokenLog: [
-      { amount: 500, reason: "Purchase Reward", date: "2026-03-26" },
-      { amount: 1000, reason: "Event Attendance", date: "2026-03-15" },
-      { amount: 1000, reason: "Loyalty Bonus", date: "2026-02-28" },
-    ],
-  },
-  {
-    id: "c2",
-    name: "Tasha Brown",
-    email: "tasha.brown@email.com",
-    totalPurchases: 289.0,
-    tokensReceived: 1800,
-    lastVisit: "2026-03-24",
-    visitCount: 8,
-    purchases: [
-      { item: "DJ Workshop Pass", amount: 49.99, date: "2026-03-24" },
-      { item: "Crown City Hot Sauce x2", amount: 25.98, date: "2026-03-18" },
-      { item: "Gift Card $50", amount: 50.0, date: "2026-03-05" },
-    ],
-    tokenLog: [
-      { amount: 1000, reason: "Event Attendance", date: "2026-03-24" },
-      { amount: 800, reason: "Purchase Reward", date: "2026-03-18" },
-    ],
-  },
-  {
-    id: "c3",
-    name: "Derek Miles",
-    email: "derek.miles@email.com",
-    totalPurchases: 156.25,
-    tokensReceived: 900,
-    lastVisit: "2026-03-22",
-    visitCount: 5,
-    purchases: [
-      { item: "WCCG Logo Tee", amount: 24.99, date: "2026-03-22" },
-      { item: "Festival Ticket", amount: 35.0, date: "2026-03-10" },
-      { item: "Snack Bundle", amount: 18.5, date: "2026-02-28" },
-    ],
-    tokenLog: [
-      { amount: 500, reason: "Promotion", date: "2026-03-22" },
-      { amount: 400, reason: "Purchase Reward", date: "2026-03-10" },
-    ],
-  },
-  {
-    id: "c4",
-    name: "Keisha Johnson",
-    email: "keisha.johnson@email.com",
-    totalPurchases: 512.0,
-    tokensReceived: 3200,
-    lastVisit: "2026-03-25",
-    visitCount: 18,
-    purchases: [
-      { item: "Premium Package", amount: 99.99, date: "2026-03-25" },
-      { item: "WCCG Logo Tee x3", amount: 74.97, date: "2026-03-15" },
-      { item: "DJ Workshop Pass", amount: 49.99, date: "2026-03-01" },
-      { item: "Gift Card $100", amount: 100.0, date: "2026-02-20" },
-    ],
-    tokenLog: [
-      { amount: 1500, reason: "Loyalty Bonus", date: "2026-03-25" },
-      { amount: 1000, reason: "Purchase Reward", date: "2026-03-15" },
-      { amount: 700, reason: "Event Attendance", date: "2026-03-01" },
-    ],
-  },
-  {
-    id: "c5",
-    name: "Marcus Davis",
-    email: "marcus.davis@email.com",
-    totalPurchases: 78.5,
-    tokensReceived: 300,
-    lastVisit: "2026-03-15",
-    visitCount: 2,
-    purchases: [
-      { item: "Crown City Hot Sauce", amount: 12.99, date: "2026-03-15" },
-      { item: "Vinyl Sticker Pack", amount: 7.99, date: "2026-03-01" },
-    ],
-    tokenLog: [{ amount: 300, reason: "Purchase Reward", date: "2026-03-15" }],
-  },
-  {
-    id: "c6",
-    name: "Aliyah Carter",
-    email: "aliyah.carter@email.com",
-    totalPurchases: 195.75,
-    tokensReceived: 1400,
-    lastVisit: "2026-03-23",
-    visitCount: 7,
-    purchases: [
-      { item: "Festival VIP Pass", amount: 75.0, date: "2026-03-23" },
-      { item: "WCCG Logo Tee", amount: 24.99, date: "2026-03-12" },
-      { item: "Crown City Hot Sauce", amount: 12.99, date: "2026-02-25" },
-    ],
-    tokenLog: [
-      { amount: 800, reason: "Event Attendance", date: "2026-03-23" },
-      { amount: 600, reason: "Promotion", date: "2026-03-12" },
-    ],
-  },
-  {
-    id: "c7",
-    name: "Terrence White",
-    email: "terrence.white@email.com",
-    totalPurchases: 410.0,
-    tokensReceived: 2100,
-    lastVisit: "2026-03-21",
-    visitCount: 10,
-    purchases: [
-      { item: "DJ Workshop Pass", amount: 49.99, date: "2026-03-21" },
-      { item: "Premium Package", amount: 99.99, date: "2026-03-08" },
-      { item: "Gift Card $50", amount: 50.0, date: "2026-02-18" },
-    ],
-    tokenLog: [
-      { amount: 1000, reason: "Loyalty Bonus", date: "2026-03-21" },
-      { amount: 600, reason: "Purchase Reward", date: "2026-03-08" },
-      { amount: 500, reason: "Promotion", date: "2026-02-18" },
-    ],
-  },
-  {
-    id: "c8",
-    name: "Nina Simmons",
-    email: "nina.simmons@email.com",
-    totalPurchases: 62.0,
-    tokensReceived: 200,
-    lastVisit: "2026-03-10",
-    visitCount: 1,
-    purchases: [
-      { item: "WCCG Logo Tee", amount: 24.99, date: "2026-03-10" },
-      { item: "Snack Bundle", amount: 18.5, date: "2026-03-10" },
-    ],
-    tokenLog: [{ amount: 200, reason: "Purchase Reward", date: "2026-03-10" }],
-  },
-];
+// const SEED_CUSTOMERS: Customer[] = [
+//   { id: "c1", name: "James Walker", email: "james.walker@email.com", totalPurchases: 347.5, tokensReceived: 2500, lastVisit: "2026-03-26", visitCount: 12, purchases: [...], tokenLog: [...] },
+//   { id: "c2", name: "Tasha Brown", ... },
+//   { id: "c3", name: "Derek Miles", ... },
+//   { id: "c4", name: "Keisha Johnson", ... },
+//   { id: "c5", name: "Marcus Davis", ... },
+//   { id: "c6", name: "Aliyah Carter", ... },
+//   { id: "c7", name: "Terrence White", ... },
+//   { id: "c8", name: "Nina Simmons", ... },
+// ];
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export default function VendorCustomersPage() {
+  const { supabase } = useSupabase();
+  const { user } = useAuth();
+
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterOption>("All");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // Fetch customers from Supabase
+  useEffect(() => {
+    if (!user) return;
+    async function fetchCustomers() {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('vendor_customers')
+        .select('*')
+        .eq('vendor_id', user!.id)
+        .order('last_visit', { ascending: false });
+      if (!error && data) {
+        setCustomers(data.map((row: any) => ({
+          id: row.id,
+          name: row.name ?? '',
+          email: row.email ?? '',
+          totalPurchases: row.total_purchases ?? 0,
+          tokensReceived: row.tokens_received ?? 0,
+          lastVisit: row.last_visit ?? '',
+          visitCount: row.visit_count ?? 0,
+          purchases: row.purchases ?? [],
+          tokenLog: row.token_log ?? [],
+        })));
+      }
+      setLoading(false);
+    }
+    fetchCustomers();
+  }, [user, supabase]);
+
+  // Auth guard
+  if (!user) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <p className="text-lg text-muted-foreground">Please sign in to access this page.</p>
+      </div>
+    );
+  }
+
+  // CRUD helpers
+  async function handleAddCustomer(customerData: Omit<Customer, 'id'>) {
+    const { data, error } = await supabase
+      .from('vendor_customers')
+      .insert({
+        vendor_id: user!.id,
+        name: customerData.name,
+        email: customerData.email,
+        total_purchases: customerData.totalPurchases,
+        tokens_received: customerData.tokensReceived,
+        last_visit: customerData.lastVisit,
+        visit_count: customerData.visitCount,
+        purchases: customerData.purchases,
+        token_log: customerData.tokenLog,
+      })
+      .select();
+    if (!error && data?.[0]) {
+      const row = data[0];
+      setCustomers((prev) => [{
+        id: row.id,
+        name: row.name ?? '',
+        email: row.email ?? '',
+        totalPurchases: row.total_purchases ?? 0,
+        tokensReceived: row.tokens_received ?? 0,
+        lastVisit: row.last_visit ?? '',
+        visitCount: row.visit_count ?? 0,
+        purchases: row.purchases ?? [],
+        tokenLog: row.token_log ?? [],
+      }, ...prev]);
+    }
+  }
+
+  async function handleUpdateCustomer(id: string, updates: Partial<Customer>) {
+    const dbUpdates: any = {};
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.email !== undefined) dbUpdates.email = updates.email;
+    if (updates.totalPurchases !== undefined) dbUpdates.total_purchases = updates.totalPurchases;
+    if (updates.tokensReceived !== undefined) dbUpdates.tokens_received = updates.tokensReceived;
+    if (updates.lastVisit !== undefined) dbUpdates.last_visit = updates.lastVisit;
+    if (updates.visitCount !== undefined) dbUpdates.visit_count = updates.visitCount;
+    if (updates.purchases !== undefined) dbUpdates.purchases = updates.purchases;
+    if (updates.tokenLog !== undefined) dbUpdates.token_log = updates.tokenLog;
+
+    const { error } = await supabase
+      .from('vendor_customers')
+      .update(dbUpdates)
+      .eq('id', id)
+      .eq('vendor_id', user!.id);
+    if (!error) {
+      setCustomers((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
+      );
+    }
+  }
+
+  async function handleDeleteCustomer(id: string) {
+    const { error } = await supabase
+      .from('vendor_customers')
+      .delete()
+      .eq('id', id)
+      .eq('vendor_id', user!.id);
+    if (!error) {
+      setCustomers((prev) => prev.filter((c) => c.id !== id));
+    }
+  }
+
   // Filter + search logic
-  const filtered = SEED_CUSTOMERS.filter((c) => {
+  const filtered = customers.filter((c) => {
     const matchesSearch =
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.email.toLowerCase().includes(search.toLowerCase());
@@ -222,12 +200,12 @@ export default function VendorCustomersPage() {
     }
   });
 
-  const totalCustomers = SEED_CUSTOMERS.length;
-  const repeatCustomers = SEED_CUSTOMERS.filter((c) => c.visitCount >= 3).length;
-  const repeatRate = Math.round((repeatCustomers / totalCustomers) * 100);
-  const avgTokens = Math.round(
-    SEED_CUSTOMERS.reduce((sum, c) => sum + c.tokensReceived, 0) / totalCustomers
-  );
+  const totalCustomers = customers.length;
+  const repeatCustomers = customers.filter((c) => c.visitCount >= 3).length;
+  const repeatRate = totalCustomers > 0 ? Math.round((repeatCustomers / totalCustomers) * 100) : 0;
+  const avgTokens = totalCustomers > 0 ? Math.round(
+    customers.reduce((sum, c) => sum + c.tokensReceived, 0) / totalCustomers
+  ) : 0;
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-8">
