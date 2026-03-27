@@ -29,7 +29,7 @@ type FilterTab = "all" | "weekday" | "saturday" | "sunday" | "gospel";
 
 const FILTER_TABS: { key: FilterTab; label: string }[] = [
   { key: "all", label: "All Shows" },
-  { key: "weekday", label: "Mon \u2013 Fri" },
+  { key: "weekday", label: "Mon – Fri" },
   { key: "saturday", label: "Saturday" },
   { key: "sunday", label: "Sunday" },
   { key: "gospel", label: "Gospel" },
@@ -44,6 +44,84 @@ const STREAM_TABS: { key: string; label: string; logo: string }[] = [
   { key: "stream_mixsquad", label: "MixxSquadd", logo: "/images/logos/mix-squad-logo.png" },
   { key: "stream_yard", label: "Yard & Riddim", logo: "/images/logos/yard-riddim-logo.png" },
 ];
+
+function DropdownSelect({
+  items,
+  activeKey,
+  onSelect,
+  showCounts,
+}: {
+  items: { key: string; label: string; logo?: string }[];
+  activeKey: string;
+  onSelect: (key: string) => void;
+  showCounts?: Record<string, number>;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const activeItem = items.find((i) => i.key === activeKey) ?? items[0];
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-2 rounded-xl bg-foreground/[0.03] border border-border px-3 py-2.5 text-sm font-medium text-foreground transition-all hover:bg-foreground/[0.06] whitespace-nowrap"
+      >
+        {activeItem.logo ? (
+          <span className="relative h-4 w-4 rounded-sm overflow-hidden flex-shrink-0">
+            <AppImage src={activeItem.logo} alt={activeItem.label} fill className="object-cover" sizes="16px" />
+          </span>
+        ) : items[0]?.logo !== undefined ? (
+          <Radio className="h-3.5 w-3.5 text-[#74ddc7]" />
+        ) : null}
+        <span>{activeItem.label}</span>
+        {showCounts && showCounts[activeKey] !== undefined && (
+          <span className="text-xs text-muted-foreground/60">{showCounts[activeKey]}</span>
+        )}
+        <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 min-w-[200px] rounded-xl border border-border bg-card shadow-xl overflow-hidden z-50">
+          {items.map((item) => {
+            const isActive = activeKey === item.key;
+            return (
+              <button
+                key={item.key}
+                onClick={() => { onSelect(item.key); setOpen(false); }}
+                className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                  isActive
+                    ? "bg-[#74ddc7]/10 text-[#74ddc7] font-semibold"
+                    : "text-foreground hover:bg-foreground/[0.04]"
+                }`}
+              >
+                {item.logo ? (
+                  <span className="relative h-5 w-5 rounded-md overflow-hidden flex-shrink-0">
+                    <AppImage src={item.logo} alt={item.label} fill className="object-cover" sizes="20px" />
+                  </span>
+                ) : items[0]?.logo !== undefined ? (
+                  <Radio className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                ) : null}
+                <span className="flex-1 text-left">{item.label}</span>
+                {showCounts && showCounts[item.key] !== undefined && showCounts[item.key] > 0 && (
+                  <span className="text-xs text-muted-foreground/60">{showCounts[item.key]}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ShowFilterInner({ shows }: { shows: FilterableShow[] }) {
   const searchParams = useSearchParams();
@@ -109,116 +187,24 @@ function ShowFilterInner({ shows }: { shows: FilterableShow[] }) {
   const inactiveShows = filteredShows.filter((s) => !s.isActive);
 
   const activeStreamLabel = STREAM_TABS.find((t) => t.key === activeStream)?.label;
-  const activeStreamTab = STREAM_TABS.find((t) => t.key === activeStream) ?? STREAM_TABS[0];
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false);
-      }
+  // Compute show counts for station dropdown
+  const streamCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const tab of STREAM_TABS) {
+      counts[tab.key] = tab.key === "all"
+        ? shows.filter((s) => s.isActive).length
+        : shows.filter((s) => s.isActive && s.streamId === tab.key).length;
     }
-    if (dropdownOpen) document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [dropdownOpen]);
+    return counts;
+  }, [shows]);
 
   return (
     <div className="space-y-6">
-      {/* Station Filter — Dropdown on mobile, scrollable pills on desktop */}
-
-      {/* Mobile: Dropdown */}
-      <div className="sm:hidden" ref={dropdownRef}>
-        <button
-          onClick={() => setDropdownOpen((v) => !v)}
-          className="flex w-full items-center justify-between gap-2 rounded-xl bg-foreground/[0.06] border border-border px-4 py-3 text-sm font-medium text-foreground transition-all"
-        >
-          <span className="flex items-center gap-2">
-            {activeStreamTab.logo ? (
-              <span className="relative h-5 w-5 rounded-md overflow-hidden flex-shrink-0">
-                <AppImage src={activeStreamTab.logo} alt={activeStreamTab.label} fill className="object-cover" sizes="20px" />
-              </span>
-            ) : (
-              <Radio className="h-4 w-4 text-[#74ddc7]" />
-            )}
-            <span>{activeStreamTab.label}</span>
-          </span>
-          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
-        </button>
-        {dropdownOpen && (
-          <div className="mt-1 rounded-xl border border-border bg-card shadow-xl overflow-hidden z-50 relative">
-            {STREAM_TABS.map((tab) => {
-              const isActive = activeStream === tab.key;
-              const showCount = tab.key === "all"
-                ? shows.filter((s) => s.isActive).length
-                : shows.filter((s) => s.isActive && s.streamId === tab.key).length;
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => { handleStreamChange(tab.key); setDropdownOpen(false); }}
-                  className={`flex w-full items-center gap-3 px-4 py-3 text-sm transition-colors ${
-                    isActive
-                      ? "bg-[#74ddc7]/10 text-[#74ddc7] font-semibold"
-                      : "text-foreground hover:bg-foreground/[0.04]"
-                  }`}
-                >
-                  {tab.logo ? (
-                    <span className="relative h-6 w-6 rounded-md overflow-hidden flex-shrink-0">
-                      <AppImage src={tab.logo} alt={tab.label} fill className="object-cover" sizes="24px" />
-                    </span>
-                  ) : (
-                    <Radio className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  )}
-                  <span className="flex-1 text-left">{tab.label}</span>
-                  {showCount > 0 && (
-                    <span className="text-xs text-muted-foreground/60">{showCount}</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Desktop: Scrollable pills */}
-      <div className="hidden sm:flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        {STREAM_TABS.map((tab) => {
-          const isActive = activeStream === tab.key;
-          const showCount = tab.key === "all"
-            ? shows.filter((s) => s.isActive).length
-            : shows.filter((s) => s.isActive && s.streamId === tab.key).length;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => handleStreamChange(tab.key)}
-              className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-all flex-shrink-0 ${
-                isActive
-                  ? "bg-[#74ddc7] text-[#0a0a0f] shadow-md shadow-[#74ddc7]/20"
-                  : "bg-foreground/[0.06] text-muted-foreground hover:bg-foreground/[0.1] hover:text-foreground/80"
-              }`}
-            >
-              {tab.logo && (
-                <span className="relative h-5 w-5 rounded-md overflow-hidden flex-shrink-0">
-                  <AppImage src={tab.logo} alt={tab.label} fill className="object-cover" sizes="20px" />
-                </span>
-              )}
-              {tab.key === "all" && <Radio className="h-3.5 w-3.5" />}
-              <span>{tab.label}</span>
-              {showCount > 0 && (
-                <span className={`text-xs ${isActive ? "text-[#0a0a0f]/60" : "text-muted-foreground/60"}`}>
-                  {showCount}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Search + Day Filter row */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      {/* Search + Dropdowns — all on one row */}
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
         {/* Search bar */}
-        <div className="relative flex-1 sm:max-w-xs">
+        <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
           <input
             type="text"
@@ -229,22 +215,20 @@ function ShowFilterInner({ shows }: { shows: FilterableShow[] }) {
           />
         </div>
 
-        {/* Day Filter Tabs */}
-        <div className="flex items-center gap-1 rounded-xl bg-foreground/[0.03] border border-border p-1 flex-1">
-          {FILTER_TABS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveFilter(tab.key)}
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                activeFilter === tab.key
-                  ? "bg-foreground text-background shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.05]"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        {/* Station dropdown */}
+        <DropdownSelect
+          items={STREAM_TABS}
+          activeKey={activeStream}
+          onSelect={handleStreamChange}
+          showCounts={streamCounts}
+        />
+
+        {/* Day filter dropdown */}
+        <DropdownSelect
+          items={FILTER_TABS}
+          activeKey={activeFilter}
+          onSelect={(key) => setActiveFilter(key as FilterTab)}
+        />
       </div>
 
       {/* Show count */}
