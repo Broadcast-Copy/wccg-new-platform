@@ -320,25 +320,6 @@ export function UserMenu() {
               }}
             />
           )}
-          {/* Admin on/off toggle */}
-          <button
-            type="button"
-            onClick={() => {
-              if (isAdminMode) {
-                setRoleOverride(null);
-              } else {
-                setRoleOverride("production");
-              }
-            }}
-            className={`flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-1 text-[9px] font-semibold uppercase tracking-wider transition-all ${
-              isAdminMode
-                ? "bg-[#dc2626] text-white"
-                : "border border-border bg-muted/30 text-muted-foreground hover:bg-muted/60"
-            }`}
-          >
-            <Shield className="h-2.5 w-2.5" />
-            {isAdminMode ? "Exit Admin" : "Admin"}
-          </button>
         </div>
         <DropdownMenuSeparator />
 
@@ -504,13 +485,33 @@ export function UserMenu() {
 
         <DropdownMenuSeparator />
 
-        {/* Settings & Sign Out */}
-        <DropdownMenuItem asChild>
-          <Link href="/my/settings">
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
-          </Link>
-        </DropdownMenuItem>
+        {/* Settings + Admin toggle row */}
+        <div className="flex items-center gap-1 px-1 py-0.5">
+          <DropdownMenuItem asChild className="flex-1">
+            <Link href="/my/settings">
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </Link>
+          </DropdownMenuItem>
+          <button
+            type="button"
+            onClick={() => {
+              if (isAdminMode) {
+                setRoleOverride(null);
+              } else {
+                setRoleOverride("production");
+              }
+            }}
+            className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[10px] font-semibold transition-all ${
+              isAdminMode
+                ? "bg-[#dc2626] text-white"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <Shield className="h-3 w-3" />
+            {isAdminMode ? "Exit" : "Admin"}
+          </button>
+        </div>
         <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
           Sign Out
