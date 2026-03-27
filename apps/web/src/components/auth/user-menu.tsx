@@ -389,7 +389,7 @@ export function UserMenu() {
                 </>
               ) : (
                 <>
-                  <DropdownMenuItem asChild><Link href="/my/admin/production"><Clapperboard className="mr-2 h-4 w-4" />Content</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/admin/production"><Clapperboard className="mr-2 h-4 w-4" />Production Queue</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/my/studio"><Mic className="mr-2 h-4 w-4" />Audio Studio</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/my/mixes"><FolderOpen className="mr-2 h-4 w-4" />Media Manager</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/creators"><Palette className="mr-2 h-4 w-4" />Creators</Link></DropdownMenuItem>
