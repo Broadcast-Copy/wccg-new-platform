@@ -22,6 +22,7 @@ import {
   Headphones,
   Mic,
   Building2,
+  Store,
   ChevronLeft,
   ChevronRight,
   Check,
@@ -32,7 +33,7 @@ import { AppImage as Image } from "@/components/ui/app-image";
 // Types
 // ---------------------------------------------------------------------------
 
-type UserType = "listener" | "creator" | "employee";
+type UserType = "listener" | "creator" | "vendor" | "employee";
 type CreatorType = "podcaster" | "musician" | "dj";
 
 // ---------------------------------------------------------------------------
@@ -102,6 +103,14 @@ const USER_TYPE_OPTIONS: {
   ring: string;
 }[] = [
   {
+    value: "creator",
+    label: "Creator",
+    subtitle: "Podcast, upload music, create content",
+    Icon: Mic,
+    color: "text-[#7401df]",
+    ring: "ring-[#7401df]",
+  },
+  {
     value: "listener",
     label: "Listener",
     subtitle: "Listen, earn points, attend events",
@@ -110,12 +119,12 @@ const USER_TYPE_OPTIONS: {
     ring: "ring-[#74ddc7]",
   },
   {
-    value: "creator",
-    label: "Creator",
-    subtitle: "Podcast, upload music, create content",
-    Icon: Mic,
-    color: "text-[#7401df]",
-    ring: "ring-[#7401df]",
+    value: "vendor",
+    label: "Vendor",
+    subtitle: "Sell products, services & promotions",
+    Icon: Store,
+    color: "text-[#f59e0b]",
+    ring: "ring-[#f59e0b]",
   },
   {
     value: "employee",
@@ -139,7 +148,7 @@ function StepUserType({
       <p className="text-center text-sm text-muted-foreground">
         Choose the option that best describes you
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {USER_TYPE_OPTIONS.map(({ value, label, subtitle, Icon, color, ring }) => {
           const selected = userType === value;
           return (
@@ -191,6 +200,10 @@ function StepRoleFields({
   setCreatorType,
   employeeCode,
   setEmployeeCode,
+  businessName,
+  setBusinessName,
+  vendorCategory,
+  setVendorCategory,
   displayNameError,
 }: {
   userType: UserType;
@@ -202,6 +215,10 @@ function StepRoleFields({
   setCreatorType: (v: CreatorType) => void;
   employeeCode: string;
   setEmployeeCode: (v: string) => void;
+  businessName: string;
+  setBusinessName: (v: string) => void;
+  vendorCategory: string;
+  setVendorCategory: (v: string) => void;
   displayNameError: string | null;
 }) {
   return (
@@ -253,6 +270,45 @@ function StepRoleFields({
                     }`}
                   >
                     {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Vendor-specific fields */}
+      {userType === "vendor" && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="businessName">Business Name</Label>
+            <Input
+              id="businessName"
+              type="text"
+              placeholder="e.g., Fresh Cuts Barbershop"
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Category</Label>
+            <div className="flex flex-wrap gap-2">
+              {["Food & Beverage", "Fashion & Beauty", "Services", "Entertainment", "Other"].map((cat) => {
+                const active = vendorCategory === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setVendorCategory(cat)}
+                    className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f59e0b] ${
+                      active
+                        ? "border-[#f59e0b] bg-[#f59e0b] text-white"
+                        : "border-border text-muted-foreground hover:border-[#f59e0b]/60 hover:text-foreground"
+                    }`}
+                  >
+                    {cat}
                   </button>
                 );
               })}
@@ -359,13 +415,15 @@ export function RegisterForm() {
   const [step, setStep] = useState(1);
 
   // ---- step 1 ----
-  const [userType, setUserType] = useState<UserType | null>(null);
+  const [userType, setUserType] = useState<UserType | null>("listener");
 
   // ---- step 2 ----
   const [displayName, setDisplayName] = useState("");
   const [artistName, setArtistName] = useState("");
   const [creatorType, setCreatorType] = useState<CreatorType | null>(null);
   const [employeeCode, setEmployeeCode] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [vendorCategory, setVendorCategory] = useState("");
   const [displayNameError, setDisplayNameError] = useState<string | null>(null);
 
   // ---- step 3 / submission ----
@@ -433,6 +491,11 @@ export function RegisterForm() {
       if (userType === "creator") {
         metadata.creator_type = creatorType ?? undefined;
         metadata.artist_name = artistName.trim() || undefined;
+      }
+
+      if (userType === "vendor") {
+        metadata.business_name = businessName.trim() || undefined;
+        metadata.vendor_category = vendorCategory || undefined;
       }
 
       if (userType === "employee") {
@@ -575,6 +638,10 @@ export function RegisterForm() {
               setCreatorType={setCreatorType}
               employeeCode={employeeCode}
               setEmployeeCode={setEmployeeCode}
+              businessName={businessName}
+              setBusinessName={setBusinessName}
+              vendorCategory={vendorCategory}
+              setVendorCategory={setVendorCategory}
               displayNameError={displayNameError}
             />
           )}
