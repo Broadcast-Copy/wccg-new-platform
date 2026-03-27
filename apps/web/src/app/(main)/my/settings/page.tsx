@@ -40,7 +40,7 @@ function Toggle({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-        checked ? "bg-[#74ddc7]" : "bg-white/20"
+        checked ? "bg-[#74ddc7]" : "bg-foreground/20"
       }`}
     >
       <span
@@ -67,7 +67,7 @@ function PillToggle<T extends string>({
   icons?: Record<T, React.ReactNode>;
 }) {
   return (
-    <div className="inline-flex items-center rounded-full border border-white/10 bg-white/5 p-1">
+    <div className="inline-flex items-center rounded-full border border-border bg-foreground/[0.04] p-1">
       {options.map((opt) => (
         <button
           key={opt.value}
@@ -76,7 +76,7 @@ function PillToggle<T extends string>({
           className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
             value === opt.value
               ? "bg-[#74ddc7] text-black shadow-sm"
-              : "text-white/60 hover:text-white/80"
+              : "text-muted-foreground hover:text-foreground/90/80"
           }`}
         >
           {icons?.[opt.value]}
@@ -208,7 +208,7 @@ export default function SettingsPage() {
   }) {
     return (
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-white/70">
+        <label className="mb-1.5 block text-sm font-medium text-foreground/70">
           {label}
         </label>
         <input
@@ -217,7 +217,7 @@ export default function SettingsPage() {
           readOnly={readOnly}
           onChange={(e) => onChange?.(e.target.value)}
           placeholder={placeholder}
-          className={`w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-[#74ddc7]/50 focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/30 ${
+          className={`w-full rounded-lg border border-border bg-foreground/[0.04] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:border-[#74ddc7]/50 focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/30 ${
             readOnly ? "cursor-not-allowed opacity-60" : ""
           }`}
         />
@@ -239,7 +239,7 @@ export default function SettingsPage() {
   }) {
     return (
       <div className="flex items-center justify-between py-2">
-        <span className="text-sm text-white/80">{label}</span>
+        <span className="text-sm text-foreground/80">{label}</span>
         <Toggle checked={checked} onChange={onChange} />
       </div>
     );
@@ -292,7 +292,7 @@ export default function SettingsPage() {
             placeholder="Durham, NC"
           />
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-white/70">
+            <label className="mb-1.5 block text-sm font-medium text-foreground/70">
               Bio / About
             </label>
             <textarea
@@ -300,7 +300,7 @@ export default function SettingsPage() {
               onChange={(e) => setBio(e.target.value)}
               placeholder="Tell us a little about yourself..."
               rows={3}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-[#74ddc7]/50 focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/30 resize-none"
+              className="w-full rounded-lg border border-border bg-foreground/[0.04] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:border-[#74ddc7]/50 focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/30 resize-none"
             />
           </div>
           <div className="flex items-center gap-3 pt-1">
@@ -325,7 +325,7 @@ export default function SettingsPage() {
       {/* Notification Preferences                                           */}
       {/* ----------------------------------------------------------------- */}
       <SectionCard icon={Bell} title="Notification Preferences">
-        <div className="divide-y divide-white/5">
+        <div className="divide-y divide-border/50">
           <NotifRow label="Show Alerts" checked={showAlerts} onChange={setShowAlerts} />
           <NotifRow label="Contest Updates" checked={contestUpdates} onChange={setContestUpdates} />
           <NotifRow label="Event Reminders" checked={eventReminders} onChange={setEventReminders} />
@@ -342,7 +342,7 @@ export default function SettingsPage() {
         <div className="space-y-5">
           {/* Theme */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-white/70">
+            <label className="mb-2 block text-sm font-medium text-foreground/70">
               Theme Preference
             </label>
             <PillToggle
@@ -363,30 +363,30 @@ export default function SettingsPage() {
 
           {/* Default Stream */}
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-white/70">
+            <label className="mb-1.5 block text-sm font-medium text-foreground/70">
               Default Stream
             </label>
             <div className="relative">
               <select
                 value={defaultStream}
                 onChange={(e) => setDefaultStream(e.target.value as typeof defaultStream)}
-                className="w-full appearance-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 pr-10 text-sm text-white focus:border-[#74ddc7]/50 focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/30"
+                className="w-full appearance-none rounded-lg border border-border bg-foreground/[0.04] px-3 py-2 pr-10 text-sm text-foreground focus:border-[#74ddc7]/50 focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/30"
               >
                 {STREAMS.map((s) => (
-                  <option key={s} value={s} className="bg-neutral-900 text-white">
+                  <option key={s} value={s} className="bg-card text-foreground">
                     {s}
                   </option>
                 ))}
               </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
             </div>
           </div>
 
           {/* Points Display */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-white/80">Points Display</p>
-              <p className="text-xs text-white/40">
+              <p className="text-sm font-medium text-foreground/80">Points Display</p>
+              <p className="text-xs text-muted-foreground/60">
                 {showPoints ? "Points are visible on your profile" : "Points are hidden from your profile"}
               </p>
             </div>
@@ -414,13 +414,13 @@ export default function SettingsPage() {
           {/* Change Password */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-white/80">Change Password</p>
-              <p className="text-xs text-white/40">Coming soon</p>
+              <p className="text-sm font-medium text-foreground/80">Change Password</p>
+              <p className="text-xs text-muted-foreground/60">Coming soon</p>
             </div>
             <button
               type="button"
               disabled
-              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white/40 cursor-not-allowed"
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-foreground/[0.04] px-3 py-1.5 text-sm text-muted-foreground/60 cursor-not-allowed"
             >
               <KeyRound className="h-3.5 w-3.5" />
               Change
@@ -430,18 +430,18 @@ export default function SettingsPage() {
           {/* 2FA */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-white/80">Two-Factor Authentication</p>
-              <p className="text-xs text-white/40">Coming soon</p>
+              <p className="text-sm font-medium text-foreground/80">Two-Factor Authentication</p>
+              <p className="text-xs text-muted-foreground/60">Coming soon</p>
             </div>
             <Toggle checked={false} onChange={() => {}} disabled />
           </div>
 
           {/* Delete Account */}
-          <div className="border-t border-white/5 pt-4">
+          <div className="border-t border-border/50 pt-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-red-400">Delete Account</p>
-                <p className="text-xs text-white/40">Contact support to delete your account</p>
+                <p className="text-xs text-muted-foreground/60">Contact support to delete your account</p>
               </div>
               <button
                 type="button"
@@ -464,20 +464,20 @@ export default function SettingsPage() {
           {CONNECTED_PROVIDERS.map((provider) => (
             <div
               key={provider.name}
-              className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3"
+              className="flex items-center justify-between rounded-xl border border-border/50 bg-foreground/[0.02] px-4 py-3"
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 text-white/60">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-foreground/[0.04] text-muted-foreground">
                   {provider.icon}
                 </div>
                 <div>
                   <p className="text-sm font-medium">{provider.name}</p>
-                  <p className="text-xs text-white/40">Not connected</p>
+                  <p className="text-xs text-muted-foreground/60">Not connected</p>
                 </div>
               </div>
               <button
                 type="button"
-                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                className="rounded-lg border border-border bg-foreground/[0.04] px-3 py-1.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-foreground/[0.08] hover:text-foreground/90"
               >
                 Connect
               </button>
