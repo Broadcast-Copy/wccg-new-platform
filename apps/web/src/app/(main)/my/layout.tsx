@@ -41,6 +41,7 @@ import {
   Music,
   Users,
   Package,
+  Lock,
   type LucideIcon,
 } from "lucide-react";
 
@@ -87,16 +88,17 @@ const vendorItems: NavSection[] = [
   {
     sectionLabel: "STOREFRONT",
     items: [
-      { href: "/my/directory", label: "My Listings", icon: Store },
-      { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
-      { href: "/deals", label: "Deals & Offers", icon: Gift },
+      { href: "/my/vendor/storefront", label: "Storefront Manager", icon: Store, exact: true },
+      { href: "/my/vendor/products", label: "Products", icon: Package },
+      { href: "/my/vendor/bookings", label: "Bookings", icon: CalendarDays },
+      { href: "/my/vendor/events", label: "Events", icon: Megaphone },
+      { href: "/my/vendor/tokens", label: "Listener Tokens", icon: Gift },
     ],
   },
   {
     sectionLabel: "TRACKING & ANALYTICS",
     items: [
-      { href: "/my/vendor/customers", label: "Customer Tracking", icon: Users },
-      { href: "/my/vendor/products", label: "Product Marketing", icon: Package },
+      { href: "/my/vendor/customers", label: "Customers", icon: Users },
       { href: "/my/vendor/media", label: "Media Tracking", icon: FolderOpen },
       { href: "/my/vendor/songs", label: "Song Tracking", icon: Music },
     ],
@@ -326,21 +328,26 @@ function SidebarModeToggle() {
 
   return (
     <div className="inline-flex w-full items-center rounded-full border border-border bg-muted/50 p-px">
-      {modes.map(({ value, label, role, activeColor, textColor }) => (
+      {modes.map(({ value, label, role, activeColor, textColor }) => {
+        const isActive = activeMode === value;
+        const needsLock = value !== "listener" && !isActive;
+        return (
         <button
           key={value}
           type="button"
           onClick={() => setRoleOverride(role as UserRole | null)}
-          className="flex-1 rounded-full px-2 py-px text-[9px] font-semibold transition-all text-center"
+          className="flex-1 rounded-full px-2 py-px text-[9px] font-semibold transition-all text-center inline-flex items-center justify-center gap-0.5"
           style={
-            activeMode === value
+            isActive
               ? { backgroundColor: activeColor, color: textColor }
               : undefined
           }
         >
+          {needsLock && <Lock className="h-2.5 w-2.5 opacity-40" />}
           {label}
         </button>
-      ))}
+        );
+      })}
     </div>
   );
 }
