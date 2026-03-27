@@ -124,6 +124,12 @@ export const SHOW_WAY_UP_ANGELA_YEE: ShowData = {
   imageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/09/angela-yee-new-2.png",
   showImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/09/yee-01.png",
   hostImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/11/angela-yee-tamara-beckwith-ny-post-01.webp",
+  youtube: {
+    channelName: "Way Up With Angela Yee",
+    channelUrl: "https://www.youtube.com/@wayupwithyee",
+    channelId: "UCJVR_M2dXZT6uXIapYGHtTA",
+    searchQuery: "Way Up With Angela Yee",
+  },
   segments: ["Shine a Light on 'Em", "Tell Us a Secret", "Rumor Report", "Ask Yee"],
   isSyndicated: true,
   isActive: true,
