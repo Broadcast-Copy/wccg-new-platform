@@ -372,29 +372,45 @@ export function ShowCard({
 
         {/* ── Right: Square Thumbnail ─────────────────────────────── */}
         <div className="flex items-center justify-center border-t sm:border-t-0 sm:border-l border-border bg-foreground/[0.02] px-3 py-3 sm:px-4 sm:py-4">
-          {youtubeUrl ? (
+          {youtubeUrl && youtubeThumbnailUrl ? (
             <a
               href={youtubeUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="relative aspect-square w-36 sm:w-32 md:w-40 rounded-xl overflow-hidden bg-muted group/thumb"
             >
-              {(youtubeThumbnailUrl || avatarUrl) && (
-                <AppImage
-                  src={youtubeThumbnailUrl || avatarUrl!}
-                  alt={youtubeVideoTitle || `${title} latest`}
-                  fill
-                  className="object-cover opacity-80 group-hover/thumb:opacity-100 transition-opacity"
-                  sizes="160px"
-                />
-              )}
+              <AppImage
+                src={youtubeThumbnailUrl}
+                alt={youtubeVideoTitle || `${title} latest`}
+                fill
+                className="object-cover opacity-80 group-hover/thumb:opacity-100 transition-opacity"
+                sizes="160px"
+              />
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 group-hover/thumb:bg-black/20 transition-colors rounded-xl">
                 <Play className="h-8 w-8 text-white drop-shadow-md" />
                 <span className="mt-1 text-[10px] font-semibold text-white uppercase tracking-wider drop-shadow-md line-clamp-2 px-2 text-center">
-                  {youtubeVideoTitle ? youtubeVideoTitle : "Latest Episode"}
+                  {youtubeVideoTitle || "Latest Episode"}
                 </span>
               </div>
             </a>
+          ) : youtubeUrl ? (
+            <div className="relative aspect-square w-36 sm:w-32 md:w-40 rounded-xl overflow-hidden bg-muted">
+              {avatarUrl && (
+                <AppImage
+                  src={avatarUrl}
+                  alt={title}
+                  fill
+                  className="object-cover opacity-40"
+                  sizes="160px"
+                />
+              )}
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 rounded-xl">
+                <Play className="h-6 w-6 text-white/40" />
+                <span className="mt-1.5 text-[10px] font-semibold text-white/60 uppercase tracking-wider">
+                  Coming Soon
+                </span>
+              </div>
+            </div>
           ) : (
             <button
               onClick={handlePlay}

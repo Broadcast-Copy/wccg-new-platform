@@ -98,9 +98,8 @@ export const SHOW_STREETZ_MORNING: ShowData = {
   hostImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/11/attachment-thumbnail_new-streetz-pix.png",
   heroImageClass: "object-cover object-top",
   youtube: {
-    channelName: "WCCG 104.5 FM",
+    channelName: "Streetz Morning Takeover",
     channelUrl: "https://youtube.com/@WCCG1045FM",
-    channelId: "UC7fsAn1jAj4lX8sk_bd8H4A",
     searchQuery: "Streetz Morning Takeover WCCG",
   },
   podcastRss: "https://feeds.simplecast.com/c3z3h1Ug",
