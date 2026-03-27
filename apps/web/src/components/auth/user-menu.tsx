@@ -303,7 +303,15 @@ export function UserMenu() {
         <DropdownMenuSeparator />
 
         {/* Mode-specific navigation */}
-        <DropdownMenuGroup>
+        <DropdownMenuGroup
+          className={
+            currentActiveMode === "creator"
+              ? "[&_[data-slot=dropdown-menu-item]:focus]:bg-[#7401df]/10 [&_[data-slot=dropdown-menu-item]:focus]:text-[#7401df]"
+              : currentActiveMode === "vendor"
+                ? "[&_[data-slot=dropdown-menu-item]:focus]:bg-[#f59e0b]/10 [&_[data-slot=dropdown-menu-item]:focus]:text-[#f59e0b]"
+                : "[&_[data-slot=dropdown-menu-item]:focus]:bg-[#74ddc7]/10 [&_[data-slot=dropdown-menu-item]:focus]:text-[#0a0a0f]"
+          }
+        >
           {currentActiveMode === "listener" ? (
             <>
               <DropdownMenuItem asChild>
