@@ -250,6 +250,10 @@ export function UserMenu() {
   const adminRoles = ["operations", "production", "sales"];
   const isAdminMode = isOverrideActive && roleOverride !== null && adminRoles.includes(roleOverride);
 
+  // Mock notification counts for admin sections
+  const adminNotifications = { production: 3, sales: 2 };
+  const totalAdminNotifications = adminNotifications.production + adminNotifications.sales;
+
   const currentActiveMode: ViewMode =
     isOverrideActive && roleOverride === "content_creator"
       ? "creator"
@@ -286,21 +290,26 @@ export function UserMenu() {
             /* Admin mode toggle: Operations | Production | Sales */
             <div className="inline-flex w-full items-center justify-center rounded-full border border-[#dc2626]/30 bg-[#dc2626]/5 p-px">
               {([
-                { value: "operations", label: "Operations", needsLock: true },
-                { value: "production", label: "Production", needsLock: false },
-                { value: "sales", label: "Sales", needsLock: true },
-              ] as const).map(({ value, label, needsLock }) => {
+                { value: "operations", label: "Operations", needsLock: true, notifCount: 0 },
+                { value: "production", label: "Production", needsLock: false, notifCount: adminNotifications.production },
+                { value: "sales", label: "Sales", needsLock: true, notifCount: adminNotifications.sales },
+              ] as const).map(({ value, label, needsLock, notifCount }) => {
                 const active = roleOverride === value;
                 return (
                   <button
                     key={value}
                     type="button"
                     onClick={() => setRoleOverride(value)}
-                    className="flex-1 rounded-full px-2 py-1 text-[10px] font-semibold transition-all text-center inline-flex items-center justify-center gap-0.5"
+                    className="relative flex-1 rounded-full px-2 py-1 text-[10px] font-semibold transition-all text-center inline-flex items-center justify-center gap-0.5"
                     style={active ? { backgroundColor: "#dc2626", color: "#fff" } : undefined}
                   >
                     {needsLock && !active && <Lock className="h-2.5 w-2.5 opacity-40" />}
                     {label}
+                    {notifCount > 0 && (
+                      <span className="absolute -top-1 -right-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#dc2626] text-[7px] font-bold text-white px-0.5 ring-1 ring-card">
+                        {notifCount}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -405,12 +414,6 @@ export function UserMenu() {
           ) : currentActiveMode === "creator" ? (
             <>
               <DropdownMenuItem asChild>
-                <Link href="/my/admin/production">
-                  <Clapperboard className="mr-2 h-4 w-4" />
-                  Production Queue
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
                 <Link href="/my/studio">
                   <Mic className="mr-2 h-4 w-4" />
                   Broadcast Studio
@@ -502,13 +505,18 @@ export function UserMenu() {
                 setRoleOverride("production");
               }
             }}
-            className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[10px] font-semibold transition-all ${
+            className={`relative inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[10px] font-semibold transition-all ${
               isAdminMode
                 ? "bg-[#dc2626] text-white"
                 : "bg-muted/50 text-muted-foreground hover:bg-muted"
             }`}
           >
             <Shield className="h-3 w-3" />
+            {!isAdminMode && totalAdminNotifications > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#dc2626] text-[8px] font-bold text-white px-0.5 ring-1 ring-card">
+                {totalAdminNotifications}
+              </span>
+            )}
             {isAdminMode ? "Exit" : "Admin"}
           </button>
         </div>
