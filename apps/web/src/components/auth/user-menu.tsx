@@ -49,6 +49,8 @@ import {
   Package,
   Music,
   Users,
+  PenLine,
+  Globe,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -374,6 +376,7 @@ export function UserMenu() {
               {roleOverride === "operations" ? (
                 <>
                   <DropdownMenuItem asChild><Link href="/my/admin"><Shield className="mr-2 h-4 w-4" />Admin Dashboard</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/admin/cms"><Globe className="mr-2 h-4 w-4" />Web Editor / CMS</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/my/directory"><Store className="mr-2 h-4 w-4" />Listings</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/my/admin/programming"><Users className="mr-2 h-4 w-4" />Users</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/my/admin/operations/shifts"><CalendarDays className="mr-2 h-4 w-4" />Scheduling</Link></DropdownMenuItem>
@@ -392,8 +395,7 @@ export function UserMenu() {
                   <DropdownMenuItem asChild><Link href="/my/admin/production"><Clapperboard className="mr-2 h-4 w-4" />Production Queue</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/my/studio"><Mic className="mr-2 h-4 w-4" />Audio Studio</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/my/mixes"><FolderOpen className="mr-2 h-4 w-4" />Media Manager</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/creators"><Palette className="mr-2 h-4 w-4" />Creators</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/vendor/media"><Music className="mr-2 h-4 w-4" />Uploads</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/admin/creators"><Palette className="mr-2 h-4 w-4" />Creator Manager</Link></DropdownMenuItem>
                 </>
               )}
             </>
@@ -454,6 +456,12 @@ export function UserMenu() {
                 <Link href="/creators">
                   <Palette className="mr-2 h-4 w-4" />
                   Creator Hub
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/blog">
+                  <PenLine className="mr-2 h-4 w-4" />
+                  Blog Manager
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
