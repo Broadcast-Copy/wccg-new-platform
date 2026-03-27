@@ -1,6 +1,7 @@
 import { Mic2, Zap, Podcast, Radio, Clock } from "lucide-react";
 import { ALL_SHOWS, getDayPart, getShowById } from "@/data/shows";
 import { getHostsByShowId } from "@/data/hosts";
+import { fetchYouTubeVideos } from "@/lib/youtube-rss";
 import Link from "next/link";
 import { ShowFilter } from "@/components/shows/show-filter";
 import { AppImage } from "@/components/ui/app-image";
@@ -34,15 +35,30 @@ interface Show {
   category?: "weekday" | "saturday" | "sunday" | "gospel" | "mixsquad";
   streamId?: string;
   isSyndicated?: boolean;
-  youtube?: { channelUrl: string };
+  youtube?: { channelUrl: string; latestVideoId?: string; latestVideoTitle?: string; latestThumbnailUrl?: string };
   podcastRss?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-function getLocalShows(): Show[] {
+async function getLocalShows(): Promise<Show[]> {
+  // Fetch latest YouTube videos for shows that have channel IDs
+  const showsWithYT = ALL_SHOWS.filter((s) => s.youtube?.channelId);
+  const ytResults = await Promise.allSettled(
+    showsWithYT.map((s) => fetchYouTubeVideos(s.youtube!.channelId!, 1))
+  );
+  const ytMap = new Map<string, { videoId: string; title: string; thumbnailUrl: string }>();
+  showsWithYT.forEach((s, i) => {
+    const result = ytResults[i];
+    if (result.status === "fulfilled" && result.value.length > 0) {
+      const v = result.value[0];
+      ytMap.set(s.id, { videoId: v.videoId, title: v.title, thumbnailUrl: v.thumbnailUrl });
+    }
+  });
+
   return ALL_SHOWS.map((s) => {
     const hosts = getHostsByShowId(s.id);
+    const latestVideo = ytMap.get(s.id);
     return {
       id: s.id,
       name: s.name,
@@ -57,7 +73,12 @@ function getLocalShows(): Show[] {
       category: s.category,
       streamId: s.streamId,
       isSyndicated: s.isSyndicated,
-      youtube: s.youtube ? { channelUrl: s.youtube.channelUrl } : undefined,
+      youtube: s.youtube ? {
+        channelUrl: s.youtube.channelUrl,
+        latestVideoId: latestVideo?.videoId,
+        latestVideoTitle: latestVideo?.title,
+        latestThumbnailUrl: latestVideo?.thumbnailUrl,
+      } : undefined,
       podcastRss: s.podcastRss,
       hosts: hosts.map((h, i) => ({
         id: h.id,
@@ -338,7 +359,12 @@ export default async function ShowsPage() {
           category: show.category,
           streamId: show.streamId,
           isSyndicated: show.isSyndicated,
-          youtube: show.youtube ? { channelUrl: show.youtube.channelUrl } : undefined,
+          youtube: show.youtube ? {
+            channelUrl: show.youtube.channelUrl,
+            latestVideoId: show.youtube.latestVideoId,
+            latestVideoTitle: show.youtube.latestVideoTitle,
+            latestThumbnailUrl: show.youtube.latestThumbnailUrl,
+          } : undefined,
           podcastRss: show.podcastRss,
         }))}
       />

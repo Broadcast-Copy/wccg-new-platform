@@ -21,7 +21,7 @@ interface FilterableShow {
   category?: "weekday" | "saturday" | "sunday" | "gospel" | "mixsquad";
   streamId?: string;
   isSyndicated?: boolean;
-  youtube?: { channelUrl: string };
+  youtube?: { channelUrl: string; latestVideoId?: string; latestVideoTitle?: string; latestThumbnailUrl?: string };
   podcastRss?: string;
 }
 
@@ -273,7 +273,9 @@ function ShowFilterInner({ shows }: { shows: FilterableShow[] }) {
               category={show.category}
               streamId={show.streamId}
               isSyndicated={show.isSyndicated}
-              youtubeUrl={show.youtube?.channelUrl}
+              youtubeUrl={show.youtube?.latestVideoId ? `https://www.youtube.com/watch?v=${show.youtube.latestVideoId}` : show.youtube?.channelUrl}
+              youtubeThumbnailUrl={show.youtube?.latestThumbnailUrl}
+              youtubeVideoTitle={show.youtube?.latestVideoTitle}
               podcastRss={show.podcastRss}
             />
           ))}
@@ -316,7 +318,9 @@ function ShowFilterInner({ shows }: { shows: FilterableShow[] }) {
                 category={show.category}
                 streamId={show.streamId}
                 isSyndicated={show.isSyndicated}
-                youtubeUrl={show.youtube?.channelUrl}
+                youtubeUrl={show.youtube?.latestVideoId ? `https://www.youtube.com/watch?v=${show.youtube.latestVideoId}` : show.youtube?.channelUrl}
+              youtubeThumbnailUrl={show.youtube?.latestThumbnailUrl}
+              youtubeVideoTitle={show.youtube?.latestVideoTitle}
                 podcastRss={show.podcastRss}
               />
             ))}

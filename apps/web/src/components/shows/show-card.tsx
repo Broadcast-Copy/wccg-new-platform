@@ -150,6 +150,8 @@ interface ShowCardProps {
   streamId?: string;
   isSyndicated?: boolean;
   youtubeUrl?: string;
+  youtubeThumbnailUrl?: string;
+  youtubeVideoTitle?: string;
   podcastRss?: string;
 }
 
@@ -172,6 +174,8 @@ export function ShowCard({
   streamId,
   isSyndicated,
   youtubeUrl,
+  youtubeThumbnailUrl,
+  youtubeVideoTitle,
   podcastRss,
 }: ShowCardProps) {
   const { open } = useStreamPlayer();
@@ -375,10 +379,10 @@ export function ShowCard({
               rel="noopener noreferrer"
               className="relative aspect-square w-36 sm:w-32 md:w-40 rounded-xl overflow-hidden bg-muted group/thumb"
             >
-              {avatarUrl && (
+              {(youtubeThumbnailUrl || avatarUrl) && (
                 <AppImage
-                  src={avatarUrl}
-                  alt={`${title} latest`}
+                  src={youtubeThumbnailUrl || avatarUrl!}
+                  alt={youtubeVideoTitle || `${title} latest`}
                   fill
                   className="object-cover opacity-80 group-hover/thumb:opacity-100 transition-opacity"
                   sizes="160px"
@@ -386,8 +390,8 @@ export function ShowCard({
               )}
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 group-hover/thumb:bg-black/20 transition-colors rounded-xl">
                 <Play className="h-8 w-8 text-white drop-shadow-md" />
-                <span className="mt-1 text-[10px] font-semibold text-white uppercase tracking-wider drop-shadow-md">
-                  Latest Episode
+                <span className="mt-1 text-[10px] font-semibold text-white uppercase tracking-wider drop-shadow-md line-clamp-2 px-2 text-center">
+                  {youtubeVideoTitle ? youtubeVideoTitle : "Latest Episode"}
                 </span>
               </div>
             </a>
