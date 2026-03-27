@@ -137,16 +137,6 @@ function getRoleSection(flags: {
   return { label: "", items: [] };
 }
 
-// ---------------------------------------------------------------------------
-// Role switcher options
-// ---------------------------------------------------------------------------
-const VIEWABLE_ROLES: { value: UserRole; label: string }[] = [
-  { value: "promotions", label: "Advertising" },
-  { value: "operations", label: "Operations" },
-  { value: "gm", label: "General Manager" },
-  { value: "traffic", label: "Traffic & Office" },
-  { value: "admin", label: "Admin" },
-];
 
 // ---------------------------------------------------------------------------
 // Listener / Creator Toggle (inline for the dropdown)
@@ -432,76 +422,40 @@ export function UserMenu() {
           )}
         </DropdownMenuGroup>
 
-        {/* Role-specific section (admin overrides) */}
-        {currentActiveMode === "listener" && roleSection.items.length > 0 && (
-          <>
-            <DropdownMenuSeparator />
-            {roleSection.label && (
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground/60">
-                {roleSection.label}
-              </DropdownMenuLabel>
-            )}
-            <DropdownMenuGroup>
-              {roleSection.items.map((item) => (
-                <DropdownMenuItem key={item.href + item.label} asChild>
-                  <Link href={item.href}>
-                    {item.icon}
-                    {item.label}
-                  </Link>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuGroup>
-          </>
-        )}
-
-        {/* Station Control (admin) */}
+        {/* Admin section — only for admin/superadmin users */}
         {(isAdmin || isSuperAdmin) && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/my/admin" className="text-[#dc2626]">
-                <Shield className="mr-2 h-4 w-4" />
-                Station Control
-              </Link>
-            </DropdownMenuItem>
+            <div className="px-2 py-1.5">
+              <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/50 mb-1.5 text-center">Admin</p>
+              <div className="inline-flex w-full items-center justify-center rounded-full border border-[#dc2626]/30 bg-[#dc2626]/5 p-px">
+                {([
+                  { value: "operations", label: "Operations", needsLock: true },
+                  { value: "production", label: "Production", needsLock: false },
+                  { value: "sales", label: "Sales", needsLock: true },
+                ] as const).map(({ value, label, needsLock }) => {
+                  const isAdminActive = roleOverride === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setRoleOverride(isAdminActive ? null : value)}
+                      className="flex-1 rounded-full px-2 py-px text-[9px] font-semibold transition-all text-center inline-flex items-center justify-center gap-0.5"
+                      style={
+                        isAdminActive
+                          ? { backgroundColor: "#dc2626", color: "#fff" }
+                          : undefined
+                      }
+                    >
+                      {needsLock && !isAdminActive && <Lock className="h-2.5 w-2.5 opacity-40" />}
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </>
         )}
-
-        <DropdownMenuSeparator />
-
-        {/* Role switcher */}
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <Eye className="mr-2 h-4 w-4" />
-            {isOverrideActive ? (
-              <span className="capitalize text-[#f59e0b]">
-                {roleOverride?.replace("_", " ")}
-              </span>
-            ) : (
-              "View as role\u2026"
-            )}
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            {isOverrideActive && (
-              <>
-                <DropdownMenuItem onClick={() => setRoleOverride(null)}>
-                  <RotateCcw className="mr-2 h-4 w-4 text-[#f59e0b]" />
-                  Reset to default
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-              </>
-            )}
-            {VIEWABLE_ROLES.map((r) => (
-              <DropdownMenuItem
-                key={r.value}
-                onClick={() => setRoleOverride(r.value)}
-                className={roleOverride === r.value ? "bg-accent" : ""}
-              >
-                {r.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
 
         <DropdownMenuSeparator />
 
