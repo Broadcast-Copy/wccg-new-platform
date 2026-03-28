@@ -199,7 +199,7 @@ export default async function ShowsPage() {
       {onAirShow ? (
         <Link
           href={`/shows/${onAirShow.id}`}
-          className="group relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-950/80 via-gray-900 to-gray-900 border border-red-500/30 hover:border-red-500/50 transition-all"
+          className="group relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-950 via-gray-900 to-gray-900 border border-red-500/30 hover:border-red-500/50 transition-all"
         >
           <div className="absolute inset-0 opacity-20">
             {onAirImage && (
