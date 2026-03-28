@@ -208,6 +208,36 @@ export function UserMenu() {
   } = useUserRoles();
   const router = useRouter();
 
+  // Real notification counts from Supabase — must be before early returns
+  const [adminNotifications, setAdminNotifications] = useState({ production: 0, sales: 0 });
+
+  useEffect(() => {
+    if (!user) return;
+    async function fetchCounts() {
+      try {
+        const { count: prodCount } = await supabase
+          .from('productions')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending_review');
+
+        const { count: salesCount } = await supabase
+          .from('vendor_events')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'upcoming');
+
+        setAdminNotifications({
+          production: prodCount || 0,
+          sales: salesCount || 0,
+        });
+      } catch {
+        // Keep defaults
+      }
+    }
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 30000);
+    return () => clearInterval(interval);
+  }, [user, supabase]);
+
   if (isLoading) {
     return (
       <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
@@ -254,37 +284,6 @@ export function UserMenu() {
 
   const adminRoles = ["operations", "production", "sales"];
   const isAdminMode = isOverrideActive && roleOverride !== null && adminRoles.includes(roleOverride);
-
-  // Real notification counts from Supabase
-  const [adminNotifications, setAdminNotifications] = useState({ production: 0, sales: 0 });
-
-  useEffect(() => {
-    if (!user) return;
-    async function fetchCounts() {
-      try {
-        const { count: prodCount } = await supabase
-          .from('productions')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'pending_review');
-
-        const { count: salesCount } = await supabase
-          .from('vendor_events')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'upcoming');
-
-        setAdminNotifications({
-          production: prodCount || 0,
-          sales: salesCount || 0,
-        });
-      } catch {
-        // Keep defaults
-      }
-    }
-    fetchCounts();
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchCounts, 30000);
-    return () => clearInterval(interval);
-  }, [user, supabase]);
 
   const totalAdminNotifications = adminNotifications.production + adminNotifications.sales;
 
