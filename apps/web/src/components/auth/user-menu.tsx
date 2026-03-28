@@ -440,15 +440,12 @@ export function UserMenu() {
           ) : currentActiveMode === "listener" ? (
             <>
               <DropdownMenuItem asChild>
-                <Link href="/my">
-                  <LayoutDashboard className="mr-2 h-4 w-4" />
-                  Dashboard
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/listeners">
+                <Link href="/listeners" className="relative">
                   <Users className="mr-2 h-4 w-4" />
                   Listener Hub
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#14b8a6] text-[9px] font-bold text-white px-1">
+                    New
+                  </span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -485,9 +482,12 @@ export function UserMenu() {
           ) : currentActiveMode === "creator" ? (
             <>
               <DropdownMenuItem asChild>
-                <Link href="/creators">
+                <Link href="/creators" className="relative">
                   <Palette className="mr-2 h-4 w-4" />
                   Creator Hub
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#7401df] text-[9px] font-bold text-white px-1">
+                    New
+                  </span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
