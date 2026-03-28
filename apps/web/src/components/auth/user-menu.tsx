@@ -234,7 +234,7 @@ export function UserMenu() {
         const { data: pointsData } = await supabase
           .from('user_points')
           .select('balance')
-          .eq('user_id', user.id)
+          .eq('user_id', user!.id)
           .single();
 
         setAdminNotifications({
