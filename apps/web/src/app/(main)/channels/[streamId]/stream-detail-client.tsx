@@ -25,6 +25,7 @@ import {
 import { ALL_SHOWS, getDayPart } from "@/data/shows";
 import type { ShowData } from "@/data/shows";
 import { getHostsByShowId } from "@/data/hosts";
+import { parseTime12h } from "@/lib/time-utils";
 
 // ---------------------------------------------------------------------------
 // Channel logo mapping
@@ -129,21 +130,6 @@ function getShowImage(show: ShowData): string | null {
   const hosts = getHostsByShowId(show.id);
   const hostWithImage = hosts.find((h) => h.imageUrl);
   return hostWithImage?.imageUrl ?? null;
-}
-
-/** Parse a 12-hour time string like "6:00 AM" into minutes since midnight */
-function parseTime12h(timeStr: string): number {
-  const trimmed = timeStr.trim().toLowerCase();
-  if (trimmed === "midnight" || trimmed === "12:00 am") return 0;
-  if (trimmed === "noon" || trimmed === "12:00 pm") return 720;
-  const match = trimmed.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
-  if (!match) return -1;
-  let hours = parseInt(match[1], 10);
-  const minutes = parseInt(match[2], 10);
-  const period = match[3].toUpperCase();
-  if (period === "AM" && hours === 12) hours = 0;
-  if (period === "PM" && hours !== 12) hours += 12;
-  return hours * 60 + minutes;
 }
 
 /** Determine if a show is currently airing based on its timeSlot and days */

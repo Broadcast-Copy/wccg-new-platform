@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { useAuth } from "@/hooks/use-auth";
+import { useFileUpload } from "@/hooks/use-file-upload";
 import Link from "next/link";
 import {
   Clapperboard,
@@ -148,6 +149,7 @@ const FILTER_OPTIONS: (JobStatus | "All")[] = ["All", ...STATUS_ORDER];
 export default function ProductionPage() {
   const { supabase } = useSupabase();
   const { user } = useAuth();
+  const { upload: uploadAudio, isUploading: isUploadingAudio, error: uploadError } = useFileUpload("audio");
 
   // -- State ----------------------------------------------------------------
   const [jobs, setJobs] = useState<ProductionJob[]>([]);
@@ -164,6 +166,7 @@ export default function ProductionPage() {
   const [newDue, setNewDue] = useState("");
   const [newAssigned, setNewAssigned] = useState("");
   const [newProject, setNewProject] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // -- Fetch productions from Supabase -------------------------------------
   const fetchJobs = useCallback(async () => {
@@ -321,6 +324,16 @@ export default function ProductionPage() {
       return;
     }
 
+    // Upload audio file if selected
+    let fileUrl: string | null = null;
+    if (selectedFile) {
+      fileUrl = await uploadAudio(selectedFile);
+      if (!fileUrl) {
+        toast.error("Audio upload failed — job not created");
+        return;
+      }
+    }
+
     const jobId = nextJobId();
     const job: ProductionJob = {
       id: jobId,
@@ -341,6 +354,7 @@ export default function ProductionPage() {
         status: job.status,
         assigned_to: job.assignedTo,
         project: job.project ?? null,
+        file_url: fileUrl,
       });
 
       if (error) {
@@ -357,6 +371,7 @@ export default function ProductionPage() {
     setNewDue("");
     setNewAssigned("");
     setNewProject("");
+    setSelectedFile(null);
     showToast(`Created job ${job.id}`);
   }
 
@@ -501,10 +516,32 @@ export default function ProductionPage() {
               </Link>
             </div>
           </div>
+          {/* Audio File Upload */}
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground font-medium">Audio File</label>
+            <input
+              type="file"
+              accept="audio/*"
+              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+            {selectedFile && (
+              <p className="text-xs text-muted-foreground truncate">
+                Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(1)} MB)
+              </p>
+            )}
+            {uploadError && (
+              <p className="text-xs text-[#dc2626]">{uploadError}</p>
+            )}
+          </div>
           <div className="flex justify-end">
-            <Button onClick={handleAddJob} className="bg-[#74ddc7] text-[#0a0a0f] hover:bg-[#5ec4af]">
+            <Button
+              onClick={handleAddJob}
+              disabled={isUploadingAudio}
+              className="bg-[#74ddc7] text-[#0a0a0f] hover:bg-[#5ec4af]"
+            >
               <Plus className="h-4 w-4 mr-1.5" />
-              Create Job
+              {isUploadingAudio ? "Uploading..." : "Create Job"}
             </Button>
           </div>
         </div>

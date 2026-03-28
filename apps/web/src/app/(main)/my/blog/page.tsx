@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { useAuth } from "@/hooks/use-auth";
+import { useFileUpload } from "@/hooks/use-file-upload";
 import {
   PenLine,
   Plus,
@@ -65,6 +66,7 @@ const STATUS_STYLES: Record<PostStatus, string> = {
 export default function BlogManagerPage() {
   const { supabase } = useSupabase();
   const { user } = useAuth();
+  const { upload: uploadImage, isUploading: isUploadingImage } = useFileUpload("images");
 
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +75,7 @@ export default function BlogManagerPage() {
   const [formContent, setFormContent] = useState("");
   const [formCategory, setFormCategory] = useState(CATEGORIES[0]);
   const [formImage, setFormImage] = useState("");
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
   // -- Fetch blog posts from Supabase --------------------------------------
   const fetchPosts = useCallback(async () => {
@@ -119,11 +122,20 @@ export default function BlogManagerPage() {
     setFormContent("");
     setFormCategory(CATEGORIES[0]);
     setFormImage("");
+    setSelectedImage(null);
     setShowForm(false);
   }
 
   async function handlePublish() {
     if (!formTitle.trim() || !supabase || !user) return;
+
+    // Upload featured image if selected
+    let imageUrl = formImage || null;
+    if (selectedImage) {
+      const uploaded = await uploadImage(selectedImage);
+      if (!uploaded) return; // upload failed, hook sets error
+      imageUrl = uploaded;
+    }
 
     const now = new Date().toISOString();
     const { data, error } = await supabase
@@ -134,7 +146,7 @@ export default function BlogManagerPage() {
         content: formContent,
         excerpt: formContent.slice(0, 140),
         category: formCategory,
-        featured_image_url: formImage || null,
+        featured_image_url: imageUrl,
         status: "Published",
         published_at: now,
       })
@@ -165,6 +177,14 @@ export default function BlogManagerPage() {
   async function handleSaveDraft() {
     if (!formTitle.trim() || !supabase || !user) return;
 
+    // Upload featured image if selected
+    let imageUrl = formImage || null;
+    if (selectedImage) {
+      const uploaded = await uploadImage(selectedImage);
+      if (!uploaded) return; // upload failed, hook sets error
+      imageUrl = uploaded;
+    }
+
     const { data, error } = await supabase
       .from("blog_posts")
       .insert({
@@ -173,7 +193,7 @@ export default function BlogManagerPage() {
         content: formContent,
         excerpt: formContent.slice(0, 140),
         category: formCategory,
-        featured_image_url: formImage || null,
+        featured_image_url: imageUrl,
         status: "Draft",
       })
       .select();
@@ -331,32 +351,51 @@ export default function BlogManagerPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-foreground">Featured Image URL</label>
+                  <label className="mb-1 block text-sm font-medium text-foreground">Featured Image</label>
                   <input
-                    type="text"
-                    value={formImage}
-                    onChange={(e) => setFormImage(e.target.value)}
-                    placeholder="https://example.com/image.jpg"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-[#7401df] focus:outline-none focus:ring-1 focus:ring-[#7401df]"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      setSelectedImage(file);
+                      if (file) setFormImage(file.name);
+                      else setFormImage("");
+                    }}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground focus:border-[#7401df] focus:outline-none focus:ring-1 focus:ring-[#7401df]"
                   />
+                  {selectedImage && (
+                    <div className="mt-2">
+                      <img
+                        src={URL.createObjectURL(selectedImage)}
+                        alt="Featured image preview"
+                        className="h-24 w-auto rounded-lg border border-border object-cover"
+                      />
+                      <p className="mt-1 text-xs text-muted-foreground truncate">{selectedImage.name}</p>
+                    </div>
+                  )}
+                  {isUploadingImage && (
+                    <p className="mt-1 text-xs text-[#7401df]">Uploading image...</p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-3 pt-2">
                 <button
                   type="button"
                   onClick={handlePublish}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#7401df] px-4 py-2 text-sm font-semibold text-white hover:bg-[#6001b8] transition-colors"
+                  disabled={isUploadingImage}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#7401df] px-4 py-2 text-sm font-semibold text-white hover:bg-[#6001b8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send className="h-4 w-4" />
-                  Publish
+                  {isUploadingImage ? "Uploading..." : "Publish"}
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveDraft}
-                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
+                  disabled={isUploadingImage}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Save className="h-4 w-4" />
-                  Save Draft
+                  {isUploadingImage ? "Uploading..." : "Save Draft"}
                 </button>
               </div>
             </div>

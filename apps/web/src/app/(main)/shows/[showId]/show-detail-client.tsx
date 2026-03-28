@@ -22,6 +22,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
+import { AppImage } from "@/components/ui/app-image";
 import {
   ArrowLeft,
   Mic,
@@ -264,7 +265,7 @@ function PodcastPlayer({
           <div className="flex items-center gap-4">
             <div className="h-20 w-20 shrink-0 rounded-lg overflow-hidden bg-gradient-to-br from-[#74ddc7]/30 to-[#7401df]/30 flex items-center justify-center">
               {showImage ? (
-                <img src={showImage} alt={showName} className="h-full w-full object-cover" />
+                <AppImage src={showImage} alt={showName} width={80} height={80} className="h-full w-full object-cover" />
               ) : (
                 <Mic className="h-8 w-8 text-white/60" />
               )}
@@ -754,7 +755,7 @@ export default function ShowDetailPage({
             <div className="space-y-4">
               {hostImage && (
                 <div className="rounded-xl overflow-hidden border border-border">
-                  <img src={hostImage} alt={show.name} className="w-full object-cover" />
+                  <AppImage src={hostImage} alt={show.name} width={400} height={300} className="w-full object-cover" />
                 </div>
               )}
               {show.hosts.length > 0 && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Palette,
   Users,
@@ -14,7 +14,10 @@ import {
   X,
   UserCheck,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
+import { useSupabase } from "@/components/providers/supabase-provider";
+import { useAuth } from "@/hooks/use-auth";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,24 +45,39 @@ interface Submission {
 }
 
 // ---------------------------------------------------------------------------
-// Mock data
+// Mock data (commented out — kept as fallback reference)
 // ---------------------------------------------------------------------------
 
-const initialCreators: Creator[] = [
-  { id: "cr-01", name: "DJ Kilo", type: "DJ", joinDate: "2025-11-15", contentCount: 24, status: "Active" },
-  { id: "cr-02", name: "Marcus Lyons", type: "Podcaster", joinDate: "2026-01-08", contentCount: 12, status: "Active" },
-  { id: "cr-03", name: "Tasha Reign", type: "Musician", joinDate: "2026-02-20", contentCount: 0, status: "Pending" },
-  { id: "cr-04", name: "Smooth B", type: "DJ", joinDate: "2025-09-03", contentCount: 47, status: "Active" },
-  { id: "cr-05", name: "Nia Carter", type: "Podcaster", joinDate: "2026-03-10", contentCount: 0, status: "Pending" },
-  { id: "cr-06", name: "Ray Focus", type: "Musician", joinDate: "2025-12-01", contentCount: 8, status: "Suspended" },
-];
+// const initialCreators: Creator[] = [
+//   { id: "cr-01", name: "DJ Kilo", type: "DJ", joinDate: "2025-11-15", contentCount: 24, status: "Active" },
+//   { id: "cr-02", name: "Marcus Lyons", type: "Podcaster", joinDate: "2026-01-08", contentCount: 12, status: "Active" },
+//   { id: "cr-03", name: "Tasha Reign", type: "Musician", joinDate: "2026-02-20", contentCount: 0, status: "Pending" },
+//   { id: "cr-04", name: "Smooth B", type: "DJ", joinDate: "2025-09-03", contentCount: 47, status: "Active" },
+//   { id: "cr-05", name: "Nia Carter", type: "Podcaster", joinDate: "2026-03-10", contentCount: 0, status: "Pending" },
+//   { id: "cr-06", name: "Ray Focus", type: "Musician", joinDate: "2025-12-01", contentCount: 8, status: "Suspended" },
+// ];
 
-const initialSubmissions: Submission[] = [
-  { id: "sub-01", title: "The Culture Corner Ep. 14", creatorName: "Marcus Lyons", type: "Podcast Episode", submittedDate: "2026-03-26" },
-  { id: "sub-02", title: "Night Drive Mix Vol. 3", creatorName: "DJ Kilo", type: "Mix", submittedDate: "2026-03-25" },
-  { id: "sub-03", title: "Summer Anthem (Single)", creatorName: "Tasha Reign", type: "Music Track", submittedDate: "2026-03-24" },
-  { id: "sub-04", title: "Friday Vibes Playlist", creatorName: "Smooth B", type: "Playlist", submittedDate: "2026-03-23" },
-];
+// const initialSubmissions: Submission[] = [
+//   { id: "sub-01", title: "The Culture Corner Ep. 14", creatorName: "Marcus Lyons", type: "Podcast Episode", submittedDate: "2026-03-26" },
+//   { id: "sub-02", title: "Night Drive Mix Vol. 3", creatorName: "DJ Kilo", type: "Mix", submittedDate: "2026-03-25" },
+//   { id: "sub-03", title: "Summer Anthem (Single)", creatorName: "Tasha Reign", type: "Music Track", submittedDate: "2026-03-24" },
+//   { id: "sub-04", title: "Friday Vibes Playlist", creatorName: "Smooth B", type: "Playlist", submittedDate: "2026-03-23" },
+// ];
+
+// ---------------------------------------------------------------------------
+// Supabase production row shape
+// ---------------------------------------------------------------------------
+interface ProductionRow {
+  id: string;
+  user_id: string;
+  title: string;
+  type: string;
+  status: string;
+  created_at: string;
+  reviewed_at: string | null;
+  reviewer_id: string | null;
+  review_notes: string | null;
+}
 
 // ---------------------------------------------------------------------------
 // Status & type badge styles
@@ -89,9 +107,98 @@ const TABS: { id: TabId; label: string }[] = [
 // ---------------------------------------------------------------------------
 
 export default function CreatorManagerPage() {
-  const [creators, setCreators] = useState<Creator[]>(initialCreators);
-  const [submissions, setSubmissions] = useState<Submission[]>(initialSubmissions);
+  const { supabase } = useSupabase();
+  const { user } = useAuth();
+
+  const [creators, setCreators] = useState<Creator[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [activeTab, setActiveTab] = useState<TabId>("all");
+  const [loading, setLoading] = useState(true);
+
+  // ---------------------------------------------------------------------------
+  // Fetch productions from Supabase and derive creators + pending submissions
+  // ---------------------------------------------------------------------------
+  const fetchData = useCallback(async () => {
+    if (!supabase) return;
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("productions")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Failed to fetch productions:", error.message);
+      setLoading(false);
+      return;
+    }
+
+    const rows = (data ?? []) as ProductionRow[];
+
+    // Group by user_id to build creator list
+    const creatorMap = new Map<
+      string,
+      { id: string; name: string; type: CreatorType; joinDate: string; contentCount: number; status: CreatorStatus }
+    >();
+
+    for (const row of rows) {
+      const existing = creatorMap.get(row.user_id);
+      if (existing) {
+        existing.contentCount += 1;
+      } else {
+        // Derive creator-level status from their productions
+        const creatorStatus: CreatorStatus =
+          row.status === "approved" ? "Active" : row.status === "rejected" ? "Suspended" : "Pending";
+        // Map production type to CreatorType
+        const creatorType: CreatorType =
+          row.type === "podcast" ? "Podcaster" : row.type === "music" ? "Musician" : "DJ";
+
+        creatorMap.set(row.user_id, {
+          id: row.user_id,
+          name: row.user_id.slice(0, 8), // Fallback display name from user_id
+          type: creatorType,
+          joinDate: row.created_at?.split("T")[0] ?? "",
+          contentCount: 1,
+          status: creatorStatus,
+        });
+      }
+    }
+
+    setCreators(Array.from(creatorMap.values()));
+
+    // Pending submissions = productions with status "pending"
+    const pendingSubs: Submission[] = rows
+      .filter((r) => r.status === "pending")
+      .map((r) => ({
+        id: r.id,
+        title: r.title,
+        creatorName: r.user_id.slice(0, 8),
+        type: r.type,
+        submittedDate: r.created_at?.split("T")[0] ?? "",
+      }));
+
+    setSubmissions(pendingSubs);
+    setLoading(false);
+  }, [supabase]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // ---------------------------------------------------------------------------
+  // Auth guard
+  // ---------------------------------------------------------------------------
+  if (!user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="rounded-xl border border-border bg-card p-8 text-center shadow-sm">
+          <AlertCircle className="mx-auto mb-3 h-8 w-8 text-[#dc2626]" />
+          <h2 className="text-lg font-semibold text-foreground">Please sign in to access this page</h2>
+          <p className="mt-1 text-sm text-muted-foreground">You need admin privileges to manage creators.</p>
+        </div>
+      </div>
+    );
+  }
 
   const activeCount = creators.filter((c) => c.status === "Active").length;
   const pendingCount = creators.filter((c) => c.status === "Pending").length;
@@ -101,24 +208,83 @@ export default function CreatorManagerPage() {
       ? creators
       : creators.filter((c) => c.status.toLowerCase() === activeTab);
 
-  function approveCreator(id: string) {
+  // ---------------------------------------------------------------------------
+  // Approve / Suspend creators (updates all their productions)
+  // ---------------------------------------------------------------------------
+  async function approveCreator(id: string) {
+    if (!supabase || !user) return;
+    const { error } = await supabase
+      .from("productions")
+      .update({ status: "approved", reviewer_id: user.id, reviewed_at: new Date().toISOString() })
+      .eq("user_id", id);
+    if (error) {
+      console.error("Failed to approve creator:", error.message);
+      return;
+    }
     setCreators((prev) =>
       prev.map((c) => (c.id === id ? { ...c, status: "Active" as CreatorStatus } : c)),
     );
   }
 
-  function suspendCreator(id: string) {
+  async function suspendCreator(id: string) {
+    if (!supabase || !user) return;
+    const { error } = await supabase
+      .from("productions")
+      .update({ status: "rejected", reviewer_id: user.id, reviewed_at: new Date().toISOString() })
+      .eq("user_id", id);
+    if (error) {
+      console.error("Failed to suspend creator:", error.message);
+      return;
+    }
     setCreators((prev) =>
       prev.map((c) => (c.id === id ? { ...c, status: "Suspended" as CreatorStatus } : c)),
     );
   }
 
-  function approveSubmission(id: string) {
+  // ---------------------------------------------------------------------------
+  // Approve / Reject individual submissions (productions)
+  // ---------------------------------------------------------------------------
+  async function approveSubmission(id: string) {
+    if (!supabase || !user) return;
+    const { error } = await supabase
+      .from("productions")
+      .update({ status: "approved", reviewer_id: user.id, reviewed_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) {
+      console.error("Failed to approve submission:", error.message);
+      return;
+    }
     setSubmissions((prev) => prev.filter((s) => s.id !== id));
+    // Refresh creator stats
+    fetchData();
   }
 
-  function rejectSubmission(id: string) {
+  async function rejectSubmission(id: string) {
+    if (!supabase || !user) return;
+    const reason = window.prompt("Reason for rejection (optional):");
+    const { error } = await supabase
+      .from("productions")
+      .update({
+        status: "rejected",
+        reviewer_id: user.id,
+        reviewed_at: new Date().toISOString(),
+        review_notes: reason ?? null,
+      })
+      .eq("id", id);
+    if (error) {
+      console.error("Failed to reject submission:", error.message);
+      return;
+    }
     setSubmissions((prev) => prev.filter((s) => s.id !== id));
+    fetchData();
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   return (

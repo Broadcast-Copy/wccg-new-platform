@@ -50,6 +50,7 @@ import {
   HardDrive,
 } from "lucide-react";
 import { LoginRequired } from "@/components/auth/login-required";
+import { AppImage } from "@/components/ui/app-image";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -1513,8 +1514,7 @@ export default function VideoEditorPage() {
                           className={`h-8 w-12 rounded ${item.thumbnailUrl ? "bg-black" : item.thumbnail} flex items-center justify-center shrink-0 overflow-hidden`}
                         >
                           {item.thumbnailUrl ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img src={item.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                            <AppImage src={item.thumbnailUrl} alt="" width={48} height={32} className="w-full h-full object-cover" />
                           ) : (
                             <>
                               {item.type === "video" && <Film className="h-3 w-3 text-foreground/60" />}
