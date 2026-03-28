@@ -440,12 +440,6 @@ export function UserMenu() {
           ) : currentActiveMode === "listener" ? (
             <>
               <DropdownMenuItem asChild>
-                <Link href="/listeners">
-                  <Heart className="mr-2 h-4 w-4" />
-                  Listener Hub
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
                 <Link href="/my">
                   <LayoutDashboard className="mr-2 h-4 w-4" />
                   Dashboard
@@ -476,6 +470,12 @@ export function UserMenu() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
+                <Link href="/listeners">
+                  <Users className="mr-2 h-4 w-4" />
+                  Listener Hub
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
                 <Link href="/my/history">
                   <Clock className="mr-2 h-4 w-4" />
                   Listening History
@@ -484,6 +484,12 @@ export function UserMenu() {
             </>
           ) : currentActiveMode === "creator" ? (
             <>
+              <DropdownMenuItem asChild>
+                <Link href="/creators">
+                  <Palette className="mr-2 h-4 w-4" />
+                  Creator Hub
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/my/studio">
                   <Mic className="mr-2 h-4 w-4" />
@@ -494,12 +500,6 @@ export function UserMenu() {
                 <Link href="/my/mixes">
                   <FolderOpen className="mr-2 h-4 w-4" />
                   Media Manager
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/creators">
-                  <Palette className="mr-2 h-4 w-4" />
-                  Creator Hub
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -518,12 +518,6 @@ export function UserMenu() {
           ) : (
             <>
               <DropdownMenuItem asChild>
-                <Link href="/vendors/hub">
-                  <Store className="mr-2 h-4 w-4" />
-                  Vendor Hub
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
                 <Link href="/my/vendor/storefront">
                   <Settings className="mr-2 h-4 w-4" />
                   Storefront Manager
@@ -532,7 +526,7 @@ export function UserMenu() {
               <DropdownMenuItem asChild>
                 <Link href="/my/vendor/products">
                   <Package className="mr-2 h-4 w-4" />
-                  Products
+                  Product Manager
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -544,25 +538,25 @@ export function UserMenu() {
               <DropdownMenuItem asChild>
                 <Link href="/my/vendor/events">
                   <Megaphone className="mr-2 h-4 w-4" />
-                  Events
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/vendor/tokens">
-                  <Gift className="mr-2 h-4 w-4" />
-                  Listener Tokens
+                  Event Manager
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/my/vendor/customers">
                   <Users className="mr-2 h-4 w-4" />
-                  Customers
+                  Customer Manager
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/my/vendor/media">
-                  <FolderOpen className="mr-2 h-4 w-4" />
-                  Media Tracking
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  Marketing
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/vendors/hub">
+                  <Store className="mr-2 h-4 w-4" />
+                  Vendor Hub
                 </Link>
               </DropdownMenuItem>
             </>
