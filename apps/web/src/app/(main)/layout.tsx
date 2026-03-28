@@ -29,13 +29,17 @@ import {
   ChevronDown,
   ArrowDownRight,
   ShoppingCart,
+  ShoppingBag,
+  MapPin,
 } from "lucide-react";
+import { useSupabase } from "@/components/providers/supabase-provider";
 
-// Desktop nav: Home, Discover, [Streaming mega], Support
+// Desktop nav
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/discover", label: "Discover" },
-  // Streaming mega menu is rendered separately between Discover and Support
+  // Streaming mega menu is rendered separately between Discover and Marketplace
+  { href: "/marketplace", label: "Marketplace" },
   { href: "/contact", label: "Support" },
 ];
 
@@ -46,24 +50,24 @@ const streamingChannels = [
   { href: "/shows?stream=stream_vibe", label: "104.5 THE VIBE", badge: "/images/channels/vibe-badge.png" },
 ];
 
-// Full nav links for mobile drawer (keep full navigation there)
+// Full nav links for mobile drawer
 const mobileNavLinks = [
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/channels", label: "Listen", icon: Headphones },
   { href: "/shows", label: "Shows", icon: Mic },
-  { href: "/shows", label: "Schedule", icon: CalendarDays },
   { href: "/events", label: "Events", icon: CalendarDays },
-  { href: "/community", label: "Community", icon: Users2 },
+  { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
+  { href: "/my/directory", label: "Directory", icon: MapPin },
   { href: "/contact", label: "Connect", icon: Mail },
 ];
 
 // iHeartRadio-style bottom tab bar items
 const bottomTabs = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/channels", label: "Listen", icon: Radio },
-  { href: "/discover", label: "Discover", icon: Compass },
-  { href: "/shows", label: "Shows", icon: Mic },
-  { href: "/rewards", label: "Perks", icon: Gift },
+  { href: "/", label: "Home", icon: Home, badgeKey: null as string | null },
+  { href: "/channels", label: "Listen", icon: Radio, badgeKey: null as string | null },
+  { href: "/marketplace", label: "Shop", icon: ShoppingBag, badgeKey: "shop" as string | null },
+  { href: "/shows", label: "Shows", icon: Mic, badgeKey: "shows" as string | null },
+  { href: "/my/directory", label: "Directory", icon: MapPin, badgeKey: null as string | null },
 ];
 
 function NavLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
@@ -240,6 +244,39 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { supabase } = useSupabase();
+  const [tabBadges, setTabBadges] = useState<{ shows: boolean; shop: number }>({ shows: false, shop: 0 });
+
+  useEffect(() => {
+    async function fetchBadges() {
+      try {
+        // Check if any stream is live
+        const { data: liveStreams } = await supabase
+          .from("stream_metadata")
+          .select("id")
+          .eq("is_live", true)
+          .limit(1);
+
+        // Count new products added in last 7 days
+        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const { count: newProducts } = await supabase
+          .from("vendor_products")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "active")
+          .gte("created_at", weekAgo);
+
+        setTabBadges({
+          shows: (liveStreams?.length ?? 0) > 0,
+          shop: newProducts ?? 0,
+        });
+      } catch {
+        // Keep defaults
+      }
+    }
+    fetchBadges();
+    const interval = setInterval(fetchBadges, 60000); // refresh every minute
+    return () => clearInterval(interval);
+  }, [supabase]);
 
   return (
     <SpotCartProvider>
@@ -480,13 +517,28 @@ export default function MainLayout({
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-all ${
+                className={`relative flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-all ${
                   isActive
                     ? "text-[#74ddc7]"
                     : "text-muted-foreground/70 hover:text-foreground/60"
                 }`}
               >
-                <tab.icon className={`h-5 w-5 ${isActive ? "drop-shadow-[0_0_6px_rgba(116,221,199,0.5)]" : ""}`} />
+                <div className="relative">
+                  <tab.icon className={`h-5 w-5 ${isActive ? "drop-shadow-[0_0_6px_rgba(116,221,199,0.5)]" : ""}`} />
+                  {/* Live dot on Shows */}
+                  {tab.badgeKey === "shows" && tabBadges.shows && (
+                    <span className="absolute -top-1 -right-1.5 flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                    </span>
+                  )}
+                  {/* New count on Shop */}
+                  {tab.badgeKey === "shop" && tabBadges.shop > 0 && (
+                    <span className="absolute -top-1.5 -right-2.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white px-0.5">
+                      {tabBadges.shop > 99 ? "99+" : tabBadges.shop}
+                    </span>
+                  )}
+                </div>
                 <span className="text-[10px] font-semibold">{tab.label}</span>
               </Link>
             );
