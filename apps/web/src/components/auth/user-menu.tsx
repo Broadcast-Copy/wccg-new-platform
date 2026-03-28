@@ -507,18 +507,6 @@ export function UserMenu() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/requests">
-                  <Music className="mr-2 h-4 w-4" />
-                  Song Requests
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/leaderboard">
-                  <Award className="mr-2 h-4 w-4" />
-                  Leaderboard
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
                 <Link href="/my/history">
                   <Clock className="mr-2 h-4 w-4" />
                   Listening History
