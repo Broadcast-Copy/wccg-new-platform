@@ -1,605 +1,458 @@
 "use client";
 
-import { useState, useRef } from "react";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
+import { useSupabase } from "@/components/providers/supabase-provider";
 import {
   ShoppingBag,
   Search,
-  Star,
-  ShoppingCart,
-  Zap,
   Shield,
   Tag,
-  Headset,
+  Heart,
+  Gift,
+  Coins,
+  ChevronRight,
+  Usb,
   Shirt,
   Droplets,
   Headphones,
-  Gift,
-  Sticker,
-  Package,
   Dumbbell,
-  Usb,
+  Package,
+  MapPin,
+  Award,
+  Star,
+  Users,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
-/* Mock Data                                                           */
+/* Types                                                               */
 /* ------------------------------------------------------------------ */
 
-interface Product {
+interface VendorProduct {
   id: string;
+  vendor_id: string;
   name: string;
+  description: string | null;
   price: number;
-  rating: number;
-  reviews: number;
-  gradient: string;
-  icon: string;
-  pointsEligible: boolean;
-  category: string;
-  badge?: string;
+  category: string | null;
+  status: string;
+  token_eligible: boolean;
+  gift_card_eligible: boolean;
+  image_url: string | null;
+  created_at: string;
+  vendorName: string;
 }
 
-const CATEGORIES = [
-  { name: "All", slug: "all" },
-  { name: "Apparel", slug: "apparel" },
-  { name: "Accessories", slug: "accessories" },
-  { name: "Drinkware", slug: "drinkware" },
-  { name: "Tech", slug: "tech" },
-  { name: "Stickers & Prints", slug: "stickers" },
-  { name: "Gift Cards", slug: "gift-cards" },
-  { name: "Bundles", slug: "bundles" },
-] as const;
+/* ------------------------------------------------------------------ */
+/* Hero Slides                                                         */
+/* ------------------------------------------------------------------ */
 
-const HOT_CATEGORIES = [
+const HERO_SLIDES = [
   {
-    name: "Hoodies",
-    icon: "hoodie",
-    gradient: "from-violet-500 to-purple-600",
-    count: 8,
+    image: "/images/marketplace/bag-promo.png",
+    title: "Classic 104.5 FM Duffle Bag",
+    subtitle: "Fresh design when you travel",
   },
   {
-    name: "Snap Backs",
-    icon: "cap",
-    gradient: "from-amber-500 to-orange-600",
-    count: 12,
+    image: "/images/marketplace/shirt-slide-1.png",
+    title: "Classic Hip Hop Shirt",
+    subtitle: "Available with Listener Points",
   },
   {
-    name: "Water Bottles",
-    icon: "bottle",
-    gradient: "from-sky-500 to-blue-600",
-    count: 5,
-  },
-  {
-    name: "Headphones",
-    icon: "headphones",
-    gradient: "from-rose-500 to-pink-600",
-    count: 4,
-  },
-  {
-    name: "Tank Tops",
-    icon: "tank",
-    gradient: "from-emerald-500 to-green-600",
-    count: 6,
-  },
-  {
-    name: "Duffle Bags",
-    icon: "bag",
-    gradient: "from-slate-600 to-zinc-700",
-    count: 3,
-  },
-  {
-    name: "Flash Drives",
-    icon: "usb",
-    gradient: "from-indigo-500 to-blue-600",
-    count: 4,
-  },
-] as const;
-
-const PRODUCTS: Product[] = [
-  {
-    id: "p1",
-    name: "WCCG 104.5 Classic Tee",
-    price: 24.99,
-    rating: 4.8,
-    reviews: 142,
-    gradient: "from-primary/80 to-primary/40",
-    icon: "shirt",
-    pointsEligible: true,
-    category: "apparel",
-    badge: "Best Seller",
-  },
-  {
-    id: "p2",
-    name: "Gospel Vibes Hoodie",
-    price: 49.99,
-    rating: 4.9,
-    reviews: 98,
-    gradient: "from-violet-600/80 to-purple-400/40",
-    icon: "hoodie",
-    pointsEligible: true,
-    category: "apparel",
-    badge: "New",
-  },
-  {
-    id: "p3",
-    name: "Station Logo Snapback",
-    price: 22.99,
-    rating: 4.6,
-    reviews: 67,
-    gradient: "from-amber-600/80 to-yellow-400/40",
-    icon: "cap",
-    pointsEligible: false,
-    category: "accessories",
-  },
-  {
-    id: "p4",
-    name: "Blessed & Hydrated Bottle",
-    price: 18.99,
-    rating: 4.7,
-    reviews: 203,
-    gradient: "from-sky-600/80 to-cyan-400/40",
-    icon: "bottle",
-    pointsEligible: true,
-    category: "drinkware",
-    badge: "Popular",
-  },
-  {
-    id: "p5",
-    name: "WCCG Sticker Pack (10pc)",
-    price: 8.99,
-    rating: 4.5,
-    reviews: 312,
-    gradient: "from-pink-600/80 to-rose-400/40",
-    icon: "sticker",
-    pointsEligible: false,
-    category: "stickers",
-  },
-  {
-    id: "p6",
-    name: "Studio Monitor Headphones",
-    price: 79.99,
-    rating: 4.9,
-    reviews: 54,
-    gradient: "from-slate-700/80 to-zinc-500/40",
-    icon: "headphones",
-    pointsEligible: true,
-    category: "tech",
-    badge: "Premium",
-  },
-  {
-    id: "p7",
-    name: "WCCG Duffle Bag",
-    price: 39.99,
-    rating: 4.4,
-    reviews: 41,
-    gradient: "from-emerald-600/80 to-teal-400/40",
-    icon: "bag",
-    pointsEligible: false,
-    category: "accessories",
-  },
-  {
-    id: "p8",
-    name: "Digital Gift Card",
-    price: 25.0,
-    rating: 5.0,
-    reviews: 89,
-    gradient: "from-indigo-600/80 to-blue-400/40",
-    icon: "gift",
-    pointsEligible: true,
-    category: "gift-cards",
-  },
-  {
-    id: "p9",
-    name: "Faith Over Fear Tank Top",
-    price: 19.99,
-    rating: 4.6,
-    reviews: 73,
-    gradient: "from-orange-600/80 to-amber-400/40",
-    icon: "tank",
-    pointsEligible: false,
-    category: "apparel",
-  },
-  {
-    id: "p10",
-    name: "WCCG USB Gospel Mix Drive",
-    price: 14.99,
-    rating: 4.3,
-    reviews: 156,
-    gradient: "from-blue-700/80 to-indigo-400/40",
-    icon: "usb",
-    pointsEligible: true,
-    category: "tech",
-  },
-  {
-    id: "p11",
-    name: "Worship Sweatshirt",
-    price: 44.99,
-    rating: 4.8,
-    reviews: 61,
-    gradient: "from-fuchsia-600/80 to-pink-400/40",
-    icon: "shirt",
-    pointsEligible: true,
-    category: "apparel",
-    badge: "New",
-  },
-  {
-    id: "p12",
-    name: "Sports & Outdoors Bundle",
-    price: 59.99,
-    rating: 4.7,
-    reviews: 28,
-    gradient: "from-green-700/80 to-emerald-400/40",
-    icon: "bundle",
-    pointsEligible: true,
-    category: "bundles",
-    badge: "Value",
+    image: "/images/marketplace/male-headphones.png",
+    title: "104.5 FM Headphones",
+    subtitle: "New Drops for 2026",
   },
 ];
 
-const BENEFITS = [
+/* ------------------------------------------------------------------ */
+/* Hot Categories                                                      */
+/* ------------------------------------------------------------------ */
+
+const HOT_CATEGORIES = [
+  { name: "Flash Drives", icon: Usb, gradient: "from-indigo-500 to-blue-600" },
+  { name: "Tank Tops", icon: Shirt, gradient: "from-emerald-500 to-green-600" },
   {
-    icon: "local",
-    title: "Local & Exclusive",
-    description:
-      "Official WCCG 104.5 FM merchandise designed for our Charlotte community.",
+    name: "Water Bottles",
+    icon: Droplets,
+    gradient: "from-sky-500 to-blue-600",
   },
+  { name: "Hoodies", icon: Shirt, gradient: "from-violet-500 to-purple-600" },
   {
-    icon: "quality",
-    title: "Quality Assured",
-    description:
-      "Every item is crafted with premium materials built to last.",
+    name: "Outdoors & Sports",
+    icon: Dumbbell,
+    gradient: "from-orange-500 to-red-600",
   },
+  { name: "Snap Backs", icon: Package, gradient: "from-amber-500 to-orange-600" },
   {
-    icon: "deals",
-    title: "Shop with Points",
-    description:
-      "Use your mY1045 Listener Points for discounts on eligible items.",
+    name: "Sweatshirts",
+    icon: Shirt,
+    gradient: "from-rose-500 to-pink-600",
   },
-  {
-    icon: "support",
-    title: "Expert Support",
-    description:
-      "Our team is here to help with orders, sizing, and returns.",
-  },
-] as const;
+];
 
 /* ------------------------------------------------------------------ */
-/* Helper: Star Rating                                                 */
+/* Trust Bar Items                                                     */
 /* ------------------------------------------------------------------ */
 
-function StarRating({ rating, reviews }: { rating: number; reviews: number }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <div className="flex items-center">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Star
-            key={i}
-            className={`h-3.5 w-3.5 ${
-              i < Math.floor(rating)
-                ? "fill-amber-400 text-amber-400"
-                : i < rating
-                  ? "fill-amber-400/50 text-amber-400"
-                  : "fill-muted text-muted"
-            }`}
-          />
-        ))}
-      </div>
-      <span className="text-xs text-muted-foreground">
-        {rating} ({reviews})
-      </span>
-    </div>
-  );
-}
+const TRUST_ITEMS = [
+  { icon: MapPin, title: "Local & Exclusive" },
+  { icon: Shield, title: "Quality Assured" },
+  { icon: Star, title: "Listener Points" },
+  { icon: Users, title: "Support Local" },
+];
 
 /* ------------------------------------------------------------------ */
-/* Helper: Product icon by string key                                  */
-/* ------------------------------------------------------------------ */
-
-function ProductIcon({ icon, className }: { icon: string; className?: string }) {
-  const base = className ?? "h-10 w-10 text-foreground/80";
-  switch (icon) {
-    case "shirt":
-    case "tank":
-    case "hoodie":
-      return <Shirt className={base} />;
-    case "cap":
-      return <Package className={base} />;
-    case "bottle":
-      return <Droplets className={base} />;
-    case "headphones":
-      return <Headphones className={base} />;
-    case "sticker":
-      return <Sticker className={base} />;
-    case "bag":
-      return <ShoppingBag className={base} />;
-    case "gift":
-      return <Gift className={base} />;
-    case "usb":
-      return <Usb className={base} />;
-    case "bundle":
-      return <Dumbbell className={base} />;
-    default:
-      return <Package className={base} />;
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/* Helper: Benefit icon by string key                                  */
-/* ------------------------------------------------------------------ */
-
-function BenefitIcon({ icon }: { icon: string }) {
-  const base = "h-6 w-6";
-  switch (icon) {
-    case "local":
-      return <ShoppingBag className={base} />;
-    case "quality":
-      return <Shield className={base} />;
-    case "deals":
-      return <Tag className={base} />;
-    case "support":
-      return <Headset className={base} />;
-    default:
-      return <ShoppingBag className={base} />;
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/* Page                                                                */
+/* Page Component                                                      */
 /* ------------------------------------------------------------------ */
 
 export default function MarketplacePage() {
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const { supabase } = useSupabase();
+  const [products, setProducts] = useState<VendorProduct[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [cartItems, setCartItems] = useState<Set<string>>(new Set());
-  const productsRef = useRef<HTMLElement>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const filteredProducts = PRODUCTS.filter((product) => {
+  /* ---- Fetch products + vendor names ---- */
+  useEffect(() => {
+    async function fetchProducts() {
+      setLoading(true);
+
+      const { data: rawProducts, error } = await supabase
+        .from("vendor_products")
+        .select("*")
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+
+      if (error || !rawProducts || rawProducts.length === 0) {
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+
+      // Collect unique vendor IDs
+      const vendorIds = [...new Set(rawProducts.map((p: any) => p.vendor_id))];
+
+      // Fetch vendor display names
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", vendorIds);
+
+      const vendorMap: Record<string, string> = {};
+      if (profiles) {
+        for (const p of profiles) {
+          vendorMap[p.id] = p.display_name || "Unknown Vendor";
+        }
+      }
+
+      const enriched: VendorProduct[] = rawProducts.map((p: any) => ({
+        ...p,
+        vendorName: vendorMap[p.vendor_id] || "Unknown Vendor",
+      }));
+
+      setProducts(enriched);
+      setLoading(false);
+    }
+
+    fetchProducts();
+  }, [supabase]);
+
+  /* ---- Hero auto-advance ---- */
+  const resetTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, 5000);
+  }, []);
+
+  useEffect(() => {
+    resetTimer();
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [resetTimer]);
+
+  function goToSlide(index: number) {
+    setCurrentSlide(index);
+    resetTimer();
+  }
+
+  /* ---- Derived categories from product data ---- */
+  const categoryPills = [
+    "All",
+    ...Array.from(
+      new Set(products.map((p) => p.category).filter(Boolean) as string[])
+    ),
+  ];
+
+  /* ---- Filtered products ---- */
+  const filteredProducts = products.filter((product) => {
     const matchesCategory =
-      selectedCategory === "all" || product.category === selectedCategory;
+      selectedCategory === "All" || product.category === selectedCategory;
     const matchesSearch = product.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
-  function toggleCart(productId: string) {
-    setCartItems((prev) => {
-      const next = new Set(prev);
-      if (next.has(productId)) {
-        next.delete(productId);
-      } else {
-        next.add(productId);
-      }
-      return next;
-    });
-  }
-
-  function scrollToProducts() {
-    productsRef.current?.scrollIntoView({ behavior: "smooth" });
+  /* ---- Category click from hot categories grid ---- */
+  function handleHotCategory(name: string) {
+    setSelectedCategory(name);
+    document
+      .getElementById("products-section")
+      ?.scrollIntoView({ behavior: "smooth" });
   }
 
   return (
     <div className="space-y-10">
-      {/* ---------------------------------------------------------- */}
-      {/* Hero Section                                                */}
-      {/* ---------------------------------------------------------- */}
-      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-primary/70 px-6 py-12 text-primary-foreground sm:px-10 sm:py-16 lg:py-20">
-        {/* Decorative background circles */}
-        <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-16 -left-16 h-56 w-56 rounded-full bg-white/5 blur-2xl" />
-
-        <div className="relative z-10 mx-auto max-w-2xl text-center">
-          <Badge variant="secondary" className="mb-4 text-xs">
-            Official WCCG 104.5 FM Merch
-          </Badge>
-          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
-            The WCCG Marketplace
-          </h1>
-          <p className="mt-4 text-base text-primary-foreground/80 sm:text-lg">
-            Rep Charlotte&apos;s #1 Gospel Station with exclusive apparel, gear,
-            and collectibles. Earn and spend your mY1045 Listener Points on
-            eligible items.
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Button
-              size="lg"
-              variant="secondary"
-              className="gap-2 font-semibold"
-              onClick={scrollToProducts}
-            >
-              <ShoppingBag className="h-5 w-5" />
-              Shop Now
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="gap-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
-              onClick={scrollToProducts}
-            >
-              <Zap className="h-5 w-5" />
-              Shop with Points
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* ---------------------------------------------------------- */}
-      {/* Hot Categories Grid                                         */}
-      {/* ---------------------------------------------------------- */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold tracking-tight">Hot Categories</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
-          {HOT_CATEGORIES.map((cat) => (
-            <button
-              key={cat.name}
-              className="group flex flex-col items-center gap-2 rounded-xl border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-md"
-            >
-              <div
-                className={`flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br ${cat.gradient} transition-transform group-hover:scale-110`}
-              >
-                <ProductIcon
-                  icon={cat.icon}
-                  className="h-5 w-5 text-white"
-                />
-              </div>
-              <span className="text-xs font-medium leading-tight text-center">
-                {cat.name}
-              </span>
-              <span className="text-[10px] text-muted-foreground">
-                {cat.count} items
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* ---------------------------------------------------------- */}
-      {/* Search + Filter + Products Grid                             */}
-      {/* ---------------------------------------------------------- */}
-      <section ref={productsRef} className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold tracking-tight">
-              Featured Products
-            </h2>
-            {cartItems.size > 0 && (
-              <Badge className="gap-1 bg-primary text-primary-foreground">
-                <ShoppingCart className="h-3.5 w-3.5" />
-                {cartItems.size}
-              </Badge>
-            )}
-          </div>
-          <div className="relative w-full max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search products..."
-              className="pl-9"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Horizontal Filter Tabs */}
-        <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.slug}
-              onClick={() => setSelectedCategory(cat.slug)}
-              className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
-                selectedCategory === cat.slug
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+      {/* ============================================================ */}
+      {/* Hero Slider                                                   */}
+      {/* ============================================================ */}
+      <section className="relative overflow-hidden rounded-2xl">
+        <div className="relative h-[320px] sm:h-[400px] lg:h-[480px]">
+          {HERO_SLIDES.map((slide, index) => (
+            <div
+              key={index}
+              className={`absolute inset-0 transition-opacity duration-700 ${
+                index === currentSlide
+                  ? "opacity-100"
+                  : "opacity-0 pointer-events-none"
               }`}
             >
-              {cat.name}
+              {/* Background image */}
+              <img
+                src={slide.image}
+                alt={slide.title}
+                className="h-full w-full object-cover"
+              />
+              {/* Dark gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+              {/* Text content */}
+              <div className="absolute inset-0 flex flex-col items-center justify-end pb-16 px-6 text-center text-white">
+                <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl drop-shadow-lg">
+                  {slide.title}
+                </h2>
+                <p className="mt-2 text-base text-white/80 sm:text-lg">
+                  {slide.subtitle}
+                </p>
+                <button
+                  onClick={() =>
+                    document
+                      .getElementById("products-section")
+                      ?.scrollIntoView({ behavior: "smooth" })
+                  }
+                  className="mt-5 inline-flex items-center gap-2 rounded-full bg-amber-500 px-6 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-amber-400"
+                >
+                  Shop Now
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Navigation dots */}
+        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
+          {HERO_SLIDES.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goToSlide(index)}
+              className={`h-2.5 w-2.5 rounded-full transition-all ${
+                index === currentSlide
+                  ? "bg-amber-500 w-6"
+                  : "bg-white/50 hover:bg-white/80"
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* Hot Categories Grid                                           */}
+      {/* ============================================================ */}
+      <section className="space-y-4">
+        <h2 className="text-2xl font-bold tracking-tight">Hot Categories</h2>
+        <div className="flex flex-wrap gap-3">
+          {HOT_CATEGORIES.map((cat) => {
+            const Icon = cat.icon;
+            return (
+              <button
+                key={cat.name}
+                onClick={() => handleHotCategory(cat.name)}
+                className="group flex items-center gap-3 rounded-xl border bg-card px-4 py-3 transition-all hover:border-amber-500/40 hover:shadow-md"
+              >
+                <div
+                  className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br ${cat.gradient} transition-transform group-hover:scale-110`}
+                >
+                  <Icon className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-sm font-medium">{cat.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* Search + Category Filter Bar                                  */}
+      {/* ============================================================ */}
+      <section id="products-section" className="space-y-6">
+        {/* Search input */}
+        <div className="relative w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search products..."
+            className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none transition-colors focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        {/* Category pills */}
+        <div className="flex flex-wrap gap-2">
+          {categoryPills.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+                selectedCategory === cat
+                  ? "border-amber-500 bg-amber-500 text-black"
+                  : "border-border bg-background text-muted-foreground hover:border-amber-500/40 hover:text-foreground"
+              }`}
+            >
+              {cat}
             </button>
           ))}
         </div>
 
-        {/* Products Grid */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredProducts.length === 0 ? (
-            <div className="col-span-full py-12 text-center text-muted-foreground">
-              No products found. Try a different search or category.
-            </div>
-          ) : (
-            filteredProducts.map((product) => {
-              const inCart = cartItems.has(product.id);
-              return (
-                <Card key={product.id} className="group overflow-hidden py-0">
-                  {/* Image placeholder with gradient */}
-                  <div
-                    className={`relative flex h-48 items-center justify-center bg-gradient-to-br ${product.gradient}`}
-                  >
-                    <ProductIcon
-                      icon={product.icon}
-                      className="h-16 w-16 text-foreground/70 transition-transform group-hover:scale-110"
-                    />
+        {/* ========================================================== */}
+        {/* Product Grid                                                */}
+        {/* ========================================================== */}
+        {loading ? (
+          /* Loading skeleton */
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="overflow-hidden rounded-xl border bg-card"
+              >
+                <div className="h-48 animate-pulse bg-muted" />
+                <div className="space-y-3 p-4">
+                  <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+                  <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
+                  <div className="h-5 w-1/4 animate-pulse rounded bg-muted" />
+                  <div className="flex gap-2">
+                    <div className="h-5 w-16 animate-pulse rounded-full bg-muted" />
+                    <div className="h-5 w-20 animate-pulse rounded-full bg-muted" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          /* Empty state */
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <ShoppingBag className="h-16 w-16 text-muted-foreground/40" />
+            <h3 className="mt-4 text-lg font-semibold">No products found</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Try adjusting your search or selecting a different category.
+            </p>
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedCategory("All");
+              }}
+              className="mt-4 text-sm font-medium text-amber-500 hover:text-amber-400"
+            >
+              Clear filters
+            </button>
+          </div>
+        ) : (
+          /* Product cards */
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredProducts.map((product) => (
+              <div
+                key={product.id}
+                className="group overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-lg"
+              >
+                {/* Image placeholder */}
+                <div className="relative flex h-48 items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
+                  <ShoppingBag className="h-16 w-16 text-muted-foreground/30 transition-transform group-hover:scale-110" />
+                  {/* Category badge */}
+                  {product.category && (
+                    <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-0.5 text-[10px] font-medium text-white">
+                      {product.category}
+                    </span>
+                  )}
+                </div>
 
-                    {/* Badges */}
-                    <div className="absolute left-3 top-3 flex flex-col gap-1.5">
-                      {product.badge && (
-                        <Badge variant="secondary" className="text-[10px]">
-                          {product.badge}
-                        </Badge>
-                      )}
-                      {product.pointsEligible && (
-                        <Badge className="gap-1 bg-amber-500 text-[10px] text-white hover:bg-amber-500">
-                          <Zap className="h-2.5 w-2.5" />
-                          Shop with Points
-                        </Badge>
-                      )}
-                    </div>
+                {/* Card body */}
+                <div className="space-y-2 p-4">
+                  <h3 className="font-bold leading-snug line-clamp-2">
+                    {product.name}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    by {product.vendorName}
+                  </p>
+                  <p className="text-lg font-bold text-amber-500">
+                    ${product.price.toFixed(2)}
+                  </p>
+
+                  {/* Badges row */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {product.token_eligible && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600">
+                        <Coins className="h-3 w-3" />
+                        Token Eligible
+                      </span>
+                    )}
+                    {product.gift_card_eligible && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-600">
+                        <Gift className="h-3 w-3" />
+                        Gift Card
+                      </span>
+                    )}
                   </div>
 
-                  {/* Content */}
-                  <CardHeader className="pb-1 pt-4">
-                    <CardTitle className="text-sm leading-snug">
-                      {product.name}
-                    </CardTitle>
-                  </CardHeader>
-
-                  <CardContent className="space-y-2 pb-2">
-                    <StarRating
-                      rating={product.rating}
-                      reviews={product.reviews}
-                    />
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-lg font-bold">
-                        ${product.price.toFixed(2)}
-                      </span>
-                      {product.pointsEligible && (
-                        <span className="text-xs text-muted-foreground">
-                          or {Math.round(product.price * 100)} pts
-                        </span>
-                      )}
-                    </div>
-                  </CardContent>
-
-                  <CardFooter className="pb-4 pt-0">
-                    <Button
-                      className={`w-full gap-2 ${inCart ? "bg-emerald-600 hover:bg-emerald-700" : ""}`}
-                      size="sm"
-                      onClick={() => toggleCart(product.id)}
-                    >
-                      <ShoppingCart className="h-4 w-4" />
-                      {inCart ? "Added!" : "Add to Cart"}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              );
-            })
-          )}
-        </div>
+                  {/* View Store link */}
+                  <Link
+                    href={`/vendors?id=${product.vendor_id}`}
+                    className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-amber-500 transition-colors hover:text-amber-400"
+                  >
+                    View Store
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
-      {/* ---------------------------------------------------------- */}
-      {/* Benefits Bar                                                */}
-      {/* ---------------------------------------------------------- */}
+      {/* ============================================================ */}
+      {/* Trust Bar                                                     */}
+      {/* ============================================================ */}
       <section className="rounded-xl border bg-muted/50 p-6 sm:p-8">
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {BENEFITS.map((benefit) => (
-            <div key={benefit.title} className="flex gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <BenefitIcon icon={benefit.icon} />
+        <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
+          {TRUST_ITEMS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={item.title}
+                className="flex flex-col items-center gap-2 text-center"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10 text-amber-500">
+                  <Icon className="h-6 w-6" />
+                </div>
+                <span className="text-sm font-semibold">{item.title}</span>
               </div>
-              <div>
-                <h3 className="font-semibold">{benefit.title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {benefit.description}
-                </p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
     </div>

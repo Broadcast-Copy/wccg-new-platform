@@ -36,7 +36,8 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
-import { apiClient } from "@/lib/api-client";
+import { useSupabase } from "@/components/providers/supabase-provider";
+import { Search } from "lucide-react";
 
 // ─── Constants ─────────────────────────────────────────────────────────
 
@@ -147,34 +148,67 @@ function getCategoryColor(category: string): string {
 
 export default function MyDirectoryPage() {
   const { user } = useAuth();
+  const { supabase } = useSupabase();
   const [listings, setListings] = useState<DirectoryListing[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<ListingFormData>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchCategory, setSearchCategory] = useState<string>("All");
+  const [hasSearched, setHasSearched] = useState(false);
 
-  const fetchListings = useCallback(async () => {
-    if (!user) return;
-    try {
-      const data = await apiClient<DirectoryListing[]>("/directory/my");
-      setListings(Array.isArray(data) ? data : []);
-    } catch {
+  const searchListings = useCallback(async (query?: string, category?: string) => {
+    setLoading(true);
+    setHasSearched(true);
+    let q = supabase
+      .from("directory_listings")
+      .select("*")
+      .eq("status", "ACTIVE")
+      .order("name", { ascending: true })
+      .limit(50);
+
+    const searchTerm = query ?? searchQuery;
+    const searchCat = category ?? searchCategory;
+
+    if (searchTerm.trim()) {
+      q = q.or(`name.ilike.%${searchTerm.trim()}%,description.ilike.%${searchTerm.trim()}%,city.ilike.%${searchTerm.trim()}%`);
+    }
+    if (searchCat && searchCat !== "All") {
+      q = q.eq("category", searchCat);
+    }
+
+    const { data, error } = await q;
+    if (!error && data) {
+      setListings(data.map((row: Record<string, unknown>) => ({
+        id: (row.id as string) ?? "",
+        name: (row.name as string) ?? "",
+        category: (row.category as string) ?? "",
+        description: (row.description as string) ?? null,
+        address: (row.address as string) ?? null,
+        city: (row.city as string) ?? null,
+        county: (row.county as string) ?? null,
+        state: (row.state as string) ?? "NC",
+        zipCode: (row.zip_code as string) ?? null,
+        phone: (row.phone as string) ?? null,
+        email: (row.email as string) ?? null,
+        website: (row.website as string) ?? null,
+        status: (row.status as string) ?? "ACTIVE",
+        createdAt: (row.created_at as string) ?? "",
+      })));
+    } else {
       setListings([]);
-    } finally {
-      setLoading(false);
     }
-  }, [user]);
+    setLoading(false);
+  }, [supabase, searchQuery, searchCategory]);
 
-  useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    fetchListings();
-  }, [user, fetchListings]);
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    searchListings();
+  }
 
   // ─── Form handlers ──────────────────────────────────────────────────
 
@@ -226,19 +260,27 @@ export default function MyDirectoryPage() {
     setFormError(null);
 
     try {
+      const payload = {
+        name: formData.name.trim(),
+        category: formData.category,
+        description: formData.description || null,
+        address: formData.address || null,
+        city: formData.city || null,
+        county: formData.county || null,
+        state: formData.state || "NC",
+        zip_code: formData.zipCode || null,
+        phone: formData.phone || null,
+        email: formData.email || null,
+        website: formData.website || null,
+        status: "ACTIVE",
+      };
       if (editingId) {
-        await apiClient(`/directory/${editingId}`, {
-          method: "PATCH",
-          body: JSON.stringify(formData),
-        });
+        await supabase.from("directory_listings").update(payload).eq("id", editingId);
       } else {
-        await apiClient("/directory", {
-          method: "POST",
-          body: JSON.stringify(formData),
-        });
+        await supabase.from("directory_listings").insert(payload);
       }
       closeForm();
-      await fetchListings();
+      await searchListings();
     } catch (err: unknown) {
       setFormError(
         err instanceof Error ? err.message : "Failed to save listing.",
@@ -252,7 +294,7 @@ export default function MyDirectoryPage() {
     if (!confirm("Are you sure you want to delete this listing?")) return;
     setDeleting(id);
     try {
-      await apiClient(`/directory/${id}`, { method: "DELETE" });
+      await supabase.from("directory_listings").delete().eq("id", id);
       setListings((prev) => prev.filter((l) => l.id !== id));
     } catch {
       // Silently handle
@@ -272,7 +314,7 @@ export default function MyDirectoryPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            My Directory Listings
+            Community Local Directory
           </h1>
           <p className="text-muted-foreground">
             Please{" "}
@@ -294,10 +336,10 @@ export default function MyDirectoryPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            My Directory Listings
+            Community Local Directory
           </h1>
           <p className="text-muted-foreground">
-            Manage your business and organization listings
+            Search local businesses, services, and organizations in the Fayetteville area
           </p>
         </div>
         <Button
@@ -305,9 +347,37 @@ export default function MyDirectoryPage() {
           className="gap-2 bg-[#7401df] hover:bg-[#7401df]/90"
         >
           <Plus className="h-4 w-4" />
-          Add New Listing
+          Add Listing
         </Button>
       </div>
+
+      {/* Search Bar */}
+      <form onSubmit={handleSearch} className="flex flex-col gap-3 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search businesses, restaurants, services..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={searchCategory} onValueChange={(val) => { setSearchCategory(val); searchListings(searchQuery, val); }}>
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">All Categories</SelectItem>
+            {CATEGORIES.map((cat) => (
+              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button type="submit" className="gap-2 bg-[#7401df] hover:bg-[#7401df]/90">
+          <Search className="h-4 w-4" />
+          Search
+        </Button>
+      </form>
 
       {/* Inline Form */}
       {showForm && (
@@ -502,6 +572,33 @@ export default function MyDirectoryPage() {
             <span>Loading your listings...</span>
           </div>
         </div>
+      ) : !hasSearched ? (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#7401df]/10">
+              <Search className="h-8 w-8 text-[#7401df]" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">Find Local Businesses</h3>
+              <p className="mt-1 text-sm text-muted-foreground max-w-md">
+                Search for restaurants, services, churches, and more in the Fayetteville &amp; surrounding NC communities.
+              </p>
+            </div>
+            <div className="flex gap-2 flex-wrap justify-center">
+              {["Restaurants", "Churches", "Auto Services", "Health & Wellness"].map((cat) => (
+                <Button
+                  key={cat}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setSearchCategory(cat); searchListings("", cat); }}
+                  className="text-xs"
+                >
+                  {cat}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       ) : listings.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
@@ -509,10 +606,9 @@ export default function MyDirectoryPage() {
               <Store className="h-8 w-8 text-[#7401df]" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold">No listings yet</h3>
+              <h3 className="text-lg font-semibold">No results found</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                You haven&apos;t created any directory listings yet. Add your
-                business or organization to the WCCG community directory!
+                Try a different search term or category. You can also add a new listing to the directory.
               </p>
             </div>
             <Button
@@ -520,7 +616,7 @@ export default function MyDirectoryPage() {
               className="gap-2 bg-[#7401df] hover:bg-[#7401df]/90"
             >
               <Plus className="h-4 w-4" />
-              Add Your First Listing
+              Add a Listing
             </Button>
           </CardContent>
         </Card>

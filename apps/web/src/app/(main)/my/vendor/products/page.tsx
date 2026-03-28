@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ImageIcon,
   Coins,
+  Gift,
   Search,
   ShoppingBag,
 } from "lucide-react";
@@ -30,6 +31,7 @@ interface Product {
   imageUrl: string;
   inventory: number;
   tokenEligible: boolean;
+  giftCardEligible: boolean;
 }
 
 type ProductCategory = "Food" | "Fashion" | "Services" | "Entertainment" | "Other";
@@ -85,6 +87,7 @@ const EMPTY_FORM = {
   imageUrl: "",
   inventory: "",
   tokenEligible: false,
+  giftCardEligible: false,
 };
 
 export default function ProductsPage() {
@@ -118,6 +121,7 @@ export default function ProductsPage() {
           imageUrl: row.image_url ?? '',
           inventory: row.inventory ?? 0,
           tokenEligible: row.token_eligible ?? false,
+          giftCardEligible: row.gift_card_eligible ?? false,
         })));
       }
       setLoading(false);
@@ -159,6 +163,7 @@ export default function ProductsPage() {
       imageUrl: product.imageUrl,
       inventory: product.inventory.toString(),
       tokenEligible: product.tokenEligible,
+      giftCardEligible: product.giftCardEligible,
     });
     setEditingId(product.id);
     setShowForm(true);
@@ -181,6 +186,7 @@ export default function ProductsPage() {
           image_url: form.imageUrl.trim(),
           inventory,
           token_eligible: form.tokenEligible,
+          gift_card_eligible: form.giftCardEligible,
         })
         .eq('id', editingId)
         .eq('vendor_id', user!.id)
@@ -198,6 +204,7 @@ export default function ProductsPage() {
                   imageUrl: form.imageUrl.trim(),
                   inventory,
                   tokenEligible: form.tokenEligible,
+                  giftCardEligible: form.giftCardEligible,
                 }
               : p
           )
@@ -215,6 +222,7 @@ export default function ProductsPage() {
           image_url: form.imageUrl.trim(),
           inventory,
           token_eligible: form.tokenEligible,
+          gift_card_eligible: form.giftCardEligible,
         })
         .select();
       if (!error && data?.[0]) {
@@ -228,6 +236,7 @@ export default function ProductsPage() {
           imageUrl: row.image_url ?? '',
           inventory: row.inventory ?? 0,
           tokenEligible: row.token_eligible ?? false,
+          giftCardEligible: row.gift_card_eligible ?? false,
         };
         setProducts((prev) => [newProduct, ...prev]);
       }
@@ -393,6 +402,23 @@ export default function ProductsPage() {
               </button>
               <span className="text-sm font-medium">Token-Eligible</span>
             </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Gift className="h-4 w-4 text-emerald-500" />
+                <span className="text-sm font-medium">Gift Card Eligible</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setForm(prev => ({ ...prev, giftCardEligible: !prev.giftCardEligible }))}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  form.giftCardEligible ? "bg-emerald-500" : "bg-muted"
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  form.giftCardEligible ? "translate-x-6" : "translate-x-1"
+                }`} />
+              </button>
+            </div>
           </div>
 
           <div className="mt-4 flex gap-2">
@@ -490,6 +516,11 @@ export default function ProductsPage() {
                     <span className="flex items-center gap-1 rounded-full bg-[#f59e0b]/10 px-3 py-1 text-xs font-semibold text-[#f59e0b]">
                       <Coins className="h-3 w-3" />
                       Token
+                    </span>
+                  )}
+                  {product.giftCardEligible && (
+                    <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600">
+                      <Gift className="h-3 w-3" /> Gift Card
                     </span>
                   )}
                 </div>
