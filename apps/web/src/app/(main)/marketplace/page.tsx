@@ -278,17 +278,17 @@ export default function MarketplacePage() {
       {/* ============================================================ */}
       <section className="space-y-4">
         <h2 className="text-2xl font-bold tracking-tight">Hot Categories</h2>
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-4 sm:grid-cols-7 gap-3">
           {HOT_CATEGORIES.map((cat) => (
               <button
                 key={cat.name}
                 onClick={() => handleHotCategory(cat.name)}
-                className="group flex flex-col items-center gap-2 rounded-xl border bg-card p-3 transition-all hover:border-amber-500/40 hover:shadow-md w-[100px]"
+                className="group flex flex-col items-center gap-2 rounded-xl bg-white dark:bg-white/10 p-3 transition-all hover:shadow-lg hover:-translate-y-0.5 border border-transparent hover:border-amber-400/50"
               >
-                <div className={`flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br ${cat.gradient} overflow-hidden transition-transform group-hover:scale-110`}>
-                  <img src={cat.image} alt={cat.name} className="h-12 w-12 object-contain" />
+                <div className="h-14 w-14 sm:h-16 sm:w-16 overflow-hidden rounded-lg transition-transform group-hover:scale-105">
+                  <img src={cat.image} alt={cat.name} className="h-full w-full object-contain" />
                 </div>
-                <span className="text-[11px] font-medium text-center leading-tight">{cat.name}</span>
+                <span className="text-[10px] sm:text-[11px] font-semibold text-foreground/80 text-center leading-tight">{cat.name}</span>
               </button>
           ))}
         </div>
@@ -375,37 +375,37 @@ export default function MarketplacePage() {
             {filteredProducts.map((product) => (
               <div
                 key={product.id}
-                className="group overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-lg"
+                className="group overflow-hidden rounded-xl border bg-card shadow-sm transition-all hover:shadow-lg hover:-translate-y-0.5"
               >
                 {/* Product image */}
-                <div className="relative h-48 bg-gradient-to-br from-muted to-muted/50 overflow-hidden">
+                <div className="relative h-52 bg-white overflow-hidden">
                   {(product.image_url || (product.category && CATEGORY_IMAGES[product.category])) ? (
                     <img
                       src={product.image_url || CATEGORY_IMAGES[product.category!]}
                       alt={product.name}
-                      className="h-full w-full object-contain p-4 transition-transform group-hover:scale-110"
+                      className="h-full w-full object-contain p-6 transition-transform group-hover:scale-105"
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center">
-                      <ShoppingBag className="h-16 w-16 text-muted-foreground/30" />
+                    <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+                      <ShoppingBag className="h-16 w-16 text-gray-300" />
                     </div>
                   )}
                   {product.category && (
-                    <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-0.5 text-[10px] font-medium text-white">
+                    <span className="absolute left-2 top-2 rounded-md bg-black/70 backdrop-blur-sm px-2 py-0.5 text-[10px] font-medium text-white">
                       {product.category}
                     </span>
                   )}
                 </div>
 
                 {/* Card body */}
-                <div className="space-y-2 p-4">
-                  <h3 className="font-bold leading-snug line-clamp-2">
+                <div className="space-y-1.5 p-4 border-t">
+                  <h3 className="font-semibold text-sm leading-snug line-clamp-2">
                     {product.name}
                   </h3>
-                  <p className="text-xs text-muted-foreground">
-                    by {product.vendorName}
+                  <p className="text-[11px] text-muted-foreground">
+                    by <span className="font-medium text-foreground/70">{product.vendorName}</span>
                   </p>
-                  <p className="text-lg font-bold text-amber-500">
+                  <p className="text-base font-bold text-amber-500">
                     ${product.price.toFixed(2)}
                   </p>
 
