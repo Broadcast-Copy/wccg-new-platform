@@ -237,12 +237,20 @@ export function UserMenu() {
           .eq('user_id', user!.id)
           .single();
 
-        setAdminNotifications({
+        const next = {
           production: prodCount || 0,
           sales: salesCount || 0,
           bookings: bookingCount || 0,
           points: pointsData?.balance || 0,
-        });
+        };
+        setAdminNotifications((prev) =>
+          prev.production === next.production &&
+          prev.sales === next.sales &&
+          prev.bookings === next.bookings &&
+          prev.points === next.points
+            ? prev
+            : next
+        );
       } catch {
         // Keep defaults
       }
