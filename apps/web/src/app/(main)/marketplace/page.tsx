@@ -194,7 +194,8 @@ export default function MarketplacePage() {
     const matchesSearch = product.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const hasImage = !!(product.image_url || (product.category && CATEGORY_IMAGES[product.category]));
+    return matchesCategory && matchesSearch && hasImage;
   });
 
   /* ---- Category click from hot categories grid ---- */
