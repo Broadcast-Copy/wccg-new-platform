@@ -308,37 +308,44 @@ export function UserMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-60" align="end">
-        {/* User info + Admin toggle */}
+        {/* Version ribbon + Admin toggle */}
+        <div className="flex items-center justify-between px-2 py-1 bg-muted/50 border-b border-border">
+          <Link
+            href="/changelog"
+            className="inline-flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            v0.1.0-beta
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              if (isAdminMode) {
+                setRoleOverride(null);
+              } else {
+                setRoleOverride("production");
+              }
+            }}
+            className={`relative inline-flex items-center gap-1 rounded-md px-2 py-1 text-[9px] font-semibold transition-all shrink-0 ${
+              isAdminMode
+                ? "bg-[#dc2626] text-white"
+                : "bg-muted/80 text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <Shield className="h-2.5 w-2.5" />
+            {isAdminMode ? "Exit" : "Admin"}
+            {!isAdminMode && totalAdminNotifications > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#dc2626] text-[7px] font-bold text-white px-0.5 ring-1 ring-card">
+                {totalAdminNotifications}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* User info */}
         <div className="px-2 py-1.5">
-          <div className="flex items-start justify-between mb-0.5">
-            <div className="flex flex-col space-y-0.5">
-              <p className="text-sm font-medium">{displayName}</p>
-              <p className="text-xs text-muted-foreground">{user.email}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                if (isAdminMode) {
-                  setRoleOverride(null);
-                } else {
-                  setRoleOverride("production");
-                }
-              }}
-              className={`relative inline-flex items-center gap-1 rounded-md px-2 py-1 text-[9px] font-semibold transition-all shrink-0 ${
-                isAdminMode
-                  ? "bg-[#dc2626] text-white"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              <Shield className="h-2.5 w-2.5" />
-              {isAdminMode ? "Exit" : "Admin"}
-              {!isAdminMode && totalAdminNotifications > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#dc2626] text-[7px] font-bold text-white px-0.5 ring-1 ring-card">
-                  {totalAdminNotifications}
-                </span>
-              )}
-            </button>
-          </div>
+          <p className="text-sm font-medium">{displayName}</p>
+          <p className="text-xs text-muted-foreground">{user.email}</p>
         </div>
         <DropdownMenuSeparator />
 
