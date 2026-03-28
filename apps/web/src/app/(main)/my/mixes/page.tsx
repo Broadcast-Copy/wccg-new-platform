@@ -1214,20 +1214,23 @@ export default function MediaManagerPage() {
         </div>
       </div>
 
+      {/* Breadcrumb + Back */}
+      <div className="flex items-center gap-2">
+        {currentFolderId && (
+          <button
+            onClick={() => breadcrumbNavigate(folderPath.length - 2)}
+            className="flex items-center gap-1.5 shrink-0 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-[#74ddc7]/40 transition-colors"
+          >
+            <ChevronRight className="h-4 w-4 rotate-180" />
+            Back
+          </button>
+        )}
+        <BreadcrumbNav path={folderPath} onNavigate={breadcrumbNavigate} />
+      </div>
+
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          {currentFolderId && (
-            <button
-              onClick={() => breadcrumbNavigate(folderPath.length - 2)}
-              className="flex items-center gap-1 shrink-0 rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-[#74ddc7]/40 transition-colors"
-            >
-              <ChevronRight className="h-3.5 w-3.5 rotate-180" />
-              Back
-            </button>
-          )}
-          <BreadcrumbNav path={folderPath} onNavigate={breadcrumbNavigate} />
-        </div>
+        <div className="flex-1" />
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           {/* Search */}
           <div className="relative">
