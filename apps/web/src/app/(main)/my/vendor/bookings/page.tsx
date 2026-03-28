@@ -158,29 +158,19 @@ export default function BookingsPage() {
 
       if (!slotsRes.error && slotsRes.data) {
         // Map rows that represent slots (have service_name)
-        const slotRows = slotsRes.data.filter((row: any) => row.record_type === 'slot' || !row.record_type);
-        setSlots(slotRows.map((row: any) => ({
+        setSlots(slotsRes.data.map((row: any) => ({
           id: row.id,
           serviceName: row.service_name ?? '',
           type: row.type ?? 'Appointment',
-          duration: row.duration ?? '1 hour',
+          duration: row.duration_minutes ? `${row.duration_minutes} min` : '60 min',
           price: row.price ?? 0,
           capacity: row.capacity ?? 1,
-          available: row.available ?? true,
+          available: row.status === 'active',
           description: row.description ?? '',
         })));
 
-        const bookingRows = slotsRes.data.filter((row: any) => row.record_type === 'booking');
-        setBookings(bookingRows.map((row: any) => ({
-          id: row.id,
-          slotId: row.slot_id ?? '',
-          customerName: row.customer_name ?? '',
-          date: row.date ?? '',
-          time: row.time ?? '',
-          status: row.status ?? 'Pending',
-          serviceName: row.service_name ?? '',
-          type: row.type ?? 'Appointment',
-        })));
+        // Bookings come from booking_reservations table - fetch separately if needed
+        setBookings([]);
       }
       setLoading(false);
     }
@@ -212,12 +202,11 @@ export default function BookingsPage() {
         vendor_id: user!.id,
         service_name: form.serviceName.trim(),
         type: form.type,
-        duration: form.duration.trim() || "1 hour",
+        duration_minutes: parseInt(form.duration) || 60,
         price: parseFloat(form.price) || 0,
         capacity: parseInt(form.capacity) || 1,
-        available: true,
         description: form.description.trim(),
-        record_type: 'slot',
+        status: 'active',
       })
       .select();
 
@@ -227,10 +216,10 @@ export default function BookingsPage() {
         id: row.id,
         serviceName: row.service_name ?? '',
         type: row.type ?? 'Appointment',
-        duration: row.duration ?? '1 hour',
+        duration: row.duration_minutes ? `${row.duration_minutes} min` : '60 min',
         price: row.price ?? 0,
         capacity: row.capacity ?? 1,
-        available: row.available ?? true,
+        available: row.status === 'active',
         description: row.description ?? '',
       };
       setSlots((prev) => [newSlot, ...prev]);

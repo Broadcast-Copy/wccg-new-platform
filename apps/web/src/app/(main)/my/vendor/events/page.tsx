@@ -135,15 +135,15 @@ export default function VendorEventsPage() {
           id: row.id,
           title: row.title ?? '',
           description: row.description ?? '',
-          date: row.date ?? '',
-          time: row.time ?? 'TBD',
+          date: row.date ? new Date(row.date).toLocaleDateString() : '',
+          time: row.date ? new Date(row.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'TBD',
           venue: row.venue ?? 'TBD',
           capacity: row.capacity ?? 50,
-          sold: row.sold ?? 0,
+          sold: row.tickets_sold ?? 0,
           price: row.price ?? 0,
           ticketType: row.ticket_type ?? 'Paid',
           tokenReward: row.token_reward ?? 0,
-          status: row.status ?? 'Upcoming',
+          status: row.status ?? 'upcoming',
         });
         setEvents(data.filter((r: any) => r.status !== 'Past').map(mapRow));
         setPastEvents(data.filter((r: any) => r.status === 'Past').map(mapRow));
@@ -171,15 +171,14 @@ export default function VendorEventsPage() {
         vendor_id: user!.id,
         title: form.title.trim(),
         description: form.description.trim(),
-        date: form.date,
-        time: form.time || "TBD",
+        date: form.date ? new Date(form.date).toISOString() : new Date().toISOString(),
         venue: form.venue.trim() || "TBD",
         capacity: parseInt(form.capacity) || 50,
-        sold: 0,
+        tickets_sold: 0,
         price: parseFloat(form.price) || 0,
         ticket_type: form.ticketType,
         token_reward: distributeTokens ? parseInt(form.tokenReward) || 0 : 0,
-        status: "Upcoming",
+        status: 'upcoming',
       })
       .select();
 
@@ -189,15 +188,15 @@ export default function VendorEventsPage() {
         id: row.id,
         title: row.title ?? '',
         description: row.description ?? '',
-        date: row.date ?? '',
-        time: row.time ?? 'TBD',
+        date: row.date ? new Date(row.date).toLocaleDateString() : '',
+        time: row.date ? new Date(row.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'TBD',
         venue: row.venue ?? 'TBD',
         capacity: row.capacity ?? 50,
-        sold: row.sold ?? 0,
+        sold: row.tickets_sold ?? 0,
         price: row.price ?? 0,
         ticketType: row.ticket_type ?? 'Paid',
         tokenReward: row.token_reward ?? 0,
-        status: row.status ?? 'Upcoming',
+        status: row.status ?? 'upcoming',
       };
       setEvents((prev) => [newEvent, ...prev]);
     }
