@@ -50,6 +50,7 @@ import {
   Lock,
   Package,
   Music,
+  Award,
   Users,
   PenLine,
   Globe,
@@ -497,6 +498,24 @@ export function UserMenu() {
                 <Link href="/my/tickets">
                   <Ticket className="mr-2 h-4 w-4" />
                   My Tickets
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/perks">
+                  <Gift className="mr-2 h-4 w-4" />
+                  My Perks
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/requests">
+                  <Music className="mr-2 h-4 w-4" />
+                  Song Requests
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/leaderboard">
+                  <Award className="mr-2 h-4 w-4" />
+                  Leaderboard
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
