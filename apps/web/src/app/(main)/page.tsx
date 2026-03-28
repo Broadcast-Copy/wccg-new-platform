@@ -286,7 +286,7 @@ export default function HomePage() {
                 type="submit"
                 size="lg"
                 disabled={subscribing}
-                className="rounded-full bg-background text-white font-bold hover:bg-background/80 shadow-lg px-6 shrink-0"
+                className="rounded-full bg-[#dc2626] text-white font-bold hover:bg-[#b91c1c] shadow-lg px-6 shrink-0"
               >
                 {subscribing ? "Subscribing..." : "Subscribe"}
                 {!subscribing && <ArrowDownRight className="ml-1.5 h-4 w-4" />}

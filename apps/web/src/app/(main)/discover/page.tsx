@@ -75,7 +75,7 @@ export default function DiscoverPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="rounded-full border-white/20 text-white hover:bg-white/5 hover:text-white px-6"
+                className="rounded-full border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white px-6"
                 asChild
               >
                 <Link href="/shows">

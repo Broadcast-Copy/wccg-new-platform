@@ -126,7 +126,7 @@ export default function MediaKitPage() {
           <Button asChild className="rounded-full bg-white text-[#dc2626] font-bold hover:bg-white/90 px-6">
             <Link href="/advertise">Request a Proposal</Link>
           </Button>
-          <Button asChild variant="outline" className="rounded-full border-white/30 text-white hover:bg-foreground/10 px-6">
+          <Button asChild variant="outline" className="rounded-full border-white/30 bg-transparent text-white hover:bg-white/10 px-6">
             <Link href="/advertise/guidelines">View Ad Specs</Link>
           </Button>
         </div>
