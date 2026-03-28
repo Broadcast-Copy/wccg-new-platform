@@ -70,26 +70,28 @@ const HERO_SLIDES = [
 /* ------------------------------------------------------------------ */
 
 const HOT_CATEGORIES = [
-  { name: "Flash Drives", icon: Usb, gradient: "from-indigo-500 to-blue-600" },
-  { name: "Tank Tops", icon: Shirt, gradient: "from-emerald-500 to-green-600" },
-  {
-    name: "Water Bottles",
-    icon: Droplets,
-    gradient: "from-sky-500 to-blue-600",
-  },
-  { name: "Hoodies", icon: Shirt, gradient: "from-violet-500 to-purple-600" },
-  {
-    name: "Outdoors & Sports",
-    icon: Dumbbell,
-    gradient: "from-orange-500 to-red-600",
-  },
-  { name: "Snap Backs", icon: Package, gradient: "from-amber-500 to-orange-600" },
-  {
-    name: "Sweatshirts",
-    icon: Shirt,
-    gradient: "from-rose-500 to-pink-600",
-  },
+  { name: "Flash Drives", image: "/images/marketplace/hot-categories/usbdrive.png", gradient: "from-indigo-500 to-blue-600" },
+  { name: "Tank Tops", image: "/images/marketplace/hot-categories/tanktop.png", gradient: "from-emerald-500 to-green-600" },
+  { name: "Water Bottles", image: "/images/marketplace/hot-categories/waterbottle.png", gradient: "from-sky-500 to-blue-600" },
+  { name: "Hoodies", image: "/images/marketplace/hot-categories/hoodie.png", gradient: "from-violet-500 to-purple-600" },
+  { name: "Outdoors & Sports", image: "/images/marketplace/hot-categories/skigoggles.png", gradient: "from-orange-500 to-red-600" },
+  { name: "Snap Backs", image: "/images/marketplace/hot-categories/hat.png", gradient: "from-amber-500 to-orange-600" },
+  { name: "Sweatshirts", image: "/images/marketplace/hot-categories/sweatshirt.png", gradient: "from-rose-500 to-pink-600" },
 ];
+
+// Map product categories to images for product cards
+const CATEGORY_IMAGES: Record<string, string> = {
+  "Bags": "/images/marketplace/bag-promo.png",
+  "Apparel": "/images/marketplace/shirt-slide-1.png",
+  "Electronics": "/images/marketplace/male-headphones.png",
+  "Water Bottles": "/images/marketplace/hot-categories/waterbottle.png",
+  "Hoodies": "/images/marketplace/hot-categories/hoodie.png",
+  "Snap Backs": "/images/marketplace/hot-categories/hat.png",
+  "Tank Tops": "/images/marketplace/hot-categories/tanktop.png",
+  "Sweatshirts": "/images/marketplace/hot-categories/sweatshirt.png",
+  "Flash Drives": "/images/marketplace/hot-categories/usbdrive.png",
+  "Outdoors & Sports": "/images/marketplace/hot-categories/skigoggles.png",
+};
 
 /* ------------------------------------------------------------------ */
 /* Trust Bar Items                                                     */
@@ -277,23 +279,18 @@ export default function MarketplacePage() {
       <section className="space-y-4">
         <h2 className="text-2xl font-bold tracking-tight">Hot Categories</h2>
         <div className="flex flex-wrap gap-3">
-          {HOT_CATEGORIES.map((cat) => {
-            const Icon = cat.icon;
-            return (
+          {HOT_CATEGORIES.map((cat) => (
               <button
                 key={cat.name}
                 onClick={() => handleHotCategory(cat.name)}
-                className="group flex items-center gap-3 rounded-xl border bg-card px-4 py-3 transition-all hover:border-amber-500/40 hover:shadow-md"
+                className="group flex flex-col items-center gap-2 rounded-xl border bg-card p-3 transition-all hover:border-amber-500/40 hover:shadow-md w-[100px]"
               >
-                <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br ${cat.gradient} transition-transform group-hover:scale-110`}
-                >
-                  <Icon className="h-5 w-5 text-white" />
+                <div className={`flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br ${cat.gradient} overflow-hidden transition-transform group-hover:scale-110`}>
+                  <img src={cat.image} alt={cat.name} className="h-12 w-12 object-contain" />
                 </div>
-                <span className="text-sm font-medium">{cat.name}</span>
+                <span className="text-[11px] font-medium text-center leading-tight">{cat.name}</span>
               </button>
-            );
-          })}
+          ))}
         </div>
       </section>
 
@@ -380,10 +377,19 @@ export default function MarketplacePage() {
                 key={product.id}
                 className="group overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-lg"
               >
-                {/* Image placeholder */}
-                <div className="relative flex h-48 items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
-                  <ShoppingBag className="h-16 w-16 text-muted-foreground/30 transition-transform group-hover:scale-110" />
-                  {/* Category badge */}
+                {/* Product image */}
+                <div className="relative h-48 bg-gradient-to-br from-muted to-muted/50 overflow-hidden">
+                  {(product.image_url || (product.category && CATEGORY_IMAGES[product.category])) ? (
+                    <img
+                      src={product.image_url || CATEGORY_IMAGES[product.category!]}
+                      alt={product.name}
+                      className="h-full w-full object-contain p-4 transition-transform group-hover:scale-110"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <ShoppingBag className="h-16 w-16 text-muted-foreground/30" />
+                    </div>
+                  )}
                   {product.category && (
                     <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-0.5 text-[10px] font-medium text-white">
                       {product.category}
