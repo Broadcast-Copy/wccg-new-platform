@@ -474,7 +474,7 @@ export function UserMenu() {
                   Points & Rewards
                   {adminNotifications.points > 0 && (
                     <span className="absolute right-2 top-1/2 -translate-y-1/2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#14b8a6] text-[9px] font-bold text-white px-1">
-                      {adminNotifications.points > 9999 ? "9999+" : adminNotifications.points}
+                      {adminNotifications.points >= 100000 ? `${Math.floor(adminNotifications.points / 1000)}k` : adminNotifications.points.toLocaleString()}
                     </span>
                   )}
                 </Link>
