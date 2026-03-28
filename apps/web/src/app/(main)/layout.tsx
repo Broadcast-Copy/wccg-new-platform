@@ -57,17 +57,17 @@ const mobileNavLinks = [
   { href: "/shows", label: "Shows", icon: Mic },
   { href: "/events", label: "Events", icon: CalendarDays },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
-  { href: "/my/directory", label: "Directory", icon: MapPin },
+  { href: "/community", label: "Directory", icon: MapPin },
   { href: "/contact", label: "Connect", icon: Mail },
 ];
 
 // iHeartRadio-style bottom tab bar items
 const bottomTabs = [
   { href: "/", label: "Home", icon: Home, badgeKey: null as string | null },
-  { href: "/discover", label: "Discover", icon: Compass, badgeKey: null as string | null },
-  { href: "/channels", label: "Listen", icon: Radio, badgeKey: "shows" as string | null },
   { href: "/marketplace", label: "Shop", icon: ShoppingBag, badgeKey: "shop" as string | null },
-  { href: "/my/directory", label: "Directory", icon: MapPin, badgeKey: null as string | null },
+  { href: "/discover", label: "Discover", icon: Compass, badgeKey: null as string | null },
+  { href: "/events", label: "Events", icon: CalendarDays, badgeKey: null as string | null },
+  { href: "/community", label: "Directory", icon: MapPin, badgeKey: null as string | null },
 ];
 
 function NavLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
