@@ -184,12 +184,12 @@ export default function ProductionPage() {
       setJobs(
         data.map((row: Record<string, unknown>) => ({
           id: (row.id as string) ?? "",
-          client: (row.client as string) ?? "",
+          client: (row.title as string) ?? "",
           type: (row.type as string) ?? "",
-          due: (row.due as string) ?? "",
+          due: (row.due_date as string) ?? "",
           status: (row.status as JobStatus) ?? "Pending",
           assignedTo: (row.assigned_to as string) ?? "Unassigned",
-          project: (row.project as string) ?? undefined,
+          project: (row.description as string) ?? undefined,
         }))
       );
     }
@@ -347,13 +347,13 @@ export default function ProductionPage() {
 
     if (supabase) {
       const { error } = await supabase.from("productions").insert({
-        id: jobId,
-        client: job.client,
+        user_id: user?.id,
+        title: job.client,
         type: job.type,
-        due: job.due,
-        status: job.status,
+        due_date: job.due || null,
+        status: "pending_review",
         assigned_to: job.assignedTo,
-        project: job.project ?? null,
+        description: job.project ?? null,
         file_url: fileUrl,
       });
 
