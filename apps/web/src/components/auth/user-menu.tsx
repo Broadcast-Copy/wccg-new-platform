@@ -209,7 +209,7 @@ export function UserMenu() {
   const router = useRouter();
 
   // Real notification counts from Supabase — must be before early returns
-  const [adminNotifications, setAdminNotifications] = useState({ production: 0, sales: 0, bookings: 0 });
+  const [adminNotifications, setAdminNotifications] = useState({ production: 0, sales: 0, bookings: 0, points: 0 });
 
   useEffect(() => {
     if (!user) return;
@@ -230,10 +230,18 @@ export function UserMenu() {
           .select('*', { count: 'exact', head: true })
           .eq('status', 'pending');
 
+        // Get user points balance
+        const { data: pointsData } = await supabase
+          .from('user_points')
+          .select('balance')
+          .eq('user_id', user.id)
+          .single();
+
         setAdminNotifications({
           production: prodCount || 0,
           sales: salesCount || 0,
           bookings: bookingCount || 0,
+          points: pointsData?.balance || 0,
         });
       } catch {
         // Keep defaults
@@ -455,15 +463,20 @@ export function UserMenu() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/my/points">
-                  <Star className="mr-2 h-4 w-4" />
-                  Points & Rewards
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
                 <Link href="/my/favorites">
                   <Heart className="mr-2 h-4 w-4" />
                   Favorites
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/points" className="relative">
+                  <Star className="mr-2 h-4 w-4" />
+                  Points & Rewards
+                  {adminNotifications.points > 0 && (
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#14b8a6] text-[9px] font-bold text-white px-1">
+                      {adminNotifications.points > 9999 ? "9999+" : adminNotifications.points}
+                    </span>
+                  )}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
