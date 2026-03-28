@@ -209,7 +209,7 @@ export function UserMenu() {
   const router = useRouter();
 
   // Real notification counts from Supabase — must be before early returns
-  const [adminNotifications, setAdminNotifications] = useState({ production: 0, sales: 0 });
+  const [adminNotifications, setAdminNotifications] = useState({ production: 0, sales: 0, bookings: 0 });
 
   useEffect(() => {
     if (!user) return;
@@ -225,9 +225,15 @@ export function UserMenu() {
           .select('*', { count: 'exact', head: true })
           .eq('status', 'upcoming');
 
+        const { count: bookingCount } = await supabase
+          .from('booking_reservations')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending');
+
         setAdminNotifications({
           production: prodCount || 0,
           sales: salesCount || 0,
+          bookings: bookingCount || 0,
         });
       } catch {
         // Keep defaults
@@ -514,6 +520,12 @@ export function UserMenu() {
                   Events Manager
                 </Link>
               </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/vendor/media">
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  Creator Marketing
+                </Link>
+              </DropdownMenuItem>
             </>
           ) : (
             <>
@@ -539,9 +551,14 @@ export function UserMenu() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/my/vendor/bookings">
+                <Link href="/my/vendor/bookings" className="relative">
                   <CalendarDays className="mr-2 h-4 w-4" />
                   Bookings
+                  {adminNotifications.bookings > 0 && (
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#f59e0b] text-[9px] font-bold text-white px-1">
+                      {adminNotifications.bookings}
+                    </span>
+                  )}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -559,7 +576,7 @@ export function UserMenu() {
               <DropdownMenuItem asChild>
                 <Link href="/my/vendor/media">
                   <BarChart3 className="mr-2 h-4 w-4" />
-                  Marketing
+                  Vendor Marketing
                 </Link>
               </DropdownMenuItem>
             </>
