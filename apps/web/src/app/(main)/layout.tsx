@@ -66,7 +66,7 @@ const bottomTabs = [
   { href: "/", label: "Home", icon: Home, badgeKey: null as string | null },
   { href: "/events", label: "Events", icon: CalendarDays, badgeKey: null as string | null },
   { href: "/discover", label: "Discover", icon: Compass, badgeKey: null as string | null },
-  { href: "/marketplace", label: "Shop", icon: ShoppingBag, badgeKey: "shop" as string | null },
+  { href: "/marketplace", label: "Market", icon: ShoppingBag, badgeKey: "shop" as string | null },
   { href: "/community", label: "Directory", icon: MapPin, badgeKey: null as string | null },
 ];
 
