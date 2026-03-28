@@ -50,14 +50,15 @@ const streamingChannels = [
   { href: "/shows?stream=stream_vibe", label: "104.5 THE VIBE", badge: "/images/channels/vibe-badge.png" },
 ];
 
-// Full nav links for mobile drawer
+// Full nav links for mobile drawer — matches bottom tabs + extras
 const mobileNavLinks = [
-  { href: "/discover", label: "Discover", icon: Compass },
-  { href: "/channels", label: "Listen", icon: Headphones },
-  { href: "/shows", label: "Shows", icon: Mic },
+  { href: "/", label: "Home", icon: Home },
   { href: "/events", label: "Events", icon: CalendarDays },
+  { href: "/discover", label: "Discover", icon: Compass },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
   { href: "/community", label: "Directory", icon: MapPin },
+  { href: "/channels", label: "Listen", icon: Headphones },
+  { href: "/shows", label: "Shows", icon: Mic },
   { href: "/contact", label: "Connect", icon: Mail },
 ];
 
