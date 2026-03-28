@@ -58,9 +58,6 @@ const mobileNavLinks = [
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
   { href: "/community", label: "Directory", icon: MapPin },
-  { href: "/creators", label: "Creator Hub", icon: Mic },
-  { href: "/vendors/hub", label: "Vendor Hub", icon: Store },
-  { href: "/listeners", label: "Listener Hub", icon: Headphones },
   { href: "/contact", label: "Connect", icon: Mail },
 ];
 
