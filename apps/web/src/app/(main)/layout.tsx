@@ -64,9 +64,9 @@ const mobileNavLinks = [
 // iHeartRadio-style bottom tab bar items
 const bottomTabs = [
   { href: "/", label: "Home", icon: Home, badgeKey: null as string | null },
-  { href: "/channels", label: "Listen", icon: Radio, badgeKey: null as string | null },
+  { href: "/discover", label: "Discover", icon: Compass, badgeKey: null as string | null },
+  { href: "/channels", label: "Listen", icon: Radio, badgeKey: "shows" as string | null },
   { href: "/marketplace", label: "Shop", icon: ShoppingBag, badgeKey: "shop" as string | null },
-  { href: "/shows", label: "Shows", icon: Mic, badgeKey: "shows" as string | null },
   { href: "/my/directory", label: "Directory", icon: MapPin, badgeKey: null as string | null },
 ];
 
