@@ -79,11 +79,8 @@ const HOT_CATEGORIES = [
   { name: "Sweatshirts", image: "/images/marketplace/hot-categories/sweatshirt.png", gradient: "from-rose-500 to-pink-600" },
 ];
 
-// Map product categories to product images (NOT hero/promo images)
+// Map categories to matching product-type images (only where the image fits ALL products in category)
 const CATEGORY_IMAGES: Record<string, string> = {
-  "Bags": "/images/marketplace/promo/back-hoodie.png",
-  "Apparel": "/images/marketplace/categories/apparel.png",
-  "Electronics": "/images/marketplace/promo/buds-final.png",
   "Water Bottles": "/images/marketplace/hot-categories/waterbottle.png",
   "Hoodies": "/images/marketplace/hot-categories/hoodie.png",
   "Snap Backs": "/images/marketplace/hot-categories/hat.png",
