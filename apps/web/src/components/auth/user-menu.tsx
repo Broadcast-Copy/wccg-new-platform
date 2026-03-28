@@ -440,6 +440,12 @@ export function UserMenu() {
           ) : currentActiveMode === "listener" ? (
             <>
               <DropdownMenuItem asChild>
+                <Link href="/listeners">
+                  <Heart className="mr-2 h-4 w-4" />
+                  Listener Hub
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
                 <Link href="/my">
                   <LayoutDashboard className="mr-2 h-4 w-4" />
                   Dashboard
@@ -512,8 +518,14 @@ export function UserMenu() {
           ) : (
             <>
               <DropdownMenuItem asChild>
-                <Link href="/my/vendor/storefront">
+                <Link href="/vendors/hub">
                   <Store className="mr-2 h-4 w-4" />
+                  Vendor Hub
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/vendor/storefront">
+                  <Settings className="mr-2 h-4 w-4" />
                   Storefront Manager
                 </Link>
               </DropdownMenuItem>

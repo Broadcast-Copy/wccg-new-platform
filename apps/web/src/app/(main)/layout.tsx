@@ -31,6 +31,7 @@ import {
   ShoppingCart,
   ShoppingBag,
   MapPin,
+  Store,
 } from "lucide-react";
 import { useSupabase } from "@/components/providers/supabase-provider";
 
@@ -50,13 +51,16 @@ const streamingChannels = [
   { href: "/shows?stream=stream_vibe", label: "104.5 THE VIBE", badge: "/images/channels/vibe-badge.png" },
 ];
 
-// Full nav links for mobile drawer — matches bottom tabs + extras
+// Full nav links for mobile drawer
 const mobileNavLinks = [
   { href: "/", label: "Home", icon: Home },
   { href: "/events", label: "Events", icon: CalendarDays },
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
   { href: "/community", label: "Directory", icon: MapPin },
+  { href: "/creators", label: "Creator Hub", icon: Mic },
+  { href: "/vendors/hub", label: "Vendor Hub", icon: Store },
+  { href: "/listeners", label: "Listener Hub", icon: Headphones },
   { href: "/contact", label: "Connect", icon: Mail },
 ];
 
