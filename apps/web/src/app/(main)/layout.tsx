@@ -331,7 +331,7 @@ export default function MainLayout({
       </header>
 
       {/* Main content — pb accounts for bottom tab bar + player */}
-      <main className="flex-1 pb-40">
+      <main className="flex-1 pb-40" style={{ WebkitOverflowScrolling: "touch" }}>
         <div className="container pt-8 pb-6">{children}</div>
       </main>
 
