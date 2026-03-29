@@ -622,9 +622,24 @@ export function UserMenu() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/my/vendor/media">
+                <Link href="/my/vendor/analytics">
                   <BarChart3 className="mr-2 h-4 w-4" />
-                  Vendor Marketing
+                  Analytics
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/vendor/media">
+                  <Megaphone className="mr-2 h-4 w-4" />
+                  Marketing
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/vendors/hub" className="relative">
+                  <Store className="mr-2 h-4 w-4" />
+                  Vendor Hub
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#f59e0b] text-[9px] font-bold text-white px-1">
+                    New
+                  </span>
                 </Link>
               </DropdownMenuItem>
             </>

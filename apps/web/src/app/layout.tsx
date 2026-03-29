@@ -24,6 +24,7 @@ export const metadata: Metadata = {
   title: "WCCG 104.5 FM",
   description:
     "Your community radio station. Listen live, discover shows, earn rewards, and connect with your favorite hosts.",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
