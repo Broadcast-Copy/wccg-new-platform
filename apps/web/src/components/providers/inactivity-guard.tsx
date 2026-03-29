@@ -1,18 +1,15 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useInactivityLogout } from "@/hooks/use-inactivity-logout";
 
 /**
- * Thin wrapper component that activates the inactivity logout hook.
+ * InactivityGuard — DISABLED.
  *
- * Must be rendered inside both `<SupabaseProvider>` (for useAuth)
- * and `<AudioProvider>` (for useAudioPlayer) so the hook has access
- * to auth state and audio playback state.
- *
- * Placed as a child of `<StreamPlayerProvider>` in the root layout.
+ * The old useInactivityLogout hook used window.confirm() which fired
+ * even when not playing. Replaced by StillListeningModal component
+ * in the main layout which only triggers after 1hr of active playback.
  */
 export function InactivityGuard({ children }: { children: ReactNode }) {
-  useInactivityLogout();
+  // useInactivityLogout() — disabled, replaced by StillListeningModal
   return <>{children}</>;
 }
