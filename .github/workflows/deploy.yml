@@ -41,8 +41,8 @@ jobs:
       - name: Build for GitHub Pages
         env:
           GITHUB_PAGES: 'true'
-          NEXT_PUBLIC_SUPABASE_URL: 'https://lmoqvvkhibfiwudgdopb.supabase.co'
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxtb3F2dmtoaWJmaXd1ZGdkb3BiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzNDcxOTQsImV4cCI6MjA4NjkyMzE5NH0.gohJNliy0HBAwajzYwNZS44UTwZ-WBIF7zQUXWRjuLU'
+          NEXT_PUBLIC_SUPABASE_URL: 'https://irjiqbmoohklagdegezz.supabase.co'
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlyamlxYm1vb2hrbGFnZGVnZXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwNjU0MzEsImV4cCI6MjA4NTY0MTQzMX0.0-ChQ69cVWQjqbJYrLE5FbO6eBAKr7j8yHbnY4Fag3k'
           NEXT_PUBLIC_API_URL: 'https://api.wccg1045fm.com/api/v1'
         run: pnpm --filter web build
 
@@ -54,8 +54,8 @@ jobs:
       - name: Build for KnownHost (no basePath)
         env:
           GITHUB_PAGES: ''
-          NEXT_PUBLIC_SUPABASE_URL: 'https://lmoqvvkhibfiwudgdopb.supabase.co'
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxtb3F2dmtoaWJmaXd1ZGdkb3BiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzNDcxOTQsImV4cCI6MjA4NjkyMzE5NH0.gohJNliy0HBAwajzYwNZS44UTwZ-WBIF7zQUXWRjuLU'
+          NEXT_PUBLIC_SUPABASE_URL: 'https://irjiqbmoohklagdegezz.supabase.co'
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlyamlxYm1vb2hrbGFnZGVnZXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwNjU0MzEsImV4cCI6MjA4NTY0MTQzMX0.0-ChQ69cVWQjqbJYrLE5FbO6eBAKr7j8yHbnY4Fag3k'
           NEXT_PUBLIC_API_URL: 'https://api.wccg1045fm.com/api/v1'
         run: pnpm --filter web build
 
