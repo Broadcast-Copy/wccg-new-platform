@@ -331,7 +331,7 @@ export default function MainLayout({
       </header>
 
       {/* Main content — pb accounts for bottom tab bar + player */}
-      <main className="flex-1 pb-40" style={{ WebkitOverflowScrolling: "touch" }}>
+      <main className="flex-1 pb-44" style={{ WebkitOverflowScrolling: "touch", paddingBottom: "max(11rem, calc(11rem + env(safe-area-inset-bottom, 0px)))" }}>
         <div className="container pt-8 pb-6">{children}</div>
       </main>
 
@@ -512,7 +512,7 @@ export default function MainLayout({
         pathname.startsWith("/studio/video-editor") || pathname.startsWith("/studio/podcast") || pathname.startsWith("/studio/audio-editor")
           ? "hidden"
           : ""
-      }`}>
+      }`} style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
         <div className="flex items-center justify-around h-14 max-w-lg mx-auto">
           {bottomTabs.map((tab) => {
             const isActive =
