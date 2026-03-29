@@ -19,9 +19,9 @@ import {
 } from "@/components/ui/dialog";
 import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
-import { Heart, Loader2, Radio, Tv, Trash2 } from "lucide-react";
+import { Heart, Loader2, Radio, Tv, Trash2, MapPin, ShoppingBag, Calendar } from "lucide-react";
 
-type TargetType = "stream" | "show";
+type TargetType = "stream" | "show" | "place" | "product" | "event";
 
 interface FavoriteTarget {
   name: string;
@@ -65,17 +65,24 @@ function FavoriteImage({
   const gradients: Record<TargetType, string> = {
     stream: "from-blue-600 to-purple-600",
     show: "from-orange-500 to-pink-600",
+    place: "from-emerald-500 to-teal-600",
+    product: "from-amber-500 to-orange-600",
+    event: "from-violet-500 to-purple-600",
+  };
+
+  const icons: Record<TargetType, React.ReactNode> = {
+    stream: <Radio className="size-10 text-foreground/70" />,
+    show: <Tv className="size-10 text-foreground/70" />,
+    place: <MapPin className="size-10 text-foreground/70" />,
+    product: <ShoppingBag className="size-10 text-foreground/70" />,
+    event: <Calendar className="size-10 text-foreground/70" />,
   };
 
   return (
     <div
       className={`flex aspect-video w-full items-center justify-center rounded-md bg-gradient-to-br ${gradients[type]}`}
     >
-      {type === "stream" ? (
-        <Radio className="size-10 text-foreground/70" />
-      ) : (
-        <Tv className="size-10 text-foreground/70" />
-      )}
+      {icons[type]}
     </div>
   );
 }
@@ -90,11 +97,17 @@ function FavoriteCard({
   const [removing, setRemoving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const isStream = favorite.targetType === "stream";
   const name = favorite.target?.name ?? "Unknown";
   const slug = favorite.target?.slug ?? "";
   const imageUrl = favorite.target?.imageUrl ?? null;
-  const href = isStream ? `/shows?stream=${slug}` : `/shows/${slug}`;
+  const hrefMap: Record<TargetType, string> = {
+    stream: `/shows?stream=${slug}`,
+    show: `/shows/${slug}`,
+    place: `/community`,
+    product: `/marketplace`,
+    event: `/events/${slug}`,
+  };
+  const href = hrefMap[favorite.targetType] || "/";
 
   const handleRemove = async () => {
     setRemoving(true);
@@ -167,8 +180,8 @@ function FavoriteCard({
             </Dialog>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
-            <Badge variant="secondary" className="text-xs">
-              {isStream ? "Stream" : "Show"}
+            <Badge variant="secondary" className="text-xs capitalize">
+              {favorite.targetType}
             </Badge>
           </div>
         </div>
@@ -177,12 +190,12 @@ function FavoriteCard({
   );
 }
 
-function EmptyState({ tab }: { tab: "all" | "streams" | "shows" }) {
+function EmptyState({ tab }: { tab: string }) {
   const messages: Record<string, { text: string; link: string; linkText: string }> = {
     all: {
-      text: "Your favorite shows and streams will appear here.",
-      link: "/channels",
-      linkText: "Browse channels",
+      text: "Your favorites will appear here.",
+      link: "/discover",
+      linkText: "Start exploring",
     },
     streams: {
       text: "You haven't favorited any streams yet.",
@@ -193,6 +206,21 @@ function EmptyState({ tab }: { tab: "all" | "streams" | "shows" }) {
       text: "You haven't favorited any shows yet.",
       link: "/shows",
       linkText: "Browse shows",
+    },
+    places: {
+      text: "You haven't saved any places yet.",
+      link: "/community",
+      linkText: "Browse directory",
+    },
+    products: {
+      text: "You haven't favorited any products yet.",
+      link: "/marketplace",
+      linkText: "Browse marketplace",
+    },
+    events: {
+      text: "You haven't favorited any events yet.",
+      link: "/events",
+      linkText: "Browse events",
     },
   };
   const msg = messages[tab];
@@ -251,68 +279,46 @@ export function FavoritesList() {
 
   const streams = favorites.filter((f) => f.targetType === "stream");
   const shows = favorites.filter((f) => f.targetType === "show");
+  const places = favorites.filter((f) => f.targetType === "place");
+  const products = favorites.filter((f) => f.targetType === "product");
+  const events = favorites.filter((f) => f.targetType === "event");
+
+  const tabs = [
+    { value: "all", label: "All", items: favorites },
+    { value: "streams", label: "Streams", items: streams },
+    { value: "shows", label: "Shows", items: shows },
+    { value: "places", label: "Places", items: places },
+    { value: "products", label: "Products", items: products },
+    { value: "events", label: "Events", items: events },
+  ];
 
   return (
     <Tabs defaultValue="all" className="space-y-4">
       <TabsList>
-        <TabsTrigger value="all">
-          All ({favorites.length})
-        </TabsTrigger>
-        <TabsTrigger value="streams">
-          Streams ({streams.length})
-        </TabsTrigger>
-        <TabsTrigger value="shows">
-          Shows ({shows.length})
-        </TabsTrigger>
+        {tabs.map((tab) => (
+          <TabsTrigger key={tab.value} value={tab.value}>
+            {tab.label} ({tab.items.length})
+          </TabsTrigger>
+        ))}
       </TabsList>
 
-      <TabsContent value="all">
-        {favorites.length === 0 ? (
-          <EmptyState tab="all" />
-        ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {favorites.map((fav) => (
-              <FavoriteCard
-                key={fav.id}
-                favorite={fav}
-                onRemoved={handleRemoved}
-              />
-            ))}
-          </div>
-        )}
-      </TabsContent>
-
-      <TabsContent value="streams">
-        {streams.length === 0 ? (
-          <EmptyState tab="streams" />
-        ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {streams.map((fav) => (
-              <FavoriteCard
-                key={fav.id}
-                favorite={fav}
-                onRemoved={handleRemoved}
-              />
-            ))}
-          </div>
-        )}
-      </TabsContent>
-
-      <TabsContent value="shows">
-        {shows.length === 0 ? (
-          <EmptyState tab="shows" />
-        ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {shows.map((fav) => (
-              <FavoriteCard
-                key={fav.id}
-                favorite={fav}
-                onRemoved={handleRemoved}
-              />
-            ))}
-          </div>
-        )}
-      </TabsContent>
+      {tabs.map((tab) => (
+        <TabsContent key={tab.value} value={tab.value}>
+          {tab.items.length === 0 ? (
+            <EmptyState tab={tab.value} />
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {tab.items.map((fav) => (
+                <FavoriteCard
+                  key={fav.id}
+                  favorite={fav}
+                  onRemoved={handleRemoved}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      ))}
     </Tabs>
   );
 }
