@@ -156,11 +156,23 @@ const SEED_FOLDERS: MediaFolder[] = [
   { id: "mf3", name: "Promos", type: "folder", parentId: null, createdAt: "2026-02-10T10:00:00Z", updatedAt: now },
   { id: "mf4", name: "Voiceovers", type: "folder", parentId: null, createdAt: "2026-02-15T10:00:00Z", updatedAt: now },
   { id: "mf5", name: "Music Beds", type: "folder", parentId: null, createdAt: "2026-02-20T10:00:00Z", updatedAt: now },
+  // DJ folders inside DJ Mixes
+  { id: "dj1", name: "DJ Mike G", type: "folder", parentId: "mf1", createdAt: "2026-02-02T10:00:00Z", updatedAt: now },
+  { id: "dj2", name: "DJ IzzyNice", type: "folder", parentId: "mf1", createdAt: "2026-02-02T11:00:00Z", updatedAt: now },
+  { id: "dj3", name: "DJ Ike GDA", type: "folder", parentId: "mf1", createdAt: "2026-02-02T12:00:00Z", updatedAt: now },
+  { id: "dj4", name: "DJ Sam I Am", type: "folder", parentId: "mf1", createdAt: "2026-02-02T13:00:00Z", updatedAt: now },
+  { id: "dj5", name: "Bootleg Kev", type: "folder", parentId: "mf1", createdAt: "2026-02-02T14:00:00Z", updatedAt: now },
+  { id: "dj6", name: "Yung Joc", type: "folder", parentId: "mf1", createdAt: "2026-02-02T15:00:00Z", updatedAt: now },
+  { id: "dj7", name: "Mz Shyneka", type: "folder", parentId: "mf1", createdAt: "2026-02-02T16:00:00Z", updatedAt: now },
+  { id: "dj8", name: "Shawty Shawty", type: "folder", parentId: "mf1", createdAt: "2026-02-02T17:00:00Z", updatedAt: now },
+  { id: "dj9", name: "Angela Yee", type: "folder", parentId: "mf1", createdAt: "2026-02-02T18:00:00Z", updatedAt: now },
+  { id: "dj10", name: "Riich Villianz", type: "folder", parentId: "mf1", createdAt: "2026-02-02T19:00:00Z", updatedAt: now },
+  { id: "dj11", name: "Big Gleem", type: "folder", parentId: "mf1", createdAt: "2026-02-02T20:00:00Z", updatedAt: now },
 ];
 
 const SEED_FILES: MediaFile[] = [
-  { id: "fl1", name: "Friday Night Vibes Vol 3.mp3", type: "file", category: "mix", format: "mp3", duration: 3720, size: 89_400_000, folderId: "mf1", createdAt: "2026-02-28T20:00:00Z", updatedAt: now },
-  { id: "fl2", name: "Sunday Soul Brunch.mp3", type: "file", category: "mix", format: "mp3", duration: 5400, size: 129_600_000, folderId: "mf1", createdAt: "2026-02-20T12:00:00Z", updatedAt: now },
+  { id: "fl1", name: "Friday Night Vibes Vol 3.mp3", type: "file", category: "mix", format: "mp3", duration: 3720, size: 89_400_000, folderId: "dj1", createdAt: "2026-02-28T20:00:00Z", updatedAt: now },
+  { id: "fl2", name: "Sunday Soul Brunch.mp3", type: "file", category: "mix", format: "mp3", duration: 5400, size: 129_600_000, folderId: "dj2", createdAt: "2026-02-20T12:00:00Z", updatedAt: now },
   { id: "fl3", name: "Spring Auto Sale 30s.wav", type: "file", category: "commercial", format: "wav", duration: 30, size: 4_800_000, folderId: "mf2", createdAt: "2026-03-01T10:00:00Z", updatedAt: now },
   { id: "fl4", name: "Health Fair Spot 15s.wav", type: "file", category: "commercial", format: "wav", duration: 15, size: 2_400_000, folderId: "mf2", createdAt: "2026-03-03T14:00:00Z", updatedAt: now },
   { id: "fl5", name: "Weekend Events Promo.mp3", type: "file", category: "promo", format: "mp3", duration: 22, size: 3_600_000, folderId: "mf3", createdAt: "2026-03-02T09:00:00Z", updatedAt: now },
