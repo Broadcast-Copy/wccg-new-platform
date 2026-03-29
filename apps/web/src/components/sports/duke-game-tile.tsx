@@ -1548,26 +1548,26 @@ export function DukeGameTile() {
   return (
     <section className="px-4 sm:px-[50px] mt-[25px] space-y-0">
       {/* ── Countdown Ribbon ── */}
-      <div className={`relative overflow-hidden ${scoreExpanded ? "rounded-t-2xl" : "rounded-2xl"} border ${scoreExpanded ? "border-b-0" : ""} border-[#003087]/60 px-4 sm:px-6 py-3 sm:py-4`} style={{ background: "linear-gradient(to right, #001845, #000d2b, #001845)" }}>
+      <div className={`relative overflow-hidden ${scoreExpanded ? "rounded-t-2xl" : "rounded-2xl"} border ${scoreExpanded ? "border-b-0" : ""} border-[#003087]/20 dark:border-[#003087]/60 bg-gradient-to-r from-[#e8eef8] via-[#f0f4fa] to-[#e8eef8] dark:from-transparent dark:via-transparent dark:to-transparent px-4 sm:px-6 py-3 sm:py-4`} style={{ ['--tw-dark-bg' as string]: "linear-gradient(to right, #001845, #000d2b, #001845)" }}>
+        {/* Dark mode background */}
+        <div className="absolute inset-0 hidden dark:block" style={{ background: "linear-gradient(to right, #001845, #000d2b, #001845)" }} />
         <Link href="/sports/duke-basketball" className="block group">
           <div className="absolute inset-0 opacity-[0.04]">
             <div className="absolute inset-0" style={{
-              backgroundImage: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.3) 0%, transparent 50%)",
+              backgroundImage: "radial-gradient(circle at 20% 50%, rgba(0,48,135,0.15) 0%, transparent 50%)",
             }} />
           </div>
           <div className="relative z-10 flex flex-col items-center gap-2 sm:gap-3">
             {/* Row 1: Title */}
-            <h2 className="text-sm sm:text-base md:text-lg font-black text-white tracking-tight uppercase text-center">
+            <h2 className="text-sm sm:text-base md:text-lg font-black text-[#003087] dark:text-white tracking-tight uppercase text-center">
               Countdown to Crazy
             </h2>
 
             {/* Row 2: Matchup + Countdown */}
             <div className="flex items-center justify-center gap-3 sm:gap-5 w-full">
-              {/* Duke logo */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={DUKE_BASKETBALL.logoUrl} alt="Duke" className="h-6 w-6 sm:h-8 sm:w-8 object-contain shrink-0" />
 
-              {/* Countdown digits */}
               <div className="flex items-center gap-1 sm:gap-2">
                 {[
                   { value: countdown.days, label: "D" },
@@ -1576,36 +1576,35 @@ export function DukeGameTile() {
                   { value: countdown.seconds, label: "S" },
                 ].map((unit, i) => (
                   <div key={unit.label} className="flex items-center gap-0.5 sm:gap-1.5">
-                    <div className="flex items-center gap-0.5 rounded-lg bg-white/10 px-1.5 sm:px-2.5 py-1 sm:py-2">
-                      <span className="text-sm sm:text-xl font-black text-white tabular-nums leading-none">
+                    <div className="flex items-center gap-0.5 rounded-lg bg-[#003087]/10 dark:bg-white/10 px-1.5 sm:px-2.5 py-1 sm:py-2">
+                      <span className="text-sm sm:text-xl font-black text-[#003087] dark:text-white tabular-nums leading-none">
                         {pad(unit.value)}
                       </span>
-                      <span className="text-[7px] sm:text-[9px] font-bold text-white/40">{unit.label}</span>
+                      <span className="text-[7px] sm:text-[9px] font-bold text-[#003087]/40 dark:text-white/40">{unit.label}</span>
                     </div>
-                    {i < 3 && <span className="text-white/30 font-bold text-xs sm:text-sm">:</span>}
+                    {i < 3 && <span className="text-[#003087]/30 dark:text-white/30 font-bold text-xs sm:text-sm">:</span>}
                   </div>
                 ))}
               </div>
 
-              {/* Opponent logo */}
               {nextGame.opponentLogo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={nextGame.opponentLogo} alt={nextGame.opponent} className="h-6 w-6 sm:h-8 sm:w-8 object-contain shrink-0" />
               ) : (
-                <span className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-white/10 flex items-center justify-center text-[8px] sm:text-xs font-bold text-white/30 shrink-0">?</span>
+                <span className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-[#003087]/10 dark:bg-white/10 flex items-center justify-center text-[8px] sm:text-xs font-bold text-[#003087]/30 dark:text-white/30 shrink-0">?</span>
               )}
             </div>
 
             {/* Row 3: Game details */}
-            <div className="flex items-center justify-center gap-2 text-[9px] sm:text-[11px] text-white/40">
-              <span className="font-semibold text-white/60">{opponentShort}</span>
-              <span className="text-white/20">|</span>
+            <div className="flex items-center justify-center gap-2 text-[9px] sm:text-[11px] text-[#003087]/40 dark:text-white/40">
+              <span className="font-semibold text-[#003087]/60 dark:text-white/60">{opponentShort}</span>
+              <span className="text-[#003087]/20 dark:text-white/20">|</span>
               <span>{formattedDate}</span>
-              <span className="text-white/20">|</span>
+              <span className="text-[#003087]/20 dark:text-white/20">|</span>
               <span>{nextGame.time}</span>
               {nextGame.broadcast && (
                 <>
-                  <span className="text-white/20">|</span>
+                  <span className="text-[#003087]/20 dark:text-white/20">|</span>
                   <span>{nextGame.broadcast}</span>
                 </>
               )}
@@ -1615,7 +1614,7 @@ export function DukeGameTile() {
         {/* Toggle arrow */}
         <button
           onClick={() => setScoreExpanded((prev) => !prev)}
-          className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20 flex items-center gap-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white/70 text-[9px] sm:text-[10px] font-semibold px-2.5 sm:px-3 py-1 sm:py-1.5"
+          className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20 flex items-center gap-1 rounded-full bg-[#003087]/10 hover:bg-[#003087]/20 dark:bg-white/10 dark:hover:bg-white/20 transition-colors text-[#003087]/70 dark:text-white/70 text-[9px] sm:text-[10px] font-semibold px-2.5 sm:px-3 py-1 sm:py-1.5"
           aria-label={scoreExpanded ? "Minimize" : "Expand"}
         >
           {scoreExpanded ? "Minimize ▲" : "Expand ▼"}
