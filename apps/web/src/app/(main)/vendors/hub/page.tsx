@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSupabase } from "@/components/providers/supabase-provider";
+import { useAuth } from "@/hooks/use-auth";
 import { HubFeed } from "@/components/social/hub-feed";
 import {
   Store,
@@ -50,8 +51,26 @@ const resources = [
 // ---------------------------------------------------------------------------
 export default function VendorHubPage() {
   const { supabase } = useSupabase();
+  const { user } = useAuth();
+  const [isMember, setIsMember] = useState(false);
+  const [memberLoading, setMemberLoading] = useState(true);
+  const [joining, setJoining] = useState(false);
 
   const [stats, setStats] = useState({ vendors: 0, products: 0, events: 0 });
+
+  useEffect(() => {
+    if (!user) { setMemberLoading(false); return; }
+    supabase.from('hub_memberships').select('id').eq('user_id', user.id).eq('hub_type', 'vendor').single()
+      .then(({ data }) => { setIsMember(!!data); setMemberLoading(false); });
+  }, [user, supabase]);
+
+  async function handleJoin() {
+    if (!user) return;
+    setJoining(true);
+    await supabase.from('hub_memberships').insert({ user_id: user.id, hub_type: 'vendor' });
+    setIsMember(true);
+    setJoining(false);
+  }
 
   useEffect(() => {
     async function loadStats() {
@@ -78,76 +97,90 @@ export default function VendorHubPage() {
 
   return (
     <div className="space-y-8">
-      {/* ---- Hero ---- */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#f59e0b] to-[#d97706]">
-        <div className="relative px-6 py-10 sm:px-10 sm:py-14">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm shadow-xl">
-              <Store className="h-7 w-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-white">Vendor Hub</h1>
-              <p className="text-white/70 mt-1">
-                A network for vendors — wholesale, resources, and community
-                deals
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ---- Stats bar ---- */}
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: "Vendors", value: stats.vendors, icon: Users },
-          { label: "Products Listed", value: stats.products, icon: ShoppingBag },
-          { label: "Active Events", value: stats.events, icon: CalendarDays },
-        ].map((s) => (
-          <div
-            key={s.label}
-            className="rounded-xl border border-border bg-card p-4 flex items-center gap-3"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f59e0b]/10">
-              <s.icon className="h-5 w-5 text-[#f59e0b]" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{s.value}</p>
-              <p className="text-xs text-muted-foreground">{s.label}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ---- Resources grid ---- */}
-      <div>
-        <h2 className="text-xl font-semibold text-foreground mb-4">
-          Vendor Resources
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {resources.map((r) => (
-            <Link
-              key={r.title}
-              href={r.href}
-              className="group rounded-xl border border-border bg-card p-5 transition-all hover:border-input"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f59e0b]/10 mb-3">
-                <r.icon className="h-5 w-5 text-[#f59e0b]" />
-              </div>
-              <div className="flex items-start justify-between gap-2">
+      {memberLoading ? null : !isMember ? (
+        <>
+          {/* ---- Hero ---- */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#f59e0b] to-[#d97706]">
+            <div className="relative px-6 py-10 sm:px-10 sm:py-14">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm shadow-xl">
+                  <Store className="h-7 w-7 text-white" />
+                </div>
                 <div>
-                  <h3 className="font-semibold text-foreground mb-1">
-                    {r.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {r.description}
+                  <h1 className="text-3xl font-bold text-white">Vendor Hub</h1>
+                  <p className="text-white/70 mt-1">
+                    A network for vendors — wholesale, resources, and community
+                    deals
                   </p>
                 </div>
-                <ArrowRight className="h-4 w-4 mt-1 shrink-0 text-foreground/20 group-hover:text-[#f59e0b] transition-colors" />
               </div>
-            </Link>
-          ))}
+              {user && (
+                <button onClick={handleJoin} disabled={joining} className="mt-4 rounded-full bg-white text-gray-900 px-6 py-2 text-sm font-bold hover:bg-white/90 transition-colors disabled:opacity-50">
+                  {joining ? "Joining..." : "Join the Hub"}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* ---- Stats bar ---- */}
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { label: "Vendors", value: stats.vendors, icon: Users },
+              { label: "Products Listed", value: stats.products, icon: ShoppingBag },
+              { label: "Active Events", value: stats.events, icon: CalendarDays },
+            ].map((s) => (
+              <div
+                key={s.label}
+                className="rounded-xl border border-border bg-card p-4 flex items-center gap-3"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f59e0b]/10">
+                  <s.icon className="h-5 w-5 text-[#f59e0b]" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{s.value}</p>
+                  <p className="text-xs text-muted-foreground">{s.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ---- Resources grid ---- */}
+          <div>
+            <h2 className="text-xl font-semibold text-foreground mb-4">
+              Vendor Resources
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {resources.map((r) => (
+                <Link
+                  key={r.title}
+                  href={r.href}
+                  className="group rounded-xl border border-border bg-card p-5 transition-all hover:border-input"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f59e0b]/10 mb-3">
+                    <r.icon className="h-5 w-5 text-[#f59e0b]" />
+                  </div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h3 className="font-semibold text-foreground mb-1">
+                        {r.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {r.description}
+                      </p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 mt-1 shrink-0 text-foreground/20 group-hover:text-[#f59e0b] transition-colors" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Vendor Hub</h1>
+          <span className="text-xs text-muted-foreground">Member</span>
         </div>
-      </div>
+      )}
 
       {/* ---- Social Feed ---- */}
       <HubFeed

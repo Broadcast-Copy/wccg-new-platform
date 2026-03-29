@@ -36,6 +36,8 @@ interface Profile {
   avatar_url: string | null;
   user_type: string | null;
   vendor_verified: boolean;
+  has_creator_access: boolean;
+  has_vendor_access: boolean;
   created_at: string;
 }
 
@@ -116,6 +118,56 @@ export default function UserManagementPage() {
       );
       toast.success(
         `${profile.display_name || "User"} ${!profile.vendor_verified ? "verified" : "unverified"}`
+      );
+    }
+    setUpdating(null);
+  };
+
+  // Toggle has_creator_access
+  const toggleCreatorAccess = async (profile: Profile) => {
+    setUpdating(profile.id);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ has_creator_access: !profile.has_creator_access })
+      .eq("id", profile.id);
+
+    if (error) {
+      toast.error("Failed to update creator access");
+    } else {
+      setProfiles((prev) =>
+        prev.map((p) =>
+          p.id === profile.id
+            ? { ...p, has_creator_access: !p.has_creator_access }
+            : p
+        )
+      );
+      toast.success(
+        `Creator access ${!profile.has_creator_access ? "granted" : "revoked"} for ${profile.display_name || "User"}`
+      );
+    }
+    setUpdating(null);
+  };
+
+  // Toggle has_vendor_access
+  const toggleVendorAccess = async (profile: Profile) => {
+    setUpdating(profile.id);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ has_vendor_access: !profile.has_vendor_access })
+      .eq("id", profile.id);
+
+    if (error) {
+      toast.error("Failed to update vendor access");
+    } else {
+      setProfiles((prev) =>
+        prev.map((p) =>
+          p.id === profile.id
+            ? { ...p, has_vendor_access: !p.has_vendor_access }
+            : p
+        )
+      );
+      toast.success(
+        `Vendor access ${!profile.has_vendor_access ? "granted" : "revoked"} for ${profile.display_name || "User"}`
       );
     }
     setUpdating(null);
@@ -314,6 +366,32 @@ export default function UserManagementPage() {
                     onCheckedChange={() => toggleVerified(profile)}
                     disabled={updating === profile.id}
                     className="data-[state=checked]:bg-[#22c55e]"
+                  />
+                </div>
+
+                {/* Creator access toggle */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-muted-foreground">
+                    Creator
+                  </span>
+                  <Switch
+                    checked={profile.has_creator_access}
+                    onCheckedChange={() => toggleCreatorAccess(profile)}
+                    disabled={updating === profile.id}
+                    className="data-[state=checked]:bg-[#7401df]"
+                  />
+                </div>
+
+                {/* Vendor access toggle */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-muted-foreground">
+                    Vendor
+                  </span>
+                  <Switch
+                    checked={profile.has_vendor_access}
+                    onCheckedChange={() => toggleVendorAccess(profile)}
+                    disabled={updating === profile.id}
+                    className="data-[state=checked]:bg-[#f59e0b]"
                   />
                 </div>
 
