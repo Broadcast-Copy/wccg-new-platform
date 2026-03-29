@@ -439,8 +439,10 @@ export function UserMenu() {
                   <DropdownMenuItem asChild><Link href="/my/admin"><Shield className="mr-2 h-4 w-4" />Admin Dashboard</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/my/admin/cms"><Globe className="mr-2 h-4 w-4" />Web Editor / CMS</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/my/directory"><Store className="mr-2 h-4 w-4" />Listings</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/admin/programming"><Users className="mr-2 h-4 w-4" />Users</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/admin/operations/shifts"><CalendarDays className="mr-2 h-4 w-4" />Scheduling</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/admin/users"><Users className="mr-2 h-4 w-4" />User Management</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/admin/fees"><DollarSign className="mr-2 h-4 w-4" />Platform Fees</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/admin/moderation"><Eye className="mr-2 h-4 w-4" />Moderation</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/admin/audit-log"><Clock className="mr-2 h-4 w-4" />Audit Log</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/my/admin/operations"><Settings className="mr-2 h-4 w-4" />System Control</Link></DropdownMenuItem>
                 </>
               ) : roleOverride === "sales" ? (
@@ -498,6 +500,12 @@ export function UserMenu() {
                 <Link href="/my/perks">
                   <Gift className="mr-2 h-4 w-4" />
                   My Perks
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/orders">
+                  <ShoppingBag className="mr-2 h-4 w-4" />
+                  My Orders
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -561,6 +569,12 @@ export function UserMenu() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
+                <Link href="/my/vendor/orders">
+                  <Receipt className="mr-2 h-4 w-4" />
+                  Orders
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
                 <Link href="/my/vendor/storefront">
                   <Settings className="mr-2 h-4 w-4" />
                   Storefront Manager
@@ -593,6 +607,18 @@ export function UserMenu() {
                 <Link href="/my/vendor/customers">
                   <Users className="mr-2 h-4 w-4" />
                   Customer Manager
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/vendor/payouts">
+                  <DollarSign className="mr-2 h-4 w-4" />
+                  Payouts
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/vendor/shipping">
+                  <Package className="mr-2 h-4 w-4" />
+                  Shipping
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
