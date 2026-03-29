@@ -960,7 +960,7 @@ export default function MediaManagerPage() {
 
   const [mounted, setMounted] = useState(false);
   const [state, setState] = useState<MediaManagerState>(seedState());
-  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<MediaCategory | "all">("all");
   const [showUploader, setShowUploader] = useState(false);
