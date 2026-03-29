@@ -14,6 +14,7 @@ import { SpotCartDrawer } from "@/components/sales/spot-cart-drawer";
 import { SyncInitializer } from "@/components/providers/sync-initializer";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 import { StationAIChat } from "@/components/chat/station-ai-chat";
+import { WeatherRibbon } from "@/components/weather/weather-ribbon";
 import { useNowPlaying } from "@/hooks/use-now-playing";
 import {
   Compass,
@@ -326,6 +327,9 @@ export default function MainLayout({
           </div>
         </div>
       </header>
+
+      {/* Weather ribbon — always visible below header */}
+      <WeatherRibbon />
 
       {/* Main content — pb accounts for bottom tab bar + player */}
       <main className="flex-1 pb-32">
