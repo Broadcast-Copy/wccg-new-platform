@@ -422,7 +422,7 @@ function FileCard({
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-full mt-1 z-20 w-44 rounded-xl border border-border bg-card p-1.5 shadow-2xl">
+              <div className="absolute right-0 top-full mt-1 z-50 w-40 rounded-xl border border-border bg-card p-1.5 shadow-2xl max-h-64 overflow-y-auto">
                 {menuItems.map((item) => (
                   <button
                     key={item.key}
@@ -468,7 +468,7 @@ function FileCard({
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-full mt-1 z-20 w-44 rounded-xl border border-border bg-card p-1.5 shadow-2xl">
+              <div className="absolute right-0 top-full mt-1 z-50 w-40 rounded-xl border border-border bg-card p-1.5 shadow-2xl max-h-64 overflow-y-auto">
                 {menuItems.map((item) => (
                   <button
                     key={item.key}
