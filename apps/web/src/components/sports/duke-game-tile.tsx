@@ -1548,7 +1548,7 @@ export function DukeGameTile() {
   return (
     <section className="px-4 sm:px-[50px] mt-[25px] space-y-0">
       {/* ── Countdown Ribbon ── */}
-      <div className={`relative overflow-hidden ${scoreExpanded ? "rounded-t-2xl" : "rounded-2xl"} bg-gradient-to-r from-[#003087] via-[#001a4d] to-[#003087] border ${scoreExpanded ? "border-b-0" : ""} border-[#003087]/60 px-4 sm:px-6 py-3 sm:py-4`}>
+      <div className={`relative overflow-hidden ${scoreExpanded ? "rounded-t-2xl" : "rounded-2xl"} border ${scoreExpanded ? "border-b-0" : ""} border-[#003087]/60 px-4 sm:px-6 py-3 sm:py-4`} style={{ background: "linear-gradient(to right, #001845, #000d2b, #001845)" }}>
         <Link href="/sports/duke-basketball" className="block group">
           <div className="absolute inset-0 opacity-[0.04]">
             <div className="absolute inset-0" style={{
