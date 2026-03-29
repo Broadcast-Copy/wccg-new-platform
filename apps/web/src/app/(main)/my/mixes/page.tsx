@@ -447,8 +447,8 @@ function FileCard({
   // Grid card
   return (
     <div className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-input">
-      <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-[#7401df]/10 to-[#74ddc7]/5 flex items-center justify-center">
-        <FileAudio className="h-12 w-12 text-foreground/10" />
+      <div className="relative h-20 overflow-hidden bg-gradient-to-br from-[#7401df]/10 to-[#74ddc7]/5 flex items-center justify-center">
+        <FileAudio className="h-8 w-8 text-foreground/10" />
         {file.duration !== undefined && (
           <div className="absolute bottom-2 right-2 rounded-md bg-black/70 px-2 py-0.5 text-[11px] font-medium text-foreground backdrop-blur-sm">
             {formatDuration(file.duration)}
@@ -1378,7 +1378,7 @@ export default function MediaManagerPage() {
         {filteredFolders.length > 0 && (
           <div>
             <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-2">Folders</p>
-            <div className={viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3" : "flex flex-col gap-2"}>
+            <div className={viewMode === "grid" ? "grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2" : "flex flex-col gap-2"}>
               {filteredFolders.map((folder) => (
                 <FolderCard key={folder.id} folder={folder} onClick={() => navigateToFolder(folder)} itemCount={folderItemCounts[folder.id] || 0} viewMode={viewMode} />
               ))}
@@ -1390,7 +1390,7 @@ export default function MediaManagerPage() {
         {currentFiles.length > 0 && (
           <div>
             <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-2">Files</p>
-            <div className={viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3" : "flex flex-col gap-2"}>
+            <div className={viewMode === "grid" ? "grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2" : "flex flex-col gap-2"}>
               {currentFiles.map((file) => (
                 <FileCard key={file.id} file={file} viewMode={viewMode} onAction={handleFileAction} />
               ))}
