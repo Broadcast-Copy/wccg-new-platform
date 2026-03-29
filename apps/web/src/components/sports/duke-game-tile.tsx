@@ -1072,7 +1072,7 @@ export function DukeGameTile() {
   const [visiblePlays, setVisiblePlays] = useState<PlayByPlayEntry[]>([]);
   const [currentRevealedPlay, setCurrentRevealedPlay] = useState<PlayByPlayEntry | null>(null);
   const [currentPostGameEntry, setCurrentPostGameEntry] = useState<PostGameEntry | null>(null);
-  const [scoreExpanded, setScoreExpanded] = useState(true);
+  const [scoreExpanded, setScoreExpanded] = useState(false);
 
   // Detect post-game show window (up to 1 hour after game ends)
   const isPostGameShow = useMemo(() => {
@@ -1615,10 +1615,10 @@ export function DukeGameTile() {
         {/* Toggle arrow */}
         <button
           onClick={() => setScoreExpanded((prev) => !prev)}
-          className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20 flex items-center gap-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white/60 text-[9px] sm:text-[10px] font-semibold px-2 sm:px-3 py-1 sm:py-1.5"
+          className="absolute top-2 right-2 sm:top-3 sm:right-3 z-20 flex items-center gap-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white/70 text-[9px] sm:text-[10px] font-semibold px-2.5 sm:px-3 py-1 sm:py-1.5"
           aria-label={scoreExpanded ? "Minimize" : "Expand"}
         >
-          {scoreExpanded ? "▲" : "▼"}
+          {scoreExpanded ? "Minimize ▲" : "Expand ▼"}
         </button>
       </div>
 
