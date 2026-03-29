@@ -14,6 +14,7 @@ import { SpotCartDrawer } from "@/components/sales/spot-cart-drawer";
 import { SyncInitializer } from "@/components/providers/sync-initializer";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 import { StationAIChat } from "@/components/chat/station-ai-chat";
+import { StillListeningModal } from "@/components/player/still-listening-modal";
 import { WeatherPill } from "@/components/weather/weather-pill";
 import { useNowPlaying } from "@/hooks/use-now-playing";
 import {
@@ -502,6 +503,9 @@ export default function MainLayout({
 
       {/* AI Station Assistant */}
       <StationAIChat />
+
+      {/* Still Listening? modal — after 1hr of playback inactivity */}
+      <StillListeningModal />
 
       {/* Bottom Tab Bar — iHeartRadio-inspired, fixed (hidden on studio editor pages) */}
       <nav className={`fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-xl ${
