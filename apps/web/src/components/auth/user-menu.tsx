@@ -585,8 +585,8 @@ export function UserMenu() {
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/my/vendor/events">
-                  <Megaphone className="mr-2 h-4 w-4" />
-                  Event Manager
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  Events Manager
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
