@@ -331,12 +331,12 @@ export default function MainLayout({
       </header>
 
       {/* Main content — pb accounts for bottom tab bar + player */}
-      <main className="flex-1 pb-32">
+      <main className="flex-1 pb-40">
         <div className="container pt-8 pb-6">{children}</div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-background pb-28">
+      <footer className="border-t border-border bg-background pb-36">
         <div className="container py-10">
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-6">
             {/* Brand */}
