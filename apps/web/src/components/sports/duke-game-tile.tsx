@@ -1566,7 +1566,7 @@ export function DukeGameTile() {
             {/* Row 2: Matchup + Countdown */}
             <div className="flex items-center justify-center gap-3 sm:gap-5 w-full">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={DUKE_BASKETBALL.logoUrl} alt="Duke" className="h-6 w-6 sm:h-8 sm:w-8 object-contain shrink-0" />
+              <img src={DUKE_BASKETBALL.logoUrl} alt="Duke" className="h-10 w-10 sm:h-12 sm:w-12 object-contain shrink-0" />
 
               <div className="flex items-center gap-1 sm:gap-2">
                 {[
@@ -1589,9 +1589,9 @@ export function DukeGameTile() {
 
               {nextGame.opponentLogo ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={nextGame.opponentLogo} alt={nextGame.opponent} className="h-6 w-6 sm:h-8 sm:w-8 object-contain shrink-0" />
+                <img src={nextGame.opponentLogo} alt={nextGame.opponent} className="h-10 w-10 sm:h-12 sm:w-12 object-contain shrink-0" />
               ) : (
-                <span className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-[#003087]/10 dark:bg-white/10 flex items-center justify-center text-[8px] sm:text-xs font-bold text-[#003087]/30 dark:text-white/30 shrink-0">?</span>
+                <span className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-[#003087]/10 dark:bg-white/10 flex items-center justify-center text-xs sm:text-sm font-bold text-[#003087]/30 dark:text-white/30 shrink-0">?</span>
               )}
             </div>
 
@@ -1605,7 +1605,13 @@ export function DukeGameTile() {
               {nextGame.broadcast && (
                 <>
                   <span className="text-[#003087]/20 dark:text-white/20">|</span>
-                  <span>{nextGame.broadcast}</span>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/${nextGame.broadcast.toLowerCase().replace(/\s/g, '')}.png&w=40&h=40`}
+                    alt={nextGame.broadcast}
+                    className="h-4 w-4 object-contain inline-block"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).insertAdjacentText('afterend', nextGame.broadcast || ''); }}
+                  />
                 </>
               )}
             </div>
