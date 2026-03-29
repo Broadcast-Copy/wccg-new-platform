@@ -489,12 +489,6 @@ export function UserMenu() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/my/places">
-                  <MapPin className="mr-2 h-4 w-4" />
-                  My Places
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
                 <Link href="/my/tickets">
                   <Ticket className="mr-2 h-4 w-4" />
                   My Tickets
