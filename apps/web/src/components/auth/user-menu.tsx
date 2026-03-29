@@ -456,7 +456,7 @@ export function UserMenu() {
               ) : (
                 <>
                   <DropdownMenuItem asChild><Link href="/my/admin/production"><Clapperboard className="mr-2 h-4 w-4" />Production Queue</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/studio"><Mic className="mr-2 h-4 w-4" />Studio Manager</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/admin/studios"><Mic className="mr-2 h-4 w-4" />Studio Manager</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/my/mixes"><FolderOpen className="mr-2 h-4 w-4" />Media Manager</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/my/admin/creators"><Palette className="mr-2 h-4 w-4" />Creator Manager</Link></DropdownMenuItem>
                 </>
