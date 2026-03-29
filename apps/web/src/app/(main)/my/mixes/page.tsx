@@ -450,7 +450,7 @@ function FileCard({
       <div className="relative h-20 overflow-hidden bg-gradient-to-br from-[#7401df]/10 to-[#74ddc7]/5 flex items-center justify-center">
         <FileAudio className="h-8 w-8 text-foreground/10" />
         {file.duration !== undefined && (
-          <div className="absolute bottom-2 right-2 rounded-md bg-black/70 px-2 py-0.5 text-[11px] font-medium text-foreground backdrop-blur-sm">
+          <div className="absolute bottom-2 right-2 rounded-md bg-black/70 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
             {formatDuration(file.duration)}
           </div>
         )}
@@ -461,7 +461,7 @@ function FileCard({
         <div className="absolute top-2 right-2">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-foreground/70 hover:bg-black/70 backdrop-blur-sm transition-colors opacity-0 group-hover:opacity-100"
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white/70 hover:bg-black/70 backdrop-blur-sm transition-colors opacity-0 group-hover:opacity-100"
           >
             <MoreHorizontal className="h-3.5 w-3.5" />
           </button>
