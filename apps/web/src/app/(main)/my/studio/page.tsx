@@ -264,24 +264,29 @@ function InviteGuestDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           </div>
         </div>
 
-        {/* Invite Link + Copy */}
-        <div className="flex items-center gap-1.5">
-          <div className="flex-1 rounded-md border border-border bg-muted/50 px-2 py-1.5 text-[9px] text-foreground font-mono break-all select-all min-w-0 leading-tight">
-            {inviteLink}
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleCopy}
-            className="shrink-0 h-8 w-8 p-0"
-          >
-            {copied ? (
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-            ) : (
-              <Copy className="h-3.5 w-3.5" />
-            )}
-          </Button>
+        {/* Invite Link */}
+        <div className="rounded-md border border-border bg-muted/50 px-2 py-1.5 text-[9px] text-foreground font-mono break-all select-all leading-tight">
+          {inviteLink}
         </div>
+
+        {/* Copy Button */}
+        <Button
+          size="sm"
+          onClick={handleCopy}
+          className="w-full bg-[#74ddc7] hover:bg-[#74ddc7]/90 text-[#0a0a0f]"
+        >
+          {copied ? (
+            <>
+              <CheckCircle2 className="h-3.5 w-3.5 mr-1.5 text-emerald-700" />
+              Copied!
+            </>
+          ) : (
+            <>
+              <Copy className="h-3.5 w-3.5 mr-1.5" />
+              Copy Link
+            </>
+          )}
+        </Button>
       </DialogContent>
     </Dialog>
   );
