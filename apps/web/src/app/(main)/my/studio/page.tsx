@@ -223,7 +223,7 @@ function NewProjectModal({ open, onClose }: { open: boolean; onClose: () => void
 // ---------------------------------------------------------------------------
 
 function RealQRCode({ value, size = 180 }: { value: string; size?: number }) {
-  const qrUrl = `https://chart.googleapis.com/chart?cht=qr&chs=${size}x${size}&chl=${encodeURIComponent(value)}&choe=UTF-8&chld=M|2`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(value)}&margin=8`;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={qrUrl} alt="QR Code" width={size} height={size} className="mx-auto rounded-lg" />
