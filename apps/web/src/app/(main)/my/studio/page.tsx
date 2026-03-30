@@ -249,30 +249,30 @@ function InviteGuestDialog({ open, onOpenChange }: { open: boolean; onOpenChange
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm gap-3 p-5">
-        <DialogHeader className="gap-1">
-          <DialogTitle className="flex items-center gap-2 text-base">
+      <DialogContent className="sm:max-w-xs gap-2 p-4 overflow-hidden max-h-[90vh]">
+        <DialogHeader className="gap-0.5">
+          <DialogTitle className="flex items-center gap-2 text-sm">
             <UserPlus className="h-4 w-4 text-[#74ddc7]" />
             Invite Guest
           </DialogTitle>
-          <DialogDescription className="text-xs">
-            Share this QR code or link with your guest to join remotely.
+          <DialogDescription className="text-[11px]">
+            Share QR code or link to join remotely.
           </DialogDescription>
         </DialogHeader>
 
         {/* QR Code */}
-        <div className="flex flex-col items-center gap-2 py-2">
-          <div className="rounded-lg border border-border bg-white p-2 shadow-sm">
-            <RealQRCode value={inviteLink} size={140} />
+        <div className="flex flex-col items-center gap-1">
+          <div className="rounded-lg border border-border bg-white p-1.5">
+            <RealQRCode value={inviteLink} size={120} />
           </div>
-          <p className="text-[11px] text-muted-foreground text-center">
-            Scan with phone camera to join. No app required.
+          <p className="text-[10px] text-muted-foreground">
+            Scan with phone camera. No app needed.
           </p>
         </div>
 
         {/* Invite Link */}
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">Invite Link</label>
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-muted-foreground">Invite Link</label>
           <div className="flex items-center gap-2">
             <div className="flex-1 rounded-lg border border-border bg-muted/50 px-3 py-2 text-xs text-foreground font-mono truncate select-all">
               {inviteLink}
