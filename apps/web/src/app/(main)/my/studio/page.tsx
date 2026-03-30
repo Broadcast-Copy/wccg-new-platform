@@ -249,53 +249,51 @@ function InviteGuestDialog({ open, onOpenChange }: { open: boolean; onOpenChange
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xs gap-2 p-4 overflow-hidden max-h-[90vh]">
-        <DialogHeader className="gap-0.5">
-          <DialogTitle className="flex items-center gap-2 text-sm">
+      <DialogContent className="sm:max-w-sm gap-3 p-5 overflow-hidden">
+        <DialogHeader className="gap-1 text-center">
+          <DialogTitle className="flex items-center justify-center gap-2 text-base">
             <UserPlus className="h-4 w-4 text-[#74ddc7]" />
             Invite Guest
           </DialogTitle>
-          <DialogDescription className="text-[11px]">
+          <DialogDescription className="text-xs text-center">
             Share QR code or link to join remotely.
           </DialogDescription>
         </DialogHeader>
 
         {/* QR Code */}
-        <div className="flex flex-col items-center gap-1">
-          <div className="rounded-lg border border-border bg-white p-1.5">
-            <RealQRCode value={inviteLink} size={120} />
+        <div className="flex flex-col items-center gap-1.5">
+          <div className="rounded-lg border border-border bg-white p-2">
+            <RealQRCode value={inviteLink} size={150} />
           </div>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-[10px] text-muted-foreground text-center">
             Scan with phone camera. No app needed.
           </p>
         </div>
 
         {/* Invite Link */}
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <label className="text-[11px] font-medium text-muted-foreground">Invite Link</label>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 rounded-lg border border-border bg-muted/50 px-3 py-2 text-xs text-foreground font-mono truncate select-all">
-              {inviteLink}
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleCopy}
-              className="shrink-0"
-            >
-              {copied ? (
-                <>
-                  <CheckCircle2 className="h-3.5 w-3.5 mr-1.5 text-emerald-500" />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3.5 w-3.5 mr-1.5" />
-                  Copy
-                </>
-              )}
-            </Button>
+          <div className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-[10px] text-foreground font-mono break-all select-all">
+            {inviteLink}
           </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleCopy}
+            className="w-full"
+          >
+            {copied ? (
+              <>
+                <CheckCircle2 className="h-3.5 w-3.5 mr-1.5 text-emerald-500" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="h-3.5 w-3.5 mr-1.5" />
+                Copy Link
+              </>
+            )}
+          </Button>
         </div>
 
         <DialogFooter showCloseButton>
