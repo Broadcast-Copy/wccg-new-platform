@@ -219,63 +219,14 @@ function NewProjectModal({ open, onClose }: { open: boolean; onClose: () => void
 }
 
 // ---------------------------------------------------------------------------
-// QR Code SVG (simple placeholder — generates a visual QR pattern)
+// QR Code — uses Google Charts API to generate a real scannable QR code
 // ---------------------------------------------------------------------------
 
-function QRCodePlaceholder({ value, size = 180 }: { value: string; size?: number }) {
-  // Generate a deterministic pattern from the value string
-  const cells = 21; // 21x21 grid (QR Version 1 size)
-  const cellSize = size / cells;
-
-  // Simple hash to generate deterministic pattern
-  function hashChar(str: string, i: number) {
-    const code = str.charCodeAt(i % str.length);
-    return ((code * (i + 1) * 7 + i * 13) % 100) > 40;
-  }
-
-  const rects: { x: number; y: number }[] = [];
-  for (let row = 0; row < cells; row++) {
-    for (let col = 0; col < cells; col++) {
-      // Finder patterns (top-left, top-right, bottom-left)
-      const inFinderTL = row < 7 && col < 7;
-      const inFinderTR = row < 7 && col >= cells - 7;
-      const inFinderBL = row >= cells - 7 && col < 7;
-      const isFinderBorder =
-        (inFinderTL || inFinderTR || inFinderBL) &&
-        (row === 0 || row === 6 || col === 0 || col === 6 ||
-         (inFinderTR && (col === cells - 7 || col === cells - 1)) ||
-         (inFinderBL && (row === cells - 7 || row === cells - 1)));
-      const isFinderCenter =
-        (inFinderTL && row >= 2 && row <= 4 && col >= 2 && col <= 4) ||
-        (inFinderTR && row >= 2 && row <= 4 && col >= cells - 5 && col <= cells - 3) ||
-        (inFinderBL && row >= cells - 5 && row <= cells - 3 && col >= 2 && col <= 4);
-      const isFinderWhite =
-        (inFinderTL || inFinderTR || inFinderBL) && !isFinderBorder && !isFinderCenter;
-
-      if (isFinderBorder || isFinderCenter) {
-        rects.push({ x: col, y: row });
-      } else if (!isFinderWhite && !(inFinderTL || inFinderTR || inFinderBL)) {
-        if (hashChar(value, row * cells + col)) {
-          rects.push({ x: col, y: row });
-        }
-      }
-    }
-  }
-
+function RealQRCode({ value, size = 180 }: { value: string; size?: number }) {
+  const qrUrl = `https://chart.googleapis.com/chart?cht=qr&chs=${size}x${size}&chl=${encodeURIComponent(value)}&choe=UTF-8&chld=M|2`;
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="mx-auto">
-      <rect width={size} height={size} fill="white" rx="8" />
-      {rects.map((r, i) => (
-        <rect
-          key={i}
-          x={r.x * cellSize}
-          y={r.y * cellSize}
-          width={cellSize}
-          height={cellSize}
-          fill="#0a0a0f"
-        />
-      ))}
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={qrUrl} alt="QR Code" width={size} height={size} className="mx-auto rounded-lg" />
   );
 }
 
@@ -285,7 +236,9 @@ function QRCodePlaceholder({ value, size = 180 }: { value: string; size?: number
 
 function InviteGuestDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [copied, setCopied] = useState(false);
-  const inviteLink = "https://studio.wccg.fm/invite/abc123";
+  const inviteLink = typeof window !== "undefined"
+    ? `${window.location.origin}/studio/booking?invite=${Date.now().toString(36)}`
+    : "https://app.wccg1045fm.com/studio/booking";
 
   function handleCopy() {
     navigator.clipboard.writeText(inviteLink).then(() => {
@@ -310,7 +263,7 @@ function InviteGuestDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         {/* QR Code */}
         <div className="flex flex-col items-center gap-4 py-4">
           <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
-            <QRCodePlaceholder value={inviteLink} size={180} />
+            <RealQRCode value={inviteLink} size={180} />
           </div>
           <p className="text-xs text-muted-foreground text-center max-w-[280px]">
             Guests can scan this code with their phone camera to join from any browser. No app required.
