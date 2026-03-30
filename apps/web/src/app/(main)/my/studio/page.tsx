@@ -249,24 +249,24 @@ function InviteGuestDialog({ open, onOpenChange }: { open: boolean; onOpenChange
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-[#74ddc7]" />
+      <DialogContent className="sm:max-w-sm gap-3 p-5">
+        <DialogHeader className="gap-1">
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <UserPlus className="h-4 w-4 text-[#74ddc7]" />
             Invite Guest
           </DialogTitle>
-          <DialogDescription>
-            Share this QR code or link with your guest so they can join your studio session remotely.
+          <DialogDescription className="text-xs">
+            Share this QR code or link with your guest to join remotely.
           </DialogDescription>
         </DialogHeader>
 
         {/* QR Code */}
-        <div className="flex flex-col items-center gap-4 py-4">
-          <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
-            <RealQRCode value={inviteLink} size={180} />
+        <div className="flex flex-col items-center gap-2 py-2">
+          <div className="rounded-lg border border-border bg-white p-2 shadow-sm">
+            <RealQRCode value={inviteLink} size={140} />
           </div>
-          <p className="text-xs text-muted-foreground text-center max-w-[280px]">
-            Guests can scan this code with their phone camera to join from any browser. No app required.
+          <p className="text-[11px] text-muted-foreground text-center">
+            Scan with phone camera to join. No app required.
           </p>
         </div>
 
