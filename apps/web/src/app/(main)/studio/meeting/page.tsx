@@ -155,6 +155,12 @@ export default function MeetingRoomPage() {
   const [showReactions, setShowReactions] = useState(false);
   const [activeReaction, setActiveReaction] = useState<string | null>(null);
 
+  // -- Lobby --
+  const [lobbyGuests, setLobbyGuests] = useState<{ id: string; name: string; time: string }[]>([
+    { id: "lobby1", name: "Bootleg Kev", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
+  ]);
+  const [lobbyNotification, setLobbyNotification] = useState(true);
+
   // -- Schedule modal --
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduleForm, setScheduleForm] = useState({
@@ -187,6 +193,32 @@ export default function MeetingRoomPage() {
   ]);
   const [generatedLink, setGeneratedLink] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // -- Lobby functions --
+  function admitGuest(guestId: string) {
+    const guest = lobbyGuests.find((g) => g.id === guestId);
+    if (guest) {
+      setParticipants((prev) => [
+        ...prev,
+        {
+          id: guest.id,
+          name: guest.name,
+          role: "guest" as const,
+          muted: true,
+          camera: false,
+          initials: guest.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(),
+          gradient: "from-[#06b6d4] to-[#0891b2]",
+        },
+      ]);
+      setLobbyGuests((prev) => prev.filter((g) => g.id !== guestId));
+      if (lobbyGuests.length <= 1) setLobbyNotification(false);
+    }
+  }
+
+  function denyGuest(guestId: string) {
+    setLobbyGuests((prev) => prev.filter((g) => g.id !== guestId));
+    if (lobbyGuests.length <= 1) setLobbyNotification(false);
+  }
 
   // -- Timer --
   useEffect(() => {
@@ -359,6 +391,39 @@ export default function MeetingRoomPage() {
           </Button>
         </div>
       </div>
+
+      {/* ---- LOBBY NOTIFICATION ---- */}
+      {lobbyGuests.length > 0 && (
+        <div className="px-3 py-2 bg-amber-500/10 border-b border-amber-500/20 shrink-0">
+          {lobbyGuests.map((guest) => (
+            <div key={guest.id} className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                </span>
+                <span className="text-sm text-white font-medium truncate">{guest.name}</span>
+                <span className="text-xs text-white/40">is waiting in the lobby</span>
+                <span className="text-[10px] text-white/30">{guest.time}</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => admitGuest(guest.id)}
+                  className="rounded-lg bg-[#74ddc7] px-3 py-1 text-xs font-bold text-[#0a0a0f] hover:bg-[#74ddc7]/90 transition-colors"
+                >
+                  Admit
+                </button>
+                <button
+                  onClick={() => denyGuest(guest.id)}
+                  className="rounded-lg bg-white/10 px-3 py-1 text-xs font-medium text-white/60 hover:bg-white/20 transition-colors"
+                >
+                  Deny
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ---- MAIN AREA ---- */}
       <div className="flex flex-1 overflow-hidden">
