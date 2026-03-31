@@ -448,10 +448,12 @@ export function UserMenu() {
               ) : roleOverride === "sales" ? (
                 <>
                   <DropdownMenuItem asChild><Link href="/my/sales"><BarChart3 className="mr-2 h-4 w-4" />Sales Dashboard</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/sales/clients"><Briefcase className="mr-2 h-4 w-4" />Advertisers</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/marketing/campaigns"><Megaphone className="mr-2 h-4 w-4" />Campaigns</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/advertise/portal/campaign-builder"><Megaphone className="mr-2 h-4 w-4" />Campaign Builder</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/advertise/portal/dashboard"><BarChart3 className="mr-2 h-4 w-4" />Campaign Dashboard</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/admin/segments"><Users className="mr-2 h-4 w-4" />Audience Segments</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/admin/inventory"><Package className="mr-2 h-4 w-4" />Ad Inventory</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/admin/advertisers"><Briefcase className="mr-2 h-4 w-4" />Advertisers</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/my/admin/gm/revenue"><DollarSign className="mr-2 h-4 w-4" />Revenue</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/sales/pipeline"><Receipt className="mr-2 h-4 w-4" />Proposals</Link></DropdownMenuItem>
                 </>
               ) : (
                 <>
