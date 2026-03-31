@@ -296,7 +296,7 @@ export default function MeetingRoomPage() {
   // ================================================================
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] bg-[#0a0a0f] text-white overflow-hidden">
+    <div className="flex flex-col bg-[#0a0a0f] text-white overflow-hidden -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 -mb-6" style={{ height: "calc(100vh - 120px)" }}>
       {/* ---- TOP BAR ---- */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-[#0a0a0f]/90 backdrop-blur-sm shrink-0">
         <div className="flex items-center gap-3">
