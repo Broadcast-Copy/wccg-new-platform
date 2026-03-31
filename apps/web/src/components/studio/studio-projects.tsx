@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   Podcast,
@@ -10,8 +10,11 @@ import {
   ArrowRight,
   FolderOpen,
   Plus,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSupabase } from "@/components/providers/supabase-provider";
+import { useAuth } from "@/hooks/use-auth";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -22,15 +25,13 @@ type ProjectType = "podcast" | "video" | "audio";
 interface StudioProject {
   id: string;
   title: string;
-  description?: string;
-  category?: string;
   type: ProjectType;
   createdAt?: string;
   updatedAt?: string;
 }
 
 // ---------------------------------------------------------------------------
-// Tool config — colors match the creator tools
+// Tool config
 // ---------------------------------------------------------------------------
 
 const TOOL_CONFIG: Record<
@@ -75,71 +76,6 @@ const TOOL_CONFIG: Record<
 };
 
 // ---------------------------------------------------------------------------
-// LocalStorage keys
-// ---------------------------------------------------------------------------
-
-const PROJECTS_KEY = "wccg_studio_projects";
-const PODCAST_SERIES_KEY = "wccg_podcast_series"; // Legacy key for backward compat
-
-interface LegacyPodcastSeries {
-  id: string;
-  title: string;
-  description?: string;
-  category?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-// Map tool title → type key (handles old projects saved with tool name)
-function normalizeToolToType(tool?: string): ProjectType {
-  if (!tool) return "podcast";
-  const map: Record<string, ProjectType> = {
-    "Podcasts": "podcast",
-    "Video Editor": "video",
-    "Audio Editor": "audio",
-    "podcast": "podcast",
-    "video": "video",
-    "audio": "audio",
-  };
-  return map[tool] || "podcast";
-}
-
-function loadProjects(): StudioProject[] {
-  if (typeof window === "undefined") return [];
-  try {
-    // Try loading from unified key first
-    const raw = localStorage.getItem(PROJECTS_KEY);
-    if (raw) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const parsed = JSON.parse(raw) as any[];
-      return parsed.map((p) => ({
-        id: p.id,
-        title: p.title || p.name || "Untitled Project",
-        description: p.description,
-        category: p.category,
-        type: p.type ? normalizeToolToType(p.type) : normalizeToolToType(p.tool),
-        createdAt: p.createdAt,
-        updatedAt: p.updatedAt,
-      }));
-    }
-
-    // Fall back to legacy podcast series key
-    const legacyRaw = localStorage.getItem(PODCAST_SERIES_KEY);
-    if (legacyRaw) {
-      const legacy = JSON.parse(legacyRaw) as LegacyPodcastSeries[];
-      return legacy.map((s) => ({
-        ...s,
-        type: "podcast" as ProjectType,
-      }));
-    }
-
-    return [];
-  } catch {
-    return [];
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Time-ago helper
 // ---------------------------------------------------------------------------
 
@@ -161,18 +97,77 @@ function timeAgo(dateStr?: string): string {
 // ---------------------------------------------------------------------------
 
 export function StudioProjects() {
+  const { supabase } = useSupabase();
+  const { user } = useAuth();
   const [projects, setProjects] = useState<StudioProject[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const fetchProjects = useCallback(async () => {
+    if (!user) {
+      // Fallback to localStorage for unauthenticated users
+      try {
+        const raw = localStorage.getItem("wccg_studio_projects");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          setProjects(parsed.map((p: Record<string, string>) => ({
+            id: p.id,
+            title: p.title || "Untitled",
+            type: (p.type || p.tool || "podcast") as ProjectType,
+            createdAt: p.createdAt,
+            updatedAt: p.updatedAt,
+          })));
+        }
+      } catch { /* ignore */ }
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("studio_projects")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false });
+
+    if (!error && data) {
+      setProjects(data.map((row: Record<string, unknown>) => ({
+        id: row.id as string,
+        title: (row.title as string) || "Untitled",
+        type: (row.tool as ProjectType) || "podcast",
+        createdAt: row.created_at as string,
+        updatedAt: row.updated_at as string,
+      })));
+    }
+    setLoading(false);
+  }, [user, supabase]);
 
   useEffect(() => {
-    setMounted(true);
-    setProjects(loadProjects());
-  }, []);
+    fetchProjects();
+  }, [fetchProjects]);
 
-  // Don't render until client-side hydration to avoid mismatch
-  if (!mounted) return null;
+  async function deleteProject(id: string) {
+    if (!confirm("Delete this project?")) return;
+    if (user) {
+      await supabase.from("studio_projects").delete().eq("id", id);
+    }
+    setProjects((prev) => prev.filter((p) => p.id !== id));
+  }
 
-  // No projects — show a simple CTA
+  if (loading) {
+    return (
+      <section className="space-y-4">
+        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+          <FolderOpen className="h-5 w-5 text-[#7401df]" />
+          My Projects
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-32 rounded-xl border border-border bg-card animate-pulse" />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   if (projects.length === 0) {
     return (
       <section className="space-y-4">
@@ -184,9 +179,7 @@ export function StudioProjects() {
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#7401df]/10">
             <FolderOpen className="h-6 w-6 text-[#7401df]" />
           </div>
-          <p className="text-sm text-muted-foreground">
-            No projects yet
-          </p>
+          <p className="text-sm text-muted-foreground">No projects yet</p>
           <p className="text-xs text-muted-foreground max-w-sm text-center">
             Click &quot;New Project&quot; to create your first project.
           </p>
@@ -202,12 +195,7 @@ export function StudioProjects() {
           <FolderOpen className="h-5 w-5 text-[#7401df]" />
           My Projects
         </h2>
-        <Button
-          size="sm"
-          variant="outline"
-          asChild
-          className="rounded-lg text-xs"
-        >
+        <Button size="sm" variant="outline" asChild className="rounded-lg text-xs">
           <Link href="/studio/podcast">
             <Plus className="mr-1.5 h-3.5 w-3.5" />
             New Project
@@ -220,49 +208,25 @@ export function StudioProjects() {
           const config = TOOL_CONFIG[project.type] || TOOL_CONFIG.podcast;
           const ToolIcon = config.icon;
           return (
-            <Link
+            <div
               key={project.id}
-              href={config.href}
               className={`group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card p-4 transition-all ${config.borderHover} hover:shadow-lg ${config.shadowColor}`}
             >
-              {/* Icon + Info */}
               <div className="flex items-start gap-3">
-                <div
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${config.gradient}`}
-                >
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${config.gradient}`}>
                   <ToolIcon className="h-5 w-5 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors truncate">
-                    {project.title || "Untitled Project"}
-                  </h3>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span
-                      className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded"
-                      style={{
-                        color: config.accentColor,
-                        backgroundColor: `${config.accentColor}15`,
-                      }}
-                    >
-                      {config.label}
-                    </span>
-                    {project.category && (
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                        {project.category}
-                      </span>
-                    )}
-                  </div>
+                  <h3 className="font-semibold text-foreground truncate">{project.title}</h3>
+                  <span
+                    className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded"
+                    style={{ color: config.accentColor, backgroundColor: `${config.accentColor}15` }}
+                  >
+                    {config.label}
+                  </span>
                 </div>
               </div>
 
-              {/* Description */}
-              {project.description && (
-                <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
-                  {project.description}
-                </p>
-              )}
-
-              {/* Footer */}
               <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
                 {project.createdAt && (
                   <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
@@ -270,20 +234,23 @@ export function StudioProjects() {
                     {timeAgo(project.updatedAt || project.createdAt)}
                   </span>
                 )}
-                <span
-                  className="flex items-center gap-1 text-xs font-medium group-hover:text-[#74ddc7] transition-colors"
-                  style={{ color: config.accentColor }}
-                >
-                  Open
-                  <ArrowRight className="h-3 w-3" />
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => deleteProject(project.id)}
+                    className="text-muted-foreground/40 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                  <Link
+                    href={config.href}
+                    className="flex items-center gap-1 text-xs font-medium transition-colors"
+                    style={{ color: config.accentColor }}
+                  >
+                    Open <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
               </div>
-
-              {/* Color accent glow on hover */}
-              <div
-                className={`pointer-events-none absolute -inset-1 bg-gradient-to-br ${config.gradient} opacity-0 group-hover:opacity-[0.03] rounded-xl transition-opacity`}
-              />
-            </Link>
+            </div>
           );
         })}
       </div>

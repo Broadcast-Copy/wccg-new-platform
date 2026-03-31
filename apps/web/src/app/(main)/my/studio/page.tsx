@@ -81,29 +81,45 @@ function NewProjectModal({ open, onClose }: { open: boolean; onClose: () => void
 
   const canCreate = projectName.trim().length > 0 && selectedTool !== null;
 
-  function handleCreate() {
+  async function handleCreate() {
     if (!canCreate) return;
     const tool = TOOLS[selectedTool!];
 
-    // Save project to localStorage
-    const key = "wccg_studio_projects";
-    const existing = JSON.parse(localStorage.getItem(key) || "[]");
-    // Map tool title → project type key for consistent color mapping
     const toolTypeMap: Record<string, string> = {
       "Podcasts": "podcast",
       "Video Editor": "video",
       "Audio Editor": "audio",
     };
-    const newProject = {
-      id: `proj_${Date.now()}`,
-      title: projectName.trim(),
-      type: toolTypeMap[tool.title] || "podcast",
-      tool: tool.title,
-      toolHref: tool.href,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    localStorage.setItem(key, JSON.stringify([newProject, ...existing]));
+
+    // Save to Supabase if user is authenticated
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        await supabase.from("studio_projects").insert({
+          user_id: user.id,
+          title: projectName.trim(),
+          tool: toolTypeMap[tool.title] || "podcast",
+          data: { toolHref: tool.href },
+        });
+      }
+    } catch {
+      // Fallback: save to localStorage
+      const key = "wccg_studio_projects";
+      const existing = JSON.parse(localStorage.getItem(key) || "[]");
+      const newProject = {
+        id: `proj_${Date.now()}`,
+        title: projectName.trim(),
+        type: toolTypeMap[tool.title] || "podcast",
+        tool: tool.title,
+        toolHref: tool.href,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(key, JSON.stringify([newProject, ...existing]));
+    }
 
     // Navigate to the selected tool
     router.push(tool.href);
