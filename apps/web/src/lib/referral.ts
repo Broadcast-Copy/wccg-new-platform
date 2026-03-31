@@ -140,5 +140,5 @@ export function getStats(email: string): {
  */
 export function getReferralUrl(code: string): string {
   if (typeof window === "undefined") return "";
-  return `${window.location.origin}?ref=${code}`;
+  return `${window.location.origin}/register?ref=${code}`;
 }

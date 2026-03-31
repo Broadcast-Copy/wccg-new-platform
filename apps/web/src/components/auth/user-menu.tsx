@@ -54,6 +54,7 @@ import {
   Users,
   PenLine,
   Globe,
+  Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -442,6 +443,8 @@ export function UserMenu() {
                   <DropdownMenuItem asChild><Link href="/my/admin/users"><Users className="mr-2 h-4 w-4" />User Management</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/my/admin/fees"><DollarSign className="mr-2 h-4 w-4" />Platform Fees</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/my/admin/moderation"><Eye className="mr-2 h-4 w-4" />Moderation</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/admin/push"><Megaphone className="mr-2 h-4 w-4" />Push Notifications</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my/admin/email-campaigns"><Mail className="mr-2 h-4 w-4" />Email Campaigns</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/my/admin/audit-log"><Clock className="mr-2 h-4 w-4" />Audit Log</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/my/admin/operations"><Settings className="mr-2 h-4 w-4" />System Control</Link></DropdownMenuItem>
                 </>
@@ -553,6 +556,12 @@ export function UserMenu() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
+                <Link href="/my/podcast-rss">
+                  <Radio className="mr-2 h-4 w-4" />
+                  Podcast RSS
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
                 <Link href="/my/vendor/media">
                   <BarChart3 className="mr-2 h-4 w-4" />
                   Creator Marketing
@@ -621,6 +630,12 @@ export function UserMenu() {
                 <Link href="/my/vendor/shipping">
                   <Package className="mr-2 h-4 w-4" />
                   Shipping
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/my/vendor/tracking">
+                  <MapPin className="mr-2 h-4 w-4" />
+                  Tracking
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
