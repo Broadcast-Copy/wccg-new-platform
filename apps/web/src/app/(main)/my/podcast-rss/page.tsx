@@ -242,9 +242,9 @@ export default function PodcastRssPage() {
   if (!user?.email) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-12">
-        <Card className="border-white/10 bg-white/5">
+        <Card className="border-border bg-card">
           <CardContent className="py-12 text-center">
-            <p className="text-white/60">Sign in to use the Podcast RSS Generator</p>
+            <p className="text-foreground/60">Sign in to use the Podcast RSS Generator</p>
           </CardContent>
         </Card>
       </div>
@@ -256,87 +256,87 @@ export default function PodcastRssPage() {
       {/* Back link */}
       <Link
         href="/my"
-        className="mb-6 inline-flex items-center text-sm text-white/50 hover:text-white/70 transition-colors"
+        className="mb-6 inline-flex items-center text-sm text-foreground/50 hover:text-foreground/70 transition-colors"
       >
         &larr; Back to My Dashboard
       </Link>
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+        <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
           <Rss className="h-8 w-8 text-[#7401df]" />
           Podcast RSS Generator
         </h1>
-        <p className="mt-2 text-white/60">
+        <p className="mt-2 text-foreground/60">
           Generate an RSS feed URL for your podcast and submit to major platforms
         </p>
       </div>
 
       {/* Podcast Metadata Form */}
-      <Card className="mb-6 border-[#7401df]/20 bg-gradient-to-br from-[#7401df]/10 via-white/5 to-[#7401df]/5">
+      <Card className="mb-6 border-[#7401df]/20 bg-gradient-to-br from-[#7401df]/10 via-transparent to-[#7401df]/5">
         <CardHeader>
-          <CardTitle className="text-lg text-white flex items-center gap-2">
+          <CardTitle className="text-lg text-foreground flex items-center gap-2">
             <FileText className="h-5 w-5 text-[#7401df]" />
             Podcast Details
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-white/70 flex items-center gap-1">
+            <label className="mb-1 block text-sm font-medium text-foreground/70 flex items-center gap-1">
               <Music className="h-3.5 w-3.5" /> Podcast Name *
             </label>
             <Input
               value={meta.name}
               onChange={(e) => setMeta((m) => ({ ...m, name: e.target.value }))}
               placeholder="e.g. The WCCG Morning Show"
-              className="border-white/10 bg-white/5 text-white placeholder:text-white/30"
+              className="border-border bg-card text-foreground placeholder:text-muted-foreground"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-white/70">Description *</label>
+            <label className="mb-1 block text-sm font-medium text-foreground/70">Description *</label>
             <textarea
               value={meta.description}
               onChange={(e) => setMeta((m) => ({ ...m, description: e.target.value }))}
               placeholder="What is your podcast about?"
               rows={3}
-              className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-[#7401df]/50 focus:outline-none focus:ring-1 focus:ring-[#7401df]/50"
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-[#7401df]/50 focus:outline-none focus:ring-1 focus:ring-[#7401df]/50"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-white/70 flex items-center gap-1">
+              <label className="mb-1 block text-sm font-medium text-foreground/70 flex items-center gap-1">
                 <User className="h-3.5 w-3.5" /> Author *
               </label>
               <Input
                 value={meta.author}
                 onChange={(e) => setMeta((m) => ({ ...m, author: e.target.value }))}
                 placeholder="Your name"
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                className="border-border bg-card text-foreground placeholder:text-muted-foreground"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-white/70 flex items-center gap-1">
+              <label className="mb-1 block text-sm font-medium text-foreground/70 flex items-center gap-1">
                 <Mail className="h-3.5 w-3.5" /> Email
               </label>
               <Input
                 value={meta.email}
                 onChange={(e) => setMeta((m) => ({ ...m, email: e.target.value }))}
                 placeholder="podcast@example.com"
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                className="border-border bg-card text-foreground placeholder:text-muted-foreground"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-white/70">Category</label>
+              <label className="mb-1 block text-sm font-medium text-foreground/70">Category</label>
               <div className="relative">
                 <select
                   value={meta.category}
                   onChange={(e) => setMeta((m) => ({ ...m, category: e.target.value }))}
-                  className="w-full appearance-none rounded-md border border-white/10 bg-white/5 px-3 py-2 pr-8 text-sm text-white focus:border-[#7401df]/50 focus:outline-none"
+                  className="w-full appearance-none rounded-md border border-border bg-card px-3 py-2 pr-8 text-sm text-foreground focus:border-[#7401df]/50 focus:outline-none"
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c} value={c} className="bg-[#0a0a0f]">
@@ -344,18 +344,18 @@ export default function PodcastRssPage() {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/40" />
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-white/70 flex items-center gap-1">
+              <label className="mb-1 block text-sm font-medium text-foreground/70 flex items-center gap-1">
                 <Globe className="h-3.5 w-3.5" /> Language
               </label>
               <div className="relative">
                 <select
                   value={meta.language}
                   onChange={(e) => setMeta((m) => ({ ...m, language: e.target.value }))}
-                  className="w-full appearance-none rounded-md border border-white/10 bg-white/5 px-3 py-2 pr-8 text-sm text-white focus:border-[#7401df]/50 focus:outline-none"
+                  className="w-full appearance-none rounded-md border border-border bg-card px-3 py-2 pr-8 text-sm text-foreground focus:border-[#7401df]/50 focus:outline-none"
                 >
                   {LANGUAGES.map((l) => (
                     <option key={l.code} value={l.code} className="bg-[#0a0a0f]">
@@ -363,29 +363,29 @@ export default function PodcastRssPage() {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/40" />
               </div>
             </div>
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-white/70 flex items-center gap-1">
+            <label className="mb-1 block text-sm font-medium text-foreground/70 flex items-center gap-1">
               <ImageIcon className="h-3.5 w-3.5" /> Cover Image URL
             </label>
             <Input
               value={meta.imageUrl}
               onChange={(e) => setMeta((m) => ({ ...m, imageUrl: e.target.value }))}
               placeholder="https://example.com/cover.jpg (min 1400x1400px)"
-              className="border-white/10 bg-white/5 text-white placeholder:text-white/30"
+              className="border-border bg-card text-foreground placeholder:text-muted-foreground"
             />
           </div>
         </CardContent>
       </Card>
 
       {/* Episodes */}
-      <Card className="mb-6 border-white/10 bg-white/5">
+      <Card className="mb-6 border-border bg-card">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg text-white flex items-center gap-2">
+          <CardTitle className="text-lg text-foreground flex items-center gap-2">
             <Music className="h-5 w-5 text-[#7401df]" />
             Episodes
             {episodes.length > 0 && (
@@ -412,38 +412,38 @@ export default function PodcastRssPage() {
                 value={newEpisode.title}
                 onChange={(e) => setNewEpisode((ep) => ({ ...ep, title: e.target.value }))}
                 placeholder="Episode title *"
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                className="border-border bg-card text-foreground placeholder:text-muted-foreground"
               />
               <textarea
                 value={newEpisode.description}
                 onChange={(e) => setNewEpisode((ep) => ({ ...ep, description: e.target.value }))}
                 placeholder="Episode description..."
                 rows={2}
-                className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-[#7401df]/50 focus:outline-none focus:ring-1 focus:ring-[#7401df]/50"
+                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-[#7401df]/50 focus:outline-none focus:ring-1 focus:ring-[#7401df]/50"
               />
               <Input
                 value={newEpisode.audioUrl}
                 onChange={(e) => setNewEpisode((ep) => ({ ...ep, audioUrl: e.target.value }))}
                 placeholder="Audio file URL * (e.g. https://cdn.example.com/ep1.mp3)"
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                className="border-border bg-card text-foreground placeholder:text-muted-foreground"
               />
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs text-white/50">Publish Date</label>
+                  <label className="mb-1 block text-xs text-foreground/50">Publish Date</label>
                   <Input
                     type="date"
                     value={newEpisode.pubDate}
                     onChange={(e) => setNewEpisode((ep) => ({ ...ep, pubDate: e.target.value }))}
-                    className="border-white/10 bg-white/5 text-white"
+                    className="border-border bg-card text-foreground"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-white/50">Duration (HH:MM:SS)</label>
+                  <label className="mb-1 block text-xs text-foreground/50">Duration (HH:MM:SS)</label>
                   <Input
                     value={newEpisode.duration}
                     onChange={(e) => setNewEpisode((ep) => ({ ...ep, duration: e.target.value }))}
                     placeholder="01:23:45"
-                    className="border-white/10 bg-white/5 text-white placeholder:text-white/30"
+                    className="border-border bg-card text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
               </div>
@@ -451,14 +451,14 @@ export default function PodcastRssPage() {
                 <Button
                   onClick={addEpisode}
                   disabled={!newEpisode.title.trim() || !newEpisode.audioUrl.trim()}
-                  className="bg-[#7401df] hover:bg-[#7401df]/80 text-white"
+                  className="bg-[#7401df] hover:bg-[#7401df]/80 text-foreground"
                 >
                   Add Episode
                 </Button>
                 <Button
                   onClick={() => setShowAddEpisode(false)}
                   variant="outline"
-                  className="border-white/10 text-white/60 hover:bg-white/10"
+                  className="border-border text-foreground/60 hover:bg-muted"
                 >
                   Cancel
                 </Button>
@@ -468,7 +468,7 @@ export default function PodcastRssPage() {
 
           {/* Episode list */}
           {episodes.length === 0 ? (
-            <p className="text-sm text-white/40 text-center py-6">
+            <p className="text-sm text-foreground/40 text-center py-6">
               No episodes added yet. Click &quot;Add Episode&quot; to get started.
             </p>
           ) : (
@@ -476,20 +476,20 @@ export default function PodcastRssPage() {
               {episodes.map((ep, i) => (
                 <div
                   key={ep.id}
-                  className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-3"
+                  className="flex items-center gap-3 rounded-lg border border-border bg-card p-3"
                 >
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#7401df]/20 text-xs font-bold text-[#7401df] shrink-0">
                     {i + 1}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-semibold text-white truncate">{ep.title}</h4>
-                    <p className="text-xs text-white/40">
+                    <h4 className="text-sm font-semibold text-foreground truncate">{ep.title}</h4>
+                    <p className="text-xs text-foreground/40">
                       {new Date(ep.pubDate).toLocaleDateString()} &middot; {ep.duration}
                     </p>
                   </div>
                   <button
                     onClick={() => removeEpisode(ep.id)}
-                    className="text-white/30 hover:text-red-400 transition-colors"
+                    className="text-foreground/30 hover:text-red-400 transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -501,16 +501,16 @@ export default function PodcastRssPage() {
       </Card>
 
       {/* Feed URL & Actions */}
-      <Card className="mb-6 border-[#7401df]/20 bg-gradient-to-br from-[#7401df]/10 via-white/5 to-[#7401df]/5">
+      <Card className="mb-6 border-[#7401df]/20 bg-gradient-to-br from-[#7401df]/10 via-transparent to-[#7401df]/5">
         <CardHeader>
-          <CardTitle className="text-lg text-white flex items-center gap-2">
+          <CardTitle className="text-lg text-foreground flex items-center gap-2">
             <Rss className="h-5 w-5 text-[#7401df]" />
             Your RSS Feed
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-lg border border-white/10 bg-black/30 p-3">
-            <p className="text-xs text-white/40 mb-1">Feed URL</p>
+          <div className="rounded-lg border border-border bg-muted p-3">
+            <p className="text-xs text-foreground/40 mb-1">Feed URL</p>
             <p className="text-sm text-[#7401df] font-mono break-all">{feedUrl}</p>
           </div>
 
@@ -535,7 +535,7 @@ export default function PodcastRssPage() {
               onClick={() => setShowPreview(!showPreview)}
               disabled={!isFormValid}
               variant="outline"
-              className="border-white/10 text-white/60 hover:bg-white/10"
+              className="border-border text-foreground/60 hover:bg-muted"
             >
               <Code2 className="h-4 w-4 mr-1" />
               {showPreview ? "Hide" : "Preview"} XML
@@ -545,14 +545,14 @@ export default function PodcastRssPage() {
           {/* XML Preview */}
           {showPreview && (
             <div className="relative">
-              <pre className="max-h-80 overflow-auto rounded-lg border border-white/10 bg-black/50 p-4 text-xs text-green-400 font-mono whitespace-pre-wrap">
+              <pre className="max-h-80 overflow-auto rounded-lg border border-border bg-muted/80 p-4 text-xs text-green-400 font-mono whitespace-pre-wrap">
                 {rssXml}
               </pre>
               <Button
                 onClick={handleCopyXml}
                 size="sm"
                 variant="outline"
-                className="absolute top-2 right-2 border-white/10 text-white/40 hover:bg-white/10 text-xs"
+                className="absolute top-2 right-2 border-border text-foreground/40 hover:bg-muted text-xs"
               >
                 <Copy className="h-3 w-3 mr-1" /> Copy XML
               </Button>
@@ -562,23 +562,23 @@ export default function PodcastRssPage() {
       </Card>
 
       {/* Submit Instructions */}
-      <Card className="border-white/10 bg-white/5">
+      <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="text-lg text-white flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-white/60" />
+          <CardTitle className="text-lg text-foreground flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-foreground/60" />
             Submit to Platforms
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+            <div className="rounded-lg border border-border bg-card p-4">
               <div className="flex items-center gap-2 mb-2">
-                <div className="h-6 w-6 rounded bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold text-white">
+                <div className="h-6 w-6 rounded bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold text-foreground">
                   A
                 </div>
-                <h4 className="font-semibold text-white text-sm">Apple Podcasts</h4>
+                <h4 className="font-semibold text-foreground text-sm">Apple Podcasts</h4>
               </div>
-              <ol className="list-decimal list-inside text-xs text-white/50 space-y-1">
+              <ol className="list-decimal list-inside text-xs text-foreground/50 space-y-1">
                 <li>Go to Podcasts Connect (podcastsconnect.apple.com)</li>
                 <li>Sign in with your Apple ID</li>
                 <li>Click the + button and paste your RSS feed URL</li>
@@ -594,14 +594,14 @@ export default function PodcastRssPage() {
               </a>
             </div>
 
-            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+            <div className="rounded-lg border border-border bg-card p-4">
               <div className="flex items-center gap-2 mb-2">
-                <div className="h-6 w-6 rounded bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-xs font-bold text-white">
+                <div className="h-6 w-6 rounded bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-xs font-bold text-foreground">
                   S
                 </div>
-                <h4 className="font-semibold text-white text-sm">Spotify</h4>
+                <h4 className="font-semibold text-foreground text-sm">Spotify</h4>
               </div>
-              <ol className="list-decimal list-inside text-xs text-white/50 space-y-1">
+              <ol className="list-decimal list-inside text-xs text-foreground/50 space-y-1">
                 <li>Go to Spotify for Podcasters (podcasters.spotify.com)</li>
                 <li>Sign in or create a Spotify account</li>
                 <li>Click &quot;Get Started&quot; and paste your RSS feed URL</li>
@@ -617,14 +617,14 @@ export default function PodcastRssPage() {
               </a>
             </div>
 
-            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+            <div className="rounded-lg border border-border bg-card p-4">
               <div className="flex items-center gap-2 mb-2">
-                <div className="h-6 w-6 rounded bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-xs font-bold text-white">
+                <div className="h-6 w-6 rounded bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-xs font-bold text-foreground">
                   G
                 </div>
-                <h4 className="font-semibold text-white text-sm">Google Podcasts</h4>
+                <h4 className="font-semibold text-foreground text-sm">Google Podcasts</h4>
               </div>
-              <ol className="list-decimal list-inside text-xs text-white/50 space-y-1">
+              <ol className="list-decimal list-inside text-xs text-foreground/50 space-y-1">
                 <li>Go to Google Podcasts Manager (podcastsmanager.google.com)</li>
                 <li>Sign in with your Google account</li>
                 <li>Click &quot;Start Now&quot; and paste your RSS feed URL</li>
