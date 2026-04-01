@@ -92,6 +92,12 @@ export default function CreatorsPage() {
     setJoining(false);
   }
 
+  async function handleLeave() {
+    if (!user || !confirm("Leave the Creator Hub?")) return;
+    await supabase.from('hub_memberships').delete().eq('user_id', user.id).eq('hub_type', 'creator');
+    setIsMember(false);
+  }
+
   useEffect(() => {
     async function loadStats() {
       const [creatorsRes, projectsRes, weekRes] = await Promise.all([
@@ -201,10 +207,35 @@ export default function CreatorsPage() {
           </div>
         </>
       ) : (
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Creator Hub</h1>
-          <span className="text-xs text-muted-foreground">Member</span>
-        </div>
+        <>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#7401df]/10">
+                <Mic className="h-5 w-5 text-[#7401df]" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold">Creator Hub</h1>
+                <span className="text-xs text-[#7401df] font-medium">Member</span>
+              </div>
+            </div>
+            <button onClick={handleLeave} className="text-xs text-muted-foreground hover:text-red-400 transition-colors">
+              Leave Hub
+            </button>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {[
+              { href: "/my/studio", label: "Studio", icon: Mic },
+              { href: "/my/blog", label: "Blog", icon: Palette },
+              { href: "/my/podcast-rss", label: "Podcast RSS", icon: Podcast },
+              { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
+            ].map((t) => (
+              <Link key={t.href} href={t.href} className="flex items-center gap-2 rounded-lg border border-border bg-card p-2.5 text-xs font-medium hover:border-[#7401df]/40 transition-colors">
+                <t.icon className="h-3.5 w-3.5 text-[#7401df]" />
+                {t.label}
+              </Link>
+            ))}
+          </div>
+        </>
       )}
 
       {/* ---- Social Feed ---- */}
