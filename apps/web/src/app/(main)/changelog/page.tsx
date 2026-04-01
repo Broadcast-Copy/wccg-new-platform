@@ -14,12 +14,58 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "0.7.0-beta",
+    date: "March 31, 2026",
+    tag: "beta",
+    changes: [
+      "Studio projects now save to Supabase — persist across all devices",
+      "Zoom-style meeting room with video grid, controls, chat, lobby system",
+      "Guest lobby: guests wait until host clicks Admit or Deny",
+      "Video overlay system: 1045TV watermark, 8 preset overlays, text tool with animations",
+      "Floating back button in all studio tools",
+      "Role toggle now navigates to hub (Vendor→Vendor Hub, Creator→Creator Hub)",
+      "Podcast RSS page colors fixed for light mode",
+      "Studio Manager: manage all 7 station studios",
+    ],
+  },
+  {
+    version: "0.6.0-beta",
+    date: "March 31, 2026",
+    tag: "beta",
+    changes: [
+      "Push notification manager for admin",
+      "Referral program with QR codes and 100pts/signup",
+      "Podcast RSS generator with iTunes-compatible XML",
+      "A/B testing for ad creatives with auto-winner detection",
+      "Invoice PDF generation with WCCG letterhead",
+      "Email campaign builder with templates and HTML preview",
+      "Carrier tracking: USPS, FedEx, UPS, DHL with auto URLs",
+      "Service worker for offline support and push handling",
+    ],
+  },
+  {
+    version: "0.5.0-beta",
+    date: "March 30, 2026",
+    tag: "beta",
+    changes: [
+      "WCCG DSP: full demand-side platform for ad buying",
+      "6-step unified campaign builder (objective → audience → channels → creative → schedule → launch)",
+      "Cross-platform analytics dashboard with per-channel breakdowns",
+      "Audience segment builder with 6 targeting criteria",
+      "Ad inventory manager with 11 WCCG placements",
+      "Advertiser self-registration and management",
+      "API stubs for Meta, TikTok, Google, Snapchat (ready for keys)",
+      "Sponsored content component for hub feeds and marketplace",
+      "Budget allocator with auto/manual split modes",
+    ],
+  },
+  {
     version: "0.4.0-beta",
     date: "March 29, 2026",
     tag: "beta",
     changes: [
-      "Nice-to-haves: product reviews with star ratings, vendor analytics dashboard",
-      "Bulk gift card admin tool — generate 1-100 codes at any denomination",
+      "Product reviews with star ratings, vendor analytics dashboard",
+      "Bulk gift card admin tool — generate 1-100 codes",
       "Become a Vendor application form (/become-vendor)",
       "PWA manifest — install WCCG as an app on mobile",
       "Duke countdown card: theme-aware (light/dark), bigger logos, broadcast logo support",
@@ -90,7 +136,7 @@ const CHANGELOG: ChangelogEntry[] = [
 ];
 
 // Current version (shown in user menu)
-export const CURRENT_VERSION = CHANGELOG[0].version;
+export const CURRENT_VERSION = "0.7.0-beta";
 
 // ---------------------------------------------------------------------------
 // Tag Badge

@@ -339,7 +339,7 @@ export function UserMenu() {
             className="inline-flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
           >
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            v0.4.0-beta
+            v0.7.0-beta
           </Link>
           <button
             type="button"
