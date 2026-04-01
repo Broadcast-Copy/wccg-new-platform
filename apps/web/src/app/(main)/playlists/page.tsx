@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Music, ListMusic, Globe, User, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -31,7 +31,7 @@ interface PublicPlaylist {
 // Page
 // ---------------------------------------------------------------------------
 
-export default function PublicPlaylistPage() {
+function PlaylistInner() {
   const { supabase } = useSupabase();
   const searchParams = useSearchParams();
   const playlistId = searchParams.get("id");
@@ -198,5 +198,13 @@ export default function PublicPlaylistPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function PublicPlaylistPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-[60vh] items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
+      <PlaylistInner />
+    </Suspense>
   );
 }
