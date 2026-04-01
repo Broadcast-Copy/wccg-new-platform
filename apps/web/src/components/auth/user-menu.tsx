@@ -410,10 +410,13 @@ export function UserMenu() {
               onModeChange={(mode) => {
                 if (mode === "listener") {
                   setRoleOverride(null);
+                  router.push("/listeners");
                 } else if (mode === "creator") {
                   setRoleOverride("content_creator");
+                  router.push("/creators");
                 } else if (mode === "vendor") {
                   setRoleOverride("vendor");
+                  router.push("/vendors/hub");
                 }
               }}
             />
