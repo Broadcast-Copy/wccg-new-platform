@@ -410,13 +410,13 @@ export function UserMenu() {
               onModeChange={(mode) => {
                 if (mode === "listener") {
                   setRoleOverride(null);
-                  router.push("/listeners");
+                  setTimeout(() => { window.location.href = "/listeners"; }, 100);
                 } else if (mode === "creator") {
                   setRoleOverride("content_creator");
-                  router.push("/creators");
+                  setTimeout(() => { window.location.href = "/creators"; }, 100);
                 } else if (mode === "vendor") {
                   setRoleOverride("vendor");
-                  router.push("/vendors/hub");
+                  setTimeout(() => { window.location.href = "/vendors/hub"; }, 100);
                 }
               }}
             />
