@@ -644,7 +644,7 @@ export default function CommunityServicesPage() {
           </div>
 
           {/* Map panel — RIGHT */}
-          <div className="h-[600px] rounded-xl overflow-hidden border border-border shadow-lg lg:order-2">
+          <div className="relative z-0 h-[600px] rounded-xl overflow-hidden border border-border shadow-lg lg:order-2">
             <CommunityMap
               businesses={filteredListings}
               selectedBusiness={selectedListing}
