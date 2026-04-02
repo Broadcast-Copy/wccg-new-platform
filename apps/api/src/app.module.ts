@@ -23,6 +23,7 @@ import { MixesModule } from './modules/mixes/mixes.module.js';
 import { PodcastsModule } from './modules/podcasts/podcasts.module.js';
 import { AdvertisingModule } from './modules/advertising/advertising.module.js';
 import { FollowsModule } from './modules/follows/follows.module.js';
+import { HubsModule } from './modules/hubs/hubs.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { ModerationModule } from './modules/moderation/moderation.module.js';
 import { CmsModule } from './modules/cms/cms.module.js';
@@ -59,6 +60,7 @@ import { AppService } from './app.service.js';
     PodcastsModule,
     AdvertisingModule,
     FollowsModule,
+    HubsModule,
     NotificationsModule,
     ModerationModule,
 
