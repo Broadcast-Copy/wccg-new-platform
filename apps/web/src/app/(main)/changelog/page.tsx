@@ -136,7 +136,7 @@ const CHANGELOG: ChangelogEntry[] = [
 ];
 
 // Current version (shown in user menu)
-export const CURRENT_VERSION = "0.7.0-beta";
+const CURRENT_VERSION = "0.7.0-beta";
 
 // ---------------------------------------------------------------------------
 // Tag Badge
