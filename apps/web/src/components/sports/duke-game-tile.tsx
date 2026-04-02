@@ -1229,7 +1229,61 @@ export function DukeGameTile() {
     return () => clearInterval(timer);
   }, [gameDate, espnData]);
 
-  if (!nextGame) return null;
+  // ── OFFSEASON MODE ──
+  if (!nextGame) {
+    return (
+      <section className="px-4 md:px-[50px]">
+        <Link href="/sports/duke-basketball" className="block group">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#003087] via-[#001a4d] to-[#0a0a1a] border border-[#003087]/40 p-5 sm:p-6">
+            {/* Subtle texture */}
+            <div className="absolute inset-0 opacity-[0.04]">
+              <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.3) 0%, transparent 50%)" }} />
+            </div>
+            <div className="relative z-10 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+              {/* Duke logo */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={DUKE_BASKETBALL.logoUrl}
+                alt="Duke Blue Devils"
+                className="h-16 w-16 sm:h-20 sm:w-20 object-contain shrink-0 drop-shadow-lg"
+              />
+              {/* Info */}
+              <div className="flex-1 text-center sm:text-left">
+                <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
+                  <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">DUKE BASKETBALL</h2>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/10 text-white/60 font-bold uppercase tracking-wider border border-white/10">
+                    Offseason
+                  </span>
+                </div>
+                <p className="text-sm text-white/50 mb-2">
+                  2025-26 season complete — check back for 2026-27 schedule updates
+                </p>
+                {lastGame && (
+                  <div className="flex items-center justify-center sm:justify-start gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={lastGame.opponentLogo} alt={lastGame.opponent} className="h-6 w-6 object-contain opacity-70" />
+                    <span className="text-xs text-white/40">Last Game vs {lastGame.opponent}</span>
+                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                      lastGame.result === "W" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
+                    }`}>
+                      {lastGame.result} {lastGame.score.duke}-{lastGame.score.opponent}
+                    </span>
+                    <span className="text-[10px] text-white/30">
+                      {lastGame.topPerformer.name}: {lastGame.topPerformer.points} pts, {lastGame.topPerformer.rebounds} reb
+                    </span>
+                  </div>
+                )}
+              </div>
+              {/* Arrow */}
+              <div className="hidden sm:flex items-center text-white/30 group-hover:text-white/60 transition-colors">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+              </div>
+            </div>
+          </div>
+        </Link>
+      </section>
+    );
+  }
 
   const opponentShort =
     nextGame.opponent.split(" ").slice(0, -1).join(" ") || nextGame.opponent;
