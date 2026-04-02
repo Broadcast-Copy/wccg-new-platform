@@ -961,6 +961,187 @@ function DukeNewsAndVideos() {
   );
 }
 
+// ── Offseason Card — collapsible with rotating news ticker ──────────
+function DukeOffseasonCard({
+  lastGame,
+  dukeNews,
+}: {
+  lastGame: typeof DUKE_BASKETBALL.lastGame;
+  dukeNews: import("@/hooks/use-duke-news").DukeNewsItem[];
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Rotating text: season message + news headlines with fade
+  const SEASON_MSG = "2025-26 season complete — check back for 2026-27 schedule updates";
+  const allMessages = useMemo(() => {
+    const msgs = [SEASON_MSG];
+    for (const item of dukeNews.slice(0, 8)) {
+      msgs.push(item.headline);
+    }
+    return msgs;
+  }, [dukeNews]);
+
+  const [msgIndex, setMsgIndex] = useState(0);
+  const [fade, setFade] = useState(true);
+
+  useEffect(() => {
+    if (allMessages.length <= 1) return;
+    const interval = setInterval(() => {
+      setFade(false); // fade out
+      setTimeout(() => {
+        setMsgIndex((prev) => (prev + 1) % allMessages.length);
+        setFade(true); // fade in
+      }, 500);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [allMessages.length]);
+
+  return (
+    <section className="px-4 md:px-[50px]">
+      {/* Minimized bar — always visible */}
+      <button
+        onClick={() => setExpanded((prev) => !prev)}
+        className={`w-full text-left relative overflow-hidden bg-gradient-to-r from-[#003087] via-[#001a4d] to-[#0a0a1a] border border-[#003087]/40 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-5 hover:from-[#003087]/90 transition-all ${
+          expanded ? "rounded-t-2xl border-b-0" : "rounded-2xl"
+        }`}
+      >
+        {/* Subtle texture */}
+        <div className="absolute inset-0 opacity-[0.04]">
+          <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.3) 0%, transparent 50%)" }} />
+        </div>
+
+        {/* Duke logo */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={DUKE_BASKETBALL.logoUrl}
+          alt="Duke Blue Devils"
+          className="relative z-10 h-10 w-10 sm:h-12 sm:w-12 object-contain shrink-0 drop-shadow-lg"
+        />
+
+        {/* Title + rotating text */}
+        <div className="relative z-10 flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <h2 className="text-sm sm:text-base font-black text-white tracking-tight">DUKE BASKETBALL</h2>
+            <span className="text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-white/50 font-bold uppercase tracking-wider border border-white/10">
+              Offseason
+            </span>
+          </div>
+          {/* Rotating message with fade */}
+          <div className="h-5 overflow-hidden">
+            <p
+              className={`text-xs sm:text-sm text-white/50 truncate transition-opacity duration-500 ${
+                fade ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              {allMessages[msgIndex]}
+            </p>
+          </div>
+        </div>
+
+        {/* Last game badge */}
+        {lastGame && (
+          <span className={`relative z-10 hidden sm:inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+            lastGame.result === "W"
+              ? "bg-green-500/20 text-green-400 border border-green-500/30"
+              : "bg-red-500/20 text-red-400 border border-red-500/30"
+          }`}>
+            {lastGame.result} {lastGame.score.duke}-{lastGame.score.opponent}
+          </span>
+        )}
+
+        {/* Expand/collapse */}
+        <span className="relative z-10 text-white/40 text-[10px] shrink-0 flex items-center gap-1">
+          {expanded ? "Minimize" : "Expand"} {expanded ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {/* Expanded panel */}
+      {expanded && (
+        <div className="rounded-b-2xl overflow-hidden border border-t-0 border-[#003087]/40 bg-[#0a0e1a]">
+          <div className="grid grid-cols-1 lg:grid-cols-3">
+            {/* Left — Last Game + Season Stats */}
+            <div className="lg:col-span-1 border-b lg:border-b-0 lg:border-r border-white/10 p-5">
+              <h3 className="text-xs font-bold text-white/60 uppercase tracking-wider mb-4">Season Recap</h3>
+
+              {lastGame && (
+                <div className="space-y-3 mb-5">
+                  <div className="flex items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={lastGame.opponentLogo} alt={lastGame.opponent} className="h-10 w-10 object-contain opacity-80" />
+                    <div>
+                      <p className="text-sm font-bold text-white/80">Final Game vs {lastGame.opponent}</p>
+                      <p className={`text-xs font-bold ${lastGame.result === "W" ? "text-green-400" : "text-red-400"}`}>
+                        {lastGame.result} {lastGame.score.duke}-{lastGame.score.opponent}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1">Top Performer</p>
+                    <p className="text-sm font-bold text-white/80">{lastGame.topPerformer.name}</p>
+                    <p className="text-xs text-white/50">
+                      {lastGame.topPerformer.points} pts · {lastGame.topPerformer.rebounds} reb · {lastGame.topPerformer.assists} ast
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <Link
+                href="/sports/duke-basketball"
+                className="inline-flex items-center gap-2 text-xs font-bold text-[#74ddc7] hover:text-[#5bc4ae] transition-colors"
+              >
+                Full Team Page
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+              </Link>
+            </div>
+
+            {/* Right — Duke News Feed */}
+            <div className="lg:col-span-2 p-5">
+              <h3 className="text-xs font-bold text-white/60 uppercase tracking-wider mb-4">Latest Duke News</h3>
+              {dukeNews.length > 0 ? (
+                <div className="space-y-3 max-h-[320px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent pr-2">
+                  {dukeNews.slice(0, 10).map((item) => (
+                    <a
+                      key={item.id}
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-start gap-3 group hover:bg-white/5 rounded-lg p-2 -mx-2 transition-colors"
+                    >
+                      {item.thumbnail && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={item.thumbnail}
+                          alt=""
+                          className="h-14 w-20 object-cover rounded-md shrink-0 opacity-80 group-hover:opacity-100 transition-opacity"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-white/80 group-hover:text-white line-clamp-2 transition-colors">
+                          {item.headline}
+                        </p>
+                        {item.description && (
+                          <p className="text-xs text-white/40 line-clamp-1 mt-0.5">{item.description}</p>
+                        )}
+                        {item.published && (
+                          <p className="text-[10px] text-white/25 mt-1">
+                            {new Date(item.published).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          </p>
+                        )}
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-white/30">Loading news...</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function DukeGameTile() {
   // Fetch latest schedule from ESPN client-side to override hardcoded data
   const [espnNextGame, setEspnNextGame] = useState(DUKE_BASKETBALL.nextGame);
@@ -1231,58 +1412,7 @@ export function DukeGameTile() {
 
   // ── OFFSEASON MODE ──
   if (!nextGame) {
-    return (
-      <section className="px-4 md:px-[50px]">
-        <Link href="/sports/duke-basketball" className="block group">
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#003087] via-[#001a4d] to-[#0a0a1a] border border-[#003087]/40 p-5 sm:p-6">
-            {/* Subtle texture */}
-            <div className="absolute inset-0 opacity-[0.04]">
-              <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.3) 0%, transparent 50%)" }} />
-            </div>
-            <div className="relative z-10 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-              {/* Duke logo */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={DUKE_BASKETBALL.logoUrl}
-                alt="Duke Blue Devils"
-                className="h-16 w-16 sm:h-20 sm:w-20 object-contain shrink-0 drop-shadow-lg"
-              />
-              {/* Info */}
-              <div className="flex-1 text-center sm:text-left">
-                <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
-                  <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">DUKE BASKETBALL</h2>
-                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/10 text-white/60 font-bold uppercase tracking-wider border border-white/10">
-                    Offseason
-                  </span>
-                </div>
-                <p className="text-sm text-white/50 mb-2">
-                  2025-26 season complete — check back for 2026-27 schedule updates
-                </p>
-                {lastGame && (
-                  <div className="flex items-center justify-center sm:justify-start gap-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={lastGame.opponentLogo} alt={lastGame.opponent} className="h-6 w-6 object-contain opacity-70" />
-                    <span className="text-xs text-white/40">Last Game vs {lastGame.opponent}</span>
-                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-                      lastGame.result === "W" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
-                    }`}>
-                      {lastGame.result} {lastGame.score.duke}-{lastGame.score.opponent}
-                    </span>
-                    <span className="text-[10px] text-white/30">
-                      {lastGame.topPerformer.name}: {lastGame.topPerformer.points} pts, {lastGame.topPerformer.rebounds} reb
-                    </span>
-                  </div>
-                )}
-              </div>
-              {/* Arrow */}
-              <div className="hidden sm:flex items-center text-white/30 group-hover:text-white/60 transition-colors">
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-              </div>
-            </div>
-          </div>
-        </Link>
-      </section>
-    );
+    return <DukeOffseasonCard lastGame={lastGame} dukeNews={dukeNews} />;
   }
 
   const opponentShort =
