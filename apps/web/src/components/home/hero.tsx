@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { AppImage as Image } from "@/components/ui/app-image";
 import { ArrowDownRight } from "lucide-react";
 import { HERO_SHOWS, type ShowData } from "@/data/shows";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
+import { useDukeNews } from "@/hooks/use-duke-news";
+import { useSupabase } from "@/components/providers/supabase-provider";
 
 const SLIDE_INTERVAL = 8000;
 
@@ -60,7 +62,7 @@ const ALL_HERO_SLIDES: HeroSlide[] = (() => {
   return result;
 })();
 
-const TICKER_ITEMS = [
+const FALLBACK_TICKER_ITEMS = [
   "WCCG 104.5 FM — Fayetteville's Hip Hop Station",
   "Streetz Morning Takeover weekdays 6AM-10AM",
   "Way Up with Angela Yee weekdays 10AM-3PM",
@@ -68,6 +70,42 @@ const TICKER_ITEMS = [
   "Submit your music — tap Connect above",
   "Community events, local business directory & more",
 ];
+
+function useTickerItems() {
+  const dukeNews = useDukeNews();
+  const { supabase } = useSupabase();
+  const [blogTitles, setBlogTitles] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchBlogs() {
+      const { data } = await supabase
+        .from("blog_posts")
+        .select("title")
+        .eq("status", "published")
+        .order("created_at", { ascending: false })
+        .limit(6);
+      if (!cancelled && data && data.length > 0) {
+        setBlogTitles(data.map((p: { title: string }) => p.title));
+      }
+    }
+    fetchBlogs();
+    return () => { cancelled = true; };
+  }, [supabase]);
+
+  return useMemo(() => {
+    const dynamic: string[] = [];
+    // Add Duke news headlines
+    for (const item of dukeNews.slice(0, 5)) {
+      dynamic.push(item.headline);
+    }
+    // Add blog post titles
+    for (const title of blogTitles.slice(0, 5)) {
+      dynamic.push(title);
+    }
+    return dynamic.length > 0 ? dynamic : FALLBACK_TICKER_ITEMS;
+  }, [dukeNews, blogTitles]);
+}
 
 export function Hero() {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -94,6 +132,7 @@ export function Hero() {
     };
   }, [activeIndex, isPaused, advanceSlide]);
 
+  const tickerItems = useTickerItems();
   const { open: openStreamPlayer } = useStreamPlayer();
 
   const handleListenLive = () => {
@@ -243,7 +282,7 @@ export function Hero() {
             </div>
             <div className="flex-1 overflow-hidden">
               <div className="animate-marquee flex items-center gap-8 whitespace-nowrap">
-                {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
+                {[...tickerItems, ...tickerItems].map((item, i) => (
                   <span
                     key={i}
                     className="text-xs text-muted-foreground flex items-center gap-8"
@@ -391,7 +430,7 @@ export function Hero() {
             {/* Scrolling text */}
             <div className="flex-1 overflow-hidden">
               <div className="animate-marquee flex items-center gap-8 whitespace-nowrap">
-                {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
+                {[...tickerItems, ...tickerItems].map((item, i) => (
                   <span
                     key={i}
                     className="text-xs text-muted-foreground flex items-center gap-8"
