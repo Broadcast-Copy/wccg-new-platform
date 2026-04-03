@@ -60,10 +60,12 @@ interface NavItem {
 // ---------------------------------------------------------------------------
 const listenerItems: NavItem[] = [
   { href: "/my", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/my/points", label: "Points & Rewards", icon: Star },
+  { href: "/listeners", label: "Listener Hub", icon: Users },
   { href: "/my/favorites", label: "Favorites", icon: Heart },
-  { href: "/my/places", label: "My Places", icon: MapPin },
+  { href: "/my/points", label: "Points & Rewards", icon: Star },
   { href: "/my/tickets", label: "My Tickets", icon: Ticket },
+  { href: "/my/perks", label: "My Perks", icon: Gift },
+  { href: "/my/orders", label: "My Orders", icon: ShoppingBag },
   { href: "/my/history", label: "Listening History", icon: Clock },
 ];
 
@@ -71,15 +73,16 @@ const listenerItems: NavItem[] = [
 // Creator nav items (used when toggle is set to Creator)
 // ---------------------------------------------------------------------------
 const creatorItems: NavItem[] = [
-  { href: "/my/admin/production", label: "Production Queue", icon: Clapperboard },
+  { href: "/creators", label: "Creator Hub", icon: Palette },
   { href: "/my/studio", label: "Broadcast Studio", icon: Mic },
   { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
-  { href: "/creators", label: "Creator Hub", icon: Palette },
+  { href: "/my/blog", label: "Blog Manager", icon: FileText },
+  { href: "/my/events", label: "Events Manager", icon: CalendarDays },
+  { href: "/my/podcast-rss", label: "Podcast RSS", icon: Radio },
+  { href: "/my/vendor/media", label: "Creator Marketing", icon: BarChart3 },
 ];
 
-const creatorEventsItems: NavItem[] = [
-  { href: "/my/events", label: "Events Manager", icon: CalendarDays },
-];
+const creatorEventsItems: NavItem[] = [];
 
 // ---------------------------------------------------------------------------
 // Vendor nav items (used when toggle is set to Vendor)
@@ -88,19 +91,23 @@ const vendorItems: NavSection[] = [
   {
     sectionLabel: "STOREFRONT",
     items: [
+      { href: "/vendors/hub", label: "Vendor Hub", icon: Store },
+      { href: "/my/vendor/orders", label: "Orders", icon: Receipt },
       { href: "/my/vendor/storefront", label: "Storefront Manager", icon: Store, exact: true },
       { href: "/my/vendor/products", label: "Products", icon: Package },
       { href: "/my/vendor/bookings", label: "Bookings", icon: CalendarDays },
-      { href: "/my/vendor/events", label: "Events", icon: Megaphone },
-      { href: "/my/vendor/tokens", label: "Listener Tokens", icon: Gift },
+      { href: "/my/vendor/events", label: "Events Manager", icon: Megaphone },
     ],
   },
   {
-    sectionLabel: "TRACKING & ANALYTICS",
+    sectionLabel: "MANAGEMENT",
     items: [
-      { href: "/my/vendor/customers", label: "Customers", icon: Users },
-      { href: "/my/vendor/media", label: "Media Tracking", icon: FolderOpen },
-      { href: "/my/vendor/songs", label: "Song Tracking", icon: Music },
+      { href: "/my/vendor/customers", label: "Customer Manager", icon: Users },
+      { href: "/my/vendor/payouts", label: "Payouts", icon: DollarSign },
+      { href: "/my/vendor/shipping", label: "Shipping", icon: Package },
+      { href: "/my/vendor/tracking", label: "Tracking", icon: MapPin },
+      { href: "/my/vendor/analytics", label: "Analytics", icon: BarChart3 },
+      { href: "/my/vendor/media", label: "Marketing", icon: Megaphone },
     ],
   },
 ];

@@ -15,6 +15,7 @@ import {
   Users,
   FolderOpen,
   CalendarDays,
+  BarChart3,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -222,12 +223,14 @@ export default function CreatorsPage() {
               Leave Hub
             </button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {[
-              { href: "/my/studio", label: "Studio", icon: Mic },
-              { href: "/my/blog", label: "Blog", icon: Palette },
-              { href: "/my/podcast-rss", label: "Podcast RSS", icon: Podcast },
+              { href: "/my/studio", label: "Broadcast Studio", icon: Mic },
               { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
+              { href: "/my/blog", label: "Blog Manager", icon: Palette },
+              { href: "/my/events", label: "Events Manager", icon: CalendarDays },
+              { href: "/my/podcast-rss", label: "Podcast RSS", icon: Podcast },
+              { href: "/my/vendor/media", label: "Creator Marketing", icon: BarChart3 },
             ].map((t) => (
               <Link key={t.href} href={t.href} className="flex items-center gap-2 rounded-lg border border-border bg-card p-2.5 text-xs font-medium hover:border-[#7401df]/40 transition-colors">
                 <t.icon className="h-3.5 w-3.5 text-[#7401df]" />

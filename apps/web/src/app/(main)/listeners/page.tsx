@@ -14,6 +14,10 @@ import {
   Gift,
   Trophy,
   ArrowRight,
+  Heart,
+  Ticket,
+  ShoppingBag,
+  Clock,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -208,12 +212,14 @@ export default function ListenersPage() {
             </button>
           </div>
           {/* Quick tools */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {[
-              { href: "/my/points", label: "Points", icon: Star },
-              { href: "/requests", label: "Song Requests", icon: Music },
-              { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
-              { href: "/my/playlists", label: "Playlists", icon: ListMusic },
+              { href: "/my/favorites", label: "Favorites", icon: Heart },
+              { href: "/my/points", label: "Points & Rewards", icon: Star },
+              { href: "/my/tickets", label: "My Tickets", icon: Ticket },
+              { href: "/my/perks", label: "My Perks", icon: Gift },
+              { href: "/my/orders", label: "My Orders", icon: ShoppingBag },
+              { href: "/my/history", label: "Listening History", icon: Clock },
             ].map((t) => (
               <Link key={t.href} href={t.href} className="flex items-center gap-2 rounded-lg border border-border bg-card p-2.5 text-xs font-medium hover:border-[#14b8a6]/40 transition-colors">
                 <t.icon className="h-3.5 w-3.5 text-[#14b8a6]" />

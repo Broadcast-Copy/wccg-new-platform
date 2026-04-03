@@ -15,6 +15,10 @@ import {
   ArrowRight,
   Package,
   BarChart3,
+  Receipt,
+  DollarSign,
+  MapPin,
+  Settings,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -199,12 +203,19 @@ export default function VendorHubPage() {
               Leave Hub
             </button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {[
-              { href: "/my/vendor/storefront", label: "Storefront", icon: Store },
+              { href: "/my/vendor/orders", label: "Orders", icon: Receipt },
+              { href: "/my/vendor/storefront", label: "Storefront Manager", icon: Settings },
               { href: "/my/vendor/products", label: "Products", icon: Package },
-              { href: "/my/vendor/orders", label: "Orders", icon: ShoppingBag },
+              { href: "/my/vendor/bookings", label: "Bookings", icon: CalendarDays },
+              { href: "/my/vendor/events", label: "Events Manager", icon: Megaphone },
+              { href: "/my/vendor/customers", label: "Customers", icon: Users },
+              { href: "/my/vendor/payouts", label: "Payouts", icon: DollarSign },
+              { href: "/my/vendor/shipping", label: "Shipping", icon: Package },
+              { href: "/my/vendor/tracking", label: "Tracking", icon: MapPin },
               { href: "/my/vendor/analytics", label: "Analytics", icon: BarChart3 },
+              { href: "/my/vendor/media", label: "Marketing", icon: Megaphone },
             ].map((t) => (
               <Link key={t.href} href={t.href} className="flex items-center gap-2 rounded-lg border border-border bg-card p-2.5 text-xs font-medium hover:border-[#f59e0b]/40 transition-colors">
                 <t.icon className="h-3.5 w-3.5 text-[#f59e0b]" />
