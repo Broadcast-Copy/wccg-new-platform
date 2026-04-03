@@ -25,6 +25,30 @@ export const metadata: Metadata = {
   description:
     "Your community radio station. Listen live, discover shows, earn rewards, and connect with your favorite hosts.",
   manifest: "/manifest.json",
+  metadataBase: new URL("https://app.wccg1045fm.com"),
+  openGraph: {
+    type: "website",
+    siteName: "WCCG 104.5 FM",
+    title: "WCCG 104.5 FM — The Hip Hop Station",
+    description:
+      "Fayetteville's Hip Hop Station. Listen live, earn points, request songs, and connect with your community.",
+    url: "https://app.wccg1045fm.com",
+    images: [
+      {
+        url: "/images/logos/wccg-logo.png",
+        width: 500,
+        height: 324,
+        alt: "WCCG 104.5 FM",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "WCCG 104.5 FM — The Hip Hop Station",
+    description:
+      "Fayetteville's Hip Hop Station. Listen live, earn points, request songs, and connect with your community.",
+    images: ["/images/logos/wccg-logo.png"],
+  },
 };
 
 export default function RootLayout({
