@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { useAuth } from "@/hooks/use-auth";
 import { HubFeed } from "@/components/social/hub-feed";
+import { HubSidebar } from "@/components/social/hub-sidebar";
 import {
   Music,
   Podcast,
@@ -127,9 +128,43 @@ export default function CreatorsPage() {
     loadStats();
   }, [supabase]);
 
+  if (!memberLoading && isMember) {
+    return (
+      <HubSidebar hubType="creator" color="#7401df">
+        <div className="space-y-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#7401df]/10">
+                <Mic className="h-5 w-5 text-[#7401df]" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold">Creator Hub</h1>
+                <span className="text-xs text-[#7401df] font-medium">Member</span>
+              </div>
+            </div>
+            <button onClick={handleLeave} className="text-xs text-muted-foreground hover:text-red-400 transition-colors">
+              Leave Hub
+            </button>
+          </div>
+          <HubFeed
+            hubType="creator"
+            accentColor="#7401df"
+            placeholder="Share a project, update, or milestone..."
+            postTypes={[
+              { value: "project", label: "Project" },
+              { value: "update", label: "Update" },
+              { value: "milestone", label: "Milestone" },
+              { value: "resource", label: "Resource" },
+            ]}
+          />
+        </div>
+      </HubSidebar>
+    );
+  }
+
   return (
     <div className="space-y-8">
-      {memberLoading ? null : !isMember ? (
+      {memberLoading ? null : (
         <>
           {/* ---- Hero ---- */}
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#7401df] to-[#5a01b0]">
@@ -207,41 +242,8 @@ export default function CreatorsPage() {
             </div>
           </div>
         </>
-      ) : (
-        <>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#7401df]/10">
-                <Mic className="h-5 w-5 text-[#7401df]" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold">Creator Hub</h1>
-                <span className="text-xs text-[#7401df] font-medium">Member</span>
-              </div>
-            </div>
-            <button onClick={handleLeave} className="text-xs text-muted-foreground hover:text-red-400 transition-colors">
-              Leave Hub
-            </button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-            {[
-              { href: "/my/studio", label: "Broadcast Studio", icon: Mic },
-              { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
-              { href: "/my/blog", label: "Blog Manager", icon: Palette },
-              { href: "/my/events", label: "Events Manager", icon: CalendarDays },
-              { href: "/my/podcast-rss", label: "Podcast RSS", icon: Podcast },
-              { href: "/my/vendor/media", label: "Creator Marketing", icon: BarChart3 },
-            ].map((t) => (
-              <Link key={t.href} href={t.href} className="flex items-center gap-2 rounded-lg border border-border bg-card p-2.5 text-xs font-medium hover:border-[#7401df]/40 transition-colors">
-                <t.icon className="h-3.5 w-3.5 text-[#7401df]" />
-                {t.label}
-              </Link>
-            ))}
-          </div>
-        </>
       )}
 
-      {/* ---- Social Feed ---- */}
       <HubFeed
         hubType="creator"
         accentColor="#7401df"

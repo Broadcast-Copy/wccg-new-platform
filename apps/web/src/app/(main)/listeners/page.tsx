@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { useAuth } from "@/hooks/use-auth";
 import { HubFeed } from "@/components/social/hub-feed";
+import { HubSidebar } from "@/components/social/hub-sidebar";
 import {
   Headphones,
   Users,
@@ -115,9 +116,46 @@ export default function ListenersPage() {
     loadStats();
   }, [supabase]);
 
+  if (!memberLoading && isMember) {
+    return (
+      <HubSidebar hubType="listener" color="#14b8a6">
+        <div className="space-y-8">
+          {/* Member header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#14b8a6]/10">
+                <Headphones className="h-5 w-5 text-[#14b8a6]" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold">Listener Hub</h1>
+                <span className="text-xs text-[#14b8a6] font-medium">Member</span>
+              </div>
+            </div>
+            <button onClick={handleLeave} className="text-xs text-muted-foreground hover:text-red-400 transition-colors">
+              Leave Hub
+            </button>
+          </div>
+
+          {/* Social Feed */}
+          <HubFeed
+            hubType="listener"
+            accentColor="#14b8a6"
+            placeholder="Share what you're listening to, a review, or shoutout..."
+            postTypes={[
+              { value: "now-playing", label: "Now Playing" },
+              { value: "review", label: "Review" },
+              { value: "shoutout", label: "Shoutout" },
+              { value: "milestone", label: "Milestone" },
+            ]}
+          />
+        </div>
+      </HubSidebar>
+    );
+  }
+
   return (
     <div className="space-y-8">
-      {memberLoading ? null : !isMember ? (
+      {memberLoading ? null : (
         <>
           {/* ---- Hero ---- */}
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#74ddc7] to-[#14b8a6]">
@@ -194,43 +232,9 @@ export default function ListenersPage() {
             </div>
           </div>
         </>
-      ) : (
-        <>
-          {/* Member header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#14b8a6]/10">
-                <Headphones className="h-5 w-5 text-[#14b8a6]" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold">Listener Hub</h1>
-                <span className="text-xs text-[#14b8a6] font-medium">Member</span>
-              </div>
-            </div>
-            <button onClick={handleLeave} className="text-xs text-muted-foreground hover:text-red-400 transition-colors">
-              Leave Hub
-            </button>
-          </div>
-          {/* Quick tools */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-            {[
-              { href: "/my/favorites", label: "Favorites", icon: Heart },
-              { href: "/my/points", label: "Points & Rewards", icon: Star },
-              { href: "/my/tickets", label: "My Tickets", icon: Ticket },
-              { href: "/my/perks", label: "My Perks", icon: Gift },
-              { href: "/my/orders", label: "My Orders", icon: ShoppingBag },
-              { href: "/my/history", label: "Listening History", icon: Clock },
-            ].map((t) => (
-              <Link key={t.href} href={t.href} className="flex items-center gap-2 rounded-lg border border-border bg-card p-2.5 text-xs font-medium hover:border-[#14b8a6]/40 transition-colors">
-                <t.icon className="h-3.5 w-3.5 text-[#14b8a6]" />
-                {t.label}
-              </Link>
-            ))}
-          </div>
-        </>
       )}
 
-      {/* ---- Social Feed ---- */}
+      {/* ---- Social Feed (non-member landing) ---- */}
       <HubFeed
         hubType="listener"
         accentColor="#14b8a6"

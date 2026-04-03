@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { useAuth } from "@/hooks/use-auth";
 import { HubFeed } from "@/components/social/hub-feed";
+import { HubSidebar } from "@/components/social/hub-sidebar";
 import {
   Store,
   Users,
@@ -107,9 +108,43 @@ export default function VendorHubPage() {
     loadStats();
   }, [supabase]);
 
+  if (!memberLoading && isMember) {
+    return (
+      <HubSidebar hubType="vendor" color="#f59e0b">
+        <div className="space-y-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f59e0b]/10">
+                <Store className="h-5 w-5 text-[#f59e0b]" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold">Vendor Hub</h1>
+                <span className="text-xs text-[#f59e0b] font-medium">Member</span>
+              </div>
+            </div>
+            <button onClick={handleLeave} className="text-xs text-muted-foreground hover:text-red-400 transition-colors">
+              Leave Hub
+            </button>
+          </div>
+          <HubFeed
+            hubType="vendor"
+            accentColor="#f59e0b"
+            placeholder="Share a product, wholesale offer, or vendor tip..."
+            postTypes={[
+              { value: "product", label: "Product Spotlight" },
+              { value: "wholesale", label: "Wholesale Offer" },
+              { value: "resource", label: "Resource" },
+              { value: "milestone", label: "Milestone" },
+            ]}
+          />
+        </div>
+      </HubSidebar>
+    );
+  }
+
   return (
     <div className="space-y-8">
-      {memberLoading ? null : !isMember ? (
+      {memberLoading ? null : (
         <>
           {/* ---- Hero ---- */}
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#f59e0b] to-[#d97706]">
@@ -187,46 +222,8 @@ export default function VendorHubPage() {
             </div>
           </div>
         </>
-      ) : (
-        <>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f59e0b]/10">
-                <Store className="h-5 w-5 text-[#f59e0b]" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold">Vendor Hub</h1>
-                <span className="text-xs text-[#f59e0b] font-medium">Member</span>
-              </div>
-            </div>
-            <button onClick={handleLeave} className="text-xs text-muted-foreground hover:text-red-400 transition-colors">
-              Leave Hub
-            </button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-            {[
-              { href: "/my/vendor/orders", label: "Orders", icon: Receipt },
-              { href: "/my/vendor/storefront", label: "Storefront Manager", icon: Settings },
-              { href: "/my/vendor/products", label: "Products", icon: Package },
-              { href: "/my/vendor/bookings", label: "Bookings", icon: CalendarDays },
-              { href: "/my/vendor/events", label: "Events Manager", icon: Megaphone },
-              { href: "/my/vendor/customers", label: "Customers", icon: Users },
-              { href: "/my/vendor/payouts", label: "Payouts", icon: DollarSign },
-              { href: "/my/vendor/shipping", label: "Shipping", icon: Package },
-              { href: "/my/vendor/tracking", label: "Tracking", icon: MapPin },
-              { href: "/my/vendor/analytics", label: "Analytics", icon: BarChart3 },
-              { href: "/my/vendor/media", label: "Marketing", icon: Megaphone },
-            ].map((t) => (
-              <Link key={t.href} href={t.href} className="flex items-center gap-2 rounded-lg border border-border bg-card p-2.5 text-xs font-medium hover:border-[#f59e0b]/40 transition-colors">
-                <t.icon className="h-3.5 w-3.5 text-[#f59e0b]" />
-                {t.label}
-              </Link>
-            ))}
-          </div>
-        </>
       )}
 
-      {/* ---- Social Feed ---- */}
       <HubFeed
         hubType="vendor"
         accentColor="#f59e0b"
