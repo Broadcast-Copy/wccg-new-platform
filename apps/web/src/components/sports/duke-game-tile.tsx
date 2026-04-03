@@ -1038,15 +1038,19 @@ function DukeOffseasonCard({
           </div>
         </div>
 
-        {/* Last game badge */}
+        {/* Last game badge with opponent logo */}
         {lastGame && (
-          <span className={`relative z-10 hidden sm:inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-            lastGame.result === "W"
-              ? "bg-green-500/20 text-green-400 border border-green-500/30"
-              : "bg-red-500/20 text-red-400 border border-red-500/30"
-          }`}>
-            {lastGame.result} {lastGame.score.duke}-{lastGame.score.opponent}
-          </span>
+          <div className="relative z-10 hidden sm:flex items-center gap-2 shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={lastGame.opponentLogo} alt={lastGame.opponent} className="h-7 w-7 object-contain opacity-80" />
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              lastGame.result === "W"
+                ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                : "bg-red-500/20 text-red-400 border border-red-500/30"
+            }`}>
+              {lastGame.result} {lastGame.score.duke}-{lastGame.score.opponent}
+            </span>
+          </div>
         )}
 
         {/* Expand/collapse */}

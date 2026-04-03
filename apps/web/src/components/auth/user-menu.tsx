@@ -366,15 +366,12 @@ export function UserMenu() {
           </button>
         </div>
 
-        {/* User info */}
-        <div className="px-2 py-1.5">
-          <p className="text-sm font-medium">{displayName}</p>
-          <p className="text-xs text-muted-foreground">{user.email}</p>
-        </div>
-        <DropdownMenuSeparator />
-
-        {/* Toggle section */}
+        {/* User info + toggle */}
         <div className="px-2 py-1.5 space-y-2">
+          <div>
+            <p className="text-sm font-medium">{displayName}</p>
+            <p className="text-xs text-muted-foreground">{user.email}</p>
+          </div>
           {isAdminMode ? (
             /* Admin mode toggle: Operations | Production | Sales */
             <div className="inline-flex w-full items-center justify-center rounded-full border border-[#dc2626]/30 bg-[#dc2626]/5 p-px">
