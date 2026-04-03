@@ -14,6 +14,23 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "0.8.0-beta",
+    date: "April 2, 2026",
+    tag: "beta",
+    changes: [
+      "NestJS Hub API: 9 endpoints for posts, likes, membership, stats",
+      "Database migration 012: hub_posts, hub_post_likes, hub_memberships with RLS",
+      "167 unit tests across 16 API modules (events, points, users, streams, hubs, schedule, podcasts, shows, hosts, mixes, moderation, favorites, rewards, notifications, cms)",
+      "Dynamic hero ticker: rotates blog posts + Duke news headlines",
+      "Duke offseason card: expandable with rotating news + season recap",
+      "Community directory map z-index fix (no longer covers mini player)",
+      "Switched to webpack builds — fixes client-side navigation crash",
+      "Removed dead Prisma code — API builds with zero errors",
+      "Login form: password show/hide toggle",
+      "GitHub Actions auto-deploy on push to main",
+    ],
+  },
+  {
     version: "0.7.0-beta",
     date: "March 31, 2026",
     tag: "beta",
@@ -136,7 +153,7 @@ const CHANGELOG: ChangelogEntry[] = [
 ];
 
 // Current version (shown in user menu)
-const CURRENT_VERSION = "0.7.0-beta";
+const CURRENT_VERSION = "0.8.0-beta";
 
 // ---------------------------------------------------------------------------
 // Tag Badge

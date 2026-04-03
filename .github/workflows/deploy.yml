@@ -41,8 +41,8 @@ jobs:
       - name: Build for GitHub Pages
         env:
           GITHUB_PAGES: 'true'
-          NEXT_PUBLIC_SUPABASE_URL: 'https://irjiqbmoohklagdegezz.supabase.co'
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlyamlxYm1vb2hrbGFnZGVnZXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwNjU0MzEsImV4cCI6MjA4NTY0MTQzMX0.0-ChQ69cVWQjqbJYrLE5FbO6eBAKr7j8yHbnY4Fag3k'
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_API_URL: 'https://api.wccg1045fm.com/api/v1'
         run: pnpm --filter web build
 
@@ -54,10 +54,23 @@ jobs:
       - name: Build for KnownHost (no basePath)
         env:
           GITHUB_PAGES: ''
-          NEXT_PUBLIC_SUPABASE_URL: 'https://irjiqbmoohklagdegezz.supabase.co'
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlyamlxYm1vb2hrbGFnZGVnZXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwNjU0MzEsImV4cCI6MjA4NTY0MTQzMX0.0-ChQ69cVWQjqbJYrLE5FbO6eBAKr7j8yHbnY4Fag3k'
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_API_URL: 'https://api.wccg1045fm.com/api/v1'
         run: pnpm --filter web build
+
+      - name: Generate index.html for directories
+        run: |
+          cd apps/web/out
+          find . -maxdepth 5 -name "*.html" \
+            -not -name "index.html" \
+            -not -name "404.html" \
+            -not -name "_not-found.html" | while read html; do
+            dir="${html%.html}"
+            if [ -d "$dir" ] && [ ! -f "$dir/index.html" ]; then
+              cp "$html" "$dir/index.html"
+            fi
+          done
 
       - name: Upload KnownHost artifact
         uses: actions/upload-artifact@v4
