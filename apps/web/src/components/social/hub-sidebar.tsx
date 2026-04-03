@@ -4,11 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useUserRoles, type UserRole } from "@/hooks/use-user-roles";
+import { useRouter } from "next/navigation";
 import {
   Heart, Star, Ticket, Gift, ShoppingBag, Clock, Headphones,
   Mic, Palette, FolderOpen, CalendarDays, Radio, BarChart3,
   Store, Package, Receipt, Users, DollarSign, MapPin, Megaphone,
-  Menu, X, User, Settings,
+  Menu, X, User, Settings, Lock,
   type LucideIcon,
 } from "lucide-react";
 
@@ -74,6 +76,47 @@ function NavLink({ item, pathname, color }: { item: NavItem; pathname: string; c
   );
 }
 
+function ModeToggle() {
+  const { roleOverride, isOverrideActive, setRoleOverride } = useUserRoles();
+  const router = useRouter();
+
+  const activeMode = isOverrideActive && roleOverride === "content_creator"
+    ? "creator"
+    : isOverrideActive && roleOverride === "vendor"
+      ? "vendor"
+      : "listener";
+
+  const modes: { value: string; label: string; role: string | null; activeColor: string; textColor: string; href: string }[] = [
+    { value: "creator", label: "Creator", role: "content_creator", activeColor: "#7401df", textColor: "#fff", href: "/creators" },
+    { value: "listener", label: "Listener", role: null, activeColor: "#74ddc7", textColor: "#0a0a0f", href: "/listeners" },
+    { value: "vendor", label: "Vendor", role: "vendor", activeColor: "#f59e0b", textColor: "#0a0a0f", href: "/vendors/hub" },
+  ];
+
+  return (
+    <div className="inline-flex w-full items-center rounded-full border border-border bg-muted/50 p-px">
+      {modes.map(({ value, label, role, activeColor, textColor, href }) => {
+        const isActive = activeMode === value;
+        const needsLock = value !== "listener" && !isActive;
+        return (
+          <button
+            key={value}
+            type="button"
+            onClick={() => {
+              setRoleOverride(role as UserRole | null);
+              router.push(href);
+            }}
+            className="flex-1 rounded-full px-2 py-px text-[9px] font-semibold transition-all text-center inline-flex items-center justify-center gap-0.5"
+            style={isActive ? { backgroundColor: activeColor, color: textColor } : undefined}
+          >
+            {needsLock && <Lock className="h-2.5 w-2.5 opacity-40" />}
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function SidebarContent({
   hubType,
   color,
@@ -89,8 +132,8 @@ function SidebarContent({
 
   return (
     <>
-      {/* User info */}
-      <div className="border-b border-border px-4 py-4 space-y-1">
+      {/* User info + Toggle */}
+      <div className="border-b border-border px-4 py-4 space-y-2">
         <div className="flex items-center gap-3">
           <div
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border"
@@ -107,6 +150,7 @@ function SidebarContent({
             </p>
           </div>
         </div>
+        <ModeToggle />
       </div>
 
       {/* Nav */}
