@@ -128,7 +128,11 @@ export default function CreatorsPage() {
     loadStats();
   }, [supabase]);
 
-  if (!memberLoading && isMember) {
+  if (memberLoading) {
+    return <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-4 border-[#7401df] border-t-transparent" /></div>;
+  }
+
+  if (isMember) {
     return (
       <HubSidebar hubType="creator" color="#7401df">
         <div className="space-y-8">
@@ -164,7 +168,7 @@ export default function CreatorsPage() {
 
   return (
     <div className="space-y-8">
-      {memberLoading ? null : (
+      {(
         <>
           {/* ---- Hero ---- */}
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#7401df] to-[#5a01b0]">

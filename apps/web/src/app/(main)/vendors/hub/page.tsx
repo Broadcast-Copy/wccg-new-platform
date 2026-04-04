@@ -108,7 +108,11 @@ export default function VendorHubPage() {
     loadStats();
   }, [supabase]);
 
-  if (!memberLoading && isMember) {
+  if (memberLoading) {
+    return <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-4 border-[#f59e0b] border-t-transparent" /></div>;
+  }
+
+  if (isMember) {
     return (
       <HubSidebar hubType="vendor" color="#f59e0b">
         <div className="space-y-8">
@@ -144,7 +148,7 @@ export default function VendorHubPage() {
 
   return (
     <div className="space-y-8">
-      {memberLoading ? null : (
+      {(
         <>
           {/* ---- Hero ---- */}
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#f59e0b] to-[#d97706]">
