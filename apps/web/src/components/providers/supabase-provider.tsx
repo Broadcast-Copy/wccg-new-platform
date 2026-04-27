@@ -12,14 +12,19 @@ type SupabaseContext = {
 const Context = createContext<SupabaseContext | undefined>(undefined);
 
 export function SupabaseProvider({ children }: { children: ReactNode }) {
-  const supabase = useMemo(
-    () =>
-      createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      ),
-    [],
-  );
+  const supabase = useMemo(() => {
+    // Use placeholder URL/key when env is missing so static export
+    // prerendering doesn't crash. Runtime queries will fail with a clear
+    // "no project configured" error from Supabase, which is a much better
+    // failure mode than blowing up the whole build.
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL && typeof window !== "undefined") {
+      // eslint-disable-next-line no-console
+      console.warn("[supabase] NEXT_PUBLIC_SUPABASE_URL is unset — using placeholder client");
+    }
+    return createBrowserClient(url, key);
+  }, []);
 
   // A2 — kick off the points outbox flusher as soon as the app boots.
   // Idempotent; safe to call once. Drains background-earned points to the
