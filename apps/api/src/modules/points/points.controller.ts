@@ -66,4 +66,48 @@ export class PointsController {
     // TODO: Replace with AwardPointsDto
     return this.pointsService.award(dto.userId, dto);
   }
+
+  /**
+   * POST /points/sync — Drain a batch of point events from the authenticated
+   * user's client outbox. Each event must include an idempotency key. Daily
+   * caps are enforced server-side. Returns per-event results so the client
+   * can prune its outbox precisely. (Phase A2)
+   */
+  @Post('sync')
+  sync(
+    @CurrentUser() user: SupabaseUser,
+    @Body()
+    dto: {
+      events: Array<{
+        idempotencyKey: string;
+        amount: number;
+        reason: string;
+        referenceType?: string;
+        referenceId?: string;
+        occurredAt?: string;
+      }>;
+    },
+  ) {
+    return this.pointsService.sync(user.sub, dto?.events ?? []);
+  }
+
+  /**
+   * GET /points/leaderboard — Top earners for a period. (Phase A5)
+   */
+  @Get('leaderboard')
+  leaderboard(
+    @CurrentUser() user: SupabaseUser,
+    @Query('period') period?: 'weekly' | 'monthly' | 'alltime',
+    @Query('limit') limit?: number,
+  ) {
+    return this.pointsService.leaderboard(period ?? 'weekly', limit ?? 25, user.sub);
+  }
+
+  /**
+   * GET /points/streak — Current consecutive-day listening streak. (Phase A4)
+   */
+  @Get('streak')
+  streak(@CurrentUser() user: SupabaseUser) {
+    return this.pointsService.getStreak(user.sub);
+  }
 }

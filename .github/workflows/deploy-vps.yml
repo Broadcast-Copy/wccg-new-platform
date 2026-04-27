@@ -1,4 +1,4 @@
-name: Deploy Admin & API to VPS
+name: Deploy API / Admin / Workers to VPS
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
     paths:
       - 'apps/admin/**'
       - 'apps/api/**'
+      - 'apps/workers/**'
       - 'packages/**'
       - 'infra/deploy/**'
   workflow_dispatch:  # Manual trigger button
@@ -39,6 +40,9 @@ jobs:
 
             echo "=== Building Admin ==="
             pnpm --filter admin build
+
+            echo "=== Building Workers ==="
+            pnpm --filter @wccg/workers build
 
             echo "=== Restarting services ==="
             pm2 startOrRestart infra/deploy/ecosystem.config.cjs --env production

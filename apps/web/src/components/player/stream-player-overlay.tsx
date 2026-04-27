@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { useListeningTracker } from "@/hooks/use-listening-tracker";
+import { useWikiTrigger } from "@/hooks/use-wiki-trigger";
 
 // ---------------------------------------------------------------------------
 // WCCG Icecast stream URL — native HTML5 audio
@@ -65,6 +66,9 @@ export function StreamPlayerProvider({ children }: { children: ReactNode }) {
 
   // Track listening sessions for history
   useListeningTracker(isPlaying);
+
+  // C4 — auto-research the artist on air. Fire-and-forget, server-deduped.
+  useWikiTrigger();
 
   return (
     <StreamPlayerContext.Provider value={{ isOpen, open, close, toggle }}>

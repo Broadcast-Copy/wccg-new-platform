@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Hero } from "@/components/home/hero";
+import { LiveNowHero } from "@/components/home/live-now-hero";
+import { ArtistRail } from "@/components/home/artist-rail";
+import { DailyStreakCard } from "@/components/home/daily-streak-card";
+import { LeaderboardCard } from "@/components/home/leaderboard-card";
+import { PushPrompt } from "@/components/notifications/push-prompt";
+import { apiClient } from "@/lib/api-client";
+import { track } from "@/lib/analytics";
 
 import { EventCard } from "@/components/events/event-card";
 import Link from "next/link";
@@ -20,7 +27,6 @@ import {
   Music,
   Mail,
 } from "lucide-react";
-import { apiClient } from "@/lib/api-client";
 import { DukeGameTile } from "@/components/sports/duke-game-tile";
 
 interface EventItem {
@@ -164,21 +170,61 @@ function UpcomingEventsSection() {
 export default function HomePage() {
   const [subscribing, setSubscribing] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
+  const [subscribeError, setSubscribeError] = useState<string | null>(null);
   const [activeCta, setActiveCta] = useState(0); // 0 = newsletter, 1 = community
 
-  function handleSubscribe(e: React.FormEvent<HTMLFormElement>) {
+  // Phase A9 — fire visit_home once per page load.
+  const visitTrackedRef = useRef(false);
+  useEffect(() => {
+    if (visitTrackedRef.current) return;
+    visitTrackedRef.current = true;
+    void track("visit_home");
+  }, []);
+
+  // Phase A8 — real newsletter signup.
+  async function handleSubscribe(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const form = e.currentTarget;
+    const emailInput = form.elements.namedItem("email") as HTMLInputElement | null;
+    const email = emailInput?.value?.trim();
+    if (!email) return;
     setSubscribing(true);
-    setTimeout(() => {
-      setSubscribing(false);
+    setSubscribeError(null);
+    try {
+      await apiClient("/marketing/newsletter", {
+        method: "POST",
+        body: JSON.stringify({ email, source: "home_hero_cta" }),
+      });
       setSubscribed(true);
-      setTimeout(() => setSubscribed(false), 3000);
-    }, 1000);
+      void track("newsletter_subscribed", { source: "home_hero_cta" });
+      setTimeout(() => setSubscribed(false), 4000);
+      form.reset();
+    } catch (err) {
+      setSubscribeError((err as Error).message ?? "Couldn't subscribe — try again.");
+    } finally {
+      setSubscribing(false);
+    }
   }
 
   return (
     <div className="space-y-10">
-      {/* Hero Ribbon */}
+      {/* ============================================================
+          A1 — Audio-first hero. Single biggest lever for visit→play.
+          Owns the LCP; everything else lives below the fold.
+          ============================================================ */}
+      <LiveNowHero />
+
+      {/* A4 + A5 — engagement loops, side by side under the hero. */}
+      <section className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+        <DailyStreakCard />
+        <LeaderboardCard />
+      </section>
+
+      {/* A3 — discovery bridge for the artist on air right now. */}
+      <ArtistRail />
+
+      {/* Show carousel — demoted from primary hero to secondary "On the air"
+          strip. Still earns its keep for show discovery. */}
       <Hero />
 
       {/* Duke Game Day */}
@@ -186,9 +232,9 @@ export default function HomePage() {
 
       {/* Platform Headline */}
       <section className="text-center py-4">
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground tracking-tight">
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-foreground tracking-tight">
           One Platform. Endless Possibilities.
-        </h1>
+        </h2>
         <p className="mt-3 max-w-2xl mx-auto text-sm sm:text-base text-muted-foreground leading-relaxed">
           Your hub for tickets, streaming, weather &amp; news updates, community discovery, podcast booking, dynamic advertising, and digital media services, all in one place.
         </p>
@@ -277,6 +323,7 @@ export default function HomePage() {
             >
               <input
                 type="email"
+                name="email"
                 placeholder="Enter your email..."
                 required
                 disabled={subscribing}
@@ -293,8 +340,13 @@ export default function HomePage() {
               </Button>
             </form>
           )}
+          {subscribeError && (
+            <p className="text-xs text-white/90 bg-black/30 rounded-full px-3 py-1">
+              {subscribeError}
+            </p>
+          )}
           <p className="text-[11px] text-white/50">
-            No spam ever. Unsubscribe anytime.
+            Confirm via email to unlock +100 WP. No spam ever. Unsubscribe anytime.
           </p>
         </div>
       </section>
@@ -338,6 +390,9 @@ export default function HomePage() {
         </div>
       </section>
       </div>
+
+      {/* A6 — non-blocking opt-in nudge after 2 minutes of listening. */}
+      <PushPrompt />
     </div>
   );
 }

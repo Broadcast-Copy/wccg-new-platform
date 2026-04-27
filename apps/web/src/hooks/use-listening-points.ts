@@ -4,6 +4,16 @@ import { useCallback, useEffect, useRef } from "react";
 import { getSessions } from "@/lib/listening-history";
 import { getCurrentMultiplier } from "@/lib/multipliers";
 import { markDirty } from "@/lib/user-sync";
+import { enqueuePointEvent } from "@/lib/points-sync";
+
+/**
+ * Ledger sync — Phase A2. Each award also enqueues a row to the server-side
+ * outbox so balance survives across devices and feeds leaderboard / spend.
+ */
+function enqueueSync(reason: string, amount: number, idempotencyKey: string) {
+  if (amount <= 0) return;
+  enqueuePointEvent({ idempotencyKey, amount, reason });
+}
 
 /**
  * Hook that awards points for continuous listening.
@@ -253,16 +263,17 @@ function awardListeningBatch(pointsToAward: number, listeningMs: number) {
   const activeMultiplier = getCurrentMultiplier();
   const multiplier = activeMultiplier?.multiplier ?? 1;
   const effectivePoints = pointsToAward * multiplier;
+  const ts = new Date().toISOString();
 
   const data = loadPointsData();
   data.totalPoints += effectivePoints;
   data.totalListeningMs += listeningMs;
   data.sessionPointsAwarded = (data.sessionPointsAwarded ?? 0) + pointsToAward;
-  data.lastAwardedAt = new Date().toISOString();
+  data.lastAwardedAt = ts;
   data.history.unshift({
     points: effectivePoints,
     reason: "LISTENING",
-    timestamp: new Date().toISOString(),
+    timestamp: ts,
     program: multiplier > 1
       ? `WCCG 104.5 FM (${multiplier}x ${activeMultiplier!.label})`
       : "WCCG 104.5 FM",
@@ -271,6 +282,15 @@ function awardListeningBatch(pointsToAward: number, listeningMs: number) {
     data.history = data.history.slice(0, 100);
   }
   savePointsData(data);
+
+  // A2 sync — server enforces daily caps and idempotency.
+  // Use the awarded timestamp + sessionPointsAwarded counter as a stable key so
+  // a backgrounded tab that re-runs this batch doesn't double-spend on the server.
+  enqueueSync(
+    "LISTENING",
+    effectivePoints,
+    `listening:${data.sessionPointsAwarded}:${ts}`,
+  );
 }
 
 /**
@@ -322,14 +342,15 @@ export function reconcileSessionPoints() {
 
   const missed = expectedListeningPoints - sessionPointsAwarded;
   if (missed > 0) {
+    const ts = new Date().toISOString();
     data.totalPoints += missed;
     data.totalListeningMs += missed * POINTS_INTERVAL_MS;
-    data.lastAwardedAt = new Date().toISOString();
+    data.lastAwardedAt = ts;
     data.sessionPointsAwarded = expectedListeningPoints;
     data.history.unshift({
       points: missed,
       reason: "LISTENING",
-      timestamp: new Date().toISOString(),
+      timestamp: ts,
       program: "WCCG 104.5 FM",
     });
     if (data.history.length > 100) {
@@ -338,6 +359,7 @@ export function reconcileSessionPoints() {
     savePointsData(data);
     // Reset accumulated since we've reconciled
     saveAccumulated(sessionDurationMs % POINTS_INTERVAL_MS);
+    enqueueSync("LISTENING", missed, `listening_reconcile:${sessionStart}:${expectedListeningPoints}`);
   }
 
   // Also check streak bonuses
@@ -354,6 +376,7 @@ export function reconcileSessionPoints() {
     });
     if (fresh.history.length > 100) fresh.history = fresh.history.slice(0, 100);
     savePointsData(fresh);
+    enqueueSync("STREAK_BONUS", 10, `streak_2h:${sessionStart}`);
   } else if (sessionDurationMs >= ONE_HOUR_MS && !data.streak1hAwarded) {
     const fresh = loadPointsData();
     fresh.streak1hAwarded = true;
@@ -367,6 +390,7 @@ export function reconcileSessionPoints() {
     });
     if (fresh.history.length > 100) fresh.history = fresh.history.slice(0, 100);
     savePointsData(fresh);
+    enqueueSync("STREAK_BONUS", 5, `streak_1h:${sessionStart}`);
   }
 }
 
@@ -427,11 +451,14 @@ export function useListeningPoints(
           } catch { /* ignore */ }
         }
         if (!alreadyClaimed) {
+          // A4: bumped from 3 → 25 to make the daily-streak loop materially
+          // worth opening the app for.
+          const DAILY_BOUNTY_AMOUNT = 25;
           data.lastBountyDate = today;
-          data.totalPoints += 3;
+          data.totalPoints += DAILY_BOUNTY_AMOUNT;
           data.lastAwardedAt = new Date().toISOString();
           data.history.unshift({
-            points: 3,
+            points: DAILY_BOUNTY_AMOUNT,
             reason: "DAILY_BOUNTY",
             timestamp: new Date().toISOString(),
             program: "Daily Bonus",
@@ -440,7 +467,8 @@ export function useListeningPoints(
             data.history = data.history.slice(0, 100);
           }
           savePointsData(data);
-          onBonusRef.current?.({ type: "DAILY_BOUNTY", points: 3, message: "Daily Bounty! +3 pts" });
+          onBonusRef.current?.({ type: "DAILY_BOUNTY", points: DAILY_BOUNTY_AMOUNT, message: `Daily Bounty! +${DAILY_BOUNTY_AMOUNT} pts` });
+          enqueueSync("DAILY_BOUNTY", DAILY_BOUNTY_AMOUNT, `daily_bounty:${today}`);
         }
       }
 
@@ -491,6 +519,7 @@ export function useListeningPoints(
             }
             savePointsData(data);
             onBonusRef.current?.({ type: "STREAK_2H", points: 10, message: "2-Hour Streak! +10 pts" });
+            enqueueSync("STREAK_BONUS", 10, `streak_2h:${sessionStart}`);
           }
           // 1-hour streak: 5 bonus points
           else if (sessionDuration >= ONE_HOUR_MS && !data.streak1hAwarded) {
@@ -507,6 +536,7 @@ export function useListeningPoints(
               data.history = data.history.slice(0, 100);
             }
             savePointsData(data);
+            enqueueSync("STREAK_BONUS", 5, `streak_1h:${sessionStart}`);
             onBonusRef.current?.({ type: "STREAK_1H", points: 5, message: "1-Hour Streak! +5 pts" });
           }
         }
@@ -613,6 +643,7 @@ export function awardSharePoints(): boolean {
     data.history = data.history.slice(0, 100);
   }
   savePointsData(data);
+  enqueueSync("SHARE", 2, `share:${today}`);
   return true;
 }
 
@@ -689,6 +720,7 @@ export function awardShareBonus(bountyId?: string): boolean {
   }
   savePointsData(data);
   claimBounty(id);
+  enqueueSync("SHARE", 2, id);
   return true;
 }
 
@@ -722,6 +754,7 @@ export function awardVideoWatchPoints(videoId: string): boolean {
   }
   savePointsData(data);
   claimBounty(id);
+  enqueueSync("VIDEO_WATCH", 3, id);
   return true;
 }
 
@@ -764,6 +797,7 @@ export function awardReferralBonus(referralCode: string): boolean {
   }
   savePointsData(data);
   claimBounty(id);
+  enqueueSync("REFERRAL", 5, id);
   return true;
 }
 
@@ -792,6 +826,7 @@ export function awardKeywordPoints(keywordId: string): boolean {
   }
   savePointsData(data);
   claimBounty(id);
+  enqueueSync("KEYWORD_ENTRY", 5, id);
   return true;
 }
 
@@ -820,6 +855,7 @@ export function awardCheckInPoints(eventId: string): boolean {
   }
   savePointsData(data);
   claimBounty(id);
+  enqueueSync("EVENT_CHECKIN", 10, id);
   return true;
 }
 
@@ -852,5 +888,6 @@ export function awardCustomBounty(
   }
   savePointsData(data);
   claimBounty(bountyId);
+  enqueueSync(reason, points, bountyId);
   return true;
 }

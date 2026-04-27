@@ -10,6 +10,8 @@
   "dependencies": {
     "bullmq": "^5",
     "ioredis": "^5",
+    "ftp-srv": "^4.6.3",
+    "@supabase/supabase-js": "^2.96.0",
     "@wccg/db": "workspace:*",
     "@wccg/types": "workspace:*",
     "@wccg/integrations": "workspace:*"

@@ -30,6 +30,12 @@ import { CmsModule } from './modules/cms/cms.module.js';
 import { AdsModule } from './modules/ads/ads.module.js';
 import { NavigationModule } from './modules/navigation/navigation.module.js';
 import { StreamModule } from './modules/stream/stream.module.js';
+import { PushModule } from './modules/push/push.module.js';
+import { MarketingModule } from './modules/marketing/marketing.module.js';
+import { PlacesModule } from './modules/places/places.module.js';
+import { MarketplaceModule } from './modules/marketplace/marketplace.module.js';
+import { WikiModule } from './modules/wiki/wiki.module.js';
+import { DjPortalModule } from './modules/dj-portal/dj-portal.module.js';
 
 // Root controller + service (health / info)
 import { AppController } from './app.controller.js';
@@ -71,6 +77,20 @@ import { AppService } from './app.service.js';
 
     // ── Stream metadata proxy ────────────────────────────────────────
     StreamModule,
+
+    // ── Phase A: engagement plumbing ────────────────────────────────
+    PushModule,
+    MarketingModule,
+
+    // ── Phase B: places + marketplace ───────────────────────────────
+    PlacesModule,
+    MarketplaceModule,
+
+    // ── Phase C: living knowledge / wiki ────────────────────────────
+    WikiModule,
+
+    // ── DJ Portal: scheduled-drop uploads + FTP accounts ────────────
+    DjPortalModule,
   ],
   controllers: [AppController],
   providers: [
