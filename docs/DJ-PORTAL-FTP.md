@@ -373,3 +373,51 @@ Sun 5pm is `DJB_75093` and `DJB_75094` — note the **`75` prefix**, not
 `76`. This is intentional and matches an older block of cart codes already
 in Radio Spider's library. The migration enforces this by hard-coding the
 file_codes array; do not "correct" it.
+
+### Required env on the studio PC
+
+The studio-sync agent ships as part of `apps/workers`. To activate it on
+the production-room PC, set these env vars before launching pm2 / Node:
+
+```bat
+:: Required
+set WCCG_API_URL=https://api.wccg1045fm.com/api/v1
+set STUDIO_AGENT_TOKEN=<32-char hex — same value in apps/api/.env>
+set WCCG_STUDIO_ARCHIVE_ROOT=D:\WCCG\b-mixshows
+set WCCG_STUDIO_ONAIR_ROOT=M:\JBMusic
+
+:: Optional
+set WCCG_STUDIO_POLL_MS=60000
+```
+
+Generate a fresh token on any machine with Node:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Put the same value in `apps/api/.env` so the API and agent agree. The
+agent no-ops gracefully if these env vars aren't set (so the same worker
+build runs fine on the API VPS without trying to write to `M:\JBMusic`).
+
+### What gets written where
+
+Every successful sync writes to **three** paths:
+
+```
+D:\WCCG\b-mixshows\<dj-slug>\DJB_NNNNN.mp3              ← per-DJ archive
+D:\WCCG\b-mixshows\<dj-slug>\on-air\DJB_NNNNN.mp3       ← per-DJ on-air mirror
+M:\JBMusic\DJB_NNNNN.mp3                                ← flat folder DJB Radio reads
+```
+
+For unassigned slots (Mon 10pm, all Sat, etc.) the agent writes ONLY to
+`M:\JBMusic\` — there's no DJ folder to mirror to.
+
+### Admin endpoints (bearer-auth, not Supabase JWT)
+
+```
+GET  /djs/admin/ready          → list of drops the agent should pull next
+POST /djs/admin/ready/:id/ack  → agent reports a successful download
+```
+
+Both require `Authorization: Bearer <STUDIO_AGENT_TOKEN>`.

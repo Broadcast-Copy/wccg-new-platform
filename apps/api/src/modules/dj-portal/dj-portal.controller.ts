@@ -2,16 +2,21 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
+  Patch,
   Post,
   Query,
   UploadedFile,
+  UnauthorizedException,
   UseInterceptors,
   BadRequestException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { DjPortalService } from './dj-portal.service.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
+import { Public } from '../../common/decorators/public.decorator.js';
 import type { SupabaseUser } from '../../common/guards/supabase-auth.guard.js';
 
 /**
@@ -26,7 +31,10 @@ import type { SupabaseUser } from '../../common/guards/supabase-auth.guard.js';
  */
 @Controller('djs')
 export class DjPortalController {
-  constructor(private readonly portal: DjPortalService) {}
+  constructor(
+    private readonly portal: DjPortalService,
+    private readonly config: ConfigService,
+  ) {}
 
   /** GET /djs/me — DJ profile + assigned slots + this week's drop status. */
   @Get('me')
@@ -113,9 +121,80 @@ export class DjPortalController {
     return this.portal.adminClaim(dto.djSlug, dto.userId, dto.email);
   }
 
-  /** GET /djs/:slug — public-ish DJ profile (basic info + active slots). */
+  // ─── Admin slot assignment ─────────────────────────────────────────────
+
+  /** GET /djs/admin/slots — every slot + assigned DJ (or null) + DJ list. */
+  @Get('admin/slots')
+  adminSlots() {
+    return this.portal.adminSlots();
+  }
+
+  /**
+   * PATCH /djs/admin/slots/:id — assign / reassign / unassign a slot.
+   * Body: { djId: string | null }
+   */
+  @Patch('admin/slots/:id')
+  assignSlot(@Param('id') slotId: string, @Body() body: { djId?: string | null }) {
+    return this.portal.adminAssignSlot(slotId, body?.djId ?? null);
+  }
+
+  // ─── Studio-sync agent (bearer-token, not Supabase JWT) ────────────────
+
+  /**
+   * GET /djs/admin/ready — list drops ready for the studio PC to download.
+   * Auth: STUDIO_AGENT_TOKEN as `Authorization: Bearer <token>`.
+   */
+  @Public()
+  @Get('admin/ready')
+  studioReady(
+    @Headers('authorization') auth: string | undefined,
+    @Query('limit') limit?: string,
+  ) {
+    this.requireStudioAgentToken(auth);
+    return this.portal.studioReady(Number(limit) || 200);
+  }
+
+  /**
+   * POST /djs/admin/ready/:id/ack — agent reports successful download.
+   * Body: { archivePath?: string; onAirPath?: string; flatPath?: string }
+   */
+  @Public()
+  @Post('admin/ready/:id/ack')
+  studioAck(
+    @Headers('authorization') auth: string | undefined,
+    @Param('id') id: string,
+    @Body() body?: { archivePath?: string; onAirPath?: string; flatPath?: string },
+  ) {
+    this.requireStudioAgentToken(auth);
+    return this.portal.studioAck(id, body);
+  }
+
+  // ─── Public profile + archive ──────────────────────────────────────────
+
+  /** GET /djs/:slug — public DJ profile (basic info + active slots). */
+  @Public()
   @Get(':slug')
   publicProfile(@Param('slug') slug: string) {
     return this.portal.publicProfile(slug);
+  }
+
+  /** GET /djs/:slug/archive — list of this DJ's uploaded mixes with playback URLs. */
+  @Public()
+  @Get(':slug/archive')
+  publicArchive(@Param('slug') slug: string, @Query('limit') limit?: string) {
+    return this.portal.publicArchive(slug, Number(limit) || 40);
+  }
+
+  // ─── helpers ───────────────────────────────────────────────────────────
+
+  private requireStudioAgentToken(authHeader: string | undefined) {
+    const configured = this.config.get<string>('STUDIO_AGENT_TOKEN');
+    if (!configured) {
+      throw new UnauthorizedException('STUDIO_AGENT_TOKEN not configured on server');
+    }
+    const presented = (authHeader || '').replace(/^Bearer\s+/i, '').trim();
+    if (!presented || presented !== configured) {
+      throw new UnauthorizedException('invalid studio agent token');
+    }
   }
 }

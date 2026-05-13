@@ -3,6 +3,7 @@ import IORedis from 'ioredis';
 import { runOneJob } from './agents/research-agent.js';
 import { startFtpServer } from './ftp/ftp-server.js';
 import { startDjDropsWatcher } from './dj-drops/dj-drops-watcher.js';
+import { startStudioSync } from './studio-sync/studio-sync.js';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
@@ -75,3 +76,9 @@ startDjDropsWatcher();
 if (process.env.FTP_DISABLED === 'false') {
   startFtpServer();
 }
+
+// ─── Studio-sync agent (production-room PC) ─────────────────────────────────
+// Pulls uploaded drops from the API and writes to D:\WCCG\b-mixshows\<slug>\
+// and M:\JBMusic\ on the production PC. No-ops on hosts that don't have
+// WCCG_STUDIO_ARCHIVE_ROOT / WCCG_STUDIO_ONAIR_ROOT / STUDIO_AGENT_TOKEN set.
+startStudioSync();

@@ -339,17 +339,202 @@ export class DjPortalService {
 
   async publicProfile(slug: string) {
     const { data: dj } = await this.db.from('djs')
-      .select('id, slug, display_name')
+      .select('id, slug, display_name, notes')
       .eq('slug', slug)
       .eq('is_active', true)
       .maybeSingle();
     if (!dj) throw new NotFoundException();
     const { data: slots } = await this.db.from('dj_slots')
-      .select('day_of_week, start_time, end_time, status')
+      .select('day_of_week, start_time, end_time, status, file_codes')
       .eq('dj_id', dj.id)
       .eq('status', 'active')
       .order('day_of_week');
     return { dj, slots: slots ?? [] };
+  }
+
+  /**
+   * Public archive listing for /djs/:slug — every uploaded/validated/published
+   * drop for this DJ, newest first. Each row carries a short-lived signed
+   * playback URL.
+   */
+  async publicArchive(slug: string, limit = 40) {
+    const { data: dj } = await this.db.from('djs')
+      .select('id, slug, display_name')
+      .eq('slug', slug)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (!dj) throw new NotFoundException();
+
+    const { data: drops } = await this.db.from('dj_drops')
+      .select('id, file_code, week_of, status, storage_path, format, size_bytes, uploaded_at')
+      .eq('dj_id', dj.id)
+      .in('status', ['uploaded', 'validated', 'published'])
+      .order('uploaded_at', { ascending: false })
+      .limit(Math.min(Math.max(limit, 1), 200));
+
+    const out = [] as Array<{
+      id: string;
+      fileCode: string;
+      weekOf: string;
+      status: string;
+      format: string | null;
+      sizeBytes: number | null;
+      uploadedAt: string | null;
+      playbackUrl: string | null;
+    }>;
+    for (const d of drops ?? []) {
+      let playbackUrl: string | null = null;
+      if (d.storage_path) {
+        const { data: signed } = await this.db.client.storage
+          .from(STORAGE_BUCKET)
+          .createSignedUrl(d.storage_path, 60 * 60); // 1h
+        playbackUrl = signed?.signedUrl ?? null;
+      }
+      out.push({
+        id: d.id,
+        fileCode: d.file_code,
+        weekOf: d.week_of,
+        status: d.status,
+        format: d.format,
+        sizeBytes: d.size_bytes,
+        uploadedAt: d.uploaded_at,
+        playbackUrl,
+      });
+    }
+    return { dj, archive: out };
+  }
+
+  // ─── Admin: slot reassignment ──────────────────────────────────────────
+
+  /**
+   * GET /djs/admin/slots — every slot, with the assigned DJ (or null).
+   * Powers the /my/admin/dj-slots reassign UI.
+   */
+  async adminSlots() {
+    const [{ data: slots }, { data: djs }] = await Promise.all([
+      this.db.from('dj_slots')
+        .select('id, dj_id, day_of_week, start_time, end_time, file_codes, status, notes')
+        .order('day_of_week', { ascending: true })
+        .order('start_time', { ascending: true }),
+      this.db.from('djs')
+        .select('id, slug, display_name, is_active')
+        .eq('is_active', true)
+        .order('display_name', { ascending: true }),
+    ]);
+    const djsById = new Map<string, any>();
+    for (const d of djs ?? []) djsById.set(d.id, d);
+    return {
+      slots: (slots ?? []).map((s: any) => ({
+        ...s,
+        dj: s.dj_id ? djsById.get(s.dj_id) ?? null : null,
+      })),
+      djs: djs ?? [],
+    };
+  }
+
+  /**
+   * PATCH /djs/admin/slots/:id — set, change, or clear the DJ on a slot.
+   * Passing djId=null (or empty string) leaves the slot unassigned.
+   */
+  async adminAssignSlot(slotId: string, djId: string | null) {
+    if (!slotId) throw new BadRequestException('slotId required');
+    const normalized = djId && djId.trim() !== '' ? djId.trim() : null;
+
+    if (normalized) {
+      const { data: dj } = await this.db.from('djs')
+        .select('id, slug, display_name, is_active')
+        .eq('id', normalized)
+        .maybeSingle();
+      if (!dj) throw new NotFoundException(`DJ id ${normalized} not found`);
+      if (!dj.is_active) throw new BadRequestException(`DJ ${dj.slug} is inactive`);
+    }
+
+    const { data: updated, error } = await this.db.from('dj_slots')
+      .update({ dj_id: normalized, updated_at: new Date().toISOString() })
+      .eq('id', slotId)
+      .select()
+      .single();
+    if (error) throw new BadRequestException(error.message);
+    return { ok: true, slot: updated };
+  }
+
+  // ─── Studio-sync agent (production-PC pull) ────────────────────────────
+
+  /**
+   * GET /djs/admin/ready — list every drop that has been uploaded but not
+   * yet downloaded by the studio-sync agent. Caller authenticates via the
+   * STUDIO_AGENT_TOKEN bearer (see controller). Includes a short-lived
+   * signed URL for the agent to download the file.
+   */
+  async studioReady(limit = 200) {
+    const { data } = await this.db.from('dj_drops')
+      .select('id, dj_id, slot_id, file_code, week_of, storage_path, format, size_bytes, status, uploaded_at')
+      .in('status', ['uploaded', 'validated'])
+      .order('uploaded_at', { ascending: true })
+      .limit(Math.min(Math.max(limit, 1), 500));
+
+    // Pull DJ slugs for path building on the agent side.
+    const djIds = Array.from(new Set((data ?? []).map((d: any) => d.dj_id)));
+    const djsBySlug: Record<string, string> = {};
+    if (djIds.length) {
+      const { data: djs } = await this.db.from('djs')
+        .select('id, slug')
+        .in('id', djIds);
+      for (const d of djs ?? []) djsBySlug[d.id] = d.slug;
+    }
+
+    const out = [];
+    for (const d of data ?? []) {
+      let downloadUrl: string | null = null;
+      if (d.storage_path) {
+        const { data: signed } = await this.db.client.storage
+          .from(STORAGE_BUCKET)
+          .createSignedUrl(d.storage_path, 60 * 30); // 30 min
+        downloadUrl = signed?.signedUrl ?? null;
+      }
+      out.push({
+        id: d.id,
+        djId: d.dj_id,
+        djSlug: djsBySlug[d.dj_id] ?? null,
+        slotId: d.slot_id,
+        fileCode: d.file_code,
+        weekOf: d.week_of,
+        format: d.format,
+        sizeBytes: d.size_bytes,
+        status: d.status,
+        uploadedAt: d.uploaded_at,
+        downloadUrl,
+      });
+    }
+    return { count: out.length, items: out };
+  }
+
+  /**
+   * POST /djs/admin/ready/:id/ack — agent calls this after successfully
+   * writing the file to disk on the studio PC. Flips status to 'published'.
+   */
+  async studioAck(dropId: string, paths?: { archivePath?: string; onAirPath?: string; flatPath?: string }) {
+    if (!dropId) throw new BadRequestException('dropId required');
+    const { data: existing } = await this.db.from('dj_drops')
+      .select('id, status, file_code')
+      .eq('id', dropId)
+      .maybeSingle();
+    if (!existing) throw new NotFoundException(`drop ${dropId} not found`);
+
+    const { error } = await this.db.from('dj_drops')
+      .update({
+        status: 'published',
+        published_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', dropId);
+    if (error) throw new BadRequestException(error.message);
+    if (paths) {
+      this.logger.log(
+        `studio-sync ack ${existing.file_code} archive=${paths.archivePath ?? '-'} onAir=${paths.onAirPath ?? '-'} flat=${paths.flatPath ?? '-'}`,
+      );
+    }
+    return { ok: true };
   }
 
   // ─── helpers ───────────────────────────────────────────────────────────

@@ -36,6 +36,7 @@ import { PlacesModule } from './modules/places/places.module.js';
 import { MarketplaceModule } from './modules/marketplace/marketplace.module.js';
 import { WikiModule } from './modules/wiki/wiki.module.js';
 import { DjPortalModule } from './modules/dj-portal/dj-portal.module.js';
+import { RecordPoolModule } from './modules/record-pool/record-pool.module.js';
 
 // Root controller + service (health / info)
 import { AppController } from './app.controller.js';
@@ -91,6 +92,9 @@ import { AppService } from './app.service.js';
 
     // ── DJ Portal: scheduled-drop uploads + FTP accounts ────────────
     DjPortalModule,
+
+    // ── Record Pool: shared track library for DJs + labels ──────────
+    RecordPoolModule,
   ],
   controllers: [AppController],
   providers: [
