@@ -4,6 +4,7 @@ import { runOneJob } from './agents/research-agent.js';
 import { startFtpServer } from './ftp/ftp-server.js';
 import { startDjDropsWatcher } from './dj-drops/dj-drops-watcher.js';
 import { startStudioSync } from './studio-sync/studio-sync.js';
+import { startMetadataPoll } from './metadata-poll/metadata-poll.js';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
@@ -82,3 +83,9 @@ if (process.env.FTP_DISABLED === 'false') {
 // and M:\JBMusic\ on the production PC. No-ops on hosts that don't have
 // WCCG_STUDIO_ARCHIVE_ROOT / WCCG_STUDIO_ONAIR_ROOT / STUDIO_AGENT_TOKEN set.
 startStudioSync();
+
+// ─── Metadata-poll (Icecast/Shoutcast/Centova → mcr_state) ──────────────────
+// Polls the stream metadata source and PATCHes /mcr/metadata so the public
+// /on-air ticker and operator dashboard see current track + listener count.
+// No-ops when WCCG_METADATA_SOURCE is "manual" or unset.
+startMetadataPoll();

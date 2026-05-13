@@ -37,6 +37,7 @@ import { MarketplaceModule } from './modules/marketplace/marketplace.module.js';
 import { WikiModule } from './modules/wiki/wiki.module.js';
 import { DjPortalModule } from './modules/dj-portal/dj-portal.module.js';
 import { RecordPoolModule } from './modules/record-pool/record-pool.module.js';
+import { MasterControlModule } from './modules/master-control/master-control.module.js';
 
 // Root controller + service (health / info)
 import { AppController } from './app.controller.js';
@@ -95,6 +96,9 @@ import { AppService } from './app.service.js';
 
     // ── Record Pool: shared track library for DJs + labels ──────────
     RecordPoolModule,
+
+    // ── Master Control + EAS logbook + on-air ticker ────────────────
+    MasterControlModule,
   ],
   controllers: [AppController],
   providers: [
