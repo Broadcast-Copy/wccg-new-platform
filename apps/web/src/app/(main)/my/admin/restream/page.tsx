@@ -8,12 +8,14 @@
  * heartbeat from the worker.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  DollarSign,
   Eye,
   EyeOff,
+  Gauge,
   Loader2,
   Plus,
   RefreshCw,
@@ -260,11 +262,118 @@ export default function RestreamPage() {
         </div>
       )}
 
+      {items.length > 0 && <BandwidthEstimator items={items} />}
+
       <p className="text-xs text-muted-foreground">
         Auto-refresh 15s. Status is reported by the restream worker on the API host.
+        See <a href="https://github.com/Broadcast-Copy/wccg-new-platform/blob/main/docs/RESTREAM.md" className="underline">RESTREAM.md</a> for the start-small runbook.
       </p>
     </div>
   );
+}
+
+/**
+ * Live bandwidth estimator. Rolls up the bitrate of every ENABLED
+ * destination and projects monthly outbound — the number that decides
+ * whether you'll blow your VPS bandwidth cap.
+ */
+function BandwidthEstimator({ items }: { items: Destination[] }) {
+  const enabled = useMemo(() => items.filter((d) => d.enabled), [items]);
+
+  const totalKbps = useMemo(
+    () =>
+      enabled.reduce((sum, d) => {
+        const v = d.videoMode === "none" ? 0 : (d.videoBitrateKbps ?? 2500);
+        const a = d.audioBitrateKbps ?? 128;
+        return sum + v + a;
+      }, 0),
+    [enabled],
+  );
+
+  // Convert kbps → GB/month: kbps * seconds/month / 8 bits/byte / 1024^3
+  // = kbps * 2_592_000 / 8 / 1_073_741_824 = kbps * 0.000301... GB
+  const gbPerMonth = (totalKbps * 2_592_000) / 8 / 1024 / 1024;
+  const tbPerMonth = gbPerMonth / 1024;
+
+  // VPS bandwidth tiers — approximate KnownHost / Hetzner / DO common plans.
+  // Color the chip based on which tier we'd land in.
+  const tier =
+    gbPerMonth < 500 ? "ok" :
+    gbPerMonth < 1500 ? "tight" :
+    gbPerMonth < 3000 ? "expensive" :
+    "danger";
+
+  const tierStyle = {
+    ok:        "bg-[#74ddc7]/10 border-[#74ddc7]/40 text-foreground",
+    tight:     "bg-amber-500/10 border-amber-500/40 text-foreground",
+    expensive: "bg-amber-500/15 border-amber-500/50 text-foreground",
+    danger:    "bg-red-500/15 border-red-500/50 text-foreground",
+  }[tier];
+
+  // Overage cost @ $0.01/GB above the 5 TB-ish threshold many VPS plans use.
+  const overageGb = Math.max(0, gbPerMonth - 5120);
+  const estimatedOverageUsd = overageGb * 0.01;
+
+  return (
+    <article className={`rounded-2xl border p-5 ${tierStyle}`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <Gauge className="h-4 w-4" />
+            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+              Estimated bandwidth (enabled destinations)
+            </p>
+          </div>
+          <p className="mt-2 text-3xl font-black tracking-tight">
+            {fmtBitrate(totalKbps)} <span className="text-base font-medium text-muted-foreground">total out</span>
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            ≈ <span className="font-bold">{fmtGb(gbPerMonth)}</span> per month
+            {tbPerMonth >= 1 && <span> ({tbPerMonth.toFixed(2)} TB)</span>}
+            {" · "}
+            <span>{enabled.length} of {items.length} destination{items.length === 1 ? "" : "s"} live</span>
+          </p>
+        </div>
+        <div className="text-right text-xs">
+          <p className="font-bold uppercase tracking-widest text-muted-foreground">If your plan includes 5 TB</p>
+          <p className="mt-1">
+            {overageGb > 0 ? (
+              <span className="inline-flex items-center gap-1 text-amber-400">
+                <DollarSign className="h-3 w-3" />
+                ~${estimatedOverageUsd.toFixed(2)}/mo overage @ $0.01/GB
+              </span>
+            ) : (
+              <span className="text-[#74ddc7]">within plan</span>
+            )}
+          </p>
+          <p className="mt-2 text-muted-foreground">
+            Tier:{" "}
+            {tier === "ok" && "comfortable"}
+            {tier === "tight" && "watch the meter"}
+            {tier === "expensive" && "expect overage"}
+            {tier === "danger" && "WILL exceed most plans"}
+          </p>
+        </div>
+      </div>
+      {totalKbps > 0 && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Rough rule: {totalKbps.toLocaleString()} kbps × 30 days = {fmtGb(gbPerMonth)}. Drop video bitrate
+          to 1500 (or lower) per destination to cut this roughly in half.
+        </p>
+      )}
+    </article>
+  );
+}
+
+function fmtBitrate(kbps: number): string {
+  if (kbps >= 1000) return `${(kbps / 1000).toFixed(2)} Mbps`;
+  return `${kbps} kbps`;
+}
+
+function fmtGb(gb: number): string {
+  if (gb < 1) return `${(gb * 1024).toFixed(0)} MB`;
+  if (gb < 1000) return `${gb.toFixed(0)} GB`;
+  return `${(gb / 1024).toFixed(2)} TB`;
 }
 
 function NewDestinationForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
