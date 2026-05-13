@@ -1,9 +1,11 @@
 # DJ Portal & FTP — Runbook
 
-**Date:** 2026-04-19
+**Date:** 2026-05-13 (rev 2)
 **Audience:** WCCG Engineering / Operations
-**Automation target:** Radio Spider (FTP polling)
-**Your FTP:** you already run one — this doc tells you which directories to point it at.
+**Automation target:** DJB Radio + Radio Spider (production-room PC)
+**Your FTP:** still works — see §1 — but the **new primary path** is the
+Windows studio-sync agent (§7). Roster is now **33 active DJs** seeded by
+migration `015_dj_roster_v2.sql` (replaces the older 25-DJ seed from `014`).
 
 ---
 
@@ -290,3 +292,84 @@ Useful only if you want WCCG to host FTP on its own — which you don't need.
 - **No deps to install on your FTP server** — the platform doesn't touch
   your FTP daemon. It only reads/writes the directory tree under
   `$WCCG_DROP_ROOT/`.
+
+---
+
+## 7. Phase 2 — Windows studio-sync agent (new primary path)
+
+The production-room PC has moved from "Linux server + FTP poller" to a
+**Windows PC that pulls from the web API** and writes directly into DJB
+Radio's playback folder. The FTP path in §1–§6 remains as a fallback /
+emergency channel; this section is the new default.
+
+### Destinations on the studio PC
+
+```
+D:\WCCG\b-mixshows\                       ← archive root (every DJ's mixes)
+├── dj-ike-gda\
+│   ├── DJB_76051.mp3                     ← all-time archive (newest first)
+│   ├── DJB_76052.mp3
+│   └── on-air\                           ← this DJ's current weekly queue
+│       ├── DJB_76051.mp3                 (mirrors what's currently airing)
+│       └── DJB_76052.mp3
+├── dj-vi\
+│   └── on-air\
+└── …  (one folder per djs.slug; 33 DJs as of 2026-05)
+
+M:\JBMusic\                               ← FLAT folder that DJB Radio reads
+├── DJB_76051.mp3                         (filenames = cart codes exactly)
+├── DJB_76052.mp3
+├── DJB_76053.mp3
+└── …  (Radio Spider / DJB Radio pulls from here on its own poll cadence)
+```
+
+Both paths are configurable via env on the studio PC:
+
+```bash
+WCCG_STUDIO_ARCHIVE_ROOT=D:\WCCG\b-mixshows
+WCCG_STUDIO_ONAIR_ROOT=M:\JBMusic
+WCCG_API_URL=https://api.wccg1045fm.com/api/v1
+WCCG_STUDIO_AGENT_TOKEN=<service-issued bearer; see admin panel>
+```
+
+### Sync flow (pull, not push)
+
+```
+                 ┌─────────────────────────────────────┐
+                 │  DJ uploads via /my/dj on web       │
+                 │  → POST /djs/me/upload              │
+                 │  → file → Supabase Storage          │
+                 │  → dj_drops row inserted (uploaded) │
+                 └───────────────┬─────────────────────┘
+                                 │
+                                 ▼
+                ┌────────────────────────────────────┐
+                │  Studio-sync agent (Windows PC)    │
+                │  Polls GET /djs/admin/ready q60s   │
+                │  Downloads each new file via       │
+                │  GET /djs/admin/ready/:id/blob     │
+                └───────┬───────────┬────────────────┘
+                        │           │
+                        ▼           ▼
+                D:\…\<slug>\…    M:\JBMusic\DJB_NNNNN.mp3
+                D:\…\<slug>\on-air\…
+                        │
+                        ▼
+                POST /djs/admin/ready/:id/ack
+                (dj_drops.status → 'published')
+```
+
+### Empty / unassigned slots
+
+10 of the 25 weekly slots ship empty (Mon 10pm, Wed 12pm, Fri 9pm, all of
+Sat, Sun 6am/7am/6pm). They're real rows in `dj_slots` with `dj_id = NULL`
+and intact `file_codes`. Admins can assign a DJ from
+`/my/admin/dj-slots` (Phase B). The studio-sync agent simply skips empty
+slots when generating the on-air filename map.
+
+### DJ Corleone exception
+
+Sun 5pm is `DJB_75093` and `DJB_75094` — note the **`75` prefix**, not
+`76`. This is intentional and matches an older block of cart codes already
+in Radio Spider's library. The migration enforces this by hard-coding the
+file_codes array; do not "correct" it.
