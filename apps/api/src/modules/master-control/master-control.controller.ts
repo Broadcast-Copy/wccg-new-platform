@@ -10,6 +10,7 @@ import {
 import { MasterControlService } from './master-control.service.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { Public } from '../../common/decorators/public.decorator.js';
+import { Roles } from '../../common/decorators/roles.decorator.js';
 import type { SupabaseUser } from '../../common/guards/supabase-auth.guard.js';
 
 /**
@@ -42,13 +43,15 @@ export class MasterControlController {
     return this.mcr.publicOnAir();
   }
 
-  // ─── Dashboard ───────────────────────────────────────────────────────
+  // ─── Dashboard (admin/operator only) ─────────────────────────────────
 
+  @Roles('admin')
   @Get('dashboard')
   dashboard() {
     return this.mcr.dashboard();
   }
 
+  @Roles('admin')
   @Patch('metadata')
   updateMetadata(
     @Body() body: {
@@ -66,18 +69,21 @@ export class MasterControlController {
     return this.mcr.updateMetadata(body);
   }
 
+  @Roles('admin')
   @Patch('operator-note')
   updateOperatorNote(@Body() body: { note: string | null }) {
     return this.mcr.updateOperatorNote(body?.note ?? null);
   }
 
+  @Roles('admin')
   @Patch('current-dj')
   setCurrentDj(@Body() body: { djSlug: string | null; showTitle: string | null }) {
     return this.mcr.assignCurrentDj(body?.djSlug ?? null, body?.showTitle ?? null);
   }
 
-  // ─── EAS logbook ─────────────────────────────────────────────────────
+  // ─── EAS logbook (admin) ─────────────────────────────────────────────
 
+  @Roles('admin')
   @Get('eas')
   easList(
     @Query('from') from?: string,
@@ -91,6 +97,7 @@ export class MasterControlController {
     });
   }
 
+  @Roles('admin')
   @Post('eas')
   logEas(
     @CurrentUser() user: SupabaseUser,
@@ -117,13 +124,15 @@ export class MasterControlController {
     return this.mcr.logEas(user.sub, body);
   }
 
-  // ─── Test schedule ───────────────────────────────────────────────────
+  // ─── Test schedule (admin) ───────────────────────────────────────────
 
+  @Roles('admin')
   @Get('tests')
   listTests(@Query('completed') completed?: string) {
     return this.mcr.listTests(completed === 'true' || completed === '1');
   }
 
+  @Roles('admin')
   @Post('tests/:id/complete')
   completeTest(
     @CurrentUser() user: SupabaseUser,

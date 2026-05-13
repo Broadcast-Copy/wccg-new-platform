@@ -5,6 +5,7 @@ import { APP_GUARD } from '@nestjs/core';
 // Common
 import { SupabaseDbModule } from './common/supabase/supabase-db.module.js';
 import { SupabaseAuthGuard } from './common/guards/supabase-auth.guard.js';
+import { RolesGuard } from './common/guards/roles.guard.js';
 
 // Feature modules
 import { AuthModule } from './modules/auth/auth.module.js';
@@ -38,6 +39,7 @@ import { WikiModule } from './modules/wiki/wiki.module.js';
 import { DjPortalModule } from './modules/dj-portal/dj-portal.module.js';
 import { RecordPoolModule } from './modules/record-pool/record-pool.module.js';
 import { MasterControlModule } from './modules/master-control/master-control.module.js';
+import { RestreamModule } from './modules/restream/restream.module.js';
 
 // Root controller + service (health / info)
 import { AppController } from './app.controller.js';
@@ -99,6 +101,9 @@ import { AppService } from './app.service.js';
 
     // ── Master Control + EAS logbook + on-air ticker ────────────────
     MasterControlModule,
+
+    // ── Phase D: Restream fan-out (YouTube/Twitch/Discord/RTMP) ─────
+    RestreamModule,
   ],
   controllers: [AppController],
   providers: [
@@ -111,8 +116,13 @@ import { AppService } from './app.service.js';
       provide: APP_GUARD,
       useClass: SupabaseAuthGuard,
     },
-    // RolesGuard is NOT registered globally — use @UseGuards(RolesGuard)
-    // on specific routes that need role checking, combined with @Roles().
+    // RolesGuard runs after SupabaseAuthGuard. Routes without @Roles()
+    // pass through; routes with @Roles('admin') etc. enforce the priority
+    // ladder in common/guards/roles.guard.ts.
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
   ],
 })
 export class AppModule {}

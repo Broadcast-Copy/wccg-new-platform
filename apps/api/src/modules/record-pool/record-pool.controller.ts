@@ -16,6 +16,7 @@ import type { Request } from 'express';
 import { RecordPoolService } from './record-pool.service.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { Public } from '../../common/decorators/public.decorator.js';
+import { Roles } from '../../common/decorators/roles.decorator.js';
 import type { SupabaseUser } from '../../common/guards/supabase-auth.guard.js';
 
 /**
@@ -123,16 +124,19 @@ export class RecordPoolController {
 
   // ─── Admin moderation ──────────────────────────────────────────────────
 
+  @Roles('admin')
   @Get('admin/pending')
   pending(@Query('limit') limit?: string) {
     return this.pool.pendingQueue(Number(limit) || 50);
   }
 
+  @Roles('admin')
   @Post('admin/:id/approve')
   approve(@CurrentUser() user: SupabaseUser, @Param('id') id: string) {
     return this.pool.approve(user.sub, id);
   }
 
+  @Roles('admin')
   @Post('admin/:id/reject')
   reject(
     @CurrentUser() user: SupabaseUser,

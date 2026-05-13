@@ -5,6 +5,7 @@ import { startFtpServer } from './ftp/ftp-server.js';
 import { startDjDropsWatcher } from './dj-drops/dj-drops-watcher.js';
 import { startStudioSync } from './studio-sync/studio-sync.js';
 import { startMetadataPoll } from './metadata-poll/metadata-poll.js';
+import { startRestream } from './restream/restream.js';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
@@ -89,3 +90,9 @@ startStudioSync();
 // /on-air ticker and operator dashboard see current track + listener count.
 // No-ops when WCCG_METADATA_SOURCE is "manual" or unset.
 startMetadataPoll();
+
+// ─── Restream fan-out (YouTube / Twitch / Facebook / Discord / RTMP) ───────
+// Spawns one ffmpeg subprocess per enabled destination, reconciles every
+// 30s. No-ops without WCCG_API_URL + RESTREAM_AGENT_TOKEN. Requires ffmpeg
+// installed on the host running this worker.
+startRestream();

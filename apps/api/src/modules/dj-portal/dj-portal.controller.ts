@@ -17,6 +17,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { DjPortalService } from './dj-portal.service.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { Public } from '../../common/decorators/public.decorator.js';
+import { Roles } from '../../common/decorators/roles.decorator.js';
 import type { SupabaseUser } from '../../common/guards/supabase-auth.guard.js';
 
 /**
@@ -101,12 +102,14 @@ export class DjPortalController {
    * GET /djs/admin/missing?weekOf=YYYY-MM-DD — slots/codes missing this week.
    * Returns one row per (slot, file_code, week) that has no uploaded drop.
    */
+  @Roles('admin')
   @Get('admin/missing')
   missing(@Query('weekOf') weekOf?: string) {
     return this.portal.missingThisWeek(weekOf);
   }
 
   /** GET /djs/admin/all — list every DJ with their slots and a recency flag. */
+  @Roles('admin')
   @Get('admin/all')
   allDjs() {
     return this.portal.adminAll();
@@ -116,6 +119,7 @@ export class DjPortalController {
    * POST /djs/admin/claim — link an existing DJ slug to a Supabase user_id.
    * Used to onboard a DJ once they sign up.
    */
+  @Roles('admin')
   @Post('admin/claim')
   claim(@Body() dto: { djSlug: string; userId: string; email?: string }) {
     return this.portal.adminClaim(dto.djSlug, dto.userId, dto.email);
@@ -124,6 +128,7 @@ export class DjPortalController {
   // ─── Admin slot assignment ─────────────────────────────────────────────
 
   /** GET /djs/admin/slots — every slot + assigned DJ (or null) + DJ list. */
+  @Roles('admin')
   @Get('admin/slots')
   adminSlots() {
     return this.portal.adminSlots();
@@ -133,6 +138,7 @@ export class DjPortalController {
    * PATCH /djs/admin/slots/:id — assign / reassign / unassign a slot.
    * Body: { djId: string | null }
    */
+  @Roles('admin')
   @Patch('admin/slots/:id')
   assignSlot(@Param('id') slotId: string, @Body() body: { djId?: string | null }) {
     return this.portal.adminAssignSlot(slotId, body?.djId ?? null);
