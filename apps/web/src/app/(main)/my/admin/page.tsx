@@ -26,6 +26,12 @@ import {
   Clock,
   X,
   CheckCircle2,
+  Bell,
+  Disc3,
+  Headphones,
+  ListMusic,
+  Tv2,
+  Tv,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -63,7 +69,18 @@ interface ActivityItem {
 // Module definitions
 // ---------------------------------------------------------------------------
 
+// Phase 1-4 ops modules — live, with backing services + APIs.
+const opsModules: AdminModule[] = [
+  { icon: Tv, title: "Master Control", description: "Live dashboard — now playing, signal status, system health, EAS, missing drops.", href: "/my/admin/master-control", color: "from-[#dc2626] to-[#7f1d1d]" },
+  { icon: Disc3, title: "DJ Slots", description: "Assign DJs to weekly mix-show slots. Fill empty rotation slots.", href: "/my/admin/dj-slots", color: "from-[#7401df] to-[#4c1d95]" },
+  { icon: Headphones, title: "DJ Drops", description: "Who's missing this week — uploaded mix-show audio per slot.", href: "/my/admin/dj-drops", color: "from-[#3b82f6] to-[#1d4ed8]" },
+  { icon: Bell, title: "EAS Logbook", description: "FCC Emergency Alert System log — every received, originated, and test event.", href: "/my/admin/eas", color: "from-[#f59e0b] to-[#d97706]" },
+  { icon: ListMusic, title: "Record Pool Moderation", description: "Approve or reject DJ + label uploads to the WCCG record pool.", href: "/my/admin/pool", color: "from-[#74ddc7] to-[#0d9488]" },
+  { icon: Tv2, title: "Restream Destinations", description: "Simulcast WCCG to YouTube Live, Twitch, Facebook, and custom RTMP.", href: "/my/admin/restream", color: "from-[#ec4899] to-[#be185d]" },
+];
+
 const defaultModules: AdminModule[] = [
+  ...opsModules,
   { icon: Radio, title: "Stream Management", description: "Manage live streams, channels, and on-air scheduling.", href: "/my/admin", color: "from-[#74ddc7] to-[#0d9488]" },
   { icon: Users, title: "User Management", description: "View and manage listeners, hosts, and admin accounts.", href: "/my/admin", color: "from-[#3b82f6] to-[#1d4ed8]" },
   { icon: CalendarDays, title: "Events & Tickets", description: "Create events, manage ticket sales, and check-ins.", href: "/events/create", color: "from-[#ec4899] to-[#be185d]" },
@@ -83,6 +100,7 @@ const salesModules: AdminModule[] = [
 ];
 
 const productionModules: AdminModule[] = [
+  ...opsModules,
   { icon: FileAudio, title: "Production Queue", description: "Active jobs, deadlines, and production workflow.", href: "/my/admin/production", color: "from-[#f59e0b] to-[#d97706]" },
   { icon: CalendarDays, title: "Studio Booking", description: "Reserve studio time and manage sessions.", href: "/studio/booking", color: "from-[#3b82f6] to-[#1d4ed8]" },
   { icon: Radio, title: "Content Library", description: "Browse and manage audio assets and recordings.", href: "/studio", color: "from-[#74ddc7] to-[#0d9488]" },

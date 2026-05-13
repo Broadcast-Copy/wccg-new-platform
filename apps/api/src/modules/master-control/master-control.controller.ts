@@ -51,6 +51,13 @@ export class MasterControlController {
     return this.mcr.dashboard();
   }
 
+  /** Standalone alerts — same data also embedded in /dashboard.alerts. */
+  @Roles('admin')
+  @Get('alerts')
+  alerts() {
+    return this.mcr.alerts();
+  }
+
   @Roles('admin')
   @Patch('metadata')
   updateMetadata(

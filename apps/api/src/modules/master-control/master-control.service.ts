@@ -51,7 +51,13 @@ export class MasterControlService {
    * counts, pool pending, etc. Cheap enough to call every 10s from the UI.
    */
   async dashboard() {
-    const [{ data: mcr }, { data: recentEas }, { data: nextTests }, { data: missing }] = await Promise.all([
+    const [
+      { data: mcr },
+      { data: recentEas },
+      { data: nextTests },
+      { data: missing },
+      alerts,
+    ] = await Promise.all([
       this.db.from('mcr_dashboard').select('*').limit(1).maybeSingle(),
       this.db.from('eas_alerts')
         .select('id, direction, same_code, event_label, severity, originator, issued_at, sent_at')
@@ -63,6 +69,7 @@ export class MasterControlService {
         .order('scheduled_for', { ascending: true })
         .limit(5),
       this.db.from('dj_drops_this_week').select('*'),
+      this.alerts(),
     ]);
 
     const missingThisWeek = (missing ?? []).filter(
@@ -74,6 +81,7 @@ export class MasterControlService {
       recentEas: recentEas ?? [],
       nextTests: nextTests ?? [],
       missingThisWeek,
+      alerts: alerts ?? [],
     };
   }
 
@@ -241,6 +249,114 @@ export class MasterControlService {
     if (!includeCompleted) q = q.is('completed_at', null);
     const { data } = await q.order('scheduled_for', { ascending: true });
     return data ?? [];
+  }
+
+  // ─── Service-health alerts ─────────────────────────────────────────────
+
+  /**
+   * Compute live alerts for the MCR banner. Cheap — runs a handful of
+   * scalar queries. Returns deterministically ordered, severity-tagged
+   * items. The dashboard auto-refreshes this every 10s along with the
+   * rest of the dashboard payload.
+   */
+  async alerts() {
+    const out: Array<{
+      id: string;
+      severity: 'info' | 'warn' | 'error';
+      kind: 'metadata_stale' | 'restream_failed' | 'studio_silent' | 'eas_overdue' | 'restream_no_destinations';
+      title: string;
+      detail: string;
+      link?: string;
+    }> = [];
+
+    // ── Metadata staleness ─────────────────────────────────────────────
+    const { data: state } = await this.db.from('mcr_state')
+      .select('last_metadata_at, signal_status, now_playing_source')
+      .eq('id', 1).maybeSingle();
+    if (state?.last_metadata_at) {
+      const ageMs = Date.now() - new Date(state.last_metadata_at).getTime();
+      if (ageMs > 5 * 60 * 1000 && state.signal_status !== 'unknown') {
+        out.push({
+          id: 'metadata_stale',
+          severity: 'warn',
+          kind: 'metadata_stale',
+          title: 'Metadata is stale',
+          detail: `Last update ${Math.round(ageMs / 60000)}m ago. Set source manually or restart the metadata-poll worker.`,
+          link: '/my/admin/master-control',
+        });
+      }
+    }
+
+    // ── Restream destinations failed ──────────────────────────────────
+    const { data: failed } = await this.db.from('restream_destinations')
+      .select('id, label, status, consecutive_failures, last_error_msg')
+      .eq('enabled', true)
+      .in('status', ['failed', 'reconnecting']);
+    for (const d of failed ?? []) {
+      if ((d.consecutive_failures ?? 0) >= 3) {
+        out.push({
+          id: `restream_failed_${d.id}`,
+          severity: 'error',
+          kind: 'restream_failed',
+          title: `${d.label} is ${d.status}`,
+          detail: `${d.consecutive_failures} consecutive failures. ${d.last_error_msg ?? ''}`.trim(),
+          link: '/my/admin/restream',
+        });
+      }
+    }
+
+    // ── Studio-sync agent silent ──────────────────────────────────────
+    // If there are uploaded drops that haven't transitioned to 'published'
+    // in the last 30 minutes, the studio-sync agent might be down.
+    const { data: pending } = await this.db.from('dj_drops')
+      .select('id, file_code, uploaded_at, status', { count: 'exact' } as any)
+      .eq('status', 'uploaded')
+      .lte('uploaded_at', new Date(Date.now() - 30 * 60 * 1000).toISOString())
+      .limit(1);
+    if (pending && pending.length > 0) {
+      out.push({
+        id: 'studio_silent',
+        severity: 'warn',
+        kind: 'studio_silent',
+        title: 'Studio-sync agent may be offline',
+        detail: 'Drops uploaded > 30m ago are still in "uploaded" state — the studio PC hasn\'t pulled them yet.',
+        link: '/my/admin/dj-drops',
+      });
+    }
+
+    // ── EAS test overdue ─────────────────────────────────────────────
+    const { data: overdue } = await this.db.from('eas_test_schedule')
+      .select('id, kind, scheduled_for')
+      .is('completed_at', null)
+      .lt('scheduled_for', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      .order('scheduled_for', { ascending: true })
+      .limit(3);
+    for (const t of overdue ?? []) {
+      out.push({
+        id: `eas_overdue_${t.id}`,
+        severity: 'error',
+        kind: 'eas_overdue',
+        title: `${t.kind} overdue`,
+        detail: `Scheduled ${new Date(t.scheduled_for).toLocaleDateString()}. FCC requires weekly RWT compliance.`,
+        link: '/my/admin/eas',
+      });
+    }
+
+    // ── No restream destinations configured (info-level nudge) ────────
+    const { count: restreamCount } = await this.db.from('restream_destinations')
+      .select('id', { count: 'exact', head: true } as any);
+    if ((restreamCount ?? 0) === 0) {
+      out.push({
+        id: 'restream_no_destinations',
+        severity: 'info',
+        kind: 'restream_no_destinations',
+        title: 'No restream destinations configured',
+        detail: 'Phase D ready — add a YouTube/Twitch destination at /my/admin/restream when you\'re ready to simulcast.',
+        link: '/my/admin/restream',
+      });
+    }
+
+    return out;
   }
 
   async completeTest(userId: string, testId: string, kind: 'RWT' | 'RMT', notes?: string) {

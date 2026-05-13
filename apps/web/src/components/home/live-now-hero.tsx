@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 import { useNowPlaying } from "@/hooks/use-now-playing";
+import { useMcrOnAir } from "@/hooks/use-mcr-on-air";
 import {
   getListeningPoints,
   getListeningProgress,
@@ -41,7 +42,14 @@ export function LiveNowHero() {
   // Always poll now-playing — even before the user presses play. This is the
   // critical change vs. the old hero: the track on air is the first thing
   // the visitor sees, not a marketing tagline.
+  //
+  // Source priority:
+  //   1. MCR state (operator-authored or metadata-poll worker) — preferred
+  //      because it tracks the actual operator intent, not what a third-
+  //      party metadata aggregator scraped.
+  //   2. Cirrus/SecureNet XML feed — fallback when MCR is empty or stale.
   const { data: nowPlaying } = useNowPlaying(true);
+  const mcr = useMcrOnAir(true);
 
   // Live points + progress, refreshed by a 1s tick and by cross-tab sync.
   const [points, setPoints] = useState(0);
@@ -71,11 +79,28 @@ export function LiveNowHero() {
   const onAir = useMemo(() => resolveNowPlaying(), []);
   const upNext = useMemo(() => getUpNext(1)[0], []);
 
-  // Track + artist + art come from the live SecureNet/Cirrus feed; if we have
-  // nothing yet, fall back to the show-level metadata so the hero is never empty.
-  const trackTitle = nowPlaying?.title || onAir?.showName || "WCCG 104.5 FM";
-  const trackArtist = nowPlaying?.artist || onAir?.hostNames || "Fayetteville's Hip Hop Station";
-  const albumArt = nowPlaying?.albumArt || "/images/logos/wccg-logo.png";
+  // Track + artist + art prefer MCR (operator-authored), then Cirrus
+  // (live metadata aggregator), then the on-air show metadata, finally
+  // the station fallback. The hero is never empty.
+  const mcrFresh = mcr.fresh ? mcr.data?.nowPlaying : null;
+  const trackTitle =
+    mcrFresh?.title ||
+    nowPlaying?.title ||
+    onAir?.showName ||
+    "WCCG 104.5 FM";
+  const trackArtist =
+    mcrFresh?.artist ||
+    nowPlaying?.artist ||
+    onAir?.hostNames ||
+    "Fayetteville's Hip Hop Station";
+  const albumArt =
+    mcrFresh?.artUrl ||
+    nowPlaying?.albumArt ||
+    "/images/logos/wccg-logo.png";
+
+  // Real listener count when MCR has one — replaces the old TODO(Phase D)
+  // soft fallback.
+  const liveListeners = mcr.data?.listeners ?? null;
 
   // The CTA's three states: idle (cold), buffering (just clicked), playing (engaged).
   const ctaLabel = isPlaying
@@ -179,8 +204,9 @@ export function LiveNowHero() {
               On Air
             </span>
             <span className="text-[11px] font-semibold uppercase tracking-widest text-white/60">
-              {/* TODO(Phase D): replace with real concurrent listener count from restream metrics */}
-              Live worldwide · 104.5 FM
+              {liveListeners != null
+                ? `${liveListeners.toLocaleString()} listening · 104.5 FM`
+                : "Live worldwide · 104.5 FM"}
             </span>
           </div>
 

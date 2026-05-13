@@ -31,7 +31,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api-client";
 
+interface AlertItem {
+  id: string;
+  severity: "info" | "warn" | "error";
+  kind: string;
+  title: string;
+  detail: string;
+  link?: string;
+}
+
 interface DashboardResponse {
+  alerts: AlertItem[];
   state: {
     id: number;
     now_playing_title: string | null;
@@ -191,6 +201,41 @@ export default function MasterControlPage() {
         <div className="rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           {error}
         </div>
+      )}
+
+      {/* Service-health alerts banner */}
+      {data && data.alerts.length > 0 && (
+        <section className="space-y-2">
+          {data.alerts.map((a) => {
+            const Icon = a.severity === "error" ? AlertTriangle : a.severity === "warn" ? AlertTriangle : Bell;
+            const tone =
+              a.severity === "error"
+                ? "border-red-500/50 bg-red-500/10 text-red-200"
+                : a.severity === "warn"
+                  ? "border-amber-500/50 bg-amber-500/10 text-amber-200"
+                  : "border-border bg-card text-foreground";
+            const link = a.link ? (
+              <Link href={a.link} className="text-xs font-bold uppercase tracking-widest underline-offset-2 hover:underline">
+                Fix →
+              </Link>
+            ) : null;
+            return (
+              <article
+                key={a.id}
+                className={`flex flex-wrap items-start justify-between gap-3 rounded-xl border px-4 py-3 ${tone}`}
+              >
+                <div className="flex items-start gap-3">
+                  <Icon className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                  <div>
+                    <p className="font-bold">{a.title}</p>
+                    <p className="mt-0.5 text-sm opacity-90">{a.detail}</p>
+                  </div>
+                </div>
+                {link}
+              </article>
+            );
+          })}
+        </section>
       )}
 
       {/* Signal + Now Playing */}
