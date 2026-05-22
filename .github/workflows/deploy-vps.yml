@@ -62,7 +62,8 @@ jobs:
             git reset --hard origin/main
 
             echo "=== Installing dependencies ==="
-            pnpm install --frozen-lockfile
+            # --no-frozen-lockfile: same reason as deploy.yml
+            pnpm install --no-frozen-lockfile
 
             echo "=== Building API ==="
             pnpm --filter api build

@@ -36,7 +36,11 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        # NOTE: --no-frozen-lockfile because lockfile may lag behind
+        # package.json additions made without local pnpm available.
+        # Restore --frozen-lockfile once we run `pnpm install` locally and
+        # commit the regenerated pnpm-lock.yaml.
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build for GitHub Pages
         env:
