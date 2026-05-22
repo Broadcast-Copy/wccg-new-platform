@@ -40,6 +40,7 @@ import { DjPortalModule } from './modules/dj-portal/dj-portal.module.js';
 import { RecordPoolModule } from './modules/record-pool/record-pool.module.js';
 import { MasterControlModule } from './modules/master-control/master-control.module.js';
 import { RestreamModule } from './modules/restream/restream.module.js';
+import { AnalyticsModule } from './modules/analytics/analytics.module.js';
 
 // Root controller + service (health / info)
 import { AppController } from './app.controller.js';
@@ -104,6 +105,9 @@ import { AppService } from './app.service.js';
 
     // ── Phase D: Restream fan-out (YouTube/Twitch/Discord/RTMP) ─────
     RestreamModule,
+
+    // ── Phase 6: Station analytics ──────────────────────────────────
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [

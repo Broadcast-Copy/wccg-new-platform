@@ -69,9 +69,10 @@ interface ActivityItem {
 // Module definitions
 // ---------------------------------------------------------------------------
 
-// Phase 1-4 ops modules — live, with backing services + APIs.
+// Phase 1-6 ops modules — live, with backing services + APIs.
 const opsModules: AdminModule[] = [
   { icon: Tv, title: "Master Control", description: "Live dashboard — now playing, signal status, system health, EAS, missing drops.", href: "/my/admin/master-control", color: "from-[#dc2626] to-[#7f1d1d]" },
+  { icon: BarChart3, title: "Station Analytics", description: "Engagement, signups, DJ activity, record-pool usage. Real data, not mocks.", href: "/my/admin/analytics", color: "from-[#3b82f6] to-[#1d4ed8]" },
   { icon: Disc3, title: "DJ Slots", description: "Assign DJs to weekly mix-show slots. Fill empty rotation slots.", href: "/my/admin/dj-slots", color: "from-[#7401df] to-[#4c1d95]" },
   { icon: Headphones, title: "DJ Drops", description: "Who's missing this week — uploaded mix-show audio per slot.", href: "/my/admin/dj-drops", color: "from-[#3b82f6] to-[#1d4ed8]" },
   { icon: Bell, title: "EAS Logbook", description: "FCC Emergency Alert System log — every received, originated, and test event.", href: "/my/admin/eas", color: "from-[#f59e0b] to-[#d97706]" },
