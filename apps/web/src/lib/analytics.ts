@@ -12,6 +12,7 @@
 
 type EventName =
   | "visit_home"
+  | "visit_listen"
   | "play_clicked"
   | "audio_first_byte"
   | "audio_listen_minute"
