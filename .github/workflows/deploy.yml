@@ -139,11 +139,11 @@ jobs:
           name: knownhost-build
           path: out
 
-      - name: Install sshpass
+      - name: Install lftp + sshpass
         if: steps.preflight.outputs.can_deploy == 'true'
-        run: sudo apt-get install -y sshpass
+        run: sudo apt-get install -y lftp sshpass
 
-      - name: Probe SSH + remote disk before rsync
+      - name: Probe SSH + remote disk before deploy
         if: steps.preflight.outputs.can_deploy == 'true'
         env:
           SSHPASS: ${{ secrets.KNOWNHOST_SSH_PASSWORD }}
@@ -153,35 +153,55 @@ jobs:
           PORT="${PORT:-22}"
           USER="${{ secrets.KNOWNHOST_SSH_USER }}"
           HOST="${{ secrets.KNOWNHOST_SSH_HOST }}"
-          echo "=== SSH connectivity (no command, just handshake) ==="
+          echo "=== SSH connectivity ==="
           sshpass -e ssh -p "$PORT" -o StrictHostKeyChecking=no \
             -o ConnectTimeout=10 -o BatchMode=no \
             "$USER@$HOST" "echo SSH_OK_FROM_REMOTE; uname -a; df -h ~/public_html | tail -2; ls -ld ~/public_html"
           rc=$?
           echo "SSH probe exit code: $rc"
           if [ $rc -ne 0 ]; then
-            echo "::warning::SSH probe failed — likely password change, IP block, or quota. Skipping rsync."
-            echo "RSYNC_SAFE=false" >> "$GITHUB_ENV"
+            echo "::warning::SSH probe failed — likely password change, IP block, or quota. Skipping deploy."
+            echo "DEPLOY_SAFE=false" >> "$GITHUB_ENV"
           else
-            echo "RSYNC_SAFE=true" >> "$GITHUB_ENV"
+            echo "DEPLOY_SAFE=true" >> "$GITHUB_ENV"
           fi
-          # local artifact stats so we can compare with remote disk
           echo "=== Local artifact size ==="
           du -sh out
           echo "=== Local file count ==="
           find out -type f | wc -l
 
-      - name: Deploy to KnownHost via rsync
-        if: steps.preflight.outputs.can_deploy == 'true' && env.RSYNC_SAFE == 'true'
+      - name: Deploy to KnownHost via lftp (SFTP)
+        if: steps.preflight.outputs.can_deploy == 'true' && env.DEPLOY_SAFE == 'true'
         env:
-          SSHPASS: ${{ secrets.KNOWNHOST_SSH_PASSWORD }}
+          KH_PASS: ${{ secrets.KNOWNHOST_SSH_PASSWORD }}
         run: |
           set -x
-          sshpass -e rsync -avz --delete --stats \
-            -e "ssh -p ${{ secrets.KNOWNHOST_SSH_PORT }} -o StrictHostKeyChecking=no" \
-            out/ \
-            ${{ secrets.KNOWNHOST_SSH_USER }}@${{ secrets.KNOWNHOST_SSH_HOST }}:/home/${{ secrets.KNOWNHOST_SSH_USER }}/public_html/
-          echo "=== Verify a couple of new pages exist on the remote ==="
-          sshpass -e ssh -p ${{ secrets.KNOWNHOST_SSH_PORT }} -o StrictHostKeyChecking=no \
-            ${{ secrets.KNOWNHOST_SSH_USER }}@${{ secrets.KNOWNHOST_SSH_HOST }} \
-            "ls -la /home/${{ secrets.KNOWNHOST_SSH_USER }}/public_html/djs/index.html /home/${{ secrets.KNOWNHOST_SSH_USER }}/public_html/on-air/index.html /home/${{ secrets.KNOWNHOST_SSH_USER }}/public_html/my/admin/analytics/index.html 2>&1 | head -10"
+          PORT="${{ secrets.KNOWNHOST_SSH_PORT }}"
+          PORT="${PORT:-22}"
+          USER="${{ secrets.KNOWNHOST_SSH_USER }}"
+          HOST="${{ secrets.KNOWNHOST_SSH_HOST }}"
+          # lftp's "mirror -R" pushes a local directory to a remote one over
+          # SFTP. Bypasses rsync entirely (KnownHost cPanel hosts often have
+          # a stripped rsync that returns code 2 "protocol incompatibility").
+          # --parallel=4 keeps the transfer fast; --delete removes stale files
+          # so the deploy is idempotent.
+          lftp -u "$USER,$KH_PASS" -p "$PORT" sftp://"$HOST" <<EOF
+            set sftp:auto-confirm yes
+            set net:max-retries 2
+            set net:timeout 30
+            set mirror:parallel-transfer-count 4
+            mirror --reverse --delete --verbose=1 \
+              --exclude-glob "cgi-bin/" \
+              --exclude-glob ".well-known/" \
+              --exclude-glob ".htaccess*" \
+              out/ public_html/
+            cls -l public_html/djs/index.html public_html/on-air/index.html public_html/my/admin/analytics/index.html
+            bye
+          EOF
+          echo "=== Sanity-check the upload via SSH ==="
+          SSHPASS="$KH_PASS" sshpass -e ssh -p "$PORT" -o StrictHostKeyChecking=no \
+            "$USER@$HOST" <<'REMOTE'
+              for f in public_html/djs/index.html public_html/on-air/index.html public_html/pool/index.html public_html/my/admin/analytics/index.html public_html/my/admin/master-control/index.html; do
+                if [ -f "$f" ]; then echo "OK   $f $(stat -c %s "$f") bytes"; else echo "MISS $f"; fi
+              done
+          REMOTE
