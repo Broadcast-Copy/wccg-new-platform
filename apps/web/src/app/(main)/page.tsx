@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowRight,
   ArrowDownRight,
-  Headphones,
   Radio,
   CalendarDays,
   Users2,
@@ -204,42 +203,9 @@ export default function HomePage() {
 
   return (
     <div className="space-y-10">
-      {/* "Listen Live" CTA strip — direct path to the now-moved audio-first
-          experience at /listen. Compact so the home page focuses on
-          discovery + station programming rather than the player itself. */}
-      <Link
-        href="/listen"
-        className="group relative flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-2xl border border-[#dc2626]/40 bg-gradient-to-r from-[#0b0b0f] via-[#13111a] to-[#1a0e1f] px-6 py-5 text-white transition-all hover:border-[#dc2626] hover:shadow-2xl hover:shadow-red-500/20"
-      >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -left-20 -top-20 h-[200px] w-[200px] rounded-full bg-[#dc2626]/40 blur-[80px] transition-opacity group-hover:opacity-100"
-        />
-        <div className="relative z-10 flex items-center gap-4">
-          <span className="inline-flex items-center gap-2 rounded-full bg-[#dc2626] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white shadow-lg shadow-red-500/30">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
-            </span>
-            On Air
-          </span>
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-white/60">
-              WCCG 104.5 FM
-            </p>
-            <p className="text-lg font-black tracking-tight">
-              Listen live, earn WP →
-            </p>
-          </div>
-        </div>
-        <span className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white transition-colors group-hover:bg-white/20">
-          <Headphones className="h-4 w-4" />
-          Open player
-          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-        </span>
-      </Link>
-
-      {/* Show carousel — primary on-air programming view. */}
+      {/* Show carousel — primary on-air programming view.
+          The "Listen live, earn WP →" CTA strip lives on the user
+          dashboard (/my) instead of the home page. */}
       <Hero />
 
       {/* Duke Game Day */}
