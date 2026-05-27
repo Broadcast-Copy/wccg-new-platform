@@ -971,12 +971,15 @@ function DukeOffseasonCard({
 }) {
   const [expanded, setExpanded] = useState(false);
 
-  // Rotating text: season message + news headlines with fade
-  const SEASON_MSG = "2025-26 season complete — check back for 2026-27 schedule updates";
-  const allMessages = useMemo(() => {
-    const msgs = [SEASON_MSG];
+  // Rotating text: season message + news headlines with fade.
+  // Each rotating entry carries an optional sport tag (BB / FB) so the
+  // header can show a per-headline pill — the news source now covers
+  // both basketball and football per /hooks/use-duke-news.
+  const SEASON_MSG = "Latest Duke basketball + football headlines";
+  const allMessages = useMemo<Array<{ text: string; sport?: "basketball" | "football" }>>(() => {
+    const msgs: Array<{ text: string; sport?: "basketball" | "football" }> = [{ text: SEASON_MSG }];
     for (const item of dukeNews.slice(0, 8)) {
-      msgs.push(item.headline);
+      msgs.push({ text: item.headline, sport: item.sport });
     }
     return msgs;
   }, [dukeNews]);
@@ -1021,10 +1024,23 @@ function DukeOffseasonCard({
         {/* Title + rotating text */}
         <div className="relative z-10 flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <h2 className="text-sm sm:text-base font-black text-white tracking-tight">DUKE BASKETBALL</h2>
+            <h2 className="text-sm sm:text-base font-black text-white tracking-tight">DUKE SPORTS</h2>
             <span className="text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-white/50 font-bold uppercase tracking-wider border border-white/10">
               Offseason
             </span>
+            {allMessages[msgIndex]?.sport && (
+              <span
+                className={`text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider border transition-opacity duration-500 ${
+                  fade ? "opacity-100" : "opacity-0"
+                } ${
+                  allMessages[msgIndex].sport === "basketball"
+                    ? "bg-[#74ddc7]/15 text-[#74ddc7] border-[#74ddc7]/30"
+                    : "bg-[#f59e0b]/15 text-[#f59e0b] border-[#f59e0b]/30"
+                }`}
+              >
+                {allMessages[msgIndex].sport === "basketball" ? "BB" : "FB"}
+              </span>
+            )}
           </div>
           {/* Rotating message with fade */}
           <div className="h-5 overflow-hidden">
@@ -1033,7 +1049,7 @@ function DukeOffseasonCard({
                 fade ? "opacity-100" : "opacity-0"
               }`}
             >
-              {allMessages[msgIndex]}
+              {allMessages[msgIndex]?.text}
             </p>
           </div>
         </div>
