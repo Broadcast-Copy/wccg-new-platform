@@ -38,7 +38,10 @@ Deno.serve(async (req: Request) => {
     if (!drop) return json({ ok: false, reason: "drop not found" }, 404);
 
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    const NOTIFY = Deno.env.get("DROP_NOTIFY_EMAIL") ?? "biggleem@gmail.com";
+    // Resend test mode (from onboarding@resend.dev) only delivers to the
+    // Resend account owner's address. Verify a domain at resend.com/domains
+    // to notify arbitrary admins (then set DROP_NOTIFY_FROM + DROP_NOTIFY_EMAIL).
+    const NOTIFY = Deno.env.get("DROP_NOTIFY_EMAIL") ?? "wccg1045fm@gmail.com";
     const FROM = Deno.env.get("DROP_NOTIFY_FROM") ?? "WCCG Drops <onboarding@resend.dev>";
     if (!RESEND_API_KEY) {
       console.log("RESEND_API_KEY not set; skipping email for", drop.file_code);
