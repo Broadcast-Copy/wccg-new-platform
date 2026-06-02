@@ -7,56 +7,17 @@ import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles, type UserRole } from "@/hooks/use-user-roles";
 import { useRouter } from "next/navigation";
 import {
-  Heart, Star, Ticket, Gift, ShoppingBag, Clock, Headphones,
-  Mic, Palette, FolderOpen, CalendarDays, Radio, BarChart3,
-  Store, Package, Receipt, Users, DollarSign, MapPin, Megaphone,
-  Menu, X, User, Settings, Lock,
+  Menu, X, User, Lock,
   type LucideIcon,
 } from "lucide-react";
+import { listenerNav, creatorNav, vendorNav, type RoleNavItem } from "@/lib/role-nav";
 
-interface NavItem {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-}
-
-const LISTENER_ITEMS: NavItem[] = [
-  { href: "/listeners", label: "Listener Hub", icon: Headphones },
-  { href: "/my/favorites", label: "Favorites", icon: Heart },
-  { href: "/my/points", label: "Points & Rewards", icon: Star },
-  { href: "/my/tickets", label: "My Tickets", icon: Ticket },
-  { href: "/my/perks", label: "My Perks", icon: Gift },
-  { href: "/my/orders", label: "My Orders", icon: ShoppingBag },
-  { href: "/my/history", label: "Listening History", icon: Clock },
-  { href: "/my/settings", label: "Settings", icon: Settings },
-];
-
-const CREATOR_ITEMS: NavItem[] = [
-  { href: "/creators", label: "Creator Hub", icon: Palette },
-  { href: "/my/studio", label: "Broadcast Studio", icon: Mic },
-  { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
-  { href: "/my/blog", label: "Blog Manager", icon: Palette },
-  { href: "/my/events", label: "Events Manager", icon: CalendarDays },
-  { href: "/my/podcast-rss", label: "Podcast RSS", icon: Radio },
-  { href: "/my/vendor/media", label: "Creator Marketing", icon: BarChart3 },
-  { href: "/my/settings", label: "Settings", icon: Settings },
-];
-
-const VENDOR_ITEMS: NavItem[] = [
-  { href: "/vendors/hub", label: "Vendor Hub", icon: Store },
-  { href: "/my/vendor/orders", label: "Orders", icon: Receipt },
-  { href: "/my/vendor/storefront", label: "Storefront Manager", icon: Store },
-  { href: "/my/vendor/products", label: "Products", icon: Package },
-  { href: "/my/vendor/bookings", label: "Bookings", icon: CalendarDays },
-  { href: "/my/vendor/events", label: "Events Manager", icon: Megaphone },
-  { href: "/my/vendor/customers", label: "Customers", icon: Users },
-  { href: "/my/vendor/payouts", label: "Payouts", icon: DollarSign },
-  { href: "/my/vendor/shipping", label: "Shipping", icon: Package },
-  { href: "/my/vendor/tracking", label: "Tracking", icon: MapPin },
-  { href: "/my/vendor/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/my/vendor/media", label: "Marketing", icon: Megaphone },
-  { href: "/my/settings", label: "Settings", icon: Settings },
-];
+// Shared nav (single source of truth) keeps this sidebar identical to the
+// /my dashboard sidebar — see apps/web/src/lib/role-nav.ts.
+type NavItem = RoleNavItem;
+const LISTENER_ITEMS = listenerNav;
+const CREATOR_ITEMS = creatorNav;
+const VENDOR_ITEMS = vendorNav;
 
 function NavLink({ item, pathname, color }: { item: NavItem; pathname: string; color: string }) {
   const isActive = pathname === item.href || pathname.startsWith(item.href + "/");

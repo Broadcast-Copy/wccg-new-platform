@@ -44,6 +44,7 @@ import {
   Lock,
   type LucideIcon,
 } from "lucide-react";
+import { listenerNav, creatorNav, vendorNav } from "@/lib/role-nav";
 
 // ---------------------------------------------------------------------------
 // Navigation item type
@@ -55,64 +56,15 @@ interface NavItem {
   exact?: boolean;
 }
 
-// ---------------------------------------------------------------------------
-// Listener nav items
-// ---------------------------------------------------------------------------
-const listenerItems: NavItem[] = [
-  { href: "/my", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/listeners", label: "Listener Hub", icon: Users },
-  { href: "/my/favorites", label: "Favorites", icon: Heart },
-  { href: "/my/points", label: "Points & Rewards", icon: Star },
-  { href: "/my/tickets", label: "My Tickets", icon: Ticket },
-  { href: "/my/perks", label: "My Perks", icon: Gift },
-  { href: "/my/orders", label: "My Orders", icon: ShoppingBag },
-  { href: "/my/history", label: "Listening History", icon: Clock },
-];
+// Creator / Listener / Vendor nav come from the shared single source of
+// truth so this sidebar stays identical to the social HubSidebar
+// (apps/web/src/lib/role-nav.ts). Previously they were defined twice and
+// drifted apart — clicking a Hub link showed a different menu.
 
-// ---------------------------------------------------------------------------
-// Creator nav items (used when toggle is set to Creator)
-// ---------------------------------------------------------------------------
-const creatorItems: NavItem[] = [
-  { href: "/my", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/creators", label: "Creator Hub", icon: Palette },
-  { href: "/my/studio", label: "Broadcast Studio", icon: Mic },
-  { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
-  { href: "/my/blog", label: "Blog Manager", icon: FileText },
-  { href: "/my/events", label: "Events Manager", icon: CalendarDays },
-  { href: "/my/podcast-rss", label: "Podcast RSS", icon: Radio },
-  { href: "/my/vendor/media", label: "Creator Marketing", icon: BarChart3 },
-];
-
-const creatorEventsItems: NavItem[] = [];
-
-// ---------------------------------------------------------------------------
-// Vendor nav items (used when toggle is set to Vendor)
-// ---------------------------------------------------------------------------
-const vendorItems: NavSection[] = [
-  {
-    sectionLabel: "STOREFRONT",
-    items: [
-      { href: "/my", label: "Dashboard", icon: LayoutDashboard, exact: true },
-      { href: "/vendors/hub", label: "Vendor Hub", icon: Store },
-      { href: "/my/vendor/orders", label: "Orders", icon: Receipt },
-      { href: "/my/vendor/storefront", label: "Storefront Manager", icon: Store, exact: true },
-      { href: "/my/vendor/products", label: "Products", icon: Package },
-      { href: "/my/vendor/bookings", label: "Bookings", icon: CalendarDays },
-      { href: "/my/vendor/events", label: "Events Manager", icon: Megaphone },
-    ],
-  },
-  {
-    sectionLabel: "MANAGEMENT",
-    items: [
-      { href: "/my/vendor/customers", label: "Customer Manager", icon: Users },
-      { href: "/my/vendor/payouts", label: "Payouts", icon: DollarSign },
-      { href: "/my/vendor/shipping", label: "Shipping", icon: Package },
-      { href: "/my/vendor/tracking", label: "Tracking", icon: MapPin },
-      { href: "/my/vendor/analytics", label: "Analytics", icon: BarChart3 },
-      { href: "/my/vendor/media", label: "Marketing", icon: Megaphone },
-    ],
-  },
-];
+// Listener / Creator / Vendor nav — shared single source of truth.
+const listenerItems: NavItem[] = listenerNav;
+const creatorItems: NavItem[] = creatorNav;
+const vendorItems: NavItem[] = vendorNav;
 
 // ---------------------------------------------------------------------------
 // Advertising nav items (combined Sales + Marketing)
@@ -454,28 +406,14 @@ function SidebarContent({ pathname }: { pathname: string }) {
             {creatorItems.map((item) => (
               <NavLink key={item.href + item.label} item={item} pathname={pathname} color="#7401df" />
             ))}
-
-            {/* Events section with divider */}
-            <div className="my-2 border-t border-border" />
-            <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-              Events
-            </p>
-            {creatorEventsItems.map((item) => (
-              <NavLink key={item.href + item.label} item={item} pathname={pathname} color="#7401df" />
-            ))}
           </>
         ) : isVendorToggleActive ? (
           <>
-            {vendorItems.map((section) => (
-              <div key={section.sectionLabel}>
-                <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                  {section.sectionLabel}
-                </p>
-                {section.items.map((item) => (
-                  <NavLink key={item.href + item.label} item={item} pathname={pathname} color="#f59e0b" />
-                ))}
-                <div className="my-2 border-t border-border" />
-              </div>
+            <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+              Vendor
+            </p>
+            {vendorItems.map((item) => (
+              <NavLink key={item.href + item.label} item={item} pathname={pathname} color="#f59e0b" />
             ))}
           </>
         ) : (
