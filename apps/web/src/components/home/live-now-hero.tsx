@@ -234,9 +234,9 @@ export function LiveNowHero() {
               {ctaLabel}
             </Button>
 
-            {/* Earning chip — clickable, links to /earn explainer */}
+            {/* Earning chip — clickable, links to the rewards page */}
             <Link
-              href="/earn"
+              href="/rewards"
               aria-label="How earning works"
               className="group inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white/80 transition-colors hover:border-white/30 hover:bg-white/10"
             >

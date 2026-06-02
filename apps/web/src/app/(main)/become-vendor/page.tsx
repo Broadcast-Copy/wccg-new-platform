@@ -194,7 +194,7 @@ export default function BecomeVendorPage() {
           {!user && !authLoading && (
             <p className="text-sm text-amber-400 mb-4">
               Please{" "}
-              <Link href="/auth/login" className="underline hover:text-amber-300">
+              <Link href="/login" className="underline hover:text-amber-300">
                 sign in
               </Link>{" "}
               to submit your application.

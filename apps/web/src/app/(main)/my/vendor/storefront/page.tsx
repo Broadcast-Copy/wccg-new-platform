@@ -378,7 +378,7 @@ export default function StorefrontPage() {
         <Store className="h-12 w-12 text-muted-foreground" />
         <p className="text-lg font-medium">Sign in to manage your storefront</p>
         <Link
-          href="/auth/login"
+          href="/login"
           className="rounded-xl bg-[#f59e0b] px-6 py-2 text-sm font-medium text-black transition-colors hover:bg-[#f59e0b]/90"
         >
           Sign In

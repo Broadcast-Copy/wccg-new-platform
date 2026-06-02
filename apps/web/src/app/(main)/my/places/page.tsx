@@ -88,7 +88,7 @@ export default function MyPlacesPage() {
           <p className="text-sm text-muted-foreground text-center max-w-sm">
             Browse the{" "}
             <Link
-              href="/directory"
+              href="/community"
               className="text-primary underline underline-offset-2"
             >
               local directory
