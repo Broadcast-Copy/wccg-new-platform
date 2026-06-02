@@ -73,6 +73,7 @@ const listenerItems: NavItem[] = [
 // Creator nav items (used when toggle is set to Creator)
 // ---------------------------------------------------------------------------
 const creatorItems: NavItem[] = [
+  { href: "/my", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/creators", label: "Creator Hub", icon: Palette },
   { href: "/my/studio", label: "Broadcast Studio", icon: Mic },
   { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
@@ -91,6 +92,7 @@ const vendorItems: NavSection[] = [
   {
     sectionLabel: "STOREFRONT",
     items: [
+      { href: "/my", label: "Dashboard", icon: LayoutDashboard, exact: true },
       { href: "/vendors/hub", label: "Vendor Hub", icon: Store },
       { href: "/my/vendor/orders", label: "Orders", icon: Receipt },
       { href: "/my/vendor/storefront", label: "Storefront Manager", icon: Store, exact: true },
