@@ -459,7 +459,10 @@ function SidebarContent({ pathname }: { pathname: string }) {
         )}
       </nav>
 
-      {/* Role switcher — bottom of sidebar */}
+      {/* Role switcher — bottom of sidebar. Staff "view as" is real-admins
+          only; everyone else keeps the Creator/Listener/Vendor self-toggle
+          in the header. Preview changes nav only — guards + RLS use real roles. */}
+      {isRealAdmin && (
       <div className="border-t border-border px-3 py-2">
         {!isNonToggleOverride ? (
           <div className="relative" ref={roleSwitcherRef}>
@@ -511,6 +514,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
           </div>
         )}
       </div>
+      )}
 
       {/* Spacer pushes admin controls to bottom */}
       <div className="flex-1" />

@@ -13,8 +13,6 @@ import {
   Megaphone,
   Music,
   Settings,
-  ExternalLink,
-  Lock,
   ScrollText,
   Briefcase,
   FileAudio,
@@ -69,7 +67,9 @@ interface ActivityItem {
 // Module definitions
 // ---------------------------------------------------------------------------
 
-// Phase 1-6 ops modules — live, with backing services + APIs.
+// Ops modules. All wired Supabase-direct (no API server); some surface
+// worker-populated metrics (e.g. live signal/RTMP state) that only update
+// when the corresponding worker is running.
 const opsModules: AdminModule[] = [
   { icon: Tv, title: "Master Control", description: "Live dashboard — now playing, signal status, system health, EAS, missing drops.", href: "/my/admin/master-control", color: "from-[#dc2626] to-[#7f1d1d]" },
   { icon: Briefcase, title: "Project Manager", description: "Board of station projects + tasks, linked to clients and production orders.", href: "/my/admin/projects", color: "from-[#7401df] to-[#4c1d95]" },
@@ -445,36 +445,6 @@ export default function StationControlPage() {
           })}
         </div>
       </section>
-
-      {/* External Admin Link */}
-      <div className="rounded-xl border border-[#dc2626]/20 bg-[#dc2626]/5 p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Lock className="h-5 w-5 text-[#dc2626]" />
-          <div>
-            <p className="text-sm font-semibold text-foreground">
-              Full Admin Panel
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Access the complete admin interface at admin.wccg1045fm.com
-            </p>
-          </div>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="border-[#dc2626]/30 text-[#dc2626] hover:bg-[#dc2626]/10"
-          asChild
-        >
-          <a
-            href="https://admin.wccg1045fm.com"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Open Admin
-            <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
-          </a>
-        </Button>
-      </div>
 
       {/* Logged in info */}
       <div className="rounded-xl border border-border bg-card p-4 text-center">

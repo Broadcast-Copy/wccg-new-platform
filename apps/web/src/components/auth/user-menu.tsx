@@ -198,6 +198,7 @@ export function UserMenu() {
   const {
     isAdmin,
     isSuperAdmin,
+    isRealAdmin,
     isHost,
     isSales,
     isManagement,
@@ -341,29 +342,33 @@ export function UserMenu() {
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
             v0.7.0-beta
           </Link>
-          <button
-            type="button"
-            onClick={() => {
-              if (isAdminMode) {
-                setRoleOverride(null);
-              } else {
-                setRoleOverride("production");
-              }
-            }}
-            className={`relative inline-flex items-center gap-1 rounded-md px-2 py-1 text-[9px] font-semibold transition-all shrink-0 ${
-              isAdminMode
-                ? "bg-[#dc2626] text-white"
-                : "bg-muted/80 text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            <Shield className="h-2.5 w-2.5" />
-            {isAdminMode ? "Exit" : "Admin"}
-            {!isAdminMode && totalAdminNotifications > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#dc2626] text-[7px] font-bold text-white px-0.5 ring-1 ring-card">
-                {totalAdminNotifications}
-              </span>
-            )}
-          </button>
+          {/* The staff/admin "view as" toggle is only shown to real admins —
+              it changes nav only; route guards + RLS use REAL roles. */}
+          {isRealAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                if (isAdminMode) {
+                  setRoleOverride(null);
+                } else {
+                  setRoleOverride("production");
+                }
+              }}
+              className={`relative inline-flex items-center gap-1 rounded-md px-2 py-1 text-[9px] font-semibold transition-all shrink-0 ${
+                isAdminMode
+                  ? "bg-[#dc2626] text-white"
+                  : "bg-muted/80 text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <Shield className="h-2.5 w-2.5" />
+              {isAdminMode ? "Exit" : "Admin"}
+              {!isAdminMode && totalAdminNotifications > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#dc2626] text-[7px] font-bold text-white px-0.5 ring-1 ring-card">
+                  {totalAdminNotifications}
+                </span>
+              )}
+            </button>
+          )}
         </div>
 
         {/* User info + toggle */}

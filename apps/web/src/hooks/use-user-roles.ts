@@ -48,6 +48,15 @@ const EMPLOYEE_ROLES: UserRole[] = [
 const ROLE_OVERRIDE_KEY = "wccg_role_override";
 const ROLE_CHANGE_EVENT = "wccg-role-override-change";
 
+// Roles any signed-in user may preview (cosmetic self-view of these public
+// dashboards). All OTHER (staff) roles can only be previewed by real admins
+// or by a user who genuinely holds that role.
+const SELF_VIEW_ROLES: ReadonlySet<UserRole> = new Set<UserRole>([
+  "listener",
+  "content_creator",
+  "vendor",
+]);
+
 interface UseUserRolesReturn {
   roles: UserRole[];
   realRoles: UserRole[];
@@ -200,7 +209,7 @@ export function useUserRoles(): UseUserRolesReturn {
     (role: UserRole | null) => {
       const allowed =
         role === null ||
-        role === "listener" ||
+        SELF_VIEW_ROLES.has(role) ||
         isRealAdmin ||
         realRolesRef.current.includes(role);
       if (!allowed) return;
@@ -234,10 +243,17 @@ export function useUserRoles(): UseUserRolesReturn {
   const isOverrideActive = roleOverride !== null;
   const effectiveRoles = useMemo(() => {
     if (isOverrideActive && roleOverride) {
-      return [roleOverride] as UserRole[];
+      // Honor the preview override only if this user is entitled to it — a
+      // stale or forbidden staff override (e.g. left in localStorage) must
+      // never grant staff nav to a non-admin.
+      const allowed =
+        SELF_VIEW_ROLES.has(roleOverride) ||
+        isRealAdmin ||
+        realRoles.includes(roleOverride);
+      if (allowed) return [roleOverride] as UserRole[];
     }
     return realRoles;
-  }, [isOverrideActive, roleOverride, realRoles]);
+  }, [isOverrideActive, roleOverride, realRoles, isRealAdmin]);
 
   const department =
     DEPARTMENT_ROLES.find((d) => effectiveRoles.includes(d.role))?.department ?? null;
