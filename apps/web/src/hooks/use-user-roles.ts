@@ -51,6 +51,7 @@ interface UseUserRolesReturn {
   isListener: boolean;
   isSales: boolean;
   isCreator: boolean;
+  isVendor: boolean;
   isProduction: boolean;
   isEngineering: boolean;
   isManagement: boolean;
@@ -194,6 +195,7 @@ export function useUserRoles(): UseUserRolesReturn {
     isListener: effectiveRoles.includes("listener") || effectiveRoles.length === 0,
     isSales: effectiveRoles.includes("sales"),
     isCreator: effectiveRoles.includes("content_creator"),
+    isVendor: effectiveRoles.includes("vendor"),
     isProduction: effectiveRoles.includes("production"),
     isEngineering: effectiveRoles.includes("engineering"),
     isManagement: effectiveRoles.includes("management") || effectiveRoles.includes("super_admin"),

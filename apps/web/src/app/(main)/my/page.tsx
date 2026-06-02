@@ -105,6 +105,7 @@ function getRoleDashboardConfig(flags: {
   isManagement: boolean;
   isPromotions: boolean;
   isCreator: boolean;
+  isVendor: boolean;
   isHost: boolean;
   isAdmin: boolean;
   isSuperAdmin: boolean;
@@ -122,6 +123,7 @@ function getRoleDashboardConfig(flags: {
     isManagement,
     isPromotions,
     isCreator,
+    isVendor,
     isHost,
     isAdmin,
     isSuperAdmin,
@@ -238,32 +240,60 @@ function getRoleDashboardConfig(flags: {
   if (isCreator || isHost) {
     return {
       title: isHost ? "Host Dashboard" : "Creator Dashboard",
-      subtitle: isHost ? "Shows, studio & content tools" : "Create, upload & manage content",
+      subtitle: isHost
+        ? "Your shows, audience & studio tools at a glance"
+        : "Upload music, grow your audience, and track how your content performs",
       badge: { label: isHost ? "Host" : "Creator", color: "#7401df" },
       isListener: false,
       stats: [
-        { label: "Total Content", value: "--", sub: "Published items", icon: Music, color: "#7401df" },
-        { label: "Listeners", value: "--", sub: "Total plays", icon: Headphones, color: "#74ddc7" },
-        { label: "Favorites", value: "--", sub: "Saved by users", icon: Heart, color: "#dc2626" },
-        { label: "Stream Status", value: "LIVE", sub: "WCCG 104.5 FM — On Air", icon: Radio, color: "#74ddc7", live: true },
+        { label: "Published Content", value: "--", sub: "Mixes, podcasts & shows", icon: Music, color: "#7401df" },
+        { label: "Total Plays", value: "--", sub: "Across all uploads", icon: Headphones, color: "#74ddc7" },
+        { label: "Followers", value: "--", sub: "People following you", icon: Users, color: "#3b82f6" },
+        { label: "Favorites", value: "--", sub: "Saved by listeners", icon: Heart, color: "#dc2626" },
       ],
       quickActions: [
+        { href: "/creators/upload-music", label: "Upload Music", desc: "Publish a new mix or track", icon: Music, color: "#7401df" },
+        { href: "/creators/podcast", label: "Start a Podcast", desc: "Record & publish episodes", icon: Mic, color: "#74ddc7" },
         { href: "/my/studio", label: "Broadcast Studio", desc: "Podcasts, video & audio tools", icon: Clapperboard, color: "#7401df" },
-        { href: "/my/mixes", label: "Media Manager", desc: "Upload & manage DJ mixes", icon: Music, color: "#74ddc7" },
-        { href: "/studio", label: "Studio Tools", desc: "OBS, audio/video editors", icon: Mic, color: "#7401df" },
-        { href: "/creators", label: "Creator Hub", desc: "Resources & support", icon: Palette, color: "#74ddc7" },
+        { href: "/my/mixes", label: "My Media", desc: "Manage everything you've uploaded", icon: FolderOpen, color: "#74ddc7" },
+        { href: "/my/dj", label: "DJ Portal", desc: "Upload your weekly mix-show drops", icon: Play, color: "#dc2626" },
+        { href: "/creators", label: "Creator Hub", desc: "Resources, tips & support", icon: Palette, color: "#7401df" },
+      ],
+    };
+  }
+
+  if (isVendor) {
+    return {
+      title: "Vendor Dashboard",
+      subtitle: "Your storefront, orders & payouts in one place",
+      badge: { label: "Vendor", color: "#f59e0b" },
+      isListener: false,
+      stats: [
+        { label: "Active Listings", value: "--", sub: "Products & services live", icon: ShoppingBag, color: "#f59e0b" },
+        { label: "Open Orders", value: "--", sub: "Awaiting fulfillment", icon: Receipt, color: "#7401df" },
+        { label: "Revenue (30d)", value: "--", sub: "Last 30 days", icon: DollarSign, color: "#74ddc7" },
+        { label: "Customers", value: "--", sub: "Unique buyers", icon: Users, color: "#3b82f6" },
+      ],
+      quickActions: [
+        { href: "/vendors/hub", label: "Vendor Hub", desc: "Manage your storefront", icon: ShoppingBag, color: "#f59e0b" },
+        { href: "/my/vendor/media", label: "Marketing & Ads", desc: "Promote your products on WCCG", icon: Megaphone, color: "#7401df" },
+        { href: "/my/orders", label: "Orders", desc: "Fulfill & track sales", icon: Receipt, color: "#74ddc7" },
+        { href: "/my/sales", label: "Payouts & Revenue", desc: "Earnings & payout history", icon: DollarSign, color: "#74ddc7" },
+        { href: "/marketplace", label: "Marketplace", desc: "See your listings live", icon: Briefcase, color: "#3b82f6" },
+        { href: "/become-vendor", label: "Vendor Resources", desc: "Guides & onboarding", icon: Info, color: "#f59e0b" },
       ],
     };
   }
 
   // Default: Listener (base dashboard)
   return {
-    title: "Dashboard",
-    subtitle: "Welcome back — your WCCG activity at a glance",
-    badge: null,
+    title: "Listener Dashboard",
+    subtitle: "Welcome back — your WCCG activity, points & rewards at a glance",
+    badge: { label: "Listener", color: "#74ddc7" },
     isListener: true,
     stats: [],
     quickActions: [
+      { href: "/listen", label: "Listen Live", desc: "Tune in & earn points", icon: Play, color: "#dc2626" },
       { href: "/rewards", label: "Rewards Store", desc: "Redeem points for prizes", icon: Gift, color: "#f59e0b" },
       { href: "/my/history", label: "Listening History", desc: "Your sessions & stats", icon: Clock, color: "#14b8a6" },
       { href: "/my/points", label: "Points History", desc: "Transactions & balance", icon: Star, color: "#7401df" },
@@ -282,6 +312,7 @@ export default function UserDashboardPage() {
     isManagement,
     isPromotions,
     isCreator,
+    isVendor,
     isHost,
     isAdmin,
     isSuperAdmin,
@@ -448,6 +479,7 @@ export default function UserDashboardPage() {
     isManagement,
     isPromotions,
     isCreator,
+    isVendor,
     isHost,
     isAdmin,
     isSuperAdmin,
