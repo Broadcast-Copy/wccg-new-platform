@@ -64,6 +64,8 @@ const TOOLS = [
 
 // Quick links
 const QUICK_LINKS = [
+  { href: "/my/studio/publish", label: "Publish a Video", icon: Film },
+  { href: "/videos", label: "Video Wall", icon: Film },
   { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
   { href: "/studio/booking", label: "Book a Studio", icon: Calendar },
 ];
@@ -344,6 +346,17 @@ export default function MyStudioPage() {
           >
             <UserPlus className="h-4 w-4 mr-1.5" />
             Invite Guest
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            asChild
+            className="rounded-lg"
+          >
+            <Link href="/my/studio/publish">
+              <Film className="h-4 w-4 mr-1.5" />
+              Publish Video
+            </Link>
           </Button>
           <Button
             size="sm"

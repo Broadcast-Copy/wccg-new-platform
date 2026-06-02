@@ -32,6 +32,7 @@ import {
   DollarSign,
   MapPin,
   Megaphone,
+  Film,
   type LucideIcon,
 } from "lucide-react";
 
@@ -59,6 +60,8 @@ export const creatorNav: RoleNavItem[] = [
   { href: "/my", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/creators", label: "Creator Hub", icon: Palette },
   { href: "/my/studio", label: "Broadcast Studio", icon: Mic },
+  { href: "/my/studio/publish", label: "Publish Video", icon: Film },
+  { href: "/videos", label: "Video Wall", icon: Film },
   { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
   { href: "/my/blog", label: "Blog Manager", icon: FileText },
   { href: "/my/events", label: "Events Manager", icon: CalendarDays },
