@@ -29,7 +29,9 @@ import {
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
+
+const supabase = createClient();
 
 interface AlertItem {
   id: string;
@@ -104,7 +106,50 @@ export default function MasterControlPage() {
 
   const load = useCallback(async () => {
     try {
-      const r = await apiClient<DashboardResponse>("/mcr/dashboard");
+      // mcr_dashboard is the mcr_state singleton augmented with the rollup
+      // counters (eas_last_30d, tests_due_7d, drops_last_24h, slots_unassigned,
+      // pool_pending). RLS lets any authenticated user read it.
+      const [stateRes, easRes, testsRes, weekRes] = await Promise.all([
+        supabase.from("mcr_dashboard").select("*").maybeSingle(),
+        supabase
+          .from("eas_alerts")
+          .select("id,direction,same_code,event_label,severity,originator,issued_at,sent_at")
+          .order("issued_at", { ascending: false })
+          .limit(8),
+        supabase
+          .from("eas_test_schedule")
+          .select("id,kind,scheduled_for,completed_at,notes")
+          .is("completed_at", null)
+          .lte("scheduled_for", new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString())
+          .order("scheduled_for", { ascending: true }),
+        // Slots expected this week whose drop hasn't landed yet → "missing".
+        supabase
+          .from("dj_drops_this_week")
+          .select("slot_id,drop_status"),
+      ]);
+
+      const firstErr =
+        stateRes.error || easRes.error || testsRes.error || weekRes.error;
+      if (firstErr) {
+        setError(firstErr.message);
+        setLoading(false);
+        return;
+      }
+
+      const missingThisWeek = (weekRes.data ?? []).filter(
+        (r) => !["uploaded", "validated", "published"].includes(r.drop_status ?? ""),
+      ).length;
+
+      const r: DashboardResponse = {
+        // No table backs the service-health alert feed (it was computed by the
+        // dead API host); render none rather than fabricate.
+        alerts: [],
+        state: (stateRes.data as DashboardResponse["state"]) ?? null,
+        recentEas: (easRes.data ?? []) as DashboardResponse["recentEas"],
+        nextTests: (testsRes.data ?? []) as DashboardResponse["nextTests"],
+        missingThisWeek,
+      };
+
       setData(r);
       if (!noteTouched.current) setNoteDraft(r.state?.operator_note ?? "");
       setError(null);
@@ -124,10 +169,20 @@ export default function MasterControlPage() {
   const saveNote = async () => {
     setSavingNote(true);
     try {
-      await apiClient(`/mcr/operator-note`, {
-        method: "PATCH",
-        body: JSON.stringify({ note: noteDraft || null }),
-      });
+      // mcr_state is service-role-write under RLS; an authenticated browser
+      // session can't mutate it. Attempt the update and report honestly: a
+      // zero-row result means RLS silently filtered the write.
+      const { data, error } = await supabase
+        .from("mcr_state")
+        .update({ operator_note: noteDraft || null, updated_at: new Date().toISOString() })
+        .eq("id", 1)
+        .select("id");
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) {
+        throw new Error(
+          "Couldn't save the note — the operator note is write-protected (service role only). Update mcr_state from the studio worker.",
+        );
+      }
       noteTouched.current = false;
       load();
     } catch (e) {
@@ -137,13 +192,22 @@ export default function MasterControlPage() {
     }
   };
 
-  const completeTest = async (testId: string, kind: "RWT" | "RMT") => {
+  const completeTest = async (testId: string) => {
     setBusyTestId(testId);
     try {
-      await apiClient(`/mcr/tests/${testId}/complete`, {
-        method: "POST",
-        body: JSON.stringify({ kind }),
-      });
+      // eas_test_schedule is service-role-write under RLS; same honest-failure
+      // handling as the operator note above.
+      const { data, error } = await supabase
+        .from("eas_test_schedule")
+        .update({ completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq("id", testId)
+        .select("id");
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) {
+        throw new Error(
+          "Couldn't mark the test run — the EAS test schedule is write-protected (service role only).",
+        );
+      }
       load();
     } catch (e) {
       setError((e as Error).message);
@@ -353,7 +417,7 @@ export default function MasterControlPage() {
                     size="sm"
                     className="rounded-full"
                     disabled={busyTestId === t.id}
-                    onClick={() => completeTest(t.id, t.kind)}
+                    onClick={() => completeTest(t.id)}
                   >
                     {busyTestId === t.id ? (
                       <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />

@@ -8,12 +8,9 @@ import {
   ArrowLeft,
   Pause,
   Play,
-  Pencil,
   ChevronDown,
   ChevronUp,
   Image as ImageIcon,
-  Calendar,
-  DollarSign,
   MapPin,
   Clock,
 } from "lucide-react";
@@ -40,9 +37,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
+
+const supabase = createClient();
 
 /* ---------- Types ---------- */
 
@@ -147,8 +146,10 @@ function formatDate(iso: string) {
 /* ---------- Create Campaign Dialog ---------- */
 
 function CreateCampaignDialog({
+  advertiserId,
   onCreated,
 }: {
+  advertiserId: string;
   onCreated: (campaign: Campaign) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -199,10 +200,37 @@ function CreateCampaignDialog({
 
     setSubmitting(true);
     try {
-      const created = await apiClient<Campaign>("/advertising/campaigns", {
-        method: "POST",
-        body: JSON.stringify(form),
-      });
+      const { data, error } = await supabase
+        .from("ad_campaigns")
+        .insert({
+          advertiser_id: advertiserId,
+          name: form.name.trim(),
+          description: form.description.trim() || null,
+          budget_total: form.budgetTotal,
+          budget_daily: form.budgetDaily || null,
+          start_date: form.startDate,
+          end_date: form.endDate,
+          target_geo: form.targetGeo,
+          target_dayparts: form.targetDayparts,
+          status: "DRAFT",
+        })
+        .select(
+          "id, name, description, status, budget_total, budget_daily, start_date, end_date, target_geo, target_dayparts"
+        )
+        .single();
+      if (error) throw error;
+      const created: Campaign = {
+        id: data.id,
+        name: data.name,
+        description: data.description ?? "",
+        status: data.status,
+        budgetTotal: Number(data.budget_total ?? 0),
+        budgetDaily: Number(data.budget_daily ?? 0),
+        startDate: data.start_date,
+        endDate: data.end_date,
+        targetGeo: data.target_geo ?? [],
+        targetDayparts: data.target_dayparts ?? [],
+      };
       toast.success("Campaign created successfully");
       onCreated(created);
       setOpen(false);
@@ -405,25 +433,54 @@ function CampaignRow({
   useEffect(() => {
     if (!expanded) return;
     setCreativesLoading(true);
-    apiClient<Creative[]>(
-      `/advertising/campaigns/${campaign.id}/creatives`
-    )
-      .then(setCreatives)
-      .catch(() => toast.error("Failed to load creatives"))
-      .finally(() => setCreativesLoading(false));
+    supabase
+      .from("ad_creatives")
+      .select("id, name, creative_type, status, file_url")
+      .eq("campaign_id", campaign.id)
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) {
+          toast.error("Failed to load creatives");
+        } else {
+          setCreatives(
+            (data ?? []).map((c) => ({
+              id: c.id,
+              name: c.name,
+              creativeType: c.creative_type,
+              status: c.status,
+              fileUrl: c.file_url ?? "",
+            }))
+          );
+        }
+        setCreativesLoading(false);
+      });
   }, [expanded, campaign.id]);
 
   async function handleToggleStatus() {
     const newStatus = campaign.status === "ACTIVE" ? "PAUSED" : "ACTIVE";
     setActionLoading(true);
     try {
-      const updated = await apiClient<Campaign>(
-        `/advertising/campaigns/${campaign.id}`,
-        {
-          method: "PATCH",
-          body: JSON.stringify({ status: newStatus }),
-        }
-      );
+      const { data, error } = await supabase
+        .from("ad_campaigns")
+        .update({ status: newStatus })
+        .eq("id", campaign.id)
+        .select(
+          "id, name, description, status, budget_total, budget_daily, start_date, end_date, target_geo, target_dayparts"
+        )
+        .single();
+      if (error) throw error;
+      const updated: Campaign = {
+        id: data.id,
+        name: data.name,
+        description: data.description ?? "",
+        status: data.status,
+        budgetTotal: Number(data.budget_total ?? 0),
+        budgetDaily: Number(data.budget_daily ?? 0),
+        startDate: data.start_date,
+        endDate: data.end_date,
+        targetGeo: data.target_geo ?? [],
+        targetDayparts: data.target_dayparts ?? [],
+      };
       toast.success(
         `Campaign ${newStatus === "ACTIVE" ? "resumed" : "paused"}`
       );
@@ -593,17 +650,32 @@ export default function CampaignsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const loadCampaigns = useCallback(async (advertiserId: string) => {
-    try {
-      const data = await apiClient<Campaign[]>(
-        `/advertising/campaigns?advertiserId=${advertiserId}`
-      );
-      setCampaigns(data);
-      setError(null);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load campaigns"
-      );
+    const { data, error: queryError } = await supabase
+      .from("ad_campaigns")
+      .select(
+        "id, name, description, status, budget_total, budget_daily, start_date, end_date, target_geo, target_dayparts"
+      )
+      .eq("advertiser_id", advertiserId)
+      .order("created_at", { ascending: false });
+    if (queryError) {
+      setError(queryError.message);
+      return;
     }
+    setCampaigns(
+      (data ?? []).map((c) => ({
+        id: c.id,
+        name: c.name,
+        description: c.description ?? "",
+        status: c.status,
+        budgetTotal: Number(c.budget_total ?? 0),
+        budgetDaily: Number(c.budget_daily ?? 0),
+        startDate: c.start_date,
+        endDate: c.end_date,
+        targetGeo: c.target_geo ?? [],
+        targetDayparts: c.target_dayparts ?? [],
+      }))
+    );
+    setError(null);
   }, []);
 
   useEffect(() => {
@@ -611,17 +683,24 @@ export default function CampaignsPage() {
       setLoading(false);
       return;
     }
-    apiClient<AdvertiserAccount>("/advertising/accounts/my")
-      .then(async (acct) => {
-        setAccount(acct);
-        await loadCampaigns(acct.id);
-      })
-      .catch((err) => {
-        setError(
-          err instanceof Error ? err.message : "Failed to load account"
-        );
-      })
-      .finally(() => setLoading(false));
+    supabase
+      .from("advertiser_accounts")
+      .select("id, company_name")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(async ({ data, error: acctError }) => {
+        if (acctError) {
+          setError(acctError.message);
+        } else if (data) {
+          setAccount({ id: data.id, companyName: data.company_name });
+          await loadCampaigns(data.id);
+        } else {
+          setError(
+            "No advertiser account found. Visit the portal home to get started."
+          );
+        }
+        setLoading(false);
+      });
   }, [user, loadCampaigns]);
 
   function handleCampaignCreated(campaign: Campaign) {
@@ -676,7 +755,10 @@ export default function CampaignsPage() {
             </div>
             <div className="hidden sm:block">
               {account && (
-                <CreateCampaignDialog onCreated={handleCampaignCreated} />
+                <CreateCampaignDialog
+                  advertiserId={account.id}
+                  onCreated={handleCampaignCreated}
+                />
               )}
             </div>
           </div>
@@ -686,7 +768,10 @@ export default function CampaignsPage() {
       {/* Mobile Create Button */}
       {account && (
         <div className="sm:hidden">
-          <CreateCampaignDialog onCreated={handleCampaignCreated} />
+          <CreateCampaignDialog
+                  advertiserId={account.id}
+                  onCreated={handleCampaignCreated}
+                />
         </div>
       )}
 
@@ -759,7 +844,10 @@ export default function CampaignsPage() {
                   Create your first advertising campaign to start reaching WCCG
                   listeners.
                 </p>
-                <CreateCampaignDialog onCreated={handleCampaignCreated} />
+                <CreateCampaignDialog
+                  advertiserId={account.id}
+                  onCreated={handleCampaignCreated}
+                />
               </div>
             ) : (
               <Table>

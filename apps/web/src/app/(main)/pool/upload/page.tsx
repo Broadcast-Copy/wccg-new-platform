@@ -12,7 +12,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { apiClient } from "@/lib/api-client"; // used for labels list
+import { createClient } from "@/lib/supabase/client";
 
 const VERSIONS = [
   "Original", "Clean", "Dirty", "Instrumental", "Acapella", "Radio Edit",
@@ -50,36 +50,88 @@ export default function UploadTrackPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    apiClient<Label[]>("/pool/labels").then(setLabels).catch(() => null);
+    (async () => {
+      const supabase = createClient();
+      const { data, error: err } = await supabase
+        .from("record_pool_labels")
+        .select("id, slug, name, verified")
+        .order("name", { ascending: true });
+      if (!err) setLabels((data ?? []) as Label[]);
+    })();
   }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) { setError("Pick a file."); return; }
+    if (!meta.title.trim() || !meta.artist.trim()) {
+      setError("Title and artist are required.");
+      return;
+    }
     setError(null);
     setSubmitting(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      for (const [k, v] of Object.entries(meta)) {
-        if (v) fd.append(k, v);
-      }
-      // Raw fetch — apiClient sets JSON Content-Type which breaks multipart.
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
-      const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${apiUrl}/pool/upload`, {
-        method: "POST",
-        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
-        body: fd,
-      });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({ message: res.statusText }));
-        throw new Error(j.message || res.statusText);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Please sign in to upload.");
+
+      // The storage RLS scopes uploads to the user's own folder and the path
+      // convention is `<auth_uid>/<track_uuid>.<ext>`. Generate the id up front
+      // so the storage object and the DB row line up.
+      const trackId = crypto.randomUUID();
+      const ext = (file.name.match(/\.([a-z0-9]+)$/i)?.[1] ?? "mp3").toLowerCase();
+      const storagePath = `${user.id}/${trackId}.${ext}`;
+
+      const { error: upErr } = await supabase.storage
+        .from("record-pool")
+        .upload(storagePath, file, {
+          contentType: file.type || `audio/${ext}`,
+          upsert: false,
+        });
+      if (upErr) throw new Error(`Upload failed: ${upErr.message}`);
+
+      const selectedLabel = meta.labelId
+        ? labels.find((l) => l.id === meta.labelId) ?? null
+        : null;
+      const uploaderType: "dj" | "label" | "admin" =
+        selectedLabel?.verified ? "label" : "dj";
+
+      const num = (v: string) => (v.trim() === "" ? null : Number(v));
+      const str = (v: string) => (v.trim() === "" ? null : v.trim());
+
+      const { data: row, error: insErr } = await supabase
+        .from("record_pool_tracks")
+        .insert({
+          id: trackId,
+          uploaded_by: user.id,
+          uploader_type: uploaderType,
+          label_id: selectedLabel?.id ?? null,
+          title: meta.title.trim(),
+          artist: meta.artist.trim(),
+          remix_artist: str(meta.remixArtist),
+          label_name: str(meta.labelName) ?? selectedLabel?.name ?? null,
+          album: str(meta.album),
+          genre: str(meta.genre),
+          subgenre: str(meta.subgenre),
+          bpm: num(meta.bpm),
+          musical_key: str(meta.musicalKey),
+          release_year: num(meta.releaseYear),
+          release_date: str(meta.releaseDate),
+          version: str(meta.version),
+          storage_path: storagePath,
+          size_bytes: file.size,
+          format: ext,
+          // status defaults to 'pending' in the DB — leave it to moderation.
+        })
+        .select("id")
+        .single();
+
+      if (insErr) {
+        // Roll back the orphaned upload so a retry doesn't collide.
+        await supabase.storage.from("record-pool").remove([storagePath]);
+        throw new Error(insErr.message);
       }
-      const r = (await res.json()) as { track: { id: string }; autoApproved: boolean };
-      setDone({ id: r.track.id, autoApproved: r.autoApproved });
+
+      setDone({ id: row.id, autoApproved: false });
     } catch (e) {
       setError((e as Error).message);
     } finally {

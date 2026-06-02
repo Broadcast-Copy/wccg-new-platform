@@ -35,9 +35,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
+
+const supabase = createClient();
 
 /* ---------- Types ---------- */
 
@@ -150,10 +152,33 @@ function UploadCreativeDialog({
 
     setSubmitting(true);
     try {
-      const created = await apiClient<Creative>("/advertising/creatives", {
-        method: "POST",
-        body: JSON.stringify(form),
-      });
+      const { data, error } = await supabase
+        .from("ad_creatives")
+        .insert({
+          campaign_id: form.campaignId,
+          name: form.name.trim(),
+          creative_type: form.creativeType,
+          file_url: form.fileUrl.trim() || null,
+          click_url: form.clickUrl.trim() || null,
+          alt_text: form.altText.trim() || null,
+          status: "PENDING",
+        })
+        .select(
+          "id, campaign_id, name, creative_type, status, file_url, click_url, alt_text, created_at"
+        )
+        .single();
+      if (error) throw error;
+      const created: Creative = {
+        id: data.id,
+        campaignId: data.campaign_id,
+        name: data.name,
+        creativeType: data.creative_type,
+        status: data.status,
+        fileUrl: data.file_url ?? "",
+        clickUrl: data.click_url ?? "",
+        altText: data.alt_text ?? "",
+        createdAt: data.created_at,
+      };
       toast.success("Creative uploaded successfully");
       onCreated(created);
       setOpen(false);
@@ -384,27 +409,39 @@ export default function CreativesPage() {
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
 
   const loadCreatives = useCallback(async (campaignList: Campaign[]) => {
-    try {
-      const allCreatives: Creative[] = [];
-      await Promise.all(
-        campaignList.map(async (c) => {
-          try {
-            const data = await apiClient<Creative[]>(
-              `/advertising/campaigns/${c.id}/creatives`
-            );
-            allCreatives.push(...data);
-          } catch {
-            // Skip campaigns with no creatives
-          }
-        })
-      );
-      setCreatives(allCreatives);
+    if (campaignList.length === 0) {
+      setCreatives([]);
       setError(null);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load creatives"
-      );
+      return;
     }
+    const { data, error: queryError } = await supabase
+      .from("ad_creatives")
+      .select(
+        "id, campaign_id, name, creative_type, status, file_url, click_url, alt_text, created_at"
+      )
+      .in(
+        "campaign_id",
+        campaignList.map((c) => c.id)
+      )
+      .order("created_at", { ascending: false });
+    if (queryError) {
+      setError(queryError.message);
+      return;
+    }
+    setCreatives(
+      (data ?? []).map((c) => ({
+        id: c.id,
+        campaignId: c.campaign_id,
+        name: c.name,
+        creativeType: c.creative_type,
+        status: c.status,
+        fileUrl: c.file_url ?? "",
+        clickUrl: c.click_url ?? "",
+        altText: c.alt_text ?? "",
+        createdAt: c.created_at,
+      }))
+    );
+    setError(null);
   }, []);
 
   useEffect(() => {
@@ -412,21 +449,44 @@ export default function CreativesPage() {
       setLoading(false);
       return;
     }
-    apiClient<AdvertiserAccount>("/advertising/accounts/my")
-      .then(async (acct) => {
-        setAccount(acct);
-        const campaignData = await apiClient<Campaign[]>(
-          `/advertising/campaigns?advertiserId=${acct.id}`
-        );
-        setCampaigns(campaignData);
-        await loadCreatives(campaignData);
-      })
-      .catch((err) => {
-        setError(
-          err instanceof Error ? err.message : "Failed to load account"
-        );
-      })
-      .finally(() => setLoading(false));
+    supabase
+      .from("advertiser_accounts")
+      .select("id, company_name")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(async ({ data: acct, error: acctError }) => {
+        if (acctError) {
+          setError(acctError.message);
+          setLoading(false);
+          return;
+        }
+        if (!acct) {
+          setError(
+            "No advertiser account found. Visit the portal home to get started."
+          );
+          setLoading(false);
+          return;
+        }
+        setAccount({ id: acct.id, companyName: acct.company_name });
+        const { data: campaignData, error: campaignError } = await supabase
+          .from("ad_campaigns")
+          .select("id, name, status")
+          .eq("advertiser_id", acct.id)
+          .order("created_at", { ascending: false });
+        if (campaignError) {
+          setError(campaignError.message);
+          setLoading(false);
+          return;
+        }
+        const campaigns: Campaign[] = (campaignData ?? []).map((c) => ({
+          id: c.id,
+          name: c.name,
+          status: c.status,
+        }));
+        setCampaigns(campaigns);
+        await loadCreatives(campaigns);
+        setLoading(false);
+      });
   }, [user, loadCreatives]);
 
   function handleCreativeCreated(creative: Creative) {

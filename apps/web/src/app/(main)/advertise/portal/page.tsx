@@ -29,10 +29,12 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { summaryStats } from "@/data/advertiser-performance";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
+
+const supabase = createClient();
 
 /* ---------- Types ---------- */
 
@@ -62,11 +64,6 @@ interface RateCard {
   pricePerUnit: number;
   unit: string;
   creativeType: string;
-}
-
-interface ImpressionData {
-  totalImpressions: number;
-  totalClicks: number;
 }
 
 /* ---------- Helpers ---------- */
@@ -198,36 +195,62 @@ function DashboardView({ account }: { account: AdvertiserAccount }) {
   useEffect(() => {
     async function loadData() {
       try {
-        const [campaignData, rateCardData] = await Promise.all([
-          apiClient<Campaign[]>(
-            `/advertising/campaigns?advertiserId=${account.id}`
-          ),
-          apiClient<RateCard[]>("/advertising/rate-cards"),
+        const [campaignRes, rateCardRes] = await Promise.all([
+          supabase
+            .from("ad_campaigns")
+            .select(
+              "id, name, status, budget_total, budget_daily, start_date, end_date"
+            )
+            .eq("advertiser_id", account.id)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("ad_rate_cards")
+            .select(
+              "id, name, description, creative_type, rate_per_spot, rate_cpm, rate_flat"
+            )
+            .eq("is_active", true)
+            .order("created_at", { ascending: true }),
         ]);
+
+        if (campaignRes.error) throw campaignRes.error;
+        if (rateCardRes.error) throw rateCardRes.error;
+
+        const campaignData: Campaign[] = (campaignRes.data ?? []).map((c) => ({
+          id: c.id,
+          name: c.name,
+          status: c.status,
+          budgetTotal: Number(c.budget_total ?? 0),
+          budgetDaily: Number(c.budget_daily ?? 0),
+          startDate: c.start_date,
+          endDate: c.end_date,
+        }));
         setCampaigns(campaignData);
+
+        const rateCardData: RateCard[] = (rateCardRes.data ?? []).map((r) => {
+          const perSpot = r.rate_per_spot != null ? Number(r.rate_per_spot) : null;
+          const cpm = r.rate_cpm != null ? Number(r.rate_cpm) : null;
+          const flat = r.rate_flat != null ? Number(r.rate_flat) : null;
+          const { pricePerUnit, unit } =
+            perSpot != null
+              ? { pricePerUnit: perSpot, unit: "spot" }
+              : cpm != null
+                ? { pricePerUnit: cpm, unit: "CPM" }
+                : { pricePerUnit: flat ?? 0, unit: "flat" };
+          return {
+            id: r.id,
+            name: r.name,
+            description: r.description ?? "",
+            pricePerUnit,
+            unit,
+            creativeType: r.creative_type,
+          };
+        });
         setRateCards(rateCardData);
 
-        // Fetch impressions for active campaigns
-        const activeCampaigns = campaignData.filter(
-          (c) => c.status === "ACTIVE" || c.status === "COMPLETED"
-        );
-        let impTotal = 0;
-        let clickTotal = 0;
-        await Promise.all(
-          activeCampaigns.map(async (c) => {
-            try {
-              const data = await apiClient<ImpressionData>(
-                `/advertising/campaigns/${c.id}/impressions`
-              );
-              impTotal += data.totalImpressions || 0;
-              clickTotal += data.totalClicks || 0;
-            } catch {
-              // Skip campaigns with no impression data
-            }
-          })
-        );
-        setTotalImpressions(impTotal);
-        setTotalClicks(clickTotal);
+        // No impressions/clicks data source exists in the database yet —
+        // these remain 0 and the UI renders the empty values gracefully.
+        setTotalImpressions(0);
+        setTotalClicks(0);
       } catch (err) {
         toast.error(
           err instanceof Error ? err.message : "Failed to load dashboard data"
@@ -531,22 +554,31 @@ export default function AdvertiserPortalPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [account, setAccount] = useState<AdvertiserAccount | null>(null);
   const [accountLoading, setAccountLoading] = useState(false);
-  const [accountError, setAccountError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     setAccountLoading(true);
-    apiClient<AdvertiserAccount>("/advertising/accounts/my")
-      .then((data) => {
-        setAccount(data);
-        setAccountError(null);
+    supabase
+      .from("advertiser_accounts")
+      .select("id, company_name, billing_email, is_approved")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) {
+          toast.error(error.message);
+          setAccount(null);
+        } else if (data) {
+          setAccount({
+            id: data.id,
+            companyName: data.company_name,
+            billingEmail: data.billing_email ?? "",
+            status: data.is_approved ? "APPROVED" : "PENDING",
+          });
+        } else {
+          setAccount(null);
+        }
       })
-      .catch((err) => {
-        setAccountError(
-          err instanceof Error ? err.message : "Failed to load account"
-        );
-      })
-      .finally(() => setAccountLoading(false));
+      .then(() => setAccountLoading(false));
   }, [user]);
 
   const isLoading = authLoading || accountLoading;
@@ -616,7 +648,7 @@ export default function AdvertiserPortalPage() {
       {!isLoading && !user && <SignInView />}
 
       {/* Logged in but no advertiser account */}
-      {!isLoading && user && accountError && (
+      {!isLoading && user && !account && (
         <div className="rounded-xl border border-border bg-card p-6 sm:p-8 text-center space-y-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 mx-auto">
             <LayoutDashboard className="h-8 w-8 text-amber-400" />

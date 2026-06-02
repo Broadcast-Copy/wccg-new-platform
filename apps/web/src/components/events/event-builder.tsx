@@ -38,7 +38,7 @@ import {
 } from "lucide-react";
 
 import { TicketSelector } from "./ticket-selector";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -245,55 +245,92 @@ export function EventBuilder() {
       `${data.startDate}T${data.startTime}`,
     ).toISOString();
 
-    let endDateISO: string | undefined;
+    // events.end_date is NOT NULL — fall back to the start when no end is set.
+    let endDateISO: string = startDateISO;
     if (data.endDate && data.endTime) {
       endDateISO = new Date(
         `${data.endDate}T${data.endTime}`,
       ).toISOString();
     }
 
-    // Build ticket types for API (strip client-side `id`)
+    // Build ticket types for insert (strip client-side `id`; event_id added
+    // after the event row is created).
     const ticketTypesPayload = data.ticketTypes.map((t) => ({
       name: t.name,
       price: data.isFree ? 0 : t.price,
       quantity: t.quantity,
-      description: t.description || undefined,
+      description: t.description || null,
     }));
-
-    const body = {
-      title: data.title,
-      slug: data.slug,
-      description: data.description,
-      image_url: data.imageUrl || undefined,
-      banner_url: data.bannerUrl || undefined,
-      venue: data.venue,
-      address: data.address || undefined,
-      city: data.city,
-      state: data.state,
-      zip_code: data.zipCode || undefined,
-      start_date: startDateISO,
-      end_date: endDateISO,
-      timezone: data.timezone,
-      category: data.category || undefined,
-      status,
-      visibility: data.visibility,
-      max_attendees: data.maxAttendees || undefined,
-      is_free: data.isFree,
-      ticket_types: ticketTypesPayload,
-    };
 
     setIsSubmitting(true);
     try {
-      const result = await apiClient<{ id: string }>("/events", {
-        method: "POST",
-        body: JSON.stringify(body),
-      });
+      const supabase = createClient();
+
+      // Must be signed in — events.creator_id is NOT NULL and RLS requires
+      // auth.uid() = creator_id.
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please sign in to create an event.");
+        return;
+      }
+
+      const { data: inserted, error: eventErr } = await supabase
+        .from("events")
+        .insert({
+          creator_id: user.id,
+          title: data.title,
+          slug: data.slug,
+          description: data.description || null,
+          image_url: data.imageUrl || null,
+          banner_url: data.bannerUrl || null,
+          venue: data.venue || null,
+          address: data.address || null,
+          city: data.city || null,
+          state: data.state || null,
+          zip_code: data.zipCode || null,
+          start_date: startDateISO,
+          end_date: endDateISO,
+          timezone: data.timezone,
+          category: data.category || null,
+          status,
+          visibility: data.visibility,
+          max_attendees: data.maxAttendees || null,
+          is_free: data.isFree,
+        })
+        .select("id")
+        .single();
+
+      if (eventErr || !inserted) {
+        throw new Error(eventErr?.message ?? "Failed to create event");
+      }
+
+      const eventId = inserted.id as string;
+
+      // Insert ticket types for the new event. NOTE: ticket_types is
+      // service_role-write under current RLS, so this insert is expected to
+      // fail from the browser until an owner-scoped INSERT policy is added.
+      // The event itself is still created; we don't block the redirect on it.
+      if (ticketTypesPayload.length > 0) {
+        const { error: ticketErr } = await supabase
+          .from("ticket_types")
+          .insert(
+            ticketTypesPayload.map((t) => ({ ...t, event_id: eventId })),
+          );
+        if (ticketErr) {
+          toast.warning(
+            "Event created, but ticket types could not be saved yet.",
+          );
+        }
+      }
+
       toast.success(
         status === "PUBLISHED"
           ? "Event published successfully!"
           : "Event saved as draft.",
       );
-      router.push(`/events/${result.id}`);
+      router.push(`/events/${eventId}`);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to create event";

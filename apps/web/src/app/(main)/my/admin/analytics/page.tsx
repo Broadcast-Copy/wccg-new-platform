@@ -24,23 +24,27 @@ import {
   Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 
+const supabase = createClient();
+
+// Each counter is number when the data model can supply it under the browser's
+// RLS, or null when it can't (rendered as "—" rather than a fabricated 0).
 interface Overview {
-  events_24h: number;
-  events_7d: number;
-  events_30d: number;
-  dau: number;
-  wau: number;
-  mau: number;
-  total_signups: number;
-  signups_7d: number;
-  points_awarded_7d: number;
-  drops_uploaded_7d: number;
-  slots_unassigned: number;
-  pool_tracks_approved: number;
-  pool_tracks_pending: number;
-  pool_downloads_7d: number;
+  events_24h: number | null;
+  events_7d: number | null;
+  events_30d: number | null;
+  dau: number | null;
+  wau: number | null;
+  mau: number | null;
+  total_signups: number | null;
+  signups_7d: number | null;
+  points_awarded_7d: number | null;
+  drops_uploaded_7d: number | null;
+  slots_unassigned: number | null;
+  pool_tracks_approved: number | null;
+  pool_tracks_pending: number | null;
+  pool_downloads_7d: number | null;
 }
 
 interface EngagementDay {
@@ -105,26 +109,84 @@ export default function AnalyticsPage() {
   const [digest, setDigest] = useState<Digest | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Truthful per-section notes when the data model can't supply a metric to
+  // the browser (RLS on the underlying tables). We never fabricate a value.
+  const [notices, setNotices] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [ov, eDaily, eReason, sUp, djAct, poolAct, dig] = await Promise.all([
-        apiClient<Overview>("/analytics/overview"),
-        apiClient<EngagementDay[]>("/analytics/engagement/daily?days=30"),
-        apiClient<EngagementReason[]>("/analytics/engagement/by-reason"),
-        apiClient<SignupWeek[]>("/analytics/signups/weekly"),
-        apiClient<DjActivity[]>("/analytics/djs/activity"),
-        apiClient<PoolActivityWeek[]>("/analytics/pool/activity"),
-        apiClient<Digest>("/analytics/digest"),
+      // The analytics_* views run with security_invoker=on, so the browser's
+      // RLS on the BASE tables applies. points_history / record_pool_* only
+      // expose the caller's own rows, and auth.users isn't granted to the anon
+      // key at all — so station-wide engagement, signups, and pool aggregates
+      // can't be computed client-side. We fetch what's genuinely available
+      // (DJ activity, plus slot/drop counts from world/admin-readable tables)
+      // and mark the rest "Not available" rather than show a fake 0.
+      const nextNotices: string[] = [];
+
+      // DJ activity leaderboard — backed by djs (public) + dj_drops (admin
+      // read-all). Open slots + 7-day drops come from world/admin-readable
+      // tables. Everything else is per-user RLS or auth.users (unavailable).
+      const [djAct, slotsRes, drops7dRes] = await Promise.all([
+        supabase
+          .from("analytics_dj_activity_weekly")
+          .select("week,dj_id,display_name,slug,drops_count,total_bytes")
+          .order("week", { ascending: false }),
+        supabase.from("dj_slots").select("id", { count: "exact", head: true }).is("dj_id", null),
+        supabase
+          .from("dj_drops")
+          .select("id", { count: "exact", head: true })
+          .gte("uploaded_at", new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()),
       ]);
-      setOverview(ov);
-      setDaily(eDaily);
-      setByReason(eReason);
-      setSignups(sUp);
-      setDjs(djAct);
-      setPool(poolAct);
-      setDigest(dig);
+
+      if (djAct.error) {
+        nextNotices.push(`DJ activity: ${djAct.error.message}`);
+        setDjs([]);
+      } else {
+        setDjs((djAct.data ?? []) as DjActivity[]);
+      }
+
+      setOverview({
+        // Engagement + active-user counters come from points_history, which
+        // RLS restricts to the caller's own rows — not a station-wide total.
+        events_24h: null,
+        events_7d: null,
+        events_30d: null,
+        dau: null,
+        wau: null,
+        mau: null,
+        // auth.users is not readable with the anon key.
+        total_signups: null,
+        signups_7d: null,
+        points_awarded_7d: null,
+        // dj_drops: admins read all; reliable for this role-gated page.
+        drops_uploaded_7d: drops7dRes.error ? null : drops7dRes.count ?? 0,
+        // dj_slots is world-readable; always correct.
+        slots_unassigned: slotsRes.error ? null : slotsRes.count ?? 0,
+        // record_pool_* are per-user RLS; no station-wide total client-side.
+        pool_tracks_approved: null,
+        pool_tracks_pending: null,
+        pool_downloads_7d: null,
+      });
+
+      // Engagement (daily + by reason), signups and pool activity: views
+      // resolve to the caller's own rows only (or hit auth.users), so they're
+      // not station-wide. Leave the series empty and note why instead of
+      // charting a misleading partial.
+      setDaily([]);
+      setByReason([]);
+      setPool([]);
+      setSignups([]);
+      nextNotices.push(
+        "Station-wide engagement, signups, points and record-pool aggregates aren't available from the browser: the analytics views read per-user-restricted tables (points_history, record_pool_*) and auth.users, which RLS does not expose to the app. These need a service-role rollup. DJ activity, open slots and 7-day drops below are live.",
+      );
+
+      // Weekly digest had no backing view (it was assembled by the now-dead
+      // API). Don't fabricate it.
+      setDigest(null);
+
+      setNotices(nextNotices);
       setError(null);
     } catch (e) {
       setError((e as Error).message);
@@ -165,6 +227,19 @@ export default function AnalyticsPage() {
       {error && (
         <div className="rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           {error}
+        </div>
+      )}
+
+      {notices.length > 0 && (
+        <div className="space-y-2">
+          {notices.map((n, i) => (
+            <div
+              key={i}
+              className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-200"
+            >
+              {n}
+            </div>
+          ))}
         </div>
       )}
 
@@ -383,14 +458,20 @@ function Counter({ label, value, icon: Icon, tone, link }: {
     amber: "text-amber-400",
     muted: "text-muted-foreground",
   }[tone];
-  const v = value ?? 0;
+  // null / undefined means the data model can't supply this metric to the
+  // browser — show an em-dash, never a fabricated 0.
+  const unavailable = value === null || value === undefined;
   const content = (
     <article className="rounded-xl border border-border bg-card px-4 py-3">
       <div className="flex items-center justify-between">
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
-        <Icon className={`h-3 w-3 ${toneClass}`} />
+        <Icon className={`h-3 w-3 ${unavailable ? "text-muted-foreground" : toneClass}`} />
       </div>
-      <p className={`mt-1 text-2xl font-black ${toneClass}`}>{v.toLocaleString()}</p>
+      {unavailable ? (
+        <p className="mt-1 text-2xl font-black text-muted-foreground" title="Not available — requires a service-role rollup">—</p>
+      ) : (
+        <p className={`mt-1 text-2xl font-black ${toneClass}`}>{value.toLocaleString()}</p>
+      )}
     </article>
   );
   return link ? <Link href={link} className="block transition-opacity hover:opacity-80">{content}</Link> : content;

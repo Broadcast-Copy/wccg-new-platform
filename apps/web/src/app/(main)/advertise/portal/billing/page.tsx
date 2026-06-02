@@ -29,9 +29,11 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
+
+const supabase = createClient();
 
 /* ---------- Types ---------- */
 
@@ -205,40 +207,87 @@ export default function BillingPage() {
       return;
     }
 
-    apiClient<AdvertiserAccount>("/advertising/accounts/my")
-      .then(async (acct) => {
-        setAccount(acct);
-
-        // Load campaigns for spend chart
-        try {
-          const campaignData = await apiClient<Campaign[]>(
-            `/advertising/campaigns?advertiserId=${acct.id}`
+    supabase
+      .from("advertiser_accounts")
+      .select(
+        "id, company_name, billing_email, billing_address, is_approved, created_at"
+      )
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(async ({ data: acct, error: acctError }) => {
+        if (acctError) {
+          setError(acctError.message);
+          setLoading(false);
+          return;
+        }
+        if (!acct) {
+          setError(
+            "No advertiser account found. Visit the portal home to get started."
           );
-          setCampaigns(campaignData);
-        } catch {
-          // Non-critical, continue
+          setLoading(false);
+          return;
         }
 
-        // Invoices are loaded via account — mock since we don't have a dedicated endpoint
-        // The API will return invoices if the endpoint exists; otherwise we show empty state
-        try {
-          const invoiceData = await apiClient<Invoice[]>(
-            `/advertising/accounts/my/invoices`
+        setAccount({
+          id: acct.id,
+          companyName: acct.company_name,
+          billingEmail: acct.billing_email ?? "",
+          billingAddress: acct.billing_address ?? undefined,
+          status: acct.is_approved ? "APPROVED" : "PENDING",
+          createdAt: acct.created_at,
+        });
+
+        // Load campaigns for spend chart (non-critical).
+        const { data: campaignData, error: campaignError } = await supabase
+          .from("ad_campaigns")
+          .select("id, name, status, budget_total, budget_daily, start_date, end_date")
+          .eq("advertiser_id", acct.id)
+          .order("created_at", { ascending: false });
+        if (campaignError) {
+          toast.error(campaignError.message);
+        } else {
+          setCampaigns(
+            (campaignData ?? []).map((c) => ({
+              id: c.id,
+              name: c.name,
+              status: c.status,
+              budgetTotal: Number(c.budget_total ?? 0),
+              budgetDaily: Number(c.budget_daily ?? 0),
+              startDate: c.start_date,
+              endDate: c.end_date,
+            }))
           );
-          setInvoices(invoiceData);
-        } catch {
-          // No invoice endpoint yet, show empty state
+        }
+
+        // Invoices are read-only and scoped to this advertiser account.
+        const { data: invoiceData, error: invoiceError } = await supabase
+          .from("ad_invoices")
+          .select(
+            "id, invoice_number, total, status, created_at, due_date, paid_at"
+          )
+          .eq("advertiser_id", acct.id)
+          .order("created_at", { ascending: false });
+        if (invoiceError) {
+          // Non-fatal: surface a toast but keep the rest of the page usable.
+          toast.error(invoiceError.message);
           setInvoices([]);
+        } else {
+          setInvoices(
+            (invoiceData ?? []).map((i) => ({
+              id: i.id,
+              invoiceNumber: i.invoice_number,
+              amount: Number(i.total ?? 0),
+              status: i.status,
+              issuedDate: i.created_at,
+              dueDate: i.due_date,
+              paidDate: i.paid_at ?? undefined,
+            }))
+          );
         }
 
         setError(null);
-      })
-      .catch((err) => {
-        setError(
-          err instanceof Error ? err.message : "Failed to load billing data"
-        );
-      })
-      .finally(() => setLoading(false));
+        setLoading(false);
+      });
   }, [user]);
 
   const isLoading = authLoading || loading;

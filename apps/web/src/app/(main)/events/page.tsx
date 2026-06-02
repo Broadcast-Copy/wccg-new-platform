@@ -1,12 +1,11 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { EventCard } from "@/components/events/event-card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { CalendarDays, Plus, MapPin, Ticket } from "lucide-react";
-
-export const metadata = {
-  title: "Events | WCCG 104.5 FM",
-  description: "Discover upcoming events, concerts, and community experiences in Fayetteville, NC.",
-};
+import { createClient } from "@/lib/supabase/client";
 
 interface EventItem {
   id: string;
@@ -18,19 +17,76 @@ interface EventItem {
   isFree?: boolean;
 }
 
-async function getEvents(): Promise<EventItem[]> {
-  try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
-    const res = await fetch(`${apiUrl}/events`, { next: { revalidate: 60 } });
-    if (!res.ok) return [];
-    return res.json();
-  } catch {
-    return [];
-  }
+// Raw shape of a `public.events` row (snake_case) we read from Supabase.
+interface EventRow {
+  id: string;
+  title: string;
+  description: string | null;
+  start_date: string;
+  venue: string | null;
+  image_url: string | null;
+  banner_url: string | null;
+  is_free: boolean;
 }
 
-export default async function EventsPage() {
-  const events = await getEvents();
+export default function EventsPage() {
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchEvents() {
+      try {
+        setLoading(true);
+        const supabase = createClient();
+        // RLS only exposes PUBLISHED events to anon visitors; filter explicitly
+        // so creators don't see their own drafts mixed into the public list.
+        const { data, error: queryError } = await supabase
+          .from("events")
+          .select(
+            "id, title, description, start_date, venue, image_url, banner_url, is_free",
+          )
+          .eq("status", "PUBLISHED")
+          .order("start_date", { ascending: true });
+
+        if (cancelled) return;
+
+        if (queryError) {
+          setError("Failed to load events. Please try again later.");
+          setEvents([]);
+          return;
+        }
+
+        const mapped: EventItem[] = ((data as EventRow[] | null) ?? []).map(
+          (row) => ({
+            id: row.id,
+            title: row.title,
+            description: row.description ?? undefined,
+            startDate: row.start_date,
+            venue: row.venue ?? undefined,
+            imageUrl: row.image_url ?? row.banner_url ?? undefined,
+            isFree: row.is_free,
+          }),
+        );
+        setError(null);
+        setEvents(mapped);
+      } catch {
+        if (!cancelled) {
+          setError("Failed to load events. Please try again later.");
+          setEvents([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    fetchEvents();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -69,7 +125,18 @@ export default async function EventsPage() {
         </div>
       </div>
 
-      {events.length > 0 ? (
+      {loading ? (
+        <div className="flex flex-col h-48 items-center justify-center rounded-2xl border border-dashed border-border/50 bg-muted/20">
+          <CalendarDays className="h-8 w-8 text-muted-foreground/40 mb-3 animate-pulse" />
+          <p className="text-sm font-medium text-muted-foreground">Loading events...</p>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col h-48 items-center justify-center rounded-2xl border border-dashed border-border/50 bg-muted/20">
+          <CalendarDays className="h-8 w-8 text-muted-foreground/40 mb-3" />
+          <p className="text-sm font-medium text-muted-foreground">{error}</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">Something went wrong while loading events</p>
+        </div>
+      ) : events.length > 0 ? (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {events.map((event) => (
             <EventCard key={event.id} eventId={event.id} title={event.title} description={event.description}

@@ -3,19 +3,28 @@
 /**
  * Shop product detail + checkout. Phase B6.
  *
- * Three payment modes:
- *   - cash   → Stripe Checkout
- *   - points → instant WP debit (server validates balance + caps)
- *   - split  → 50/50 (cash + points)
+ * Data layer: queries Supabase directly (no API server).
+ *   - Product comes from `vendor_products`, keyed by `id` (the `[slug]` route
+ *     param carries the product id — there is no slug column). Price is stored
+ *     in dollars and shown as cents in the existing UI.
+ *   - Reviews come from `product_reviews` (public read).
+ *
+ * Checkout: there is NO payment processor wired up. Checking out records the
+ * intent — it inserts an `orders` row (status 'pending') plus `order_items`
+ * for the cart — and tells the buyer payment will be collected separately.
+ * Ordering requires a signed-in user (orders.buyer_id is gated by RLS), so the
+ * button prompts sign-in when there is no session.
  */
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft, ShoppingBag, Sparkles, Ticket, Star } from "lucide-react";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { getListeningPoints, usePointsSync } from "@/hooks/use-listening-points";
+
+const supabase = createClient();
 
 interface Variant {
   id: string;
@@ -35,15 +44,51 @@ interface Product {
   cashPriceCents: number | null;
   pointsPrice: number | null;
   stock: number | null;
+  vendorId: string;
   variants: Variant[];
 }
 
+interface Review {
+  id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+}
+
+/** Row shape as returned from `vendor_products`. */
+interface VendorProductRow {
+  id: string;
+  vendor_id: string;
+  name: string;
+  description: string | null;
+  price: number | null;
+  image_url: string | null;
+  inventory: number | null;
+}
+
 type Mode = "cash" | "points" | "split";
+
+function mapProduct(row: VendorProductRow): Product {
+  return {
+    id: row.id,
+    slug: row.id,
+    title: row.name,
+    kind: "merch",
+    description: row.description,
+    coverUrl: row.image_url,
+    cashPriceCents: row.price != null ? Math.round(Number(row.price) * 100) : null,
+    pointsPrice: null,
+    stock: row.inventory,
+    vendorId: row.vendor_id,
+    variants: [], // catalog has no variants
+  };
+}
 
 export default function ProductDetailClient() {
   const params = useParams();
   const slug = (Array.isArray(params?.slug) ? params.slug[0] : (params?.slug as string)) ?? "";
   const [product, setProduct] = useState<Product | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [variantId, setVariantId] = useState<string | undefined>();
   const [qty, setQty] = useState(1);
   const [mode, setMode] = useState<Mode>("cash");
@@ -61,15 +106,42 @@ export default function ProductDetailClient() {
   useEffect(() => setPoints(getListeningPoints()), []);
 
   useEffect(() => {
-    apiClient<Product>(`/marketplace/products/${slug}`)
-      .then((p) => {
+    if (!slug || slug === "_placeholder") return;
+    let cancelled = false;
+
+    supabase
+      .from("vendor_products")
+      .select("id, vendor_id, name, description, price, image_url, inventory")
+      .eq("id", slug)
+      .eq("status", "active")
+      .maybeSingle()
+      .then(({ data, error: err }) => {
+        if (cancelled) return;
+        if (err || !data) {
+          setError(err ? "We couldn't load this product." : "Product not found.");
+          return;
+        }
+        const p = mapProduct(data as VendorProductRow);
         setProduct(p);
         // Pick the first variant by default if any.
         if (p.variants?.length) setVariantId(p.variants[0].id);
         // Default to whichever payment mode is supported.
         if (p.pointsPrice != null && p.cashPriceCents == null) setMode("points");
-      })
-      .catch((e) => setError(e.message));
+      });
+
+    supabase
+      .from("product_reviews")
+      .select("id, rating, comment, created_at")
+      .eq("product_id", slug)
+      .order("created_at", { ascending: false })
+      .limit(20)
+      .then(({ data }) => {
+        if (!cancelled) setReviews((data ?? []) as Review[]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [slug]);
 
   if (error && !product)
@@ -97,30 +169,55 @@ export default function ProductDetailClient() {
     setError(null);
     setSuccess(null);
     try {
-      const r = await apiClient<{
-        orderId: string;
-        stripeUrl: string | null;
-        totalPoints: number;
-        redemptions: Array<{ qrCode: string }>;
-      }>("/marketplace/checkout", {
-        method: "POST",
-        body: JSON.stringify({
-          items: [{ productSlug: product.slug, variantId, qty }],
-          paymentMode: mode,
-          fulfillment: product.kind === "merch" ? "ship" : "digital",
-        }),
-      });
-      if (r.stripeUrl) {
-        // Cash or split — redirect to Stripe.
-        window.location.href = r.stripeUrl;
+      // Ordering is gated on a signed-in user (orders.buyer_id RLS).
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setError("Please sign in to place your order.");
         return;
       }
-      // Points-only — instant.
+
+      const unitPrice = cashUnit != null ? cashUnit / 100 : 0; // dollars
+      const lineTotal = unitPrice * qty;
+
+      // No payment processor: record the order as 'pending' and collect
+      // payment separately. We do NOT call any payment API.
+      const { data: order, error: orderErr } = await supabase
+        .from("orders")
+        .insert({
+          buyer_id: user.id,
+          vendor_id: product.vendorId,
+          status: "pending",
+          subtotal: lineTotal,
+          total: lineTotal,
+          payment_method: "pending",
+          notes: "Placed via WCCG Shop. Payment to be collected separately (online payments coming soon).",
+        })
+        .select("id")
+        .single();
+
+      if (orderErr || !order) {
+        throw new Error(orderErr?.message ?? "Could not place your order.");
+      }
+
+      const { error: itemErr } = await supabase.from("order_items").insert({
+        order_id: order.id,
+        product_id: product.id,
+        name: product.title,
+        quantity: qty,
+        unit_price: unitPrice,
+        total: lineTotal,
+      });
+
+      if (itemErr) {
+        throw new Error(itemErr.message);
+      }
+
       setSuccess({
-        orderId: r.orderId,
+        orderId: order.id,
         stripeUrl: null,
-        pointsAwarded: r.totalPoints,
-        redemptions: r.redemptions,
+        redemptions: [],
       });
     } catch (e) {
       setError((e as Error).message);
@@ -239,13 +336,22 @@ export default function ProductDetailClient() {
             {busy ? "Processing…" : "Check out"}
           </Button>
 
+          <p className="text-xs text-muted-foreground">
+            Online payments are coming soon. Place your order now and our team will reach out to
+            collect payment and arrange fulfillment.
+          </p>
+
           {error && <p className="text-sm text-red-500">{error}</p>}
 
           {success && (
             <div className="rounded-2xl border border-[#74ddc7]/40 bg-[#74ddc7]/10 p-4">
-              <p className="text-sm font-bold text-foreground">Order confirmed.</p>
+              <p className="text-sm font-bold text-foreground">Order placed.</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Order ID: <span className="font-mono">{success.orderId.slice(0, 8)}</span>
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Payment will be collected separately — online checkout is coming soon. We&apos;ll
+                follow up to finalize your order.
               </p>
               {success.redemptions.length > 0 && (
                 <div className="mt-3 space-y-1">
@@ -268,6 +374,29 @@ export default function ProductDetailClient() {
           </div>
         </div>
       </div>
+
+      {reviews.length > 0 && (
+        <section className="space-y-3 border-t border-border pt-6">
+          <h2 className="text-lg font-black tracking-tight text-foreground">Reviews</h2>
+          <ul className="space-y-3">
+            {reviews.map((rev) => (
+              <li key={rev.id} className="rounded-2xl border border-border bg-card p-4">
+                <div className="flex items-center gap-1 text-[#74ddc7]">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-3.5 w-3.5 ${i < rev.rating ? "fill-current" : "text-muted-foreground/30"}`}
+                    />
+                  ))}
+                </div>
+                {rev.comment && (
+                  <p className="mt-2 text-sm text-muted-foreground">{rev.comment}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </article>
   );
 }

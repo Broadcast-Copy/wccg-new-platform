@@ -8,7 +8,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { Check, Loader2, RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
+
+const PENDING_COLUMNS =
+  "id, title, artist, remix_artist, album, genre, bpm, musical_key, version, " +
+  "storage_path, size_bytes, format, duration_seconds, uploader_type, " +
+  "label_name, uploaded_by, created_at";
 
 interface PendingTrack {
   id: string;
@@ -36,21 +41,48 @@ export default function AdminPoolPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     setLoading(true);
-    apiClient<PendingTrack[]>("/pool/admin/pending")
-      .then((rs) => { setItems(rs); setError(null); })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+    const supabase = createClient();
+    const { data, error: err } = await supabase
+      .from("record_pool_tracks")
+      .select(PENDING_COLUMNS)
+      .eq("status", "pending")
+      .order("created_at", { ascending: true });
+    if (err) {
+      setError(err.message);
+      setItems([]);
+    } else {
+      setError(null);
+      setItems((data ?? []) as unknown as PendingTrack[]);
+    }
+    setLoading(false);
   }, []);
 
-  useEffect(load, [load]);
+  useEffect(() => { load(); }, [load]);
 
   const approve = async (id: string) => {
     setBusyId(id);
     try {
-      await apiClient(`/pool/admin/${id}/approve`, { method: "POST" });
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error: err } = await supabase
+        .from("record_pool_tracks")
+        .update({
+          status: "approved",
+          approved_by: user?.id ?? null,
+          approved_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .eq("status", "pending")
+        .select("id");
+      if (err) throw new Error(err.message);
+      // RLS may silently match zero rows — don't fake success.
+      if (!data || data.length === 0) {
+        throw new Error("Not approved — you may not have permission to moderate this track.");
+      }
       setItems((xs) => xs.filter((x) => x.id !== id));
+      setError(null);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -63,11 +95,25 @@ export default function AdminPoolPage() {
     if (!reason || reason.length < 3) return;
     setBusyId(id);
     try {
-      await apiClient(`/pool/admin/${id}/reject`, {
-        method: "POST",
-        body: JSON.stringify({ reason }),
-      });
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error: err } = await supabase
+        .from("record_pool_tracks")
+        .update({
+          status: "rejected",
+          rejection_reason: reason,
+          approved_by: user?.id ?? null,
+          approved_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .eq("status", "pending")
+        .select("id");
+      if (err) throw new Error(err.message);
+      if (!data || data.length === 0) {
+        throw new Error("Not rejected — you may not have permission to moderate this track.");
+      }
       setItems((xs) => xs.filter((x) => x.id !== id));
+      setError(null);
     } catch (e) {
       setError((e as Error).message);
     } finally {

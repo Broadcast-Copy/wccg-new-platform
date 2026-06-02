@@ -27,7 +27,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 
 // ─── Types ─────────────────────────────────────────────────────────────
 
@@ -123,10 +123,53 @@ export default function MyEventsPage() {
       return;
     }
 
+    const currentUserId = user.id;
+
     async function fetchMyEvents() {
       try {
-        const data = await apiClient<MyEvent[]>("/events?creator=me");
-        setMyEvents(Array.isArray(data) ? data : []);
+        const supabase = createClient();
+        // Events I own. RLS lets a creator read their own rows in any status.
+        const { data, error } = await supabase
+          .from("events")
+          .select(
+            `id, title, slug, start_date, end_date, venue, city, status, banner_url,
+             ticket_types ( quantity_sold )`,
+          )
+          .eq("creator_id", currentUserId)
+          .order("start_date", { ascending: false });
+
+        if (error) throw new Error(error.message);
+
+        type Row = {
+          id: string;
+          title: string;
+          slug: string;
+          start_date: string;
+          end_date: string;
+          venue: string | null;
+          city: string | null;
+          status: string;
+          banner_url: string | null;
+          ticket_types: { quantity_sold: number }[] | null;
+        };
+
+        const mapped: MyEvent[] = ((data as Row[] | null) ?? []).map((row) => ({
+          id: row.id,
+          title: row.title,
+          slug: row.slug,
+          startDate: row.start_date,
+          endDate: row.end_date,
+          venueName: row.venue,
+          city: row.city,
+          status: row.status,
+          bannerUrl: row.banner_url,
+          // Sum of tickets sold is the RLS-safe proxy for registration count.
+          registrationCount: (row.ticket_types ?? []).reduce(
+            (sum, t) => sum + (t.quantity_sold || 0),
+            0,
+          ),
+        }));
+        setMyEvents(mapped);
       } catch {
         setMyEvents([]);
       } finally {
@@ -136,8 +179,67 @@ export default function MyEventsPage() {
 
     async function fetchMyTickets() {
       try {
-        const data = await apiClient<MyRegistration[]>("/registrations/me");
-        setMyTickets(Array.isArray(data) ? data : []);
+        const supabase = createClient();
+        // My registrations (RLS: auth.uid() = user_id), joined to the event
+        // and the ticket type for display.
+        const { data, error } = await supabase
+          .from("event_registrations")
+          .select(
+            `id, event_id, status, qr_code,
+             ticket_types ( name ),
+             events ( id, title, start_date, end_date, venue, city, banner_url, status )`,
+          )
+          .eq("user_id", currentUserId)
+          .order("created_at", { ascending: false });
+
+        if (error) throw new Error(error.message);
+
+        type EventEmbed = {
+          id: string;
+          title: string;
+          start_date: string;
+          end_date: string;
+          venue: string | null;
+          city: string | null;
+          banner_url: string | null;
+          status: string;
+        };
+        type Row = {
+          id: string;
+          event_id: string;
+          status: string;
+          qr_code: string | null;
+          ticket_types: { name: string } | { name: string }[] | null;
+          // Supabase types to-one embeds as arrays; normalize at runtime.
+          events: EventEmbed | EventEmbed[] | null;
+        };
+
+        const mapped: MyRegistration[] = [];
+        for (const row of (data as unknown as Row[] | null) ?? []) {
+          const ev = Array.isArray(row.events) ? row.events[0] : row.events;
+          if (!ev) continue; // skip rows whose event is not visible
+          const ticket = Array.isArray(row.ticket_types)
+            ? row.ticket_types[0]
+            : row.ticket_types;
+          mapped.push({
+            id: row.id,
+            eventId: row.event_id,
+            status: row.status,
+            ticketType: ticket?.name ?? null,
+            qrCode: row.qr_code,
+            event: {
+              id: ev.id,
+              title: ev.title,
+              startDate: ev.start_date,
+              endDate: ev.end_date,
+              venueName: ev.venue,
+              city: ev.city,
+              bannerUrl: ev.banner_url,
+              status: ev.status,
+            },
+          });
+        }
+        setMyTickets(mapped);
       } catch {
         setMyTickets([]);
       } finally {

@@ -23,7 +23,71 @@ import {
   Tv2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
+
+const supabase = createClient();
+
+// Columns on restream_destinations (snake_case) mapped to the camelCase
+// Destination shape the UI renders. stream_key / discord_bot_token are
+// secrets the client must never read back, so we only surface whether they
+// are set, plus a masked tail.
+interface DestinationRow {
+  id: string;
+  slug: string;
+  label: string;
+  platform: Destination["platform"];
+  rtmp_url: string | null;
+  stream_key: string | null;
+  discord_guild_id: string | null;
+  discord_channel_id: string | null;
+  discord_bot_token: string | null;
+  video_mode: Destination["videoMode"];
+  background_url: string | null;
+  video_bitrate_kbps: number | null;
+  audio_bitrate_kbps: number | null;
+  enabled: boolean;
+  status: Destination["status"];
+  status_message: string | null;
+  last_active_at: string | null;
+  last_error_at: string | null;
+  last_error_msg: string | null;
+  consecutive_failures: number;
+  source_url: string | null;
+  source_format: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+function mapDestination(r: DestinationRow): Destination {
+  const key = r.stream_key ?? "";
+  return {
+    id: r.id,
+    slug: r.slug,
+    label: r.label,
+    platform: r.platform,
+    rtmpUrl: r.rtmp_url,
+    streamKeySet: Boolean(key),
+    streamKeyMasked: key ? `••••${key.slice(-4)}` : null,
+    discordGuildId: r.discord_guild_id,
+    discordChannelId: r.discord_channel_id,
+    discordBotTokenSet: Boolean(r.discord_bot_token),
+    videoMode: r.video_mode,
+    backgroundUrl: r.background_url,
+    videoBitrateKbps: r.video_bitrate_kbps,
+    audioBitrateKbps: r.audio_bitrate_kbps,
+    enabled: r.enabled,
+    status: r.status,
+    statusMessage: r.status_message,
+    lastActiveAt: r.last_active_at,
+    lastErrorAt: r.last_error_at,
+    lastErrorMsg: r.last_error_msg,
+    consecutiveFailures: r.consecutive_failures ?? 0,
+    sourceUrl: r.source_url,
+    sourceFormat: r.source_format,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
 
 interface Destination {
   id: string;
@@ -81,8 +145,18 @@ export default function RestreamPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await apiClient<Destination[]>("/restream");
-      setItems(r);
+      const { data, error } = await supabase
+        .from("restream_destinations")
+        .select(
+          "id,slug,label,platform,rtmp_url,stream_key,discord_guild_id,discord_channel_id,discord_bot_token,video_mode,background_url,video_bitrate_kbps,audio_bitrate_kbps,enabled,status,status_message,last_active_at,last_error_at,last_error_msg,consecutive_failures,source_url,source_format,created_at,updated_at",
+        )
+        .order("created_at", { ascending: true });
+      if (error) {
+        setError(error.message);
+        setItems([]);
+        return;
+      }
+      setItems((data ?? []).map((r) => mapDestination(r as DestinationRow)));
       setError(null);
     } catch (e) {
       setError((e as Error).message);
@@ -100,10 +174,19 @@ export default function RestreamPage() {
   const toggle = async (d: Destination) => {
     setSavingId(d.id);
     try {
-      await apiClient(`/restream/${d.id}/toggle`, {
-        method: "PATCH",
-        body: JSON.stringify({ enabled: !d.enabled }),
-      });
+      // restream_destinations is service-role-write under RLS; a zero-row
+      // result means the write was filtered out rather than applied.
+      const { data, error } = await supabase
+        .from("restream_destinations")
+        .update({ enabled: !d.enabled, updated_at: new Date().toISOString() })
+        .eq("id", d.id)
+        .select("id");
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) {
+        throw new Error(
+          "Couldn't change this destination — the restream registry is write-protected (service role only). Toggle it from the restream worker.",
+        );
+      }
       load();
     } catch (e) {
       setError((e as Error).message);
@@ -116,7 +199,17 @@ export default function RestreamPage() {
     if (!window.confirm(`Remove "${d.label}"?`)) return;
     setSavingId(d.id);
     try {
-      await apiClient(`/restream/${d.id}`, { method: "DELETE" });
+      const { data, error } = await supabase
+        .from("restream_destinations")
+        .delete()
+        .eq("id", d.id)
+        .select("id");
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) {
+        throw new Error(
+          "Couldn't remove this destination — the restream registry is write-protected (service role only).",
+        );
+      }
       load();
     } catch (e) {
       setError((e as Error).message);
@@ -156,6 +249,14 @@ export default function RestreamPage() {
           {error}
         </div>
       )}
+
+      <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
+        Heads up: the restream registry (<code>restream_destinations</code>) is
+        service-role-protected. This console reads it directly from Supabase, so
+        rows and write actions are only visible/possible to the restream worker,
+        not the browser. An empty list here does not necessarily mean no
+        destinations are configured.
+      </div>
 
       {showForm && <NewDestinationForm onSaved={() => { setShowForm(false); load(); }} onCancel={() => setShowForm(false)} />}
 
@@ -265,7 +366,7 @@ export default function RestreamPage() {
       {items.length > 0 && <BandwidthEstimator items={items} />}
 
       <p className="text-xs text-muted-foreground">
-        Auto-refresh 15s. Status is reported by the restream worker on the API host.
+        Auto-refresh 15s. Status is written to <code>restream_destinations</code> by the restream worker.
         See <a href="https://github.com/Broadcast-Copy/wccg-new-platform/blob/main/docs/RESTREAM.md" className="underline">RESTREAM.md</a> for the start-small runbook.
       </p>
     </div>
@@ -400,24 +501,33 @@ function NewDestinationForm({ onSaved, onCancel }: { onSaved: () => void; onCanc
     setSubmitting(true);
     setError(null);
     try {
-      await apiClient("/restream", {
-        method: "POST",
-        body: JSON.stringify({
+      // Insert directly into restream_destinations. This table is
+      // service-role-write under RLS, so an authenticated browser insert is
+      // filtered out — we detect the zero-row result and report it honestly.
+      const { data, error } = await supabase
+        .from("restream_destinations")
+        .insert({
           slug: form.slug,
           label: form.label,
           platform: form.platform,
-          rtmpUrl: form.rtmpUrl || undefined,
-          streamKey: form.streamKey || undefined,
-          discordGuildId: form.discordGuildId || undefined,
-          discordChannelId: form.discordChannelId || undefined,
-          discordBotToken: form.discordBotToken || undefined,
-          videoMode: form.videoMode,
-          backgroundUrl: form.backgroundUrl || undefined,
-          videoBitrateKbps: form.videoBitrateKbps ? Number(form.videoBitrateKbps) : undefined,
-          audioBitrateKbps: form.audioBitrateKbps ? Number(form.audioBitrateKbps) : undefined,
-          sourceUrl: form.sourceUrl || undefined,
-        }),
-      });
+          rtmp_url: form.rtmpUrl || null,
+          stream_key: form.streamKey || null,
+          discord_guild_id: form.discordGuildId || null,
+          discord_channel_id: form.discordChannelId || null,
+          discord_bot_token: form.discordBotToken || null,
+          video_mode: form.videoMode,
+          background_url: form.backgroundUrl || null,
+          video_bitrate_kbps: form.videoBitrateKbps ? Number(form.videoBitrateKbps) : null,
+          audio_bitrate_kbps: form.audioBitrateKbps ? Number(form.audioBitrateKbps) : null,
+          source_url: form.sourceUrl || null,
+        })
+        .select("id");
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) {
+        throw new Error(
+          "Couldn't add the destination — the restream registry is write-protected (service role only). Add it from the restream worker.",
+        );
+      }
       onSaved();
     } catch (e) {
       setError((e as Error).message);

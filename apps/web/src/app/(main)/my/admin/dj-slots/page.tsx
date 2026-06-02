@@ -4,13 +4,16 @@
  * Admin: assign DJs to weekly mix-show slots.
  *
  * Shows every slot in the schedule with a dropdown to pick (or clear) the
- * assigned DJ. Calls PATCH /djs/admin/slots/:id.
+ * assigned DJ. Reads dj_slots (+ embedded djs) and the active DJ roster
+ * directly from Supabase; assignment writes dj_slots.dj_id.
  */
 
 import { useCallback, useEffect, useState } from "react";
 import { Calendar, Check, Loader2, RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
+
+const supabase = createClient();
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -38,6 +41,19 @@ interface SlotsResponse {
   djs: Dj[];
 }
 
+// Raw row shape from `dj_slots` with embedded `djs`.
+interface SlotQueryRow {
+  id: string;
+  dj_id: string | null;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  file_codes: string[];
+  status: "active" | "tentative" | "inactive";
+  notes: string | null;
+  djs: { id: string; slug: string; display_name: string; is_active: boolean } | null;
+}
+
 export default function AdminDjSlotsPage() {
   const [data, setData] = useState<SlotsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,13 +63,62 @@ export default function AdminDjSlotsPage() {
 
   const load = useCallback(() => {
     setLoading(true);
-    apiClient<SlotsResponse>("/djs/admin/slots")
-      .then((r) => {
-        setData(r);
-        setError(null);
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+    (async () => {
+      const [slotsRes, djsRes] = await Promise.all([
+        supabase
+          .from("dj_slots")
+          .select(
+            "id,dj_id,day_of_week,start_time,end_time,file_codes,status,notes,djs(id,slug,display_name,is_active)",
+          )
+          .order("day_of_week", { ascending: true })
+          .order("start_time", { ascending: true }),
+        supabase
+          .from("djs")
+          .select("id,slug,display_name,is_active")
+          .eq("is_active", true)
+          .order("display_name", { ascending: true }),
+      ]);
+
+      if (slotsRes.error) {
+        setError(slotsRes.error.message);
+        setData(null);
+        setLoading(false);
+        return;
+      }
+      if (djsRes.error) {
+        setError(djsRes.error.message);
+        setData(null);
+        setLoading(false);
+        return;
+      }
+
+      const slots: Slot[] = ((slotsRes.data ?? []) as unknown as SlotQueryRow[]).map((r) => ({
+        id: r.id,
+        dj_id: r.dj_id,
+        day_of_week: r.day_of_week,
+        start_time: r.start_time,
+        end_time: r.end_time,
+        file_codes: r.file_codes ?? [],
+        status: r.status,
+        notes: r.notes,
+        dj: r.djs
+          ? {
+              id: r.djs.id,
+              slug: r.djs.slug,
+              display_name: r.djs.display_name,
+              is_active: r.djs.is_active,
+            }
+          : null,
+      }));
+
+      setData({ slots, djs: (djsRes.data ?? []) as Dj[] });
+      setError(null);
+      setLoading(false);
+    })().catch((e) => {
+      setError((e as Error).message);
+      setData(null);
+      setLoading(false);
+    });
   }, []);
 
   useEffect(load, [load]);
@@ -61,10 +126,11 @@ export default function AdminDjSlotsPage() {
   const assign = async (slotId: string, djId: string) => {
     setSaving(slotId);
     try {
-      await apiClient(`/djs/admin/slots/${slotId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ djId: djId || null }),
-      });
+      const { error: updErr } = await supabase
+        .from("dj_slots")
+        .update({ dj_id: djId || null })
+        .eq("id", slotId);
+      if (updErr) throw new Error(updErr.message);
       // Update local state without reloading
       setData((prev) => {
         if (!prev) return prev;

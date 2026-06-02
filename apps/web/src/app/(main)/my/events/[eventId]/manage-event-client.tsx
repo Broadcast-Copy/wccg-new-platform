@@ -26,7 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 
 // ─── Types ─────────────────────────────────────────────────────────────
 
@@ -105,7 +105,7 @@ export default function ManageEventClient() {
   const [checkingIn, setCheckingIn] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!eventId || !user) {
+    if (!eventId || eventId === "_placeholder" || !user) {
       setLoading(false);
       return;
     }
@@ -115,24 +115,122 @@ export default function ManageEventClient() {
     async function fetchData() {
       try {
         setLoading(true);
-        const [eventData, regsData] = await Promise.allSettled([
-          apiClient<EventDetail>(`/events/${eventId}`),
-          apiClient<Registration[]>(`/events/${eventId}/registrations`),
-        ]);
+        const supabase = createClient();
 
-        if (!cancelled) {
-          if (eventData.status === "fulfilled") {
-            setEvent(eventData.value);
-          } else {
-            setError("Failed to load event details.");
-          }
+        // Event the caller owns (RLS: creator_id = auth.uid()). Pull the
+        // ticket-types so we can show capacity even when the attendee list is
+        // restricted by RLS.
+        const { data: row, error: eventErr } = await supabase
+          .from("events")
+          .select(
+            `id, title, slug, description, start_date, end_date, venue, address,
+             city, state, status, is_free, max_attendees,
+             ticket_types ( quantity_sold )`,
+          )
+          .eq("id", eventId)
+          .maybeSingle();
 
-          if (regsData.status === "fulfilled") {
-            setRegistrations(
-              Array.isArray(regsData.value) ? regsData.value : [],
-            );
-          }
+        if (cancelled) return;
+
+        if (eventErr || !row) {
+          setError("Failed to load event details.");
+          return;
         }
+
+        type EventRow = Record<string, unknown> & {
+          ticket_types: { quantity_sold: number }[] | null;
+        };
+        const eventRow = row as EventRow;
+        const soldCount = (eventRow.ticket_types ?? []).reduce(
+          (sum, t) => sum + (t.quantity_sold || 0),
+          0,
+        );
+
+        setEvent({
+          id: eventRow.id as string,
+          title: eventRow.title as string,
+          slug: eventRow.slug as string,
+          description: (eventRow.description as string | null) ?? null,
+          startDate: eventRow.start_date as string,
+          endDate: eventRow.end_date as string,
+          venueName: (eventRow.venue as string | null) ?? null,
+          address: (eventRow.address as string | null) ?? null,
+          city: (eventRow.city as string | null) ?? null,
+          state: (eventRow.state as string | null) ?? null,
+          status: eventRow.status as string,
+          isFree: Boolean(eventRow.is_free),
+          maxAttendees: (eventRow.max_attendees as number | null) ?? null,
+          registrationCount: soldCount,
+        });
+
+        // Attendee list. Current RLS on event_registrations only exposes the
+        // caller's OWN rows, so organizers will not see other attendees until
+        // an organizer-scoped SELECT policy is added centrally. We still query
+        // it the right way so the list populates once RLS is widened.
+        const { data: regRows, error: regErr } = await supabase
+          .from("event_registrations")
+          .select(
+            `id, user_id, status, checked_in_at, created_at, ticket_types ( name )`,
+          )
+          .eq("event_id", eventId)
+          .order("created_at", { ascending: false });
+
+        if (cancelled) return;
+
+        if (regErr) {
+          setRegistrations([]);
+        } else {
+          type RegRow = {
+            id: string;
+            user_id: string;
+            status: string;
+            checked_in_at: string | null;
+            created_at: string;
+            ticket_types: { name: string } | { name: string }[] | null;
+          };
+          const rows = (regRows as RegRow[] | null) ?? [];
+
+          // Resolve attendee names/emails from public profiles.
+          const userIds = [...new Set(rows.map((r) => r.user_id))];
+          const profileMap = new Map<
+            string,
+            { display_name: string | null; email: string | null }
+          >();
+          if (userIds.length > 0) {
+            const { data: profiles } = await supabase
+              .from("profiles")
+              .select("id, display_name, email")
+              .in("id", userIds);
+            for (const p of (profiles as
+              | { id: string; display_name: string | null; email: string | null }[]
+              | null) ?? []) {
+              profileMap.set(p.id, {
+                display_name: p.display_name,
+                email: p.email,
+              });
+            }
+          }
+
+          const mapped: Registration[] = rows.map((r) => {
+            const profile = profileMap.get(r.user_id);
+            const ticket = Array.isArray(r.ticket_types)
+              ? r.ticket_types[0]
+              : r.ticket_types;
+            return {
+              id: r.id,
+              userId: r.user_id,
+              displayName: profile?.display_name ?? null,
+              email: profile?.email ?? null,
+              ticketType: ticket?.name ?? null,
+              status: r.status,
+              checkedIn: r.status === "CHECKED_IN" || r.checked_in_at != null,
+              checkedInAt: r.checked_in_at,
+              createdAt: r.created_at,
+            };
+          });
+          setRegistrations(mapped);
+        }
+        setError(null);
       } catch {
         if (!cancelled) {
           setError("Failed to load event data.");
@@ -153,18 +251,29 @@ export default function ManageEventClient() {
   async function handleCheckIn(registrationId: string) {
     setCheckingIn(registrationId);
     try {
-      await apiClient(`/registrations/${registrationId}/checkin`, {
-        method: "POST",
-      });
+      const supabase = createClient();
+      const checkedInAt = new Date().toISOString();
+      // Door check-in = stamp the registration as CHECKED_IN. (event_checkins
+      // is a separate self/geo check-in log gated to auth.uid() = user_id and
+      // is not the door-staff primitive.) An organizer-scoped UPDATE policy on
+      // event_registrations is required for staff to check in other attendees.
+      const { error } = await supabase
+        .from("event_registrations")
+        .update({ status: "CHECKED_IN", checked_in_at: checkedInAt })
+        .eq("id", registrationId);
+
+      if (error) throw new Error(error.message);
+
       setRegistrations((prev) =>
         prev.map((r) =>
           r.id === registrationId
-            ? { ...r, checkedIn: true, checkedInAt: new Date().toISOString() }
+            ? { ...r, checkedIn: true, status: "CHECKED_IN", checkedInAt }
             : r,
         ),
       );
     } catch {
-      // Silently handle — could show toast
+      // Check-in failed (most likely RLS until an organizer UPDATE policy is
+      // added) — leave the row unchanged so the action can be retried.
     } finally {
       setCheckingIn(null);
     }

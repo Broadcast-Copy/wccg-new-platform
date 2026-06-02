@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -220,18 +220,134 @@ export default function EventDetailPage() {
   const [registerError, setRegisterError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!eventId) return;
+    if (!eventId || eventId === "_placeholder") return;
 
     let cancelled = false;
     async function fetchEvent() {
       try {
         setLoading(true);
-        const data = await apiClient<EventDetail>(`/events/${eventId}`);
+        const supabase = createClient();
+
+        // Event row (+ ticket types + organizers) in a single nested select.
+        // RLS exposes PUBLISHED events (or the caller's own) plus public-read
+        // ticket_types / event_organizers.
+        const { data: row, error: eventErr } = await supabase
+          .from("events")
+          .select(
+            `id, title, slug, description, category, start_date, end_date,
+             venue, address, city, state, zip_code, max_attendees, is_free,
+             banner_url, status, visibility, created_at, updated_at,
+             ticket_types ( id, name, price, quantity, quantity_sold, description, is_active ),
+             event_organizers ( user_id, role )`,
+          )
+          .eq("id", eventId)
+          .maybeSingle();
+
+        if (eventErr) throw new Error(eventErr.message);
+        if (!row) {
+          if (!cancelled) setError("Event not found.");
+          return;
+        }
+
+        type TicketRow = {
+          id: string;
+          name: string;
+          price: number | string;
+          quantity: number;
+          quantity_sold: number;
+          description: string | null;
+          is_active: boolean;
+        };
+        type OrganizerRow = { user_id: string; role: string };
+        const eventRow = row as Record<string, unknown> & {
+          ticket_types: TicketRow[] | null;
+          event_organizers: OrganizerRow[] | null;
+        };
+
+        const ticketRows = eventRow.ticket_types ?? [];
+        const organizerRows = eventRow.event_organizers ?? [];
+
+        // Resolve organizer display info from public profiles.
+        const organizerIds = organizerRows.map((o) => o.user_id);
+        const profileMap = new Map<
+          string,
+          { display_name: string | null; email: string | null; avatar_url: string | null }
+        >();
+        if (organizerIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, display_name, email, avatar_url")
+            .in("id", organizerIds);
+          for (const p of (profiles as
+            | { id: string; display_name: string | null; email: string | null; avatar_url: string | null }[]
+            | null) ?? []) {
+            profileMap.set(p.id, {
+              display_name: p.display_name,
+              email: p.email,
+              avatar_url: p.avatar_url,
+            });
+          }
+        }
+
+        const ticketTypes: TicketType[] = ticketRows.map((t) => ({
+          id: t.id,
+          name: t.name,
+          price: typeof t.price === "string" ? parseFloat(t.price) : t.price,
+          quantity: t.quantity,
+          quantitySold: t.quantity_sold,
+          description: t.description,
+          isActive: t.is_active,
+        }));
+
+        // Tickets sold across all types is the public, RLS-safe proxy for how
+        // many attendees have registered (anon cannot count others' rows in
+        // event_registrations directly).
+        const registrationCount = ticketTypes.reduce(
+          (sum, t) => sum + (t.quantitySold || 0),
+          0,
+        );
+
+        const detail: EventDetail = {
+          id: eventRow.id as string,
+          title: eventRow.title as string,
+          slug: eventRow.slug as string,
+          description: (eventRow.description as string | null) ?? null,
+          category: (eventRow.category as string | null) ?? null,
+          startDate: eventRow.start_date as string,
+          endDate: eventRow.end_date as string,
+          venueName: (eventRow.venue as string | null) ?? null,
+          address: (eventRow.address as string | null) ?? null,
+          city: (eventRow.city as string | null) ?? null,
+          state: (eventRow.state as string | null) ?? null,
+          zipCode: (eventRow.zip_code as string | null) ?? null,
+          maxAttendees: (eventRow.max_attendees as number | null) ?? null,
+          isFree: Boolean(eventRow.is_free),
+          isVirtual: false,
+          virtualUrl: null,
+          bannerUrl: (eventRow.banner_url as string | null) ?? null,
+          status: eventRow.status as string,
+          visibility: eventRow.visibility as string,
+          ticketTypes,
+          organizers: organizerRows.map((o) => {
+            const profile = profileMap.get(o.user_id);
+            return {
+              userId: o.user_id,
+              role: o.role,
+              displayName: profile?.display_name ?? null,
+              email: profile?.email ?? null,
+              avatarUrl: profile?.avatar_url ?? null,
+            };
+          }),
+          registrationCount,
+          createdAt: eventRow.created_at as string,
+          updatedAt: eventRow.updated_at as string,
+        };
+
         if (!cancelled) {
-          setEvent(data);
+          setEvent(detail);
           setError(null);
           // Auto-select first active ticket type with availability
-          const firstActive = data.ticketTypes.find(
+          const firstActive = detail.ticketTypes.find(
             (t) => t.isActive && t.quantity - t.quantitySold > 0,
           );
           if (firstActive) {
@@ -263,16 +379,53 @@ export default function EventDetailPage() {
     setRegisterError(null);
 
     try {
-      const result = await apiClient<RegistrationResult>(
-        `/events/${eventId}/register`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            ticketTypeId: selectedTicketId ?? undefined,
-          }),
-        },
-      );
-      setRegistered(result);
+      const supabase = createClient();
+
+      // Gate on sign-in.
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
+      if (!authUser) {
+        setRegisterError("Please sign in to register for this event.");
+        return;
+      }
+
+      // event_registrations.ticket_type_id is NOT NULL — require a ticket.
+      if (!selectedTicketId) {
+        setRegisterError("Please select a ticket before registering.");
+        return;
+      }
+
+      // No payment is taken here. Paid tickets are recorded the same as free
+      // ones (CONFIRMED); the price is collected separately at the door. The
+      // registration_status enum has no pending/reserved value, so CONFIRMED
+      // is the only valid "registered" state.
+      const qrCode = `WCCG-${eventId.slice(0, 8)}-${
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID().slice(0, 8)
+          : Math.random().toString(36).slice(2, 10)
+      }`.toUpperCase();
+
+      const { data: inserted, error: insertErr } = await supabase
+        .from("event_registrations")
+        .insert({
+          event_id: eventId,
+          user_id: authUser.id,
+          ticket_type_id: selectedTicketId,
+          status: "CONFIRMED",
+          qr_code: qrCode,
+        })
+        .select("id, event_id, status, qr_code")
+        .single();
+
+      if (insertErr) throw new Error(insertErr.message);
+
+      setRegistered({
+        id: inserted.id as string,
+        eventId: inserted.event_id as string,
+        status: inserted.status as string,
+        qrCode: (inserted.qr_code as string | null) ?? qrCode,
+      });
     } catch (err: unknown) {
       setRegisterError(
         err instanceof Error ? err.message : "Registration failed",

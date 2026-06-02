@@ -6,13 +6,22 @@
  * The new hybrid cash + WP catalog. Distinct from /marketplace (legacy vendor
  * directory) and /deals (local-business deals page) — those stay as-is.
  * Each card shows BOTH prices so listeners see what they can already afford.
+ *
+ * Data layer: queries Supabase `vendor_products` directly (no API server).
+ * Products are keyed by `id` (there is no slug column); the detail route uses
+ * that id as its `[slug]` param. Prices are stored as dollars (numeric) and
+ * converted to cents for the existing UI. There is no per-product WP price
+ * column, so `pointsPrice` is left null and the WP balance display stays for
+ * context only.
  */
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Sparkles, ShoppingBag, Ticket, Star } from "lucide-react";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { getListeningPoints, usePointsSync } from "@/hooks/use-listening-points";
+
+const supabase = createClient();
 
 interface Product {
   id: string;
@@ -25,18 +34,38 @@ interface Product {
   stock: number | null;
 }
 
-const KINDS: Array<{ id: "all" | Product["kind"]; label: string }> = [
-  { id: "all", label: "All" },
-  { id: "merch", label: "Merch" },
-  { id: "ticket", label: "Tickets" },
-  { id: "experience", label: "Experiences" },
-  { id: "deal", label: "Local Deals" },
-];
+/** Row shape as returned from `vendor_products`. */
+interface VendorProductRow {
+  id: string;
+  name: string;
+  price: number | null;
+  category: string | null;
+  image_url: string | null;
+  inventory: number | null;
+  status: string | null;
+}
+
+const ALL = "all";
+
+function mapProduct(row: VendorProductRow): Product {
+  return {
+    id: row.id,
+    slug: row.id, // no slug column — the detail route keys off id
+    title: row.name,
+    kind: "merch", // catalog is physical merch; drives the card icon only
+    coverUrl: row.image_url,
+    cashPriceCents: row.price != null ? Math.round(Number(row.price) * 100) : null,
+    pointsPrice: null, // no WP price column in the catalog
+    stock: row.inventory,
+  };
+}
 
 export default function ShopPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [kind, setKind] = useState<"all" | Product["kind"]>("all");
+  const [error, setError] = useState<string | null>(null);
+  const [kind, setKind] = useState<string>(ALL);
 
   const [points, setPoints] = useState(0);
   usePointsSync(() => setPoints(getListeningPoints()));
@@ -45,23 +74,45 @@ export default function ShopPage() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    const params = new URLSearchParams();
-    if (kind !== "all") params.set("kind", kind);
-    params.set("limit", "60");
-    apiClient<Product[]>(`/marketplace/products?${params}`)
-      .then((r) => {
-        if (!cancelled) setProducts(r);
-      })
-      .catch(() => {
-        if (!cancelled) setProducts([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    setError(null);
+
+    let query = supabase
+      .from("vendor_products")
+      .select("id, name, price, category, image_url, inventory, status")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(60);
+
+    if (kind !== ALL) query = query.eq("category", kind);
+
+    query.then(({ data, error: err }) => {
+      if (cancelled) return;
+      if (err) {
+        setError("We couldn't load the shop right now. Please try again shortly.");
+        setProducts([]);
+      } else {
+        const rows = (data ?? []) as VendorProductRow[];
+        setProducts(rows.map(mapProduct));
+        // Build the filter pills from the categories actually present.
+        if (kind === ALL) {
+          const cats = Array.from(
+            new Set(rows.map((r) => r.category).filter((c): c is string => !!c)),
+          ).sort();
+          setCategories(cats);
+        }
+      }
+      setLoading(false);
+    });
+
     return () => {
       cancelled = true;
     };
   }, [kind]);
+
+  const pills: Array<{ id: string; label: string }> = [
+    { id: ALL, label: "All" },
+    ...categories.map((c) => ({ id: c, label: c })),
+  ];
 
   return (
     <div className="space-y-6">
@@ -82,7 +133,7 @@ export default function ShopPage() {
       </header>
 
       <div className="flex w-fit flex-wrap gap-1 rounded-full bg-muted p-0.5 text-xs">
-        {KINDS.map((k) => (
+        {pills.map((k) => (
           <button
             key={k.id}
             type="button"
@@ -101,6 +152,10 @@ export default function ShopPage() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-64 animate-pulse rounded-2xl bg-card" />
           ))}
+        </div>
+      ) : error ? (
+        <div className="rounded-2xl border border-dashed border-border bg-card/50 p-10 text-center">
+          <p className="text-base text-muted-foreground">{error}</p>
         </div>
       ) : products.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card/50 p-10 text-center">

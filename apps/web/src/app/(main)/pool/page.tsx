@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Download, Loader2, Music2, Search, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 
 interface Track {
   id: string;
@@ -32,13 +32,6 @@ interface Track {
   label_name: string | null;
 }
 
-interface BrowseResponse {
-  items: Track[];
-  total: number;
-  limit: number;
-  offset: number;
-}
-
 const SORTS = [
   { value: "newest", label: "Newest" },
   { value: "popular", label: "Most downloaded" },
@@ -52,20 +45,55 @@ export default function RecordPoolPage() {
   const [items, setItems] = useState<Track[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     setLoading(true);
-    const qs = new URLSearchParams();
-    if (q.trim()) qs.set("q", q.trim());
-    qs.set("sort", sort);
-    qs.set("limit", "60");
-    apiClient<BrowseResponse>(`/pool/tracks?${qs.toString()}`)
-      .then((r) => {
-        setItems(r.items);
-        setTotal(r.total);
-      })
-      .finally(() => setLoading(false));
+    const supabase = createClient();
+
+    const orderBy =
+      sort === "popular"
+        ? { column: "download_count", ascending: false }
+        : sort === "title"
+          ? { column: "title", ascending: true }
+          : sort === "artist"
+            ? { column: "artist", ascending: true }
+            : { column: "created_at", ascending: false };
+
+    let query = supabase
+      .from("record_pool_tracks")
+      .select("*", { count: "exact" })
+      .eq("status", "approved")
+      .order(orderBy.column, { ascending: orderBy.ascending })
+      .limit(60);
+
+    const term = q.trim();
+    if (term) {
+      // Match the FTS columns: title, artist, remix credit, label, album.
+      const like = `%${term.replace(/[%_(),]/g, " ")}%`;
+      query = query.or(
+        [
+          `title.ilike.${like}`,
+          `artist.ilike.${like}`,
+          `remix_artist.ilike.${like}`,
+          `label_name.ilike.${like}`,
+          `album.ilike.${like}`,
+        ].join(","),
+      );
+    }
+
+    const { data, error: err, count } = await query;
+    if (err) {
+      setError(err.message);
+      setItems([]);
+      setTotal(0);
+    } else {
+      setError(null);
+      setItems((data ?? []) as Track[]);
+      setTotal(count ?? data?.length ?? 0);
+    }
+    setLoading(false);
   }, [q, sort]);
 
   // Debounced search
@@ -76,11 +104,39 @@ export default function RecordPoolPage() {
 
   const download = async (id: string) => {
     setDownloadingId(id);
+    setError(null);
     try {
-      const { url } = await apiClient<{ url: string; expiresIn: number }>(
-        `/pool/tracks/${id}/download`,
-      );
-      window.location.href = url;
+      const supabase = createClient();
+      // Look up the track's storage path (RLS lets DJs read approved rows).
+      const { data: track, error: tErr } = await supabase
+        .from("record_pool_tracks")
+        .select("storage_path")
+        .eq("id", id)
+        .single();
+      if (tErr) throw new Error(tErr.message);
+      if (!track?.storage_path) throw new Error("This track has no file to download.");
+
+      // Private bucket — mint a short-lived signed URL.
+      const { data: signed, error: sErr } = await supabase.storage
+        .from("record-pool")
+        .createSignedUrl(track.storage_path, 3600);
+      if (sErr || !signed?.signedUrl) {
+        throw new Error(sErr?.message || "Could not generate a download link.");
+      }
+
+      // Best-effort: log the download for history / counters. RLS may reject
+      // this for non-service-role clients; never block the download on it.
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from("record_pool_downloads")
+          .insert({ track_id: id, user_id: user.id })
+          .then(() => undefined, () => undefined);
+      }
+
+      window.location.href = signed.signedUrl;
+    } catch (e) {
+      setError((e as Error).message);
     } finally {
       setDownloadingId(null);
     }
@@ -131,6 +187,12 @@ export default function RecordPoolPage() {
           ))}
         </select>
       </div>
+
+      {error && (
+        <div className="rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          {error}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">

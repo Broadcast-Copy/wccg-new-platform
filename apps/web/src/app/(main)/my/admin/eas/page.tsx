@@ -15,7 +15,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Bell, Calendar, CheckCircle2, Download, Loader2, Plus, RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
+
+const supabase = createClient();
 
 interface Alert {
   id: string;
@@ -91,16 +93,36 @@ export default function EasLogbookPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const qs = new URLSearchParams();
-      if (directionFilter) qs.set("direction", directionFilter);
-      if (from) qs.set("from", new Date(from).toISOString());
-      if (to)   qs.set("to",   new Date(to + "T23:59:59").toISOString());
+      let alertsQuery = supabase
+        .from("eas_alerts")
+        .select(
+          "id,direction,same_code,event_label,severity,originator,fips_codes,issued_at,received_at,sent_at,expires_at,message_text,notes,source",
+        )
+        .order("issued_at", { ascending: false });
+      if (directionFilter) alertsQuery = alertsQuery.eq("direction", directionFilter);
+      if (from) alertsQuery = alertsQuery.gte("issued_at", new Date(from).toISOString());
+      if (to) alertsQuery = alertsQuery.lte("issued_at", new Date(to + "T23:59:59").toISOString());
+
       const [a, t] = await Promise.all([
-        apiClient<Alert[]>(`/mcr/eas?${qs.toString()}`),
-        apiClient<TestRow[]>(`/mcr/tests?completed=true`),
+        alertsQuery,
+        supabase
+          .from("eas_test_schedule")
+          .select("id,kind,scheduled_for,completed_at,notes,alert:eas_alerts!eas_test_schedule_alert_id_fkey(id,issued_at)")
+          .order("scheduled_for", { ascending: false }),
       ]);
-      setAlerts(a);
-      setTests(t);
+
+      if (a.error) {
+        setError(a.error.message);
+        setLoading(false);
+        return;
+      }
+      if (t.error) {
+        setError(t.error.message);
+        setLoading(false);
+        return;
+      }
+      setAlerts((a.data ?? []) as Alert[]);
+      setTests((t.data ?? []) as unknown as TestRow[]);
       setError(null);
     } catch (e) {
       setError((e as Error).message);
@@ -117,22 +139,30 @@ export default function EasLogbookPage() {
     try {
       const found = SAME_CODES.find((c) => c.code === form.sameCode);
       const eventLabel = form.eventLabel || found?.label || "Custom alert";
-      await apiClient("/mcr/eas", {
-        method: "POST",
-        body: JSON.stringify({
+      // eas_alerts is service-role-write under RLS (append-only FCC log). An
+      // authenticated browser insert is filtered out — surface that honestly.
+      const { data, error } = await supabase
+        .from("eas_alerts")
+        .insert({
           direction: form.direction,
-          sameCode: form.sameCode || undefined,
-          eventLabel,
+          same_code: form.sameCode || null,
+          event_label: eventLabel,
           severity: form.severity,
-          originator: form.originator || undefined,
-          fipsCodes: form.fipsCodes ? form.fipsCodes.split(/[,\s]+/).filter(Boolean) : [],
-          messageText: form.messageText || undefined,
-          receivedAt: form.receivedAt ? new Date(form.receivedAt).toISOString() : undefined,
-          sentAt:     form.sentAt     ? new Date(form.sentAt).toISOString()     : undefined,
-          airedForSeconds: form.airedForSeconds ? Number(form.airedForSeconds) : undefined,
-          notes: form.notes || undefined,
-        }),
-      });
+          originator: form.originator || null,
+          fips_codes: form.fipsCodes ? form.fipsCodes.split(/[,\s]+/).filter(Boolean) : [],
+          message_text: form.messageText || null,
+          received_at: form.receivedAt ? new Date(form.receivedAt).toISOString() : null,
+          sent_at: form.sentAt ? new Date(form.sentAt).toISOString() : null,
+          aired_for_seconds: form.airedForSeconds ? Number(form.airedForSeconds) : null,
+          notes: form.notes || null,
+        })
+        .select("id");
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) {
+        throw new Error(
+          "Couldn't save the alert — the EAS logbook is write-protected (service role only). Log it from the studio worker.",
+        );
+      }
       setShowLogForm(false);
       setForm({ ...form, sameCode: "", eventLabel: "", messageText: "", notes: "" });
       load();
@@ -143,13 +173,22 @@ export default function EasLogbookPage() {
     }
   };
 
-  const completeTest = async (testId: string, kind: "RWT" | "RMT") => {
+  const completeTest = async (testId: string) => {
     setBusyTestId(testId);
     try {
-      await apiClient(`/mcr/tests/${testId}/complete`, {
-        method: "POST",
-        body: JSON.stringify({ kind }),
-      });
+      // eas_test_schedule is service-role-write under RLS; a zero-row result
+      // means the update was filtered rather than applied.
+      const { data, error } = await supabase
+        .from("eas_test_schedule")
+        .update({ completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq("id", testId)
+        .select("id");
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) {
+        throw new Error(
+          "Couldn't mark the test run — the EAS test schedule is write-protected (service role only).",
+        );
+      }
       load();
     } catch (e) {
       setError((e as Error).message);
@@ -328,7 +367,7 @@ export default function EasLogbookPage() {
                     variant="outline"
                     className="rounded-full"
                     disabled={busyTestId === t.id}
-                    onClick={() => completeTest(t.id, t.kind)}
+                    onClick={() => completeTest(t.id)}
                   >
                     {busyTestId === t.id ? (
                       <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
