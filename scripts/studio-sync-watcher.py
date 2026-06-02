@@ -9,6 +9,17 @@ local studio folders, so DJB Radio / Radio Spider can air them:
     D:\\WCCG\\b-mixshows\\<dj-slug>\\on-air\\<CODE>.<ext>     (per-DJ on-air mirror)
     M:\\JBMusic\\<CODE>.<ext>                                (flat folder DJB Radio reads)
 
+    D:\\WCCG\\Mixshows\\<YYYY>\\<Weekday>\\<H-MM AM/PM>\\<MMDDYYYY>-onair\\<CODE>.<ext>
+                                                            (dated tree for Radio Spider)
+
+  ^ POINT RADIO SPIDER AT  D:\\WCCG\\Mixshows  (set WCCG_STUDIO_PROGRAMMING_ROOT
+  to change). The dated sub-folders are created automatically from each drop's
+  slot (day + air time) and its week, e.g.
+
+      D:\\WCCG\\Mixshows\\2026\\Monday\\12-00 PM\\05252026-onair\\DJB_76051.mp3
+
+  (A colon isn't a legal Windows path char, so 12:00 pm is written "12-00 PM".)
+
 Architecture: the platform has no API server — this watcher talks straight
 to Supabase. It signs in as an ADMIN user (RLS admin-read-all policies let
 that account see + download every drop and mark it published).
@@ -40,7 +51,11 @@ ADMIN_PASSWORD = os.environ.get("WCCG_ADMIN_PASSWORD", "")
 
 ARCHIVE_ROOT = os.environ.get("WCCG_STUDIO_ARCHIVE_ROOT", r"D:\WCCG\b-mixshows")
 ONAIR_FLAT = os.environ.get("WCCG_STUDIO_ONAIR_ROOT", r"M:\JBMusic")
+# Dated tree Radio Spider crawls:  <root>\<YYYY>\<Weekday>\<H-MM AM/PM>\<MMDDYYYY>-onair\
+PROGRAMMING_ROOT = os.environ.get("WCCG_STUDIO_PROGRAMMING_ROOT", r"D:\WCCG\Mixshows")
 BUCKET = "dj-drops"
+
+DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 POLL_SECONDS = int(os.environ.get("WCCG_STUDIO_POLL_MS", "30000")) // 1000
 
 
@@ -71,7 +86,7 @@ def fetch_pending(token: str, verbose: bool):
         f"{SUPABASE_URL}/rest/v1/dj_drops",
         headers={"apikey": PUBLISHABLE_KEY, "Authorization": f"Bearer {token}"},
         params={
-            "select": "id,file_code,storage_path,format,week_of,status,size_bytes,djs(slug,display_name)",
+            "select": "id,file_code,storage_path,format,week_of,status,size_bytes,djs(slug,display_name),slot:dj_slots(day_of_week,start_time)",
             "status": "in.(uploaded,validated)",
             "storage_path": "not.is.null",
             "order": "uploaded_at.asc",
@@ -121,6 +136,36 @@ def write_file(path: str, data: bytes):
         f.write(data)
 
 
+def air_date(week_of: str, day_of_week: int):
+    """Calendar date of a slot's day within the week starting at week_of (a Monday)."""
+    from datetime import datetime, timedelta
+    monday = datetime.strptime(week_of, "%Y-%m-%d")
+    offset = 6 if day_of_week == 0 else day_of_week - 1  # Sun=+6, Mon=+0 … Sat=+5
+    return monday + timedelta(days=offset)
+
+
+def fmt_time_12h(hhmm: str) -> str:
+    """'12:00' -> '12-00 PM'  (filesystem-safe: no colon)."""
+    parts = (hhmm or "0:00").split(":")
+    h = int(parts[0]); m = int(parts[1]) if len(parts) > 1 else 0
+    ampm = "PM" if h >= 12 else "AM"
+    disp = 12 if h % 12 == 0 else h % 12
+    return f"{disp}-{m:02d} {ampm}"
+
+
+def programming_path(week_of: str, day_of_week: int, start_time: str, filename: str) -> str:
+    """<PROGRAMMING_ROOT>\\<YYYY>\\<Weekday>\\<H-MM AM/PM>\\<MMDDYYYY>-onair\\<file>."""
+    d = air_date(week_of, day_of_week)
+    return os.path.join(
+        PROGRAMMING_ROOT,
+        d.strftime("%Y"),
+        DAY_NAMES[day_of_week],
+        fmt_time_12h(start_time),
+        d.strftime("%m%d%Y") + "-onair",
+        filename,
+    )
+
+
 def process(token: str, verbose: bool) -> int:
     rows = fetch_pending(token, verbose)
     shipped = 0
@@ -135,10 +180,23 @@ def process(token: str, verbose: bool) -> int:
         onair_path = os.path.join(ARCHIVE_ROOT, slug, "on-air", filename)
         flat_path = os.path.join(ONAIR_FLAT, filename)
 
+        # Dated tree for Radio Spider — needs the slot's day + air time.
+        slot = d.get("slot") or {}
+        prog_path = None
+        if slot.get("day_of_week") is not None and slot.get("start_time") and d.get("week_of"):
+            prog_path = programming_path(d["week_of"], slot["day_of_week"], slot["start_time"], filename)
+
         size = d.get("size_bytes") or 0
         # Idempotent: if the flat (DJB Radio) copy already exists at the right
-        # size, consider it shipped — mark published + skip the download.
+        # size, consider it shipped — mark published + backfill any missing
+        # dated copy, then skip the download.
         if os.path.exists(flat_path) and (size == 0 or os.path.getsize(flat_path) == size):
+            if prog_path and not os.path.exists(prog_path):
+                try:
+                    with open(flat_path, "rb") as fh:
+                        write_file(prog_path, fh.read())
+                except OSError:
+                    pass
             mark_published(token, d["id"])
             if verbose:
                 log(f"  = {filename} already on disk; marked published")
@@ -150,9 +208,14 @@ def process(token: str, verbose: bool) -> int:
         write_file(archive_path, data)
         write_file(onair_path, data)
         write_file(flat_path, data)
+        if prog_path:
+            write_file(prog_path, data)
         mark_published(token, d["id"])
         shipped += 1
-        log(f"  + {slug}/{filename}  ({len(data):,} bytes)  ->  archive + on-air + M:\\JBMusic")
+        dest = "archive + on-air + M:\\JBMusic"
+        if prog_path:
+            dest += f" + Mixshows\\{os.path.relpath(prog_path, PROGRAMMING_ROOT)}"
+        log(f"  + {slug}/{filename}  ({len(data):,} bytes)  ->  {dest}")
     return shipped
 
 
@@ -163,7 +226,7 @@ def main():
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
 
-    log(f"studio-sync: archive={ARCHIVE_ROOT}  flat={ONAIR_FLAT}  bucket={BUCKET}")
+    log(f"studio-sync: archive={ARCHIVE_ROOT}  flat={ONAIR_FLAT}  programming={PROGRAMMING_ROOT}  bucket={BUCKET}")
     token = sign_in()
     log(f"signed in as {ADMIN_EMAIL}")
 
