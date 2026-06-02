@@ -45,8 +45,13 @@ jobs:
       - name: Build for GitHub Pages
         env:
           GITHUB_PAGES: 'true'
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          # These two are PUBLIC by design — the project URL ships in every
+          # page and sb_publishable_* is Supabase's publishable client key
+          # (protected by RLS). Set inline so login works without depending
+          # on repo secrets being configured. Falls back to a repo secret if
+          # one is ever set, otherwise uses the literal.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://irjiqbmoohklagdegezz.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_w9EytFGBM7mEvefmGhsZ9w_bXbmNjQ4' }}
           NEXT_PUBLIC_API_URL: 'https://api.wccg1045fm.com/api/v1'
         run: pnpm --filter web build
 
@@ -75,8 +80,8 @@ jobs:
       - name: Build for KnownHost (no basePath)
         env:
           GITHUB_PAGES: ''
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://irjiqbmoohklagdegezz.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_w9EytFGBM7mEvefmGhsZ9w_bXbmNjQ4' }}
           NEXT_PUBLIC_API_URL: 'https://api.wccg1045fm.com/api/v1'
         run: pnpm --filter web build
 

@@ -11,18 +11,18 @@ type SupabaseContext = {
 
 const Context = createContext<SupabaseContext | undefined>(undefined);
 
+// Public-by-design fallbacks (project URL + sb_publishable_* key, both
+// protected by RLS). Real values so the app works even when the build env
+// lacks NEXT_PUBLIC_SUPABASE_* — previously these defaulted to a
+// non-existent placeholder domain, which is why login threw "Failed to
+// fetch" in production.
+const FALLBACK_SUPABASE_URL = "https://irjiqbmoohklagdegezz.supabase.co";
+const FALLBACK_SUPABASE_ANON_KEY = "sb_publishable_w9EytFGBM7mEvefmGhsZ9w_bXbmNjQ4";
+
 export function SupabaseProvider({ children }: { children: ReactNode }) {
   const supabase = useMemo(() => {
-    // Use placeholder URL/key when env is missing so static export
-    // prerendering doesn't crash. Runtime queries will fail with a clear
-    // "no project configured" error from Supabase, which is a much better
-    // failure mode than blowing up the whole build.
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL && typeof window !== "undefined") {
-      // eslint-disable-next-line no-console
-      console.warn("[supabase] NEXT_PUBLIC_SUPABASE_URL is unset — using placeholder client");
-    }
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || FALLBACK_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || FALLBACK_SUPABASE_ANON_KEY;
     return createBrowserClient(url, key);
   }, []);
 
