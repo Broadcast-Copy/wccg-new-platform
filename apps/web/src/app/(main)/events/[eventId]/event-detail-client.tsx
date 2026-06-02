@@ -275,8 +275,8 @@ export default function EventDetailPage() {
         >();
         if (organizerIds.length > 0) {
           const { data: profiles } = await supabase
-            .from("profiles")
-            .select("id, display_name, email, avatar_url")
+            .from("profiles_public")
+            .select("id, display_name, avatar_url")
             .in("id", organizerIds);
           for (const p of (profiles as
             | { id: string; display_name: string | null; email: string | null; avatar_url: string | null }[]

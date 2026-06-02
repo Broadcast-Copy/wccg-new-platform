@@ -88,7 +88,7 @@ export default function VendorHubPage() {
   useEffect(() => {
     async function loadStats() {
       const [vendorsRes, productsRes, eventsRes] = await Promise.all([
-        supabase.from("profiles").select("id", { count: "exact", head: true }),
+        supabase.from("profiles_public").select("id", { count: "exact", head: true }),
         supabase
           .from("vendor_products")
           .select("id", { count: "exact", head: true }),

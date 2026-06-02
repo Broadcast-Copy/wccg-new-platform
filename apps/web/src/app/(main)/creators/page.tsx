@@ -103,7 +103,7 @@ export default function CreatorsPage() {
   useEffect(() => {
     async function loadStats() {
       const [creatorsRes, projectsRes, weekRes] = await Promise.all([
-        supabase.from("profiles").select("id", { count: "exact", head: true }),
+        supabase.from("profiles_public").select("id", { count: "exact", head: true }),
         supabase
           .from("hub_posts")
           .select("id", { count: "exact", head: true })

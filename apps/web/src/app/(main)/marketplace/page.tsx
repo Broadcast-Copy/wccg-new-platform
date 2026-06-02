@@ -136,7 +136,7 @@ export default function MarketplacePage() {
 
       // Fetch vendor display names
       const { data: profiles } = await supabase
-        .from("profiles")
+        .from("profiles_public")
         .select("id, display_name")
         .in("id", vendorIds);
 

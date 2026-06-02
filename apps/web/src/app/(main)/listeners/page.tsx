@@ -97,7 +97,7 @@ export default function ListenersPage() {
   useEffect(() => {
     async function loadStats() {
       const [listenersRes, pointsRes, requestsRes] = await Promise.all([
-        supabase.from("profiles").select("id", { count: "exact", head: true }),
+        supabase.from("profiles_public").select("id", { count: "exact", head: true }),
         supabase
           .from("points_ledger")
           .select("id", { count: "exact", head: true }),

@@ -27,7 +27,6 @@ import { Suspense } from "react";
 interface VendorProfile {
   id: string;
   display_name: string;
-  email: string;
   avatar_url: string | null;
 }
 
@@ -93,8 +92,8 @@ function VendorStorefrontInner() {
     setLoading(true);
 
     const { data: profile } = await supabase
-      .from("profiles")
-      .select("id, display_name, email, avatar_url")
+      .from("profiles_public")
+      .select("id, display_name, avatar_url")
       .eq("id", vendorId)
       .single();
     if (profile) setVendor(profile);
@@ -200,7 +199,6 @@ function VendorStorefrontInner() {
         </div>
         <div>
           <h1 className="text-2xl font-bold">{vendor.display_name}</h1>
-          <p className="text-muted-foreground">{vendor.email}</p>
           <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
             <span className="flex items-center gap-1"><ShoppingBag className="h-3.5 w-3.5" /> {products.length} Products</span>
             <span className="flex items-center gap-1"><CalendarCheck className="h-3.5 w-3.5" /> {bookings.length} Services</span>

@@ -118,7 +118,7 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
       const userIds = [...new Set(rawPosts.map((p) => p.user_id))];
       const { data: profiles } = userIds.length
         ? await supabase
-            .from("profiles")
+            .from("profiles_public")
             .select("id, display_name")
             .in("id", userIds)
         : { data: [] };
