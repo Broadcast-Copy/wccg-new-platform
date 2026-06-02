@@ -15,16 +15,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Calendar,
-  Cloud,
-  Copy,
-  Eye,
-  EyeOff,
   RefreshCw,
   UploadCloud,
 } from "lucide-react";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** ISO Monday of the current week in America/New_York (YYYY-MM-DD). */
+function currentWeekOfET(): string {
+  const nowEt = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+  const day = nowEt.getDay(); // 0=Sun..6=Sat
+  const offsetToMon = (day + 6) % 7;
+  const monday = new Date(nowEt);
+  monday.setDate(nowEt.getDate() - offsetToMon);
+  return monday.toISOString().slice(0, 10);
+}
 
 interface Drop {
   id: string;
@@ -52,37 +58,75 @@ interface MeResponse {
   slots: Slot[];
 }
 
-interface FtpResponse {
-  username: string;
-  password: string | null;
-  passwordIssued: boolean;
-  host: string;
-  port: number;
-  protocol: "ftp";
-  passive: boolean;
-  uploadPath: string;
-  hint: string;
-}
-
 export default function DjPortalPage() {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploadingCode, setUploadingCode] = useState<string | null>(null);
 
+  // Load DJ profile + slots + this-week's drops directly from Supabase.
+  // No API server — the static site talks to Supabase via RLS-scoped queries.
   const reload = useCallback(() => {
     setLoading(true);
-    apiClient<MeResponse>("/djs/me")
-      .then((r) => {
-        setMe(r);
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Please sign in to use the DJ portal.");
+
+        const { data: dj } = await supabase
+          .from("djs")
+          .select("id, slug, display_name, email, is_active")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (!dj) {
+          throw new Error(
+            "No DJ profile is linked to this account. Ask an admin to claim your DJ slug to your login.",
+          );
+        }
+
+        const { data: slots } = await supabase
+          .from("dj_slots")
+          .select("id, day_of_week, start_time, end_time, file_codes, status, notes")
+          .eq("dj_id", dj.id)
+          .order("day_of_week")
+          .order("start_time");
+
+        const weekOf = currentWeekOfET();
+        const { data: drops } = await supabase
+          .from("dj_drops")
+          .select("id, file_code, status, source, uploaded_at, storage_path, format, size_bytes")
+          .eq("dj_id", dj.id)
+          .eq("week_of", weekOf);
+
+        const dropByCode = new Map((drops ?? []).map((d) => [d.file_code, d]));
+        setMe({
+          dj: {
+            id: dj.id, slug: dj.slug, displayName: dj.display_name,
+            email: dj.email, isActive: dj.is_active,
+          },
+          weekOf,
+          slots: (slots ?? []).map((s) => ({
+            slotId: s.id, dayOfWeek: s.day_of_week, startTime: s.start_time,
+            endTime: s.end_time, status: s.status, notes: s.notes,
+            files: ((s.file_codes ?? []) as string[]).map((code) => ({
+              fileCode: code,
+              drop: (dropByCode.get(code) as Drop | undefined) ?? null,
+            })),
+          })),
+        });
         setError(null);
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+      } catch (e) {
+        setError((e as Error).message);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   useEffect(reload, [reload]);
 
+  // Upload an mp3 straight to Supabase Storage, then upsert the dj_drops row.
   const handleFile = async (file: File, fileCode?: string) => {
     setError(null);
     let code = fileCode;
@@ -94,28 +138,44 @@ export default function DjPortalPage() {
       }
       code = m[0].toUpperCase();
     }
+    if (!me) return;
+
+    const slot = me.slots.find((s) => s.files.some((f) => f.fileCode === code));
+    if (!slot) {
+      setError(`${code} is not one of your assigned codes. Check your slot list.`);
+      return;
+    }
     setUploadingCode(code);
 
-    const form = new FormData();
-    form.append("file", file);
-    form.append("fileCode", code);
-    if (me?.weekOf) form.append("weekOf", me.weekOf);
-
     try {
-      // Use raw fetch — apiClient wraps with JSON Content-Type, which breaks multipart.
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
-      const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${apiUrl}/djs/me/upload`, {
-        method: "POST",
-        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
-        body: form,
-      });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({ message: res.statusText }));
-        throw new Error(j.message || res.statusText);
-      }
+      const ext = (file.name.match(/\.(mp3|wav|flac)$/i)?.[1] ?? "mp3").toLowerCase();
+      const weekOf = me.weekOf;
+      const storagePath = `${me.dj.slug}/${weekOf}/${code}.${ext}`;
+
+      const { error: upErr } = await supabase.storage
+        .from("dj-drops")
+        .upload(storagePath, file, { upsert: true, contentType: file.type || `audio/${ext}` });
+      if (upErr) throw new Error(`Storage upload failed: ${upErr.message}`);
+
+      const { error: rowErr } = await supabase.from("dj_drops").upsert(
+        {
+          dj_id: me.dj.id,
+          slot_id: slot.slotId,
+          file_code: code,
+          week_of: weekOf,
+          status: "uploaded",
+          source: "web",
+          storage_path: storagePath,
+          size_bytes: file.size,
+          format: ext,
+          uploaded_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "slot_id,file_code,week_of" },
+      );
+      if (rowErr) throw new Error(rowErr.message);
+
       reload();
     } catch (e) {
       setError((e as Error).message);
@@ -193,8 +253,6 @@ export default function DjPortalPage() {
           )}
         </div>
       </section>
-
-      <FtpPanel />
     </div>
   );
 }
@@ -361,130 +419,6 @@ function FileRow({
         {uploading ? "Uploading…" : drop ? "Replace" : "Upload"}
       </Button>
     </li>
-  );
-}
-
-// ─── FTP panel ───────────────────────────────────────────────────────────
-function FtpPanel() {
-  const [ftp, setFtp] = useState<FtpResponse | null>(null);
-  const [reveal, setReveal] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    apiClient<FtpResponse>("/djs/me/ftp")
-      .then(setFtp)
-      .catch((e) => setError(e.message));
-  }, []);
-
-  const rotate = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const r = await apiClient<FtpResponse>("/djs/me/ftp/rotate", { method: "POST" });
-      setFtp(r);
-      setReveal(true);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (error) {
-    return <p className="text-sm text-red-500">{error}</p>;
-  }
-  if (!ftp) return null;
-
-  return (
-    <section className="rounded-2xl border border-border bg-card">
-      <header className="flex items-center justify-between border-b border-border px-5 py-3">
-        <div className="flex items-center gap-2">
-          <Cloud className="h-4 w-4 text-[#74ddc7]" />
-          <h2 className="text-sm font-bold uppercase tracking-widest text-foreground">
-            FTP sync (for your DAW or automation software)
-          </h2>
-        </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={rotate}
-          disabled={busy}
-          className="rounded-full"
-        >
-          <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-          {busy ? "Rotating…" : "Rotate password"}
-        </Button>
-      </header>
-      <div className="grid gap-3 p-5 sm:grid-cols-2">
-        <KV label="Host" value={ftp.host} />
-        <KV label="Port" value={String(ftp.port)} />
-        <KV label="Username" value={ftp.username} />
-        <KV
-          label="Password"
-          value={ftp.password ?? "•".repeat(20)}
-          locked={!ftp.passwordIssued}
-          revealed={ftp.password ? reveal : false}
-          onToggleReveal={ftp.password ? () => setReveal((v) => !v) : undefined}
-        />
-        <KV label="Mode" value="Passive (PASV)" />
-        <KV label="Upload path" value={ftp.uploadPath} />
-      </div>
-      <p className="border-t border-border bg-muted/30 px-5 py-3 text-xs text-muted-foreground">
-        {ftp.hint}{" "}
-        {!ftp.passwordIssued && "Password is hidden. Rotate to issue a new one — your old one stops working."}
-      </p>
-    </section>
-  );
-}
-
-function KV({
-  label,
-  value,
-  locked,
-  revealed,
-  onToggleReveal,
-}: {
-  label: string;
-  value: string;
-  locked?: boolean;
-  revealed?: boolean;
-  onToggleReveal?: () => void;
-}) {
-  const [copied, setCopied] = useState(false);
-  const display = locked || revealed === false ? "••••••••" : value;
-  return (
-    <div className="rounded-xl bg-muted/40 px-3 py-2.5">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
-      <div className="mt-0.5 flex items-center gap-2">
-        <span className="flex-1 truncate font-mono text-sm">{display}</span>
-        {onToggleReveal && (
-          <button
-            type="button"
-            onClick={onToggleReveal}
-            aria-label={revealed ? "Hide" : "Show"}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-          </button>
-        )}
-        {!locked && (
-          <button
-            type="button"
-            onClick={() => {
-              navigator.clipboard.writeText(value);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
-            }}
-            className="text-muted-foreground hover:text-foreground"
-            aria-label="Copy"
-          >
-            <Copy className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
-      {copied && <p className="text-[10px] text-[#74ddc7]">Copied</p>}
-    </div>
   );
 }
 
