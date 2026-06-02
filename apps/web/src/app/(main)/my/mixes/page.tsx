@@ -17,6 +17,9 @@ import {
   Trash2,
   Pencil,
   Move,
+  Copy,
+  Scissors,
+  ClipboardPaste,
   Clock,
   HardDrive,
   CloudUpload,
@@ -201,6 +204,93 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// ─── Folder tree operations (pure; operate on folders[] + files[]) ─────────
+
+/** All folder ids nested under rootId (DFS pre-order, parents before children). */
+function descendantFolderIds(folders: MediaFolder[], rootId: string): string[] {
+  const out: string[] = [];
+  const walk = (parentId: string) => {
+    for (const f of folders) {
+      if (f.parentId === parentId) {
+        out.push(f.id);
+        walk(f.id);
+      }
+    }
+  };
+  walk(rootId);
+  return out;
+}
+
+/** True if maybeAncestor is rootId or any ancestor of it — used to block moving a folder into itself/its own subtree. */
+function isSelfOrDescendant(folders: MediaFolder[], rootId: string, maybeDescendantId: string | null): boolean {
+  if (maybeDescendantId === null) return false;
+  if (maybeDescendantId === rootId) return true;
+  return descendantFolderIds(folders, rootId).includes(maybeDescendantId);
+}
+
+/** Remove a folder + every nested folder + every file inside any of them. */
+function deleteFolderDeep(
+  folders: MediaFolder[],
+  files: MediaFile[],
+  rootId: string,
+): { folders: MediaFolder[]; files: MediaFile[] } {
+  const doomed = new Set<string>([rootId, ...descendantFolderIds(folders, rootId)]);
+  return {
+    folders: folders.filter((f) => !doomed.has(f.id)),
+    files: files.filter((f) => !(f.folderId && doomed.has(f.folderId))),
+  };
+}
+
+/** Deep-clone a folder subtree (+ its files) under newParentId, with fresh ids. */
+function cloneFolderTree(
+  folders: MediaFolder[],
+  files: MediaFile[],
+  rootId: string,
+  newParentId: string | null,
+  rootName: string,
+): { folders: MediaFolder[]; files: MediaFile[] } {
+  const ts = new Date().toISOString();
+  const idMap = new Map<string, string>();
+  const newFolders: MediaFolder[] = [];
+
+  const root = folders.find((f) => f.id === rootId);
+  if (!root) return { folders: [], files: [] };
+
+  const newRootId = generateId();
+  idMap.set(rootId, newRootId);
+  newFolders.push({ ...root, id: newRootId, name: rootName, parentId: newParentId, createdAt: ts, updatedAt: ts });
+
+  for (const childId of descendantFolderIds(folders, rootId)) {
+    const child = folders.find((f) => f.id === childId)!;
+    const nid = generateId();
+    idMap.set(childId, nid);
+    newFolders.push({
+      ...child,
+      id: nid,
+      parentId: child.parentId ? idMap.get(child.parentId) ?? newParentId : newParentId,
+      createdAt: ts,
+      updatedAt: ts,
+    });
+  }
+
+  const oldIds = new Set([rootId, ...descendantFolderIds(folders, rootId)]);
+  const newFiles: MediaFile[] = files
+    .filter((f) => f.folderId && oldIds.has(f.folderId))
+    .map((f) => ({ ...f, id: generateId(), folderId: idMap.get(f.folderId as string)!, createdAt: ts, updatedAt: ts }));
+
+  return { folders: newFolders, files: newFiles };
+}
+
+/** Ensure a name is unique among siblings under parentId by appending " copy"/" (n)". */
+function uniqueFolderName(folders: MediaFolder[], parentId: string | null, base: string): string {
+  const siblings = new Set(folders.filter((f) => f.parentId === parentId).map((f) => f.name));
+  if (!siblings.has(base)) return base;
+  let candidate = `${base} copy`;
+  let n = 2;
+  while (siblings.has(candidate)) candidate = `${base} copy ${n++}`;
+  return candidate;
+}
+
 function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -316,49 +406,105 @@ function BreadcrumbNav({
   );
 }
 
+const FOLDER_MENU: { key: string; icon: typeof Pencil; label: string; danger?: boolean }[] = [
+  { key: "open", icon: FolderOpen, label: "Open" },
+  { key: "rename", icon: Pencil, label: "Rename" },
+  { key: "copy", icon: Copy, label: "Copy" },
+  { key: "cut", icon: Scissors, label: "Cut (move)" },
+  { key: "delete", icon: Trash2, label: "Delete", danger: true },
+];
+
+function FolderMenu({
+  folder,
+  onAction,
+  align = "right",
+}: {
+  folder: MediaFolder;
+  onAction: (action: string, folder: MediaFolder) => void;
+  align?: "right" | "center";
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative" onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        aria-label="Folder actions"
+        className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground/70 hover:bg-foreground/[0.08] hover:text-foreground transition-colors"
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
+          <div className={`absolute ${align === "right" ? "right-0" : "left-1/2 -translate-x-1/2"} top-full mt-1 z-20 w-40 rounded-xl border border-border bg-card p-1.5 shadow-2xl`}>
+            {FOLDER_MENU.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setOpen(false); onAction(item.key, folder); }}
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs transition-colors ${
+                  item.danger
+                    ? "text-red-400 hover:bg-red-500/10"
+                    : "text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground"
+                }`}
+              >
+                <item.icon className="h-3.5 w-3.5" /> {item.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function FolderCard({
   folder,
   onClick,
+  onAction,
   itemCount,
   viewMode,
 }: {
   folder: MediaFolder;
   onClick: () => void;
+  onAction: (action: string, folder: MediaFolder) => void;
   itemCount: number;
   viewMode: "grid" | "list";
 }) {
   if (viewMode === "list") {
     return (
-      <button
-        onClick={onClick}
-        className="group flex items-center gap-4 w-full rounded-xl border border-border bg-card p-3 sm:p-4 transition-all hover:border-input text-left"
-      >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10 border border-border">
-          <Folder className="h-5 w-5 text-[#74ddc7]" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors truncate">{folder.name}</p>
-          <p className="text-xs text-muted-foreground/70 mt-0.5">{itemCount} items</p>
-        </div>
-        <div className="hidden sm:block text-xs text-muted-foreground/60">{formatDate(folder.createdAt)}</div>
-        <ChevronRight className="h-4 w-4 text-foreground/20 group-hover:text-muted-foreground transition-colors" />
-      </button>
+      <div className="group flex items-center gap-4 w-full rounded-xl border border-border bg-card p-3 sm:p-4 transition-all hover:border-input">
+        <button onClick={onClick} className="flex flex-1 items-center gap-4 min-w-0 text-left">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10 border border-border">
+            <Folder className="h-5 w-5 text-[#74ddc7]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors truncate">{folder.name}</p>
+            <p className="text-xs text-muted-foreground/70 mt-0.5">{itemCount} items</p>
+          </div>
+          <div className="hidden sm:block text-xs text-muted-foreground/60">{formatDate(folder.createdAt)}</div>
+        </button>
+        <FolderMenu folder={folder} onAction={onAction} />
+      </div>
     );
   }
 
   return (
-    <button
-      onClick={onClick}
-      className="group flex flex-col items-center gap-3 rounded-2xl border border-border bg-card p-5 transition-all hover:border-input text-center"
-    >
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10 border border-border group-hover:border-[#74ddc7]/20 transition-colors">
-        <Folder className="h-8 w-8 text-[#74ddc7]" />
+    <div className="group relative flex flex-col items-center gap-3 rounded-2xl border border-border bg-card p-5 transition-all hover:border-input text-center">
+      <div className="absolute right-1.5 top-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <FolderMenu folder={folder} onAction={onAction} />
       </div>
-      <div>
-        <p className="text-sm font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors truncate max-w-[140px]">{folder.name}</p>
-        <p className="text-[11px] text-muted-foreground/70 mt-1">{itemCount} items</p>
-      </div>
-    </button>
+      <button onClick={onClick} className="flex flex-col items-center gap-3 w-full">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10 border border-border group-hover:border-[#74ddc7]/20 transition-colors">
+          <Folder className="h-8 w-8 text-[#74ddc7]" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors truncate max-w-[140px]">{folder.name}</p>
+          <p className="text-[11px] text-muted-foreground/70 mt-1">{itemCount} items</p>
+        </div>
+      </button>
+    </div>
   );
 }
 
@@ -375,6 +521,8 @@ function FileCard({
 
   const menuItems = [
     { key: "rename", icon: Pencil, label: "Rename" },
+    { key: "copy", icon: Copy, label: "Copy" },
+    { key: "cut", icon: Scissors, label: "Cut (move)" },
     { key: "move", icon: Move, label: "Move to..." },
     { key: "convert", icon: ArrowLeftRight, label: "Convert Format" },
     { key: "djb", icon: Tag, label: "DJB Rename" },
@@ -986,6 +1134,10 @@ export default function MediaManagerPage() {
   const [moveFile, setMoveFile] = useState<MediaFile | null>(null);
   const [showFTP, setShowFTP] = useState(false);
   const [syncingFolder, setSyncingFolder] = useState(false);
+  const [clipboard, setClipboard] = useState<
+    { kind: "folder" | "file"; id: string; op: "copy" | "cut"; name: string } | null
+  >(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // ---------------------------------------------------------------------------
   // Init
@@ -1083,6 +1235,97 @@ export default function MediaManagerPage() {
     setShowNewFolder(false);
   };
 
+  // ─── Folder actions (rename / copy / cut / delete) ──────────────────────
+  const handleFolderAction = (action: string, folder: MediaFolder) => {
+    switch (action) {
+      case "open":
+        navigateToFolder(folder);
+        break;
+      case "rename": {
+        const newName = window.prompt("Rename folder:", folder.name);
+        if (newName && newName.trim() && newName.trim() !== folder.name) {
+          updateState((prev) => ({
+            ...prev,
+            folders: prev.folders.map((f) =>
+              f.id === folder.id ? { ...f, name: newName.trim(), updatedAt: new Date().toISOString() } : f,
+            ),
+          }));
+        }
+        break;
+      }
+      case "copy":
+        setClipboard({ kind: "folder", id: folder.id, op: "copy", name: folder.name });
+        break;
+      case "cut":
+        setClipboard({ kind: "folder", id: folder.id, op: "cut", name: folder.name });
+        break;
+      case "delete": {
+        const childCount = folderItemCounts[folder.id] || 0;
+        if (window.confirm(`Delete "${folder.name}"${childCount ? ` and its ${childCount} item(s)` : ""}? This can't be undone.`)) {
+          updateState((prev) => {
+            const { folders, files } = deleteFolderDeep(prev.folders, prev.files, folder.id);
+            return { ...prev, folders, files };
+          });
+          if (clipboard?.id === folder.id) setClipboard(null);
+        }
+        break;
+      }
+    }
+  };
+
+  // ─── Paste clipboard into the current folder ────────────────────────────
+  const handlePaste = () => {
+    if (!clipboard) return;
+    const dest = currentFolderId;
+
+    if (clipboard.kind === "folder") {
+      // Block pasting a folder into itself or its own subtree.
+      if (clipboard.op === "cut" && isSelfOrDescendant(state.folders, clipboard.id, dest)) {
+        alert("Can't move a folder into itself or one of its subfolders.");
+        return;
+      }
+      updateState((prev) => {
+        if (clipboard.op === "cut") {
+          return {
+            ...prev,
+            folders: prev.folders.map((f) =>
+              f.id === clipboard.id ? { ...f, parentId: dest, updatedAt: new Date().toISOString() } : f,
+            ),
+          };
+        }
+        // copy → deep clone with a unique name in the destination
+        const name = uniqueFolderName(prev.folders, dest, clipboard.name);
+        const cloned = cloneFolderTree(prev.folders, prev.files, clipboard.id, dest, name);
+        return { ...prev, folders: [...prev.folders, ...cloned.folders], files: [...prev.files, ...cloned.files] };
+      });
+    } else {
+      // file
+      updateState((prev) => {
+        const src = prev.files.find((f) => f.id === clipboard.id);
+        if (!src) return prev;
+        if (clipboard.op === "cut") {
+          return {
+            ...prev,
+            files: prev.files.map((f) =>
+              f.id === clipboard.id ? { ...f, folderId: dest, updatedAt: new Date().toISOString() } : f,
+            ),
+          };
+        }
+        const ts = new Date().toISOString();
+        return { ...prev, files: [...prev.files, { ...src, id: generateId(), folderId: dest, createdAt: ts, updatedAt: ts }] };
+      });
+    }
+    // cut is consumed after paste; copy stays so you can paste again
+    if (clipboard.op === "cut") setClipboard(null);
+  };
+
+  // ─── Refresh: re-read persisted state + brief spinner ───────────────────
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setState(seedState());
+    setTimeout(() => setRefreshing(false), 400);
+  };
+
   const handleUpload = (uploaded: { name: string; size: number; category: MediaCategory }[]) => {
     const newFiles: MediaFile[] = uploaded.map((u) => ({
       id: generateId(),
@@ -1110,6 +1353,12 @@ export default function MediaManagerPage() {
         }
         break;
       }
+      case "copy":
+        setClipboard({ kind: "file", id: file.id, op: "copy", name: file.name });
+        break;
+      case "cut":
+        setClipboard({ kind: "file", id: file.id, op: "cut", name: file.name });
+        break;
       case "move":
         setMoveFile(file);
         break;
@@ -1267,6 +1516,20 @@ export default function MediaManagerPage() {
             ))}
           </select>
 
+          {/* Refresh */}
+          <Button variant="ghost" size="sm" onClick={handleRefresh} className="h-8 text-xs text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06]" aria-label="Refresh">
+            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+
+          {/* Paste (enabled when clipboard has something) */}
+          {clipboard && (
+            <Button variant="ghost" size="sm" onClick={handlePaste} className="h-8 text-xs text-[#74ddc7] hover:text-[#74ddc7] hover:bg-[#74ddc7]/10">
+              <ClipboardPaste className="mr-1.5 h-3.5 w-3.5" />
+              Paste {clipboard.op === "cut" ? "(move)" : ""} “{clipboard.name.length > 14 ? clipboard.name.slice(0, 14) + "…" : clipboard.name}”
+            </Button>
+          )}
+
           {/* New Folder */}
           <Button variant="ghost" size="sm" onClick={() => setShowNewFolder(true)} className="h-8 text-xs text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06]">
             <FolderPlus className="mr-1.5 h-3.5 w-3.5" />
@@ -1380,7 +1643,7 @@ export default function MediaManagerPage() {
             <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-2">Folders</p>
             <div className={viewMode === "grid" ? "grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2" : "flex flex-col gap-2"}>
               {filteredFolders.map((folder) => (
-                <FolderCard key={folder.id} folder={folder} onClick={() => navigateToFolder(folder)} itemCount={folderItemCounts[folder.id] || 0} viewMode={viewMode} />
+                <FolderCard key={folder.id} folder={folder} onClick={() => navigateToFolder(folder)} onAction={handleFolderAction} itemCount={folderItemCounts[folder.id] || 0} viewMode={viewMode} />
               ))}
             </div>
           </div>
