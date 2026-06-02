@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { RewardCard } from "./reward-card";
 import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
 import { toast } from "sonner";
-import { readPointsBalance } from "@/lib/points-storage";
+import { readPointsBalance, deductLocalPoints } from "@/lib/points-storage";
 import { reconcileSessionPoints } from "@/hooks/use-listening-points";
 
 interface Reward {
@@ -47,15 +47,8 @@ export function RewardsContent({ rewards }: RewardsContentProps) {
   useEffect(() => {
     async function fetchBalance() {
       reconcileSessionPoints();
-      if (user) {
-        try {
-          const data = await apiClient<{ balance: number }>("/points/balance");
-          setBalance(data.balance);
-          return;
-        } catch {
-          // Fall through to localStorage
-        }
-      }
+      // Points accrue client-side (localStorage) as you listen, so that's the
+      // authoritative balance for the redeem gate.
       setBalance(readPointsBalance(user?.email));
     }
 
@@ -80,14 +73,26 @@ export function RewardsContent({ rewards }: RewardsContentProps) {
       return;
     }
 
+    const reward = rewards.find((r) => r.id === rewardId);
+    const cost = reward?.pointsCost ?? 0;
+
+    if (balance !== null && cost > balance) {
+      toast.error("You don't have enough points for this reward yet.");
+      return;
+    }
+
     try {
-      await apiClient("/points/redeem", {
-        method: "POST",
-        body: JSON.stringify({ rewardId }),
+      const supabase = createClient();
+      const { error } = await supabase.rpc("redeem_reward", {
+        p_reward_id: rewardId,
       });
-      toast.success("Reward redeemed successfully!");
-      const data = await apiClient<{ balance: number }>("/points/balance");
-      setBalance(data.balance);
+      if (error) throw new Error(error.message);
+
+      // Server recorded the redemption + decremented stock atomically;
+      // reflect the spend in the local (authoritative) balance.
+      const newBalance = deductLocalPoints(user.email, cost, reward?.name ?? "Reward");
+      setBalance(newBalance);
+      toast.success(`Redeemed ${reward?.name ?? "reward"}! We'll be in touch.`);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to redeem reward",

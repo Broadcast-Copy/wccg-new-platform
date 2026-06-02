@@ -140,3 +140,61 @@ export function readPointsBalance(
 ): number {
   return readAllPoints(email).balance;
 }
+
+/**
+ * Deduct points locally after a successful server-side redemption.
+ *
+ * Consolidates the combined balance into the user-specific key (minus the
+ * redeemed amount), records a negative history entry, and zeroes the
+ * orphaned default key so the summed balance isn't double-counted.
+ */
+export function deductLocalPoints(
+  email: string | null | undefined,
+  amount: number,
+  reason: string,
+): number {
+  if (typeof window === "undefined") return 0;
+  const combined = readAllPoints(email);
+  const newBalance = Math.max(0, combined.balance - amount);
+  const userKey = email
+    ? `wccg_listening_points_${email}`
+    : STORAGE_KEY_DEFAULT;
+
+  let history: Array<{
+    points: number;
+    reason: string;
+    timestamp: string;
+    program: string;
+  }> = [];
+  try {
+    const raw = localStorage.getItem(userKey);
+    if (raw) history = JSON.parse(raw).history ?? [];
+  } catch {
+    // ignore malformed
+  }
+  history.unshift({
+    points: -Math.abs(amount),
+    reason,
+    timestamp: new Date().toISOString(),
+    program: "rewards",
+  });
+
+  try {
+    localStorage.setItem(
+      userKey,
+      JSON.stringify({ totalPoints: newBalance, history }),
+    );
+    // Zero any orphaned default-key points so the sum reflects newBalance.
+    if (email) {
+      const draw = localStorage.getItem(STORAGE_KEY_DEFAULT);
+      if (draw) {
+        const d = JSON.parse(draw);
+        d.totalPoints = 0;
+        localStorage.setItem(STORAGE_KEY_DEFAULT, JSON.stringify(d));
+      }
+    }
+  } catch {
+    // ignore quota / serialization errors
+  }
+  return newBalance;
+}
