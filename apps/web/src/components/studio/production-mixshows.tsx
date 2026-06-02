@@ -79,6 +79,20 @@ function fmt12h(hhmm: string): string {
   const display = h % 12 === 0 ? 12 : h % 12;
   return m === 0 ? `${display}:00 ${ampm}` : `${display}:${String(m).padStart(2, "0")} ${ampm}`;
 }
+/** Calendar date for a given day-of-week within the week starting at weekOf (a Monday). */
+function dateForDay(weekOf: string, day: number): Date {
+  const monday = new Date(weekOf + "T00:00:00");
+  const offsetFromMonday = day === 0 ? 6 : day - 1; // Sun=+6, Mon=+0, …, Sat=+5
+  const d = new Date(monday);
+  d.setDate(monday.getDate() + offsetFromMonday);
+  return d;
+}
+function fmtDate(d: Date): string {
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+function fmtDateLong(d: Date): string {
+  return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+}
 
 export function ProductionMixshows() {
   const [weekOf, setWeekOf] = useState(isoMondayOfNow());
@@ -176,7 +190,7 @@ export function ProductionMixshows() {
             <>
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
               <button onClick={() => setPath([currentDay])} className="font-bold text-foreground hover:text-[#74ddc7]">
-                {DAY_NAMES[currentDay]}
+                {DAY_NAMES[currentDay]} · {fmtDate(dateForDay(weekOf, currentDay))}
               </button>
             </>
           )}
@@ -216,6 +230,7 @@ export function ProductionMixshows() {
               <button key={day} onClick={() => setPath([day])} className="group flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5 transition-all hover:border-[#74ddc7]/40">
                 <Folder className="h-9 w-9 text-[#74ddc7]" />
                 <p className="font-bold text-foreground group-hover:text-[#74ddc7]">{DAY_NAMES[day]}</p>
+                <p className="text-[11px] font-medium text-[#74ddc7]/80">{fmtDate(dateForDay(weekOf, day))}</p>
                 <p className="text-[11px] text-muted-foreground">{ds.length} mixshow{ds.length === 1 ? "" : "s"}</p>
               </button>
             );
@@ -258,8 +273,8 @@ export function ProductionMixshows() {
         /* ── Files in a slot ── */
         <div className="space-y-2">
           <div className="rounded-xl border border-border bg-card/50 px-4 py-2 text-xs text-muted-foreground">
-            {DAY_NAMES[currentSlot.day_of_week]} · {fmt12h(currentSlot.start_time)}–{fmt12h(currentSlot.end_time)} ·{" "}
-            {currentSlot.djs?.display_name ?? "Unassigned"} · week of {weekOf}
+            {fmtDateLong(dateForDay(weekOf, currentSlot.day_of_week))} · {fmt12h(currentSlot.start_time)}–{fmt12h(currentSlot.end_time)} ·{" "}
+            {currentSlot.djs?.display_name ?? "Unassigned"}
           </div>
           {currentSlot.file_codes.map((code) => {
             const drop = dropByKey.get(`${currentSlot.id}|${code}`);
@@ -294,6 +309,7 @@ export function ProductionMixshows() {
           djs={djs}
           defaultCodes={nextCodes}
           defaultDay={currentDay ?? 1}
+          weekOf={weekOf}
           onClose={() => setShowCreate(false)}
           onCreated={() => { setShowCreate(false); load(); }}
         />
@@ -306,12 +322,14 @@ function CreateMixshowDialog({
   djs,
   defaultCodes,
   defaultDay,
+  weekOf,
   onClose,
   onCreated,
 }: {
   djs: DjRef[];
   defaultCodes: string[];
   defaultDay: number;
+  weekOf: string;
   onClose: () => void;
   onCreated: () => void;
 }) {
@@ -368,6 +386,9 @@ function CreateMixshowDialog({
             <select value={day} onChange={(e) => setDay(Number(e.target.value))} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
               {DAY_ORDER.map((d) => <option key={d} value={d}>{DAY_NAMES[d]}</option>)}
             </select>
+            <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-[#74ddc7]">
+              <Calendar className="h-3 w-3" /> This week: {fmtDateLong(dateForDay(weekOf, day))}
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

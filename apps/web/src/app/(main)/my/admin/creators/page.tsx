@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { useAuth } from "@/hooks/use-auth";
+import { DjRoster } from "@/components/admin/dj-roster";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,7 +26,7 @@ import { useAuth } from "@/hooks/use-auth";
 
 type CreatorStatus = "Active" | "Pending" | "Suspended";
 type CreatorType = "Podcaster" | "Musician" | "DJ";
-type TabId = "all" | "pending" | "active" | "suspended";
+type TabId = "djs" | "all" | "pending" | "active" | "suspended";
 
 interface Creator {
   id: string;
@@ -96,6 +97,7 @@ const TYPE_STYLES: Record<CreatorType, string> = {
 };
 
 const TABS: { id: TabId; label: string }[] = [
+  { id: "djs", label: "DJs" },
   { id: "all", label: "All Creators" },
   { id: "pending", label: "Pending Review" },
   { id: "active", label: "Active" },
@@ -112,7 +114,7 @@ export default function CreatorManagerPage() {
 
   const [creators, setCreators] = useState<Creator[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [activeTab, setActiveTab] = useState<TabId>("all");
+  const [activeTab, setActiveTab] = useState<TabId>("djs");
   const [loading, setLoading] = useState(true);
 
   // ---------------------------------------------------------------------------
@@ -340,8 +342,15 @@ export default function CreatorManagerPage() {
           ))}
         </div>
 
-        {/* ── Creator cards ───────────────────────────────────────── */}
-        <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* ── DJs tab: full DJ roster from the djs table ──────────── */}
+        {activeTab === "djs" && (
+          <div className="mb-10">
+            <DjRoster />
+          </div>
+        )}
+
+        {/* ── Creator cards (other tabs) ──────────────────────────── */}
+        <div className={`mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 ${activeTab === "djs" ? "hidden" : ""}`}>
           {filteredCreators.map((creator) => (
             <div
               key={creator.id}
