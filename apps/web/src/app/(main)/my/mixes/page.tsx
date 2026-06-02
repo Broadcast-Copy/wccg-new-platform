@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles } from "@/hooks/use-user-roles";
+import { ProductionMixshows } from "@/components/studio/production-mixshows";
 import Link from "next/link";
 import {
   FolderOpen,
@@ -1116,7 +1117,11 @@ function MoveToFolderModal({
 
 export default function MediaManagerPage() {
   const { user, isLoading: authLoading } = useAuth();
-  const { isManagement } = useUserRoles();
+  const { isManagement, isProduction, isAdmin, isSuperAdmin } = useUserRoles();
+  // Production-tier users can switch the manager to the live DJ-mixshow
+  // schedule view (Day > Time > files), backed by dj_slots / dj_drops.
+  const canSeeProduction = isProduction || isManagement || isAdmin || isSuperAdmin;
+  const [managerMode, setManagerMode] = useState<"media" | "mixshows">("media");
 
   const [mounted, setMounted] = useState(false);
   const [state, setState] = useState<MediaManagerState>(seedState());
@@ -1430,6 +1435,45 @@ export default function MediaManagerPage() {
 
   if (!mounted) return null;
 
+  // Media | DJ Mixshows mode toggle (production-tier only).
+  const modeToggle = canSeeProduction ? (
+    <div className="inline-flex items-center rounded-full border border-border bg-card p-0.5">
+      <button
+        onClick={() => setManagerMode("media")}
+        className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${managerMode === "media" ? "bg-[#74ddc7] text-[#0a0a0f]" : "text-muted-foreground hover:text-foreground"}`}
+      >
+        My Media
+      </button>
+      <button
+        onClick={() => setManagerMode("mixshows")}
+        className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${managerMode === "mixshows" ? "bg-[#7401df] text-white" : "text-muted-foreground hover:text-foreground"}`}
+      >
+        DJ Mixshows
+      </button>
+    </div>
+  ) : null;
+
+  // Production: DJ Mixshows schedule-as-folders view.
+  if (managerMode === "mixshows" && canSeeProduction) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+              <FolderOpen className="h-6 w-6 text-[#7401df]" />
+              DJ Mixshows
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              The live weekly schedule as folders — Day › Time › files. DJ uploads populate automatically.
+            </p>
+          </div>
+          {modeToggle}
+        </div>
+        <ProductionMixshows />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1443,13 +1487,16 @@ export default function MediaManagerPage() {
             Organize audio files, mixes, commercials, and production assets.
           </p>
         </div>
-        <Link
-          href="/studio/audio-editor"
-          className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors w-fit"
-        >
-          <Mic className="h-4 w-4" />
-          Record in Studio
-        </Link>
+        <div className="flex items-center gap-2">
+          {modeToggle}
+          <Link
+            href="/studio/audio-editor"
+            className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors w-fit"
+          >
+            <Mic className="h-4 w-4" />
+            Record in Studio
+          </Link>
+        </div>
       </div>
 
       {/* Stats Bar */}
