@@ -79,11 +79,11 @@ const advertisingItems: NavSection[] = [
     sectionLabel: "SALES",
     items: [
       { href: "/my/sales", label: "Sales Dashboard", icon: DollarSign },
+      { href: "/my/sales/crm", label: "CRM — Clients", icon: Briefcase },
+      { href: "/my/sales/production-orders", label: "Production Orders", icon: FileText },
       { href: "/my/sales/pipeline", label: "Pipeline", icon: BarChart3 },
-      { href: "/my/sales/clients", label: "Client Manager", icon: Briefcase },
       { href: "/my/sales/invoices", label: "Invoices", icon: Receipt },
       { href: "/my/sales/rate-cards", label: "Rate Cards", icon: FileText },
-      { href: "/my/sales/commissions", label: "Commissions", icon: DollarSign },
     ],
   },
   {
