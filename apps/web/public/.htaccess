@@ -25,6 +25,20 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}.html -f
 RewriteRule ^(.*)$ $1.html [L]
 
+# SPA fallback for client-resolved dynamic routes. These pages ship a
+# "_placeholder" shim that reads the real id/slug from the URL at runtime
+# (useParams), so when no static file matches, serve the shim instead of 404ing
+# — this makes watch/product/wiki links shareable and refresh-safe.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^videos/[^/]+/?$ /videos/_placeholder.html [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^shop/[^/]+/?$ /shop/_placeholder.html [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^wiki/[^/]+/?$ /wiki/_placeholder.html [L]
+
 # Fallback to 404 page
 ErrorDocument 404 /404.html
 
