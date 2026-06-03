@@ -48,9 +48,11 @@ import {
   Download,
   Save,
   HardDrive,
+  Globe,
 } from "lucide-react";
 import { LoginRequired } from "@/components/auth/login-required";
 import { AppImage } from "@/components/ui/app-image";
+import { createClient } from "@/lib/supabase/client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -210,6 +212,9 @@ export default function VideoEditorPage() {
   // Drag state
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [activeMediaId, setActiveMediaId] = useState<string | null>(null);
+
+  // Publish-to-video-wall dialog (for a recorded/imported video item)
+  const [publishItem, setPublishItem] = useState<MediaItem | null>(null);
 
   // Recording state
   const [showRecordModal, setShowRecordModal] = useState(false);
@@ -1543,6 +1548,18 @@ export default function VideoEditorPage() {
                         >
                           <Plus className="h-3 w-3" />
                         </button>
+                        {item.blobUrl && item.type === "video" && (
+                          <button
+                            className="opacity-0 group-hover:opacity-100 p-0.5 text-[#74ddc7] hover:text-[#74ddc7]/80 transition-all"
+                            title="Publish to the video wall"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPublishItem(item);
+                            }}
+                          >
+                            <Globe className="h-3 w-3" />
+                          </button>
+                        )}
                         {item.blobUrl && (
                           <button
                             className="opacity-0 group-hover:opacity-100 p-0.5 text-blue-400 hover:text-blue-300 transition-all"
@@ -2816,7 +2833,128 @@ export default function VideoEditorPage() {
           </div>
         </>
       )}
+      {publishItem && (
+        <PublishToWallDialog item={publishItem} onClose={() => setPublishItem(null)} />
+      )}
     </div>
     </LoginRequired>
+  );
+}
+
+const PUBLISH_CATEGORIES = ["Studio", "Community", "Music", "Sports", "Shows", "Events", "Other"];
+
+function PublishToWallDialog({ item, onClose }: { item: MediaItem; onClose: () => void }) {
+  const [title, setTitle] = useState(item.name.replace(/\.[^.]+$/, ""));
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("Studio");
+  const [visibility, setVisibility] = useState<"public" | "unlisted" | "private">("public");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [doneId, setDoneId] = useState<string | null>(null);
+
+  const publish = async () => {
+    setErr(null);
+    setBusy(true);
+    try {
+      if (!item.blobUrl) throw new Error("No recorded video data to publish.");
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Please sign in to publish.");
+      const blob = await (await fetch(item.blobUrl)).blob();
+      const ext = (blob.type.includes("webm") ? "webm" : (blob.type.split("/")[1] || "webm")).replace(/[^a-z0-9]/gi, "") || "webm";
+      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("videos").upload(path, blob, {
+        contentType: blob.type || "video/webm",
+        upsert: false,
+      });
+      if (upErr) throw new Error(`Upload failed: ${upErr.message}`);
+      const video_url = supabase.storage.from("videos").getPublicUrl(path).data.publicUrl;
+      const creator_name = (user.user_metadata?.display_name as string) || user.email?.split("@")[0] || "WCCG 104.5 FM";
+      const { data: row, error: insErr } = await supabase
+        .from("videos")
+        .insert({
+          user_id: user.id,
+          creator_name,
+          title: title.trim() || "Untitled",
+          description: description.trim() || null,
+          storage_path: path,
+          video_url,
+          duration_seconds: item.durationSecs ? Math.round(item.durationSecs) : null,
+          category,
+          visibility,
+          status: "published",
+          published_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+      if (insErr) throw new Error(insErr.message);
+      setDoneId(row.id as string);
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        {doneId ? (
+          <div className="space-y-4 text-center">
+            <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#74ddc7]/15 text-[#74ddc7]">
+              <Check className="h-6 w-6" />
+            </div>
+            <h3 className="text-lg font-bold">Published to the video wall</h3>
+            <p className="text-sm text-muted-foreground">Your recording is live at /videos.</p>
+            <div className="flex justify-center gap-2 pt-1">
+              <button onClick={onClose} className="rounded-full border border-border px-4 py-2 text-sm hover:bg-foreground/[0.06]">Close</button>
+              <a href={`/videos/${doneId}`} className="rounded-full bg-[#74ddc7] px-4 py-2 text-sm font-bold text-[#0a0a0f] hover:bg-[#74ddc7]/90">Watch it</a>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="flex items-center gap-2 text-base font-bold"><Globe className="h-4 w-4 text-[#74ddc7]" /> Publish to video wall</h3>
+              <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+            </div>
+            {err && <div className="mb-3 rounded-lg border border-red-500/50 bg-red-500/10 px-3 py-2 text-xs text-red-300">{err}</div>}
+            <p className="mb-3 truncate text-xs text-muted-foreground">{item.name}{item.fileSize ? ` · ${(item.fileSize / (1024 * 1024)).toFixed(1)} MB` : ""}</p>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Title</label>
+                <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#74ddc7]/40" />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Description</label>
+                <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#74ddc7]/40" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Category</label>
+                  <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                    {PUBLISH_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Visibility</label>
+                  <select value={visibility} onChange={(e) => setVisibility(e.target.value as typeof visibility)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                    <option value="public">Public</option>
+                    <option value="unlisted">Unlisted</option>
+                    <option value="private">Private</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2 border-t border-border pt-4">
+              <button onClick={onClose} className="rounded-full border border-border px-4 py-2 text-sm hover:bg-foreground/[0.06]">Cancel</button>
+              <button onClick={publish} disabled={busy} className="inline-flex items-center rounded-full bg-[#74ddc7] px-4 py-2 text-sm font-bold text-[#0a0a0f] hover:bg-[#74ddc7]/90 disabled:opacity-60">
+                {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Globe className="mr-1.5 h-4 w-4" />}
+                Publish
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
