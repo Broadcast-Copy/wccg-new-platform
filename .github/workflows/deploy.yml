@@ -17,7 +17,10 @@ permissions:
 
 concurrency:
   group: 'pages'
-  cancel-in-progress: false
+  # Only the latest commit's state matters for a deploy — cancel superseded
+  # in-progress/queued runs so a burst of pushes doesn't create a long serial
+  # backlog (which left the live site several commits behind).
+  cancel-in-progress: true
 
 jobs:
   build:
