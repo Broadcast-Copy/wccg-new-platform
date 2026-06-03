@@ -336,7 +336,7 @@ export default function MainLayout({
 
       {/* Main content — pb accounts for bottom tab bar + player */}
       <main className="flex-1 pb-44" style={{ WebkitOverflowScrolling: "touch", paddingBottom: "max(11rem, calc(11rem + env(safe-area-inset-bottom, 0px)))" }}>
-        <div className="container pt-8 pb-6">{children}</div>
+        <div className="w-full px-4 pt-8 pb-6 sm:px-6 lg:px-8 2xl:px-12">{children}</div>
       </main>
 
       {/* Footer */}

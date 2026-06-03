@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { apiClient } from "@/lib/api-client";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -27,14 +26,17 @@ import {
   Star,
   X,
   UserCheck,
-  Building2,
-  Droplets,
   Hospital,
   Users,
   Trash2,
   PawPrint,
   Wheat,
   Medal,
+  ChevronRight,
+  LayoutGrid,
+  ArrowLeft,
+  MapPinned,
+  Sparkles,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -383,60 +385,64 @@ const MAP_CENTER: [number, number] = [35.0527, -78.9236];
 // Component
 // ---------------------------------------------------------------------------
 
+const LS_COUNTY_KEY = "wccg_directory_county";
+
 export default function CommunityServicesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<Category | "All">("All");
-  const [activeArea, setActiveArea] = useState<string>("All");
   const [selectedListing, setSelectedListing] = useState<ServiceListing | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // ── API-backed directory data (falls back to hardcoded SERVICE_LISTINGS) ──
-  const [listings, setListings] = useState<ServiceListing[]>(SERVICE_LISTINGS);
+  // ── Directory data (local) ──────────────────────────────────────────────
+  const listings = SERVICE_LISTINGS;
+
+  // ── County selection (persisted) + first-visit splash ────────────────────
+  // `selectedArea` is one of AREAS (county name or "Fort Liberty"). `null`
+  // means no county chosen yet → show the splash. We hydrate from localStorage
+  // after mount (guarded with a flag) to avoid set-state-in-effect churn and
+  // SSR mismatch; until then `hydrated` is false and we render nothing
+  // splash-related.
+  const [selectedArea, setSelectedArea] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  const [showSplash, setShowSplash] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    async function fetchListings() {
-      try {
-        interface DirectoryItem {
-          id: string;
-          name: string;
-          category: string;
-          address?: string;
-          city?: string;
-          county?: string;
-          phone?: string;
-          description?: string;
-          website?: string;
-          featured?: boolean;
-          claimed?: boolean;
-          lat?: number;
-          lng?: number;
-        }
-        const data = await apiClient<DirectoryItem[]>("/directory");
-        if (!cancelled && data && data.length > 0) {
-          const mapped: ServiceListing[] = data.map((item) => ({
-            id: item.id,
-            name: item.name,
-            category: item.category as Category,
-            address: item.address ?? "",
-            city: item.city ?? "",
-            county: item.county ?? "",
-            phone: item.phone ?? "",
-            description: item.description ?? "",
-            website: item.website ?? undefined,
-            featured: item.featured ?? false,
-            claimed: item.claimed ?? false,
-            lat: item.lat ?? 0,
-            lng: item.lng ?? 0,
-          }));
-          setListings(mapped);
-        }
-      } catch {
-        // API unavailable — keep hardcoded fallback
-      }
+    let stored: string | null = null;
+    try {
+      stored = window.localStorage.getItem(LS_COUNTY_KEY);
+    } catch {
+      stored = null;
     }
-    fetchListings();
-    return () => { cancelled = true; };
+    const valid = stored && (AREAS as readonly string[]).includes(stored) ? stored : null;
+    // Apply the hydrated state outside the synchronous effect body (after an
+    // await) so we don't trip react-hooks/set-state-in-effect.
+    void Promise.resolve().then(() => {
+      if (cancelled) return;
+      setSelectedArea(valid);
+      setShowSplash(!valid);
+      setHydrated(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Choose a county: persist, dismiss splash, reset filters, zoom map.
+  const chooseArea = useCallback((area: string) => {
+    try {
+      window.localStorage.setItem(LS_COUNTY_KEY, area);
+    } catch {
+      /* storage unavailable — selection still applies for this session */
+    }
+    setSelectedArea(area);
+    setShowSplash(false);
+    setActiveCategory("All");
+    setSearchQuery("");
+    setSelectedListing(null);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   }, []);
 
   // Helper: does a listing match the selected area?
@@ -446,31 +452,39 @@ export default function CommunityServicesPage() {
     return l.county === area;
   }, []);
 
-  const filteredListings = useMemo(() => {
-    return listings.filter((l) => {
-      const matchesCategory = activeCategory === "All" || l.category === activeCategory;
-      const matchesAreaFilter = matchesArea(l, activeArea);
-      const matchesSearch =
-        searchQuery.trim() === "" ||
-        l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        l.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        l.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        l.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        l.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        l.county.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesAreaFilter && matchesSearch;
-    });
-  }, [searchQuery, activeCategory, activeArea, listings, matchesArea]);
+  // Listings for the chosen area only (county/Fort Liberty), ignoring the
+  // category/search filters — used for the map, category chips and counts.
+  const areaListings = useMemo(() => {
+    if (!selectedArea) return [];
+    return listings.filter((l) => matchesArea(l, selectedArea));
+  }, [selectedArea, listings, matchesArea]);
 
+  const filteredListings = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return areaListings.filter((l) => {
+      const matchesCategory = activeCategory === "All" || l.category === activeCategory;
+      const matchesSearch =
+        q === "" ||
+        l.name.toLowerCase().includes(q) ||
+        l.description.toLowerCase().includes(q) ||
+        l.category.toLowerCase().includes(q) ||
+        l.address.toLowerCase().includes(q) ||
+        l.city.toLowerCase().includes(q) ||
+        l.county.toLowerCase().includes(q);
+      return matchesCategory && matchesSearch;
+    });
+  }, [searchQuery, activeCategory, areaListings]);
+
+  // Per-category counts within the chosen area (for the icon chips).
   const categoryCount = useMemo(() => {
-    const base = listings.filter((l) => matchesArea(l, activeArea));
-    const counts: Record<string, number> = { All: base.length };
-    for (const l of base) {
+    const counts: Record<string, number> = { All: areaListings.length };
+    for (const l of areaListings) {
       counts[l.category] = (counts[l.category] || 0) + 1;
     }
     return counts;
-  }, [activeArea, listings, matchesArea]);
+  }, [areaListings]);
 
+  // Service count per area (for the splash grid + change-county menu).
   const areaCount = useMemo(() => {
     const counts: Record<string, number> = { All: listings.length };
     for (const county of COUNTIES) {
@@ -480,6 +494,15 @@ export default function CommunityServicesPage() {
     counts["Fort Liberty"] = listings.filter((l) => l.city === "Fort Liberty").length;
     return counts;
   }, [listings]);
+
+  // Only the categories that actually have listings in this area (icon grid).
+  const areaCategories = useMemo(
+    () => CATEGORIES.filter((c) => (categoryCount[c.label] || 0) > 0),
+    [categoryCount]
+  );
+
+  // The county whose listings the map should zoom to (Fort Liberty too).
+  const mapCounty = selectedArea ?? null;
 
   const handleMarkerClick = useCallback((listing: ServiceListing) => {
     setSelectedListing(listing);
@@ -493,256 +516,305 @@ export default function CommunityServicesPage() {
     setSelectedListing((prev) => (prev?.id === listing.id ? null : listing));
   }, []);
 
+  const areaLabel = selectedArea === "Fort Liberty" ? "Fort Liberty" : `${selectedArea} County`;
+
   return (
     <div className="space-y-10">
       {/* ================================================================= */}
-      {/* Hero                                                              */}
+      {/* First-visit splash — county selection                             */}
       {/* ================================================================= */}
-      <section className="relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-background via-card to-background px-6 py-10 sm:px-10 sm:py-14">
+      {hydrated && showSplash && (
+        <CountySplash
+          areaCount={areaCount}
+          onChoose={chooseArea}
+          dismissible={selectedArea !== null}
+          onDismiss={() => setShowSplash(false)}
+        />
+      )}
+
+      {/* ================================================================= */}
+      {/* Directory (shown once a county is chosen)                         */}
+      {/* ================================================================= */}
+      {hydrated && selectedArea ? (
+        <>
+          {/* County header bar + Change county control */}
+          <section className="relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-background via-card to-background px-5 py-6 sm:px-8 sm:py-8">
+            <div className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-teal-500/10 blur-3xl" />
+            <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-teal-500/10 border border-teal-500/20">
+                  <MapPinned className="h-6 w-6 text-teal-600 dark:text-teal-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-teal-600 dark:text-teal-400">
+                    Community resources in
+                  </p>
+                  <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                    {areaLabel}
+                  </h1>
+                  <p className="text-sm text-muted-foreground">
+                    {areaListings.length} {areaListings.length === 1 ? "service" : "services"} across{" "}
+                    {areaCategories.length} {areaCategories.length === 1 ? "category" : "categories"}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setShowSplash(true)}
+                className="self-start border-border text-foreground hover:bg-muted sm:self-auto"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" /> Change county
+              </Button>
+            </div>
+          </section>
+
+          {/* Search */}
+          <section className="space-y-4">
+            <div className="relative max-w-xl">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder={`Search resources in ${areaLabel}…`}
+                className="pl-10 h-11 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Category icon chips — icon-led filter */}
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Browse by category
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {/* All */}
+                <button
+                  onClick={() => setActiveCategory("All")}
+                  className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-all ${
+                    activeCategory === "All"
+                      ? "border-teal-500/50 bg-teal-500/10 text-teal-700 dark:text-teal-300"
+                      : "border-border bg-muted/40 text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                  All
+                  <span className="rounded-full bg-background/70 px-1.5 text-xs">{categoryCount["All"] || 0}</span>
+                </button>
+                {areaCategories.map(({ label, icon: Icon }) => {
+                  const colors = CATEGORY_COLORS[label];
+                  const active = activeCategory === label;
+                  return (
+                    <button
+                      key={label}
+                      onClick={() => setActiveCategory(active ? "All" : label)}
+                      className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-all ${
+                        active
+                          ? "text-white shadow-sm"
+                          : "border-border bg-muted/40 text-foreground hover:bg-muted"
+                      }`}
+                      style={active ? { backgroundColor: colors.marker, borderColor: colors.marker } : undefined}
+                    >
+                      <Icon className="h-4 w-4" style={active ? undefined : { color: colors.marker }} />
+                      {label}
+                      <span className={`rounded-full px-1.5 text-xs ${active ? "bg-white/20" : "bg-background/70"}`}>
+                        {categoryCount[label] || 0}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              Showing <span className="font-medium text-foreground">{filteredListings.length}</span>{" "}
+              {filteredListings.length === 1 ? "service" : "services"}
+              {activeCategory !== "All" && (
+                <> in <span className="font-medium text-foreground">{activeCategory}</span></>
+              )}
+              {" "}&middot; <span className="font-medium text-foreground">{areaLabel}</span>
+            </p>
+
+            {/* Split: List LEFT, tall sticky Map RIGHT */}
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+              {/* List panel — LEFT (icon-led cards) */}
+              <div ref={listRef} className="max-h-[70vh] overflow-y-auto space-y-3 pr-1 scrollbar-thin lg:order-1">
+                {filteredListings.length > 0 ? (
+                  filteredListings.map((listing) => (
+                    <ServiceCard
+                      key={listing.id}
+                      listing={listing}
+                      isSelected={selectedListing?.id === listing.id}
+                      onClick={() => handleCardClick(listing)}
+                    />
+                  ))
+                ) : (
+                  <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-lg border border-border bg-muted/50">
+                    <Search className="h-8 w-8 text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">No services found in {areaLabel}.</p>
+                    <button
+                      onClick={() => { setSearchQuery(""); setActiveCategory("All"); }}
+                      className="text-xs text-teal-600 hover:text-teal-500 dark:text-teal-400"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Map panel — RIGHT (tall + sticky on large screens) */}
+              <div className="lg:order-2">
+                <div className="relative z-0 h-[70vh] overflow-hidden rounded-xl border border-border shadow-lg lg:sticky lg:top-20">
+                  <CommunityMap
+                    businesses={filteredListings}
+                    selectedBusiness={selectedListing}
+                    onMarkerClick={handleMarkerClick}
+                    center={MAP_CENTER}
+                    categoryColors={CATEGORY_COLORS}
+                    selectedCounty={mapCounty}
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ================================================================= */}
+          {/* Claim Your Listing CTA                                            */}
+          {/* ================================================================= */}
+          <section className="relative overflow-hidden rounded-xl border border-border bg-gradient-to-r from-teal-50 dark:from-teal-950/50 via-card to-blue-50 dark:to-blue-950/50 p-8 sm:p-12">
+            <div className="pointer-events-none absolute inset-0 opacity-[0.03]" style={{
+              backgroundImage: "radial-gradient(circle, currentColor 1px, transparent 1px)",
+              backgroundSize: "24px 24px",
+            }} />
+            <div className="relative z-10 mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-500/10 border border-teal-500/20">
+                <UserCheck className="h-7 w-7 text-teal-600 dark:text-teal-400" />
+              </div>
+              <h2 className="text-2xl font-bold tracking-tight text-foreground">Claim &amp; Manage Your Listing</h2>
+              <p className="text-muted-foreground">
+                Are you a government office, utility provider, or community service organization?
+                Claim your listing to keep your contact information current and manage your public profile
+                through your WCCG dashboard.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <Button size="lg" className="bg-teal-600 hover:bg-teal-500 text-white" asChild>
+                  <Link href="/my/directory"><UserCheck className="mr-2 h-4 w-4" /> Claim Your Listing</Link>
+                </Button>
+                <Button variant="outline" size="lg" className="border-border text-muted-foreground hover:text-foreground" asChild>
+                  <Link href="/my/directory"><Plus className="mr-2 h-4 w-4" /> Add New Service</Link>
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Free for all government &amp; community services. Log in or create an account to get started.
+              </p>
+            </div>
+          </section>
+        </>
+      ) : (
+        /* Pre-hydration / pre-selection placeholder (keeps layout stable, no flash) */
+        <section className="flex h-[60vh] items-center justify-center rounded-xl border border-border bg-muted/30">
+          <div className="space-y-2 text-center">
+            <MapPin className="mx-auto h-8 w-8 animate-pulse text-teal-500" />
+            <p className="text-sm text-muted-foreground">Loading community directory…</p>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// First-visit splash — "Want to learn about the resources in your community?"
+// A county-picker overlay. Selecting a county loads its directory.
+// ---------------------------------------------------------------------------
+
+function CountySplash({
+  areaCount,
+  onChoose,
+  dismissible,
+  onDismiss,
+}: {
+  areaCount: Record<string, number>;
+  onChoose: (area: string) => void;
+  dismissible: boolean;
+  onDismiss: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-start justify-center overflow-y-auto bg-background/80 p-4 backdrop-blur-sm sm:items-center sm:p-6">
+      <div className="relative my-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+        {/* decorative glow */}
         <div className="pointer-events-none absolute -right-32 -top-32 h-64 w-64 rounded-full bg-teal-500/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
 
-        <div className="relative z-10 mx-auto max-w-4xl text-center space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full bg-teal-500/10 border border-teal-500/20 px-4 py-1.5 text-sm font-medium text-teal-600 dark:text-teal-400">
-            <Landmark className="h-4 w-4" />
-            Serving {COUNTIES.length} Counties + Fort Liberty &middot; {listings.length}+ Services
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-            Community Services Directory
-          </h1>
-          <p className="mx-auto max-w-2xl text-muted-foreground text-base sm:text-lg">
-            Find government services, public safety, hospitals, utilities, agriculture,
-            and more across Cumberland, Sampson, and the surrounding counties.
-          </p>
-          <div className="flex flex-wrap justify-center gap-2 pt-2">
-            {["Police", "Fire", "Hospitals", "Utilities", "Agriculture", "Veterans", "Transit", "Animal Services"].map((tag) => (
-              <span key={tag} className="rounded-full bg-muted border border-border px-3 py-1 text-xs text-muted-foreground">
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
+        {dismissible && (
+          <button
+            onClick={onDismiss}
+            aria-label="Close"
+            className="absolute right-4 top-4 z-10 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
 
-      {/* ================================================================= */}
-      {/* Directory — Map (RIGHT) + List (LEFT)                            */}
-      {/* ================================================================= */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-500/10 border border-teal-500/20">
-            <MapPin className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-foreground">Government Services</h2>
-            <p className="text-sm text-muted-foreground">Search police, fire, hospitals, utilities, agriculture &amp; more across {COUNTIES.length} counties</p>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="relative max-w-xl">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search by service, city, or county…"
-            className="pl-10 h-11 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-
-        {/* Filter Dropdowns */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Area dropdown */}
-          <div className="space-y-1.5 flex-1 max-w-xs">
-            <label htmlFor="area-filter" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              County / Area
-            </label>
-            <select
-              id="area-filter"
-              value={activeArea}
-              onChange={(e) => setActiveArea(e.target.value)}
-              className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500/50 transition-colors appearance-none cursor-pointer"
-              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center" }}
-            >
-              <option value="All">All Areas ({areaCount["All"]})</option>
-              <optgroup label="Counties">
-                {COUNTIES.map((county) => (
-                  <option key={county} value={county}>
-                    {county} County ({areaCount[county] || 0})
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Military Installation">
-                <option value="Fort Liberty">Fort Liberty (Fort Bragg) ({areaCount["Fort Liberty"] || 0})</option>
-              </optgroup>
-            </select>
-          </div>
-
-          {/* Service Type dropdown */}
-          <div className="space-y-1.5 flex-1 max-w-xs">
-            <label htmlFor="category-filter" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Service Type
-            </label>
-            <select
-              id="category-filter"
-              value={activeCategory}
-              onChange={(e) => setActiveCategory(e.target.value as Category | "All")}
-              className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500/50 transition-colors appearance-none cursor-pointer"
-              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center" }}
-            >
-              <option value="All">All Service Types ({categoryCount["All"]})</option>
-              {CATEGORIES.map(({ label }) => (
-                <option key={label} value={label}>
-                  {label} ({categoryCount[label] || 0})
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <p className="text-sm text-muted-foreground">
-          Showing <span className="font-medium text-foreground">{filteredListings.length}</span>{" "}
-          {filteredListings.length === 1 ? "service" : "services"}
-          {activeCategory !== "All" && (
-            <> in <span className="font-medium text-foreground">{activeCategory}</span></>
-          )}
-          {activeArea !== "All" && (
-            <> &middot; <span className="font-medium text-foreground">{activeArea}{activeArea !== "Fort Liberty" ? " County" : ""}</span></>
-          )}
-        </p>
-
-        {/* Split: List LEFT, Map RIGHT */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* List panel — LEFT */}
-          <div ref={listRef} className="max-h-[600px] overflow-y-auto space-y-3 pr-1 scrollbar-thin lg:order-1">
-            {filteredListings.length > 0 ? (
-              filteredListings.map((listing) => (
-                <ServiceCard
-                  key={listing.id}
-                  listing={listing}
-                  isSelected={selectedListing?.id === listing.id}
-                  onClick={() => handleCardClick(listing)}
-                />
-              ))
-            ) : (
-              <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-lg border border-border bg-muted/50">
-                <Search className="h-8 w-8 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">No services found.</p>
-                <button
-                  onClick={() => { setSearchQuery(""); setActiveCategory("All"); setActiveArea("All"); }}
-                  className="text-xs text-teal-600 dark:text-teal-400 hover:text-teal-500 dark:text-teal-300"
-                >
-                  Clear filters
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Map panel — RIGHT */}
-          <div className="relative z-0 h-[600px] rounded-xl overflow-hidden border border-border shadow-lg lg:order-2">
-            <CommunityMap
-              businesses={filteredListings}
-              selectedBusiness={selectedListing}
-              onMarkerClick={handleMarkerClick}
-              center={MAP_CENTER}
-              categoryColors={CATEGORY_COLORS}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ================================================================= */}
-      {/* Claim Your Listing CTA                                            */}
-      {/* ================================================================= */}
-      <section className="relative overflow-hidden rounded-xl border border-border bg-gradient-to-r from-teal-50 dark:from-teal-950/50 via-card to-blue-50 dark:to-blue-950/50 p-8 sm:p-12">
-        <div className="pointer-events-none absolute inset-0 opacity-[0.03]" style={{
-          backgroundImage: "radial-gradient(circle, currentColor 1px, transparent 1px)",
-          backgroundSize: "24px 24px",
-        }} />
-        <div className="relative z-10 mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-500/10 border border-teal-500/20">
-            <UserCheck className="h-7 w-7 text-teal-600 dark:text-teal-400" />
-          </div>
-          <h2 className="text-2xl font-bold tracking-tight text-foreground">Claim & Manage Your Listing</h2>
-          <p className="text-muted-foreground">
-            Are you a government office, utility provider, or community service organization?
-            Claim your listing to keep your contact information current and manage your public profile
-            through your WCCG dashboard.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-            <Button size="lg" className="bg-teal-600 hover:bg-teal-500 text-white" asChild>
-              <Link href="/my/directory"><UserCheck className="mr-2 h-4 w-4" /> Claim Your Listing</Link>
-            </Button>
-            <Button variant="outline" size="lg" className="border-border text-muted-foreground hover:text-foreground" asChild>
-              <Link href="/my/directory"><Plus className="mr-2 h-4 w-4" /> Add New Service</Link>
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Free for all government &amp; community services. Log in or create an account to get started.
-          </p>
-        </div>
-      </section>
-
-      {/* ================================================================= */}
-      {/* County Info Grid                                                   */}
-      {/* ================================================================= */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 border border-blue-500/20">
-            <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-foreground">Counties We Serve</h2>
-            <p className="text-sm text-muted-foreground">Government services coverage area in southeastern North Carolina</p>
-          </div>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {COUNTIES.map((county) => {
-            const count = areaCount[county] || 0;
-            return (
-              <button
-                key={county}
-                onClick={() => { setActiveArea(county); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                className="rounded-xl border border-border bg-muted/30 p-4 text-left transition-all hover:border-border hover:bg-muted/50"
-              >
-                <h3 className="font-semibold text-foreground">{county} County</h3>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {count} {count === 1 ? "service" : "services"} listed
-                </p>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Fort Liberty callout */}
-      <section className="rounded-xl border border-orange-500/20 bg-gradient-to-r from-orange-50 dark:from-orange-950/30 via-card to-card p-6 sm:p-8">
-        <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 border border-orange-500/20">
-            <Swords className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-lg font-bold text-foreground">Fort Liberty (Fort Bragg)</h3>
-            <p className="text-sm text-muted-foreground">
-              Home of the XVIII Airborne Corps and U.S. Army Special Operations Command.
-              Our directory includes {areaCount["Fort Liberty"] || 0}+ on-post services — DEERS/ID cards,
-              Womack Army Medical Center, ACS, legal assistance, housing, commissary, PX,
-              MWR, education center, finance, transportation, and more for soldiers, civilians, and families.
+        <div className="relative z-[1] p-6 sm:p-10">
+          <div className="mb-6 text-center">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-teal-500/20 bg-teal-500/10 px-4 py-1.5 text-sm font-medium text-teal-600 dark:text-teal-400">
+              <Sparkles className="h-4 w-4" />
+              WCCG Community Directory
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              Want to learn about the resources in your community?
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
+              Pick your county and we&apos;ll show you the local government, public safety,
+              health, utility, and support services near you — with an interactive map.
             </p>
-            <button
-              onClick={() => { setActiveArea("Fort Liberty"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-              className="text-sm text-orange-600 dark:text-orange-400 hover:text-orange-500 dark:text-orange-300 font-medium"
-            >
-              View all Fort Liberty services →
-            </button>
           </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {AREAS.map((area) => {
+              const count = areaCount[area] || 0;
+              const isFort = area === "Fort Liberty";
+              return (
+                <button
+                  key={area}
+                  onClick={() => onChoose(area)}
+                  className={`group flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                    isFort
+                      ? "border-orange-500/30 bg-orange-500/5 hover:border-orange-500/50"
+                      : "border-border bg-muted/30 hover:border-teal-500/50 hover:bg-teal-500/5"
+                  }`}
+                >
+                  <div className="flex w-full items-center justify-between">
+                    <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${isFort ? "bg-orange-500/10" : "bg-teal-500/10"}`}>
+                      {isFort ? (
+                        <Swords className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                      ) : (
+                        <Landmark className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                      )}
+                    </span>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                  </div>
+                  <h3 className="mt-1 font-semibold text-foreground">
+                    {isFort ? "Fort Liberty" : `${area} County`}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {count} {count === 1 ? "service" : "services"}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="mt-6 text-center text-xs text-muted-foreground">
+            You can change your county at any time. We&apos;ll remember your choice on this device.
+          </p>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

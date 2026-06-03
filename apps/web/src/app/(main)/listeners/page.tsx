@@ -99,9 +99,7 @@ export default function ListenersPage() {
     async function loadStats() {
       const [listenersRes, pointsRes, requestsRes] = await Promise.all([
         supabase.from("profiles_public").select("id", { count: "exact", head: true }),
-        supabase
-          .from("points_ledger")
-          .select("id", { count: "exact", head: true }),
+        supabase.rpc("community_points_total"),
         supabase
           .from("song_requests")
           .select("id", { count: "exact", head: true }),
@@ -109,7 +107,7 @@ export default function ListenersPage() {
 
       setStats({
         listeners: listenersRes.count ?? 0,
-        points: pointsRes.count ?? 0,
+        points: Number(pointsRes.data ?? 0),
         requests: requestsRes.count ?? 0,
       });
     }
