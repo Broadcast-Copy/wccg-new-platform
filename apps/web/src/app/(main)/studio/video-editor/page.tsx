@@ -2847,6 +2847,7 @@ const PUBLISH_CATEGORIES = ["Studio", "Community", "Music", "Sports", "Shows", "
 function PublishToWallDialog({ item, onClose }: { item: MediaItem; onClose: () => void }) {
   const [title, setTitle] = useState(item.name.replace(/\.[^.]+$/, ""));
   const [description, setDescription] = useState("");
+  const [program, setProgram] = useState("");
   const [category, setCategory] = useState("Studio");
   const [rating, setRating] = useState<VideoRating>("G");
   const [visibility, setVisibility] = useState<"public" | "unlisted" | "private">("public");
@@ -2877,6 +2878,7 @@ function PublishToWallDialog({ item, onClose }: { item: MediaItem; onClose: () =
         .insert({
           user_id: user.id,
           creator_name,
+          program: program.trim() || null,
           title: title.trim() || "Untitled",
           description: description.trim() || null,
           storage_path: path,
@@ -2930,6 +2932,13 @@ function PublishToWallDialog({ item, onClose }: { item: MediaItem; onClose: () =
               <div>
                 <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Description</label>
                 <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#74ddc7]/40" />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Program <span className="text-muted-foreground/60">(optional)</span>
+                </label>
+                <input value={program} onChange={(e) => setProgram(e.target.value)} placeholder='e.g. "Angela Yee", "Incognito"' className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#74ddc7]/40" />
+                <p className="mt-1 text-[11px] text-muted-foreground">Groups this video into a row on the wall.</p>
               </div>
               <div>
                 <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Content rating</label>

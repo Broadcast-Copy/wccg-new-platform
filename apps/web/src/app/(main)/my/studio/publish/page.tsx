@@ -31,6 +31,7 @@ export default function PublishVideoPage() {
   const [meta, setMeta] = useState({
     title: "",
     description: "",
+    program: "",
     category: "Studio",
     rating: "G" as VideoRating,
     visibility: "public" as "public" | "unlisted" | "private",
@@ -123,6 +124,7 @@ export default function PublishVideoPage() {
         .insert({
           user_id: user.id,
           creator_name: creatorName,
+          program: meta.program.trim() || null,
           title: meta.title.trim(),
           description: meta.description.trim() || null,
           storage_path,
@@ -159,7 +161,7 @@ export default function PublishVideoPage() {
         <h1 className="text-2xl font-black tracking-tight">Published to the video wall</h1>
         <p className="text-sm text-muted-foreground">Your video is live at /videos.</p>
         <div className="flex justify-center gap-2 pt-2">
-          <Button variant="outline" onClick={() => { setDone(null); setFile(null); setThumb(null); setMeta({ ...meta, title: "", description: "", youtubeUrl: "" }); }}>
+          <Button variant="outline" onClick={() => { setDone(null); setFile(null); setThumb(null); setMeta({ ...meta, title: "", description: "", program: "", youtubeUrl: "" }); }}>
             Publish another
           </Button>
           <Button onClick={() => router.push(`/videos/${done.id}`)}>Watch it</Button>
@@ -247,6 +249,18 @@ export default function PublishVideoPage() {
         <div className="sm:col-span-2">
           <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-muted-foreground">Description</label>
           <textarea rows={3} value={meta.description} onChange={(e) => setMeta({ ...meta, description: e.target.value })} className="w-full rounded-xl border border-border bg-card px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#74ddc7]/40" />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            Program <span className="text-muted-foreground/60">(optional)</span>
+          </label>
+          <input
+            value={meta.program}
+            onChange={(e) => setMeta({ ...meta, program: e.target.value })}
+            placeholder='e.g. "Angela Yee", "Incognito", "ABC News"'
+            className="w-full rounded-full border border-border bg-card px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#74ddc7]/40"
+          />
+          <p className="mt-1 text-[11px] text-muted-foreground">Groups this video into a row on the wall. Defaults to your creator name.</p>
         </div>
         <div>
           <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-muted-foreground">Category</label>

@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
+import { createClient } from "@/lib/supabase/client";
 import { useUserRoles } from "@/hooks/use-user-roles";
 import { apiClient } from "@/lib/api-client";
 import {
@@ -338,6 +339,55 @@ export default function UserDashboardPage() {
   const songModal = useSongDetailModal();
   // Map of "title|artist" → album art URL from iTunes
   const [enrichedArt, setEnrichedArt] = useState<Record<string, string>>({});
+
+  // Live "My Listening Sessions" — real, cross-device data from the DB,
+  // refreshed every 30s (replaces the localStorage list when DB data exists).
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    const supabase = createClient();
+    const fmtDur = (s: number | null) => {
+      const sec = s ?? 0;
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    };
+    const rel = (iso: string | null) => {
+      if (!iso) return "";
+      const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+      if (mins < 1) return "just now";
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs}h ago`;
+      return `${Math.floor(hrs / 24)}d ago`;
+    };
+    async function load() {
+      const { data } = await supabase
+        .from("listening_sessions")
+        .select("id, stream_name, title, artist, started_at, ended_at, duration_secs")
+        .eq("user_id", user!.id)
+        .order("started_at", { ascending: false })
+        .limit(8);
+      if (!active || !data || data.length === 0) return;
+      setListeningHistory(
+        data.map((s) => ({
+          id: s.id,
+          title: s.title || "Listening session",
+          artist: s.artist || "WCCG 104.5 FM",
+          streamName: s.stream_name || "WCCG 104.5 FM",
+          listenedDuration: fmtDur(s.duration_secs),
+          timestamp: rel(s.started_at),
+          isActive: s.ended_at === null,
+        })) as unknown as HistoryEntry[],
+      );
+    }
+    load();
+    const iv = setInterval(load, 30_000);
+    return () => {
+      active = false;
+      clearInterval(iv);
+    };
+  }, [user]);
 
   useEffect(() => {
     if (!user) {

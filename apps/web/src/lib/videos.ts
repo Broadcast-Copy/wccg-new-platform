@@ -21,6 +21,8 @@ export interface VideoRecord {
   id: string;
   user_id: string;
   creator_name: string | null;
+  /** Optional grouping key for the wall (e.g. "Angela Yee", "ABC News"). Falls back to creator_name. */
+  program: string | null;
   title: string;
   description: string | null;
   storage_path: string | null;
@@ -40,10 +42,17 @@ export interface VideoRecord {
   created_at: string;
 }
 
-const SELECT_COLS =
-  "id,user_id,creator_name,title,description,storage_path,video_url,youtube_id,youtube_url,thumbnail_url,duration_seconds,category,rating,tags,visibility,status,views,likes,published_at,created_at";
+export const SELECT_COLS =
+  "id,user_id,creator_name,program,title,description,storage_path,video_url,youtube_id,youtube_url,thumbnail_url,duration_seconds,category,rating,tags,visibility,status,views,likes,published_at,created_at";
 
-export async function browseVideos(opts: { q?: string; category?: string; limit?: number } = {}): Promise<VideoRecord[]> {
+/** The program a video belongs to on the wall: explicit `program`, else creator, else station. */
+export function programOf(v: Pick<VideoRecord, "program" | "creator_name">): string {
+  return (v.program?.trim() || v.creator_name?.trim() || "WCCG 104.5 FM");
+}
+
+export async function browseVideos(
+  opts: { q?: string; category?: string; program?: string; limit?: number } = {},
+): Promise<VideoRecord[]> {
   const supabase = createClient();
   let query = supabase
     .from("videos")
@@ -51,14 +60,21 @@ export async function browseVideos(opts: { q?: string; category?: string; limit?
     .eq("status", "published")
     .eq("visibility", "public")
     .order("published_at", { ascending: false })
-    .limit(Math.min(Math.max(opts.limit ?? 48, 1), 100));
+    .limit(Math.min(Math.max(opts.limit ?? 200, 1), 500));
   if (opts.category) query = query.eq("category", opts.category);
   if (opts.q) {
     const v = opts.q.replace(/[,()]/g, " ");
-    query = query.or(`title.ilike.%${v}%,creator_name.ilike.%${v}%,description.ilike.%${v}%`);
+    query = query.or(`title.ilike.%${v}%,creator_name.ilike.%${v}%,program.ilike.%${v}%,description.ilike.%${v}%`);
   }
   const { data } = await query;
-  return (data ?? []) as VideoRecord[];
+  let rows = (data ?? []) as VideoRecord[];
+  // `program` may be null (older rows) — match on the effective program client-side
+  // so "WCCG 104.5 FM" (the creator fallback) still filters correctly.
+  if (opts.program) {
+    const target = opts.program.toLowerCase();
+    rows = rows.filter((v) => programOf(v).toLowerCase() === target);
+  }
+  return rows;
 }
 
 export async function getVideo(id: string): Promise<VideoRecord | null> {
@@ -90,6 +106,159 @@ export async function relatedVideos(excludeId: string, category: string | null, 
   if (category) query = query.eq("category", category);
   const { data } = await query;
   return (data ?? []) as VideoRecord[];
+}
+
+// ─── Netflix-style browse helpers ───────────────────────────────────────────
+
+/** A user's saved playback position for one video. */
+export interface VideoProgress {
+  video_id: string;
+  position_seconds: number;
+  duration_seconds: number | null;
+  completed: boolean;
+  updated_at: string;
+}
+
+/** A "continue watching" entry: the video plus the viewer's position in it. */
+export interface ContinueItem {
+  video: VideoRecord;
+  position_seconds: number;
+  duration_seconds: number | null;
+}
+
+/**
+ * Most-watched published videos, by `views` desc (the Top 10 row).
+ * Falls back to recency for ties via a secondary order.
+ */
+export async function topVideos(limit = 10): Promise<VideoRecord[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("videos")
+    .select(SELECT_COLS)
+    .eq("status", "published")
+    .eq("visibility", "public")
+    .order("views", { ascending: false })
+    .order("published_at", { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 50));
+  return (data ?? []) as VideoRecord[];
+}
+
+/**
+ * The current user's in-progress videos for the Continue Watching row:
+ * `video_progress` rows that aren't completed and are past the 5s threshold,
+ * newest first, joined to their (still-published, public) video.
+ * Returns [] when signed out. `program` lets us scope to one program's view.
+ */
+export async function continueWatching(
+  userId: string,
+  opts: { limit?: number; program?: string } = {},
+): Promise<ContinueItem[]> {
+  const supabase = createClient();
+  const { data: prog } = await supabase
+    .from("video_progress")
+    .select("video_id,position_seconds,duration_seconds,completed,updated_at")
+    .eq("user_id", userId)
+    .eq("completed", false)
+    .gt("position_seconds", 5)
+    .order("updated_at", { ascending: false })
+    .limit(Math.min(Math.max(opts.limit ?? 20, 1), 50));
+  const rows = (prog ?? []) as VideoProgress[];
+  if (rows.length === 0) return [];
+
+  // Fetch the referenced videos in one round-trip, then re-order to match progress.
+  const ids = rows.map((r) => r.video_id);
+  const { data: vids } = await supabase
+    .from("videos")
+    .select(SELECT_COLS)
+    .in("id", ids)
+    .eq("status", "published")
+    .eq("visibility", "public");
+  const byId = new Map<string, VideoRecord>(
+    ((vids ?? []) as VideoRecord[]).map((v) => [v.id, v] as const),
+  );
+
+  const items: ContinueItem[] = [];
+  for (const r of rows) {
+    const video = byId.get(r.video_id);
+    if (!video) continue; // unpublished/removed since last watched
+    if (opts.program && programOf(video).toLowerCase() !== opts.program.toLowerCase()) continue;
+    items.push({ video, position_seconds: r.position_seconds, duration_seconds: r.duration_seconds });
+  }
+  return items;
+}
+
+/** One program row on the wall: its effective name + its published videos. */
+export interface ProgramRow {
+  program: string;
+  videos: VideoRecord[];
+}
+
+/**
+ * Group published videos into one row per program (`programOf`), newest-active
+ * first. Pass an already-loaded list to avoid a second fetch (the wall loads
+ * everything once). Empty programs never appear.
+ */
+export function groupByProgram(videos: VideoRecord[]): ProgramRow[] {
+  const map = new Map<string, VideoRecord[]>();
+  for (const v of videos) {
+    const key = programOf(v);
+    const bucket = map.get(key);
+    if (bucket) bucket.push(v);
+    else map.set(key, [v]);
+  }
+  // Insertion order follows the input order (videos arrive newest-first), so the
+  // most recently-published program leads. Each row keeps that newest-first order.
+  return Array.from(map.entries()).map(([program, vids]) => ({ program, videos: vids }));
+}
+
+/** Fetch + group in one call when the caller doesn't already have the list. */
+export async function programsWithVideos(): Promise<ProgramRow[]> {
+  const videos = await browseVideos({ limit: 500 });
+  return groupByProgram(videos);
+}
+
+/** Read the current user's saved progress for one video (null if none / signed out). */
+export async function getVideoProgress(userId: string, videoId: string): Promise<VideoProgress | null> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("video_progress")
+    .select("video_id,position_seconds,duration_seconds,completed,updated_at")
+    .eq("user_id", userId)
+    .eq("video_id", videoId)
+    .maybeSingle();
+  return (data as VideoProgress) ?? null;
+}
+
+/**
+ * Upsert the current user's playback position for a video. `completed` is derived
+ * (≥95% of duration). Keyed on (user_id, video_id) so it edits one row per video.
+ */
+export async function saveVideoProgress(args: {
+  userId: string;
+  videoId: string;
+  positionSeconds: number;
+  durationSeconds: number | null;
+}): Promise<void> {
+  const { userId, videoId, positionSeconds, durationSeconds } = args;
+  const pos = Math.max(0, Math.round(positionSeconds));
+  const dur = durationSeconds && durationSeconds > 0 ? Math.round(durationSeconds) : null;
+  const completed = dur != null && pos >= dur * 0.95;
+  try {
+    const supabase = createClient();
+    await supabase.from("video_progress").upsert(
+      {
+        user_id: userId,
+        video_id: videoId,
+        position_seconds: pos,
+        duration_seconds: dur,
+        completed,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,video_id" },
+    );
+  } catch {
+    /* progress saving is best-effort */
+  }
 }
 
 // ─── Display helpers ───────────────────────────────────────────────────────
