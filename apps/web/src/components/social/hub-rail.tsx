@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { MessageButton } from "@/components/messaging/message-button";
 
 // ---------------------------------------------------------------------------
 // Shared types
@@ -101,18 +102,30 @@ export function HubMembersCard({ hubType, accentColor, supabase }: RailProps) {
       ) : (
         <div className="flex flex-wrap gap-2">
           {members.map((m) => (
-            <div
-              key={m.id}
-              title={m.name}
-              className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border text-[11px] font-semibold"
-              style={{ backgroundColor: `${accentColor}1a`, color: accentColor }}
-            >
-              {m.avatar ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={m.avatar} alt={m.name} className="h-full w-full object-cover" />
-              ) : (
-                m.name.slice(0, 2).toUpperCase()
-              )}
+            <div key={m.id} className="group relative h-9 w-9">
+              <div
+                title={m.name}
+                className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border text-[11px] font-semibold"
+                style={{ backgroundColor: `${accentColor}1a`, color: accentColor }}
+              >
+                {m.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={m.avatar} alt={m.name} className="h-full w-full object-cover" />
+                ) : (
+                  m.name.slice(0, 2).toUpperCase()
+                )}
+              </div>
+              {/* DM this member — revealed on hover/focus so the avatar grid
+                  stays clean. Hidden by MessageButton itself if m is me. */}
+              <div className="absolute -bottom-1 -right-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+                <MessageButton
+                  recipientId={m.id}
+                  recipientName={m.name}
+                  variant="icon"
+                  accentColor={accentColor}
+                  className="h-5 w-5 shadow-sm"
+                />
+              </div>
             </div>
           ))}
           {count > members.length && (

@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { useAuth } from "@/hooks/use-auth";
-import { Heart, ChevronDown, Link2, LogIn, Sparkles, LayoutList, Clapperboard } from "lucide-react";
+import { useUserRoles } from "@/hooks/use-user-roles";
+import { Heart, ChevronDown, Link2, LogIn, Lock, Sparkles, LayoutList, Clapperboard } from "lucide-react";
 import Link from "next/link";
 import { HubReels } from "@/components/social/hub-reels";
 
@@ -107,6 +108,13 @@ const PAGE_SIZE = 20;
 export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFeedProps) {
   const { supabase } = useSupabase();
   const { user } = useAuth();
+  const { hasRealRole } = useUserRoles();
+  // Listeners may post in the Listener hub; the Creator/Vendor hubs are
+  // post-restricted to creators/vendors (admins always pass via hasRealRole).
+  const canPost =
+    hubType === "listener" ||
+    (hubType === "creator" && hasRealRole("content_creator")) ||
+    (hubType === "vendor" && hasRealRole("vendor"));
 
   // Feed vs. Reels (TikTok-style) view. Defaults to the post feed; kept in
   // component state so switching tabs doesn't lose the loaded post list.
@@ -313,8 +321,9 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
         <HubReels accentColor={accentColor} />
       ) : (
       <>
-      {/* ---- Composer ---- */}
+      {/* ---- Composer (role-gated: listeners can't post in creator/vendor hubs) ---- */}
       {user ? (
+        canPost ? (
         <div
           className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md"
         >
@@ -358,6 +367,32 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
             </div>
           </div>
         </div>
+        ) : (
+          <div
+            className="rounded-2xl border border-border p-6 text-center"
+            style={{ background: `linear-gradient(135deg, ${accentColor}14, transparent)` }}
+          >
+            <div
+              className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full"
+              style={{ backgroundColor: `${accentColor}1f`, color: accentColor }}
+            >
+              <Lock className="h-5 w-5" />
+            </div>
+            <p className="mb-1 text-sm font-semibold text-foreground">
+              Only {hubType === "creator" ? "creators" : "vendors"} can post here
+            </p>
+            <p className="mb-3 text-xs text-muted-foreground">
+              You can read &amp; react — become a {hubType === "creator" ? "creator" : "vendor"} to post and join the conversation.
+            </p>
+            <Link
+              href={hubType === "creator" ? "/creators" : "/become-vendor"}
+              className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold text-white shadow-sm transition-transform hover:scale-105"
+              style={{ backgroundColor: accentColor }}
+            >
+              Become a {hubType === "creator" ? "Creator" : "Vendor"}
+            </Link>
+          </div>
+        )
       ) : (
         <div
           className="rounded-2xl border border-border p-6 text-center"

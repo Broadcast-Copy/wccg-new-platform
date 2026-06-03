@@ -1004,7 +1004,7 @@ function DukeOffseasonCard({
       {/* Minimized bar — always visible */}
       <button
         onClick={() => setExpanded((prev) => !prev)}
-        className={`w-full text-left relative overflow-hidden bg-gradient-to-r from-[#003087] via-[#001a4d] to-[#0a0a1a] border border-[#003087]/40 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-5 hover:from-[#003087]/90 transition-all ${
+        className={`w-full text-left relative overflow-hidden bg-gradient-to-r from-[#eaf0fd] via-[#dde7fb] to-[#cdddf6] dark:from-[#003087] dark:via-[#001a4d] dark:to-[#0a0a1a] border border-[#003087]/20 dark:border-[#003087]/40 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-5 hover:brightness-[1.02] dark:hover:from-[#003087]/90 transition-all ${
           expanded ? "rounded-t-2xl border-b-0" : "rounded-2xl"
         }`}
       >
@@ -1024,8 +1024,8 @@ function DukeOffseasonCard({
         {/* Title + rotating text */}
         <div className="relative z-10 flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <h2 className="text-sm sm:text-base font-black text-white tracking-tight">DUKE SPORTS</h2>
-            <span className="text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-white/50 font-bold uppercase tracking-wider border border-white/10">
+            <h2 className="text-sm sm:text-base font-black text-[#001a4d] dark:text-white tracking-tight">DUKE SPORTS</h2>
+            <span className="text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded-full bg-[#003087]/10 text-[#003087]/70 border border-[#003087]/20 dark:bg-white/10 dark:text-white/50 dark:border-white/10 font-bold uppercase tracking-wider">
               Offseason
             </span>
             {allMessages[msgIndex]?.sport && (
@@ -1045,7 +1045,7 @@ function DukeOffseasonCard({
           {/* Rotating message with fade */}
           <div className="h-5 overflow-hidden">
             <p
-              className={`text-xs sm:text-sm text-white/50 truncate transition-opacity duration-500 ${
+              className={`text-xs sm:text-sm text-[#003087]/70 dark:text-white/50 truncate transition-opacity duration-500 ${
                 fade ? "opacity-100" : "opacity-0"
               }`}
             >
@@ -1070,7 +1070,7 @@ function DukeOffseasonCard({
         )}
 
         {/* Expand/collapse */}
-        <span className="relative z-10 text-white/40 text-[10px] shrink-0 flex items-center gap-1">
+        <span className="relative z-10 text-[#003087]/60 dark:text-white/40 text-[10px] shrink-0 flex items-center gap-1">
           {expanded ? "Minimize" : "Expand"} {expanded ? "▲" : "▼"}
         </span>
       </button>

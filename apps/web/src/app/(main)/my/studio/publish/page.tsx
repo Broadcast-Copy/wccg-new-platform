@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { parseYouTubeId, VIDEO_RATINGS, type VideoRating } from "@/lib/videos";
 
-const CATEGORIES = ["Studio", "Community", "Music", "Sports", "Shows", "Events", "Other"];
+const CATEGORIES = ["Sports", "News", "Podcasts", "Music", "Shows", "Talk", "Comedy", "Gospel", "Community", "Studio", "Events", "Other"];
 
 export default function PublishVideoPage() {
   const router = useRouter();

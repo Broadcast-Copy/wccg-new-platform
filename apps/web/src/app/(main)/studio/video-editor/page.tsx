@@ -2842,7 +2842,7 @@ export default function VideoEditorPage() {
   );
 }
 
-const PUBLISH_CATEGORIES = ["Studio", "Community", "Music", "Sports", "Shows", "Events", "Other"];
+const PUBLISH_CATEGORIES = ["Sports", "News", "Podcasts", "Music", "Shows", "Talk", "Comedy", "Gospel", "Community", "Studio", "Events", "Other"];
 
 function PublishToWallDialog({ item, onClose }: { item: MediaItem; onClose: () => void }) {
   const [title, setTitle] = useState(item.name.replace(/\.[^.]+$/, ""));

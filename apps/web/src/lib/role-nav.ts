@@ -36,6 +36,7 @@ import {
   Wand2,
   Frame,
   BookOpen,
+  MessageCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -50,6 +51,7 @@ export interface RoleNavItem {
 export const listenerNav: RoleNavItem[] = [
   { href: "/my", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/listeners", label: "Listener Hub", icon: Users },
+  { href: "/my/messages", label: "Messages", icon: MessageCircle },
   { href: "/my/favorites", label: "Favorites", icon: Heart },
   { href: "/my/points", label: "Points & Rewards", icon: Star },
   { href: "/my/tickets", label: "My Tickets", icon: Ticket },
@@ -62,6 +64,7 @@ export const listenerNav: RoleNavItem[] = [
 export const creatorNav: RoleNavItem[] = [
   { href: "/my", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/creators", label: "Creator Hub", icon: Palette },
+  { href: "/my/messages", label: "Messages", icon: MessageCircle },
   { href: "/my/studio", label: "Broadcast Studio", icon: Mic },
   { href: "/my/studio/publish", label: "Publish Video", icon: Film },
   { href: "/videos", label: "Video Wall", icon: Film },
@@ -79,6 +82,7 @@ export const creatorNav: RoleNavItem[] = [
 export const vendorNav: RoleNavItem[] = [
   { href: "/my", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/vendors/hub", label: "Vendor Hub", icon: Store },
+  { href: "/my/messages", label: "Messages", icon: MessageCircle },
   { href: "/my/vendor/storefront", label: "Storefront Manager", icon: Store },
   { href: "/my/vendor/orders", label: "Orders", icon: Receipt },
   { href: "/my/vendor/products", label: "Products", icon: Package },
