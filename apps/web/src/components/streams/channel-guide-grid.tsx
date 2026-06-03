@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Radio, Sparkles, Lock, Unlock, Megaphone } from "lucide-react";
 import { ALL_SHOWS } from "@/data/shows";
 import type { ShowData } from "@/data/shows";
+import { getHostsByShowId } from "@/data/hosts";
 import { parseTime12h } from "@/lib/time-utils";
 
 // ---------------------------------------------------------------------------
@@ -90,15 +91,14 @@ const CHANNEL_STATUS: Record<
   stream_mixsquad: { status: "unlocked", comingSoon: "Coming 2026" },
 };
 
-// Default show image for WCCG Live Now section
-const DEFAULT_SHOW_IMAGE = "/images/shows/streetz-morning-takeover.png";
-
 // ---------------------------------------------------------------------------
 // Schedule-based current show detection
 // ---------------------------------------------------------------------------
 
 function getCurrentShowForStream(streamId: string): ShowData | null {
-  const now = new Date();
+  // Station schedule is US Eastern — resolve "now" in America/New_York so the
+  // live show is correct regardless of the viewer's timezone.
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
   const dayIndex = now.getDay();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -176,7 +176,8 @@ function ChannelTile({ stream }: { stream: Stream }) {
   const showImage =
     (currentShow?.showImageUrl || currentShow?.imageUrl) ||
     stream.metadata?.currentShowImage ||
-    (isLive ? DEFAULT_SHOW_IMAGE : null);
+    null;
+  const currentShowHosts = currentShow ? getHostsByShowId(currentShow.id) : [];
 
   const handleTogglePlay = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -231,6 +232,50 @@ function ChannelTile({ stream }: { stream: Stream }) {
             <p className="text-xs sm:text-sm text-amber-600 dark:text-amber-400 font-medium">
               {subtitle}
             </p>
+          )}
+
+          {/* Now live — current show + hosts */}
+          {currentShow && (
+            <div className="pt-1">
+              <div className="flex items-center gap-2">
+                {currentShowHosts.length > 0 && (
+                  <div className="flex -space-x-1.5">
+                    {currentShowHosts.slice(0, 3).map((host) =>
+                      host.imageUrl ? (
+                        <Image
+                          key={host.id}
+                          src={host.imageUrl}
+                          alt={host.name}
+                          width={20}
+                          height={20}
+                          className="h-5 w-5 rounded-full ring-1 ring-border object-cover"
+                        />
+                      ) : (
+                        <span
+                          key={host.id}
+                          className="flex h-5 w-5 items-center justify-center rounded-full ring-1 ring-border bg-foreground/10 text-[9px] font-bold text-foreground"
+                        >
+                          {host.name.charAt(0)}
+                        </span>
+                      ),
+                    )}
+                  </div>
+                )}
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <span className="h-1.5 w-1.5 rounded-full bg-red-600 animate-pulse" />
+                  On air now
+                </span>
+              </div>
+              <Link
+                href={`/shows/${currentShow.id}`}
+                className="block text-sm font-bold text-foreground hover:text-[#74ddc7] transition-colors leading-tight"
+              >
+                {currentShow.name}
+              </Link>
+              {currentShow.hostNames && (
+                <p className="text-xs text-muted-foreground">with {currentShow.hostNames}</p>
+              )}
+            </div>
           )}
 
           {artists && (

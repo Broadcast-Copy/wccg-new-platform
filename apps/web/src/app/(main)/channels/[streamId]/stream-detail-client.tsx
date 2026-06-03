@@ -134,7 +134,9 @@ function getShowImage(show: ShowData): string | null {
 
 /** Determine if a show is currently airing based on its timeSlot and days */
 function getCurrentShow(shows: ShowData[]): ShowData | null {
-  const now = new Date();
+  // Station schedule is US Eastern — resolve "now" in America/New_York so the
+  // live show is correct regardless of the viewer's timezone.
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
   const dayIndex = now.getDay(); // 0=Sun, 1=Mon, ... 6=Sat
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
@@ -393,6 +395,7 @@ export default function StreamDetailPage() {
   // Determine the currently airing show (if any)
   const currentShow = useMemo(() => getCurrentShow(channelShows), [channelShows]);
   const currentShowImage = currentShow ? getShowImage(currentShow) : null;
+  const currentShowHosts = currentShow ? getHostsByShowId(currentShow.id) : [];
 
   // Filter shows by day
   const filteredShows = useMemo(() => {
@@ -612,6 +615,54 @@ export default function StreamDetailPage() {
                 <p className="text-base text-white/70 max-w-2xl leading-relaxed">
                   {stream.description}
                 </p>
+              )}
+
+              {/* On air now card */}
+              {currentShow && (
+                <div className="rounded-xl bg-black/25 ring-1 ring-white/15 backdrop-blur-sm p-3 max-w-xl text-white">
+                  <div className="flex items-center gap-3">
+                    {currentShowHosts.length > 0 && (
+                      <div className="flex -space-x-2">
+                        {currentShowHosts.slice(0, 3).map((host) =>
+                          host.imageUrl ? (
+                            <Image
+                              key={host.id}
+                              src={host.imageUrl}
+                              alt={host.name}
+                              width={36}
+                              height={36}
+                              className="h-9 w-9 rounded-full ring-2 ring-white/30 object-cover"
+                            />
+                          ) : (
+                            <span
+                              key={host.id}
+                              className="flex h-9 w-9 items-center justify-center rounded-full ring-2 ring-white/30 bg-white/20 text-xs font-bold text-white"
+                            >
+                              {host.name.charAt(0)}
+                            </span>
+                          ),
+                        )}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-white/70">
+                        On air now
+                      </p>
+                      <p className="text-base font-bold leading-tight text-white">
+                        {currentShow.name}
+                      </p>
+                      {currentShow.hostNames && (
+                        <p className="text-sm text-white/70">with {currentShow.hostNames}</p>
+                      )}
+                    </div>
+                  </div>
+                  <Link
+                    href={`/shows/${currentShow.id}`}
+                    className="mt-2 inline-block text-sm font-semibold text-white hover:underline"
+                  >
+                    View Show &rarr;
+                  </Link>
+                </div>
               )}
 
               {/* Actions */}

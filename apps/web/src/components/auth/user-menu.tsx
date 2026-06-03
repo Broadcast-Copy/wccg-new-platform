@@ -23,7 +23,6 @@ import { useRouter } from "next/navigation";
 import {
   BarChart3,
   Briefcase,
-  Calendar,
   CalendarDays,
   Clapperboard,
   Clock,
@@ -31,32 +30,23 @@ import {
   Eye,
   FolderOpen,
   Gift,
-  Heart,
-  LayoutDashboard,
   LogOut,
-  MapPin,
   Megaphone,
   Mic,
   Palette,
   Radio,
   Receipt,
-  RotateCcw,
   Settings,
   Shield,
-  ShoppingBag,
-  Star,
   Store,
-  Ticket,
   Lock,
   Package,
-  Music,
-  Award,
   Users,
-  PenLine,
   Globe,
   Mail,
 } from "lucide-react";
 import { toast } from "sonner";
+import { navForMode } from "@/lib/role-nav";
 
 // ---------------------------------------------------------------------------
 // Role-specific menu items
@@ -472,202 +462,20 @@ export function UserMenu() {
                 </>
               )}
             </>
-          ) : currentActiveMode === "listener" ? (
-            <>
-              <DropdownMenuItem asChild>
-                <Link href="/listeners" className="relative">
-                  <Users className="mr-2 h-4 w-4" />
-                  Listener Hub
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#14b8a6] text-[9px] font-bold text-white px-1">
-                    New
-                  </span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/favorites">
-                  <Heart className="mr-2 h-4 w-4" />
-                  Favorites
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/points" className="relative">
-                  <Star className="mr-2 h-4 w-4" />
-                  Points & Rewards
-                  {adminNotifications.points > 0 && (
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#14b8a6] text-[9px] font-bold text-white px-1">
-                      {adminNotifications.points >= 100000 ? `${Math.floor(adminNotifications.points / 1000)}k` : adminNotifications.points.toLocaleString()}
-                    </span>
-                  )}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/tickets">
-                  <Ticket className="mr-2 h-4 w-4" />
-                  My Tickets
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/perks">
-                  <Gift className="mr-2 h-4 w-4" />
-                  My Perks
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/orders">
-                  <ShoppingBag className="mr-2 h-4 w-4" />
-                  My Orders
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/history">
-                  <Clock className="mr-2 h-4 w-4" />
-                  Listening History
-                </Link>
-              </DropdownMenuItem>
-            </>
-          ) : currentActiveMode === "creator" ? (
-            <>
-              <DropdownMenuItem asChild>
-                <Link href="/creators" className="relative">
-                  <Palette className="mr-2 h-4 w-4" />
-                  Creator Hub
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#7401df] text-[9px] font-bold text-white px-1">
-                    New
-                  </span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/studio">
-                  <Mic className="mr-2 h-4 w-4" />
-                  Broadcast Studio
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/mixes">
-                  <FolderOpen className="mr-2 h-4 w-4" />
-                  Media Manager
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/blog">
-                  <PenLine className="mr-2 h-4 w-4" />
-                  Blog Manager
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/events">
-                  <CalendarDays className="mr-2 h-4 w-4" />
-                  Events Manager
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/podcast-rss">
-                  <Radio className="mr-2 h-4 w-4" />
-                  Podcast RSS
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/vendor/media">
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  Creator Marketing
-                </Link>
-              </DropdownMenuItem>
-            </>
           ) : (
-            <>
-              <DropdownMenuItem asChild>
-                <Link href="/vendors/hub" className="relative">
-                  <Store className="mr-2 h-4 w-4" />
-                  Vendor Hub
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#f59e0b] text-[9px] font-bold text-white px-1">
-                    New
-                  </span>
+            navForMode(currentActiveMode).map((item) => (
+              <DropdownMenuItem key={item.href} asChild>
+                <Link href={item.href}>
+                  <item.icon className="mr-2 h-4 w-4" />
+                  {item.label}
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/vendor/orders">
-                  <Receipt className="mr-2 h-4 w-4" />
-                  Orders
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/vendor/storefront">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Storefront Manager
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/vendor/products">
-                  <Package className="mr-2 h-4 w-4" />
-                  Product Manager
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/vendor/bookings" className="relative">
-                  <CalendarDays className="mr-2 h-4 w-4" />
-                  Bookings
-                  {adminNotifications.bookings > 0 && (
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#f59e0b] text-[9px] font-bold text-white px-1">
-                      {adminNotifications.bookings}
-                    </span>
-                  )}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/vendor/events">
-                  <CalendarDays className="mr-2 h-4 w-4" />
-                  Events Manager
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/vendor/customers">
-                  <Users className="mr-2 h-4 w-4" />
-                  Customer Manager
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/vendor/payouts">
-                  <DollarSign className="mr-2 h-4 w-4" />
-                  Payouts
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/vendor/shipping">
-                  <Package className="mr-2 h-4 w-4" />
-                  Shipping
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/vendor/tracking">
-                  <MapPin className="mr-2 h-4 w-4" />
-                  Tracking
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/vendor/analytics">
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  Analytics
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/my/vendor/media">
-                  <Megaphone className="mr-2 h-4 w-4" />
-                  Marketing
-                </Link>
-              </DropdownMenuItem>
-            </>
+            ))
           )}
         </DropdownMenuGroup>
 
         <DropdownMenuSeparator />
 
-        {/* Settings */}
-        <DropdownMenuItem asChild>
-          <Link href="/my/settings">
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
-          </Link>
-        </DropdownMenuItem>
         <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
           Sign Out
