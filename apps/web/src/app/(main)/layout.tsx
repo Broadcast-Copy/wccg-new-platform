@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from "react";
 import { UserMenu } from "@/components/auth/user-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { MobileNav } from "@/components/navigation/mobile-nav";
+import { AppDock } from "@/components/navigation/app-dock";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ThemeLogo } from "@/components/theme-logo";
 import { AppImage as Image } from "@/components/ui/app-image";
@@ -63,15 +64,6 @@ const mobileNavLinks = [
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
   { href: "/community", label: "Directory", icon: MapPin },
   { href: "/contact", label: "Connect", icon: Mail },
-];
-
-// iHeartRadio-style bottom tab bar items
-const bottomTabs = [
-  { href: "/", label: "Home", icon: Home, badgeKey: null as string | null },
-  { href: "/events", label: "Events", icon: CalendarDays, badgeKey: null as string | null },
-  { href: "/discover", label: "Discover", icon: Compass, badgeKey: null as string | null },
-  { href: "/marketplace", label: "Market", icon: ShoppingBag, badgeKey: "shop" as string | null },
-  { href: "/community", label: "Directory", icon: MapPin, badgeKey: null as string | null },
 ];
 
 function NavLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
@@ -511,50 +503,8 @@ export default function MainLayout({
       {/* Still Listening? modal — after 1hr of playback inactivity */}
       <StillListeningModal />
 
-      {/* Bottom Tab Bar — iHeartRadio-inspired, fixed (hidden on studio editor pages) */}
-      <nav className={`fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-xl ${
-        pathname.startsWith("/studio/video-editor") || pathname.startsWith("/studio/podcast") || pathname.startsWith("/studio/audio-editor")
-          ? "hidden"
-          : ""
-      }`} style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
-        <div className="flex items-center justify-around h-14 max-w-lg mx-auto">
-          {bottomTabs.map((tab) => {
-            const isActive =
-              tab.href === "/"
-                ? pathname === "/"
-                : pathname === tab.href || pathname.startsWith(tab.href + "/");
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className={`relative flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-all ${
-                  isActive
-                    ? "text-[#74ddc7]"
-                    : "text-muted-foreground/70 hover:text-foreground/60"
-                }`}
-              >
-                <div className="relative">
-                  <tab.icon className={`h-5 w-5 ${isActive ? "drop-shadow-[0_0_6px_rgba(116,221,199,0.5)]" : ""}`} />
-                  {/* Live dot on Shows */}
-                  {tab.badgeKey === "shows" && tabBadges.shows && (
-                    <span className="absolute -top-1 -right-1.5 flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
-                    </span>
-                  )}
-                  {/* New count on Shop */}
-                  {tab.badgeKey === "shop" && tabBadges.shop > 0 && (
-                    <span className="absolute -top-1.5 -right-2.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white px-0.5">
-                      {tabBadges.shop > 99 ? "99+" : tabBadges.shop}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] font-semibold">{tab.label}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
+      {/* Bottom App Dock — customizable, minimizable, dark (hidden on studio editor pages) */}
+      <AppDock liveShows={tabBadges.shows} newProducts={tabBadges.shop} />
     </div>
     </SpotCartProvider>
   );
