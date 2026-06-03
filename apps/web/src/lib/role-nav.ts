@@ -66,7 +66,6 @@ export const creatorNav: RoleNavItem[] = [
   { href: "/creators", label: "Creator Hub", icon: Palette },
   { href: "/my/messages", label: "Messages", icon: MessageCircle },
   { href: "/my/studio", label: "Broadcast Studio", icon: Mic },
-  { href: "/my/studio/publish", label: "Publish Video", icon: Film },
   { href: "/videos", label: "Video Wall", icon: Film },
   { href: "/studio/image-generator", label: "Image Generator", icon: Wand2 },
   { href: "/studio/hyperframes", label: "Hyperframes", icon: Frame },
