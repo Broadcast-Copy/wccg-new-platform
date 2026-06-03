@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles, type UserRole } from "@/hooks/use-user-roles";
 import { useRouter } from "next/navigation";
 import {
-  Menu, X, User, Lock,
+  Menu, X, User, Lock, Shield,
   type LucideIcon,
 } from "lucide-react";
 import { listenerNav, creatorNav, vendorNav, type RoleNavItem } from "@/lib/role-nav";
@@ -88,6 +88,7 @@ function SidebarContent({
   pathname: string;
 }) {
   const { user } = useAuth();
+  const { isRealAdmin } = useUserRoles();
   const items = hubType === "listener" ? LISTENER_ITEMS : hubType === "creator" ? CREATOR_ITEMS : VENDOR_ITEMS;
   const hubLabel = hubType === "listener" ? "LISTENER" : hubType === "creator" ? "CREATOR" : "VENDOR";
 
@@ -123,6 +124,18 @@ function SidebarContent({
           <NavLink key={item.href} item={item} pathname={pathname} color={color} />
         ))}
       </nav>
+
+      {/* Admin link — mirrors the /my dashboard so the left menu stays
+          consistent when navigating between hub pages and /my/* pages. */}
+      {isRealAdmin && (
+        <div className="mt-auto border-t border-border p-2">
+          <NavLink
+            item={{ href: "/my/admin", label: "Station Control", icon: Shield, exact: true }}
+            pathname={pathname}
+            color="#dc2626"
+          />
+        </div>
+      )}
     </>
   );
 }
