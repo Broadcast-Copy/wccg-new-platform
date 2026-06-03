@@ -144,7 +144,8 @@ export function useListeningTracker(isListening: boolean) {
       albumArt: nowPlaying.albumArt ?? null,
     });
     if (dbSessionIdRef.current) {
-      createClient()
+      const supabase = createClient();
+      supabase
         .from("listening_sessions")
         .update({
           title: nowPlaying.title || "Unknown Track",
@@ -152,6 +153,23 @@ export function useListeningTracker(isListening: boolean) {
         })
         .eq("id", dbSessionIdRef.current)
         .then(() => {}, () => {});
+      // Per-session song log — one row per song change. Powers the "songs you
+      // heard + points each earned" breakdown when a session is expanded on
+      // the dashboard. (This effect only fires when the track changes, so songs
+      // aren't duplicated.) Points are derived per-song from airtime at read time.
+      if (userIdRef.current) {
+        supabase
+          .from("session_tracks")
+          .insert({
+            session_id: dbSessionIdRef.current,
+            user_id: userIdRef.current,
+            title: nowPlaying.title || "Unknown Track",
+            artist: nowPlaying.artist || "WCCG 104.5 FM",
+            album_art: nowPlaying.albumArt ?? null,
+            played_at: new Date().toISOString(),
+          })
+          .then(() => {}, () => {});
+      }
     }
   }, [nowPlaying?.title, nowPlaying?.artist]); // eslint-disable-line react-hooks/exhaustive-deps
 

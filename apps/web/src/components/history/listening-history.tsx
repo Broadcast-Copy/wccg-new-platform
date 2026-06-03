@@ -64,6 +64,8 @@ interface HistoryEntry {
   listenedDuration: string; // e.g. "2h 15m"
   totalDuration: string | null;
   listenedMinutes: number;
+  /** Raw listened seconds — used for accurate per-song point math. */
+  listenedSeconds: number;
   totalMinutes: number | null;
   timestamp: string; // e.g. "8:00 AM" or "Feb 14, 8:00 PM"
   date: string; // YYYY-MM-DD
@@ -245,6 +247,7 @@ function sessionRowToEntry(row: ListeningSessionRow): HistoryEntry | null {
     listenedDuration: formatDurationFromSeconds(durationSeconds),
     totalDuration: null,
     listenedMinutes: minutes,
+    listenedSeconds: durationSeconds,
     totalMinutes: null,
     timestamp: formatTimestamp(started),
     date: toDateString(started),
@@ -253,6 +256,66 @@ function sessionRowToEntry(row: ListeningSessionRow): HistoryEntry | null {
     streamName,
     startedAtMs: started.getTime(),
   };
+}
+
+// ─── Per-session song log (what you heard + points each earned) ─────────
+
+/** 1 listening point is earned per 90 seconds (mirror of use-listening-points). */
+const POINTS_INTERVAL_SECONDS = 90;
+
+interface SessionTrack {
+  id: string;
+  title: string;
+  artist: string;
+  albumArt: string | null;
+  timeLabel: string; // when it started, e.g. "8:14 PM"
+  listenedLabel: string; // how long it was on, e.g. "3m 20s"
+  points: number; // points earned during this song's airtime
+}
+
+/**
+ * Fetch the songs heard during one session and attribute the session's
+ * time-based listening points to each, partitioned by airtime. The per-song
+ * integers sum exactly to floor(sessionSeconds / 90) — the session's listening
+ * points — so the breakdown always reconciles with the session total.
+ */
+async function fetchSessionTracks(
+  sessionId: string,
+  sessionStartMs: number,
+  sessionSeconds: number,
+): Promise<SessionTrack[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("session_tracks")
+    .select("id, title, artist, album_art, played_at")
+    .eq("session_id", sessionId)
+    .order("played_at", { ascending: true });
+  const rows =
+    (data as Array<{ id: string; title: string; artist: string; album_art: string | null; played_at: string }> | null) ??
+    [];
+  if (rows.length === 0) return [];
+
+  const sessionEndMs = sessionStartMs + sessionSeconds * 1000;
+  const pointsAt = (ms: number) =>
+    Math.floor(Math.max(0, (ms - sessionStartMs) / 1000) / POINTS_INTERVAL_SECONDS);
+
+  return rows.map((r, i) => {
+    // The first song also gets credit for the lead-in from the session start.
+    const startMs = i === 0 ? sessionStartMs : Math.max(new Date(r.played_at).getTime(), sessionStartMs);
+    const nextMs = i < rows.length - 1 ? new Date(rows[i + 1].played_at).getTime() : sessionEndMs;
+    const endMs = Math.min(nextMs, sessionEndMs);
+    const points = Math.max(0, pointsAt(endMs) - pointsAt(startMs));
+    const listenedSeconds = Math.max(0, Math.round((endMs - startMs) / 1000));
+    return {
+      id: r.id,
+      title: r.title || "Unknown Track",
+      artist: r.artist || "WCCG 104.5 FM",
+      albumArt: r.album_art,
+      timeLabel: formatTimestamp(new Date(r.played_at)),
+      listenedLabel: formatDurationFromSeconds(listenedSeconds),
+      points,
+    };
+  });
 }
 
 function computeStats(entries: HistoryEntry[]): ListeningStats {
@@ -1091,114 +1154,167 @@ function ActiveSessionItem({
 function HistoryItem({ entry }: { entry: HistoryEntry }) {
   const hasProgress = entry.totalMinutes !== null && entry.totalMinutes > 0;
   const progressPercent = hasProgress
-    ? Math.min(
-        Math.round((entry.listenedMinutes / entry.totalMinutes!) * 100),
-        100
-      )
+    ? Math.min(Math.round((entry.listenedMinutes / entry.totalMinutes!) * 100), 100)
     : null;
   const isComplete = progressPercent === 100;
 
-  return (
-    <Card
-      className={`transition-colors hover:bg-accent/50 ${
-        entry.isActive
-          ? "border-[#74ddc7]/30 bg-[#74ddc7]/5"
-          : ""
-      }`}
-    >
-      <CardContent className="flex items-center gap-4 py-3">
-        {/* Content Type Icon */}
-        <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-            entry.isActive ? "bg-[#74ddc7]/15" : getContentBgColor(entry.type)
-          }`}
-        >
-          {entry.isActive ? (
-            <span className="relative flex h-4 w-4 items-center justify-center">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#74ddc7] opacity-50" />
-              <Radio className="relative h-4 w-4 text-[#74ddc7]" />
-            </span>
-          ) : (
-            <span className={getContentColor(entry.type)}>
-              {getContentIcon(entry.type)}
-            </span>
-          )}
-        </div>
+  // Expandable per-song breakdown — songs heard + points each earned.
+  const [expanded, setExpanded] = useState(false);
+  const [tracks, setTracks] = useState<SessionTrack[] | null>(null);
+  const [loadingTracks, setLoadingTracks] = useState(false);
+  const sessionPoints = Math.floor(entry.listenedSeconds / POINTS_INTERVAL_SECONDS);
 
-        {/* Main Info */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="truncate text-sm font-semibold">
-              {entry.type === "live" ? entry.streamName : entry.title}
-            </h3>
-            {entry.isActive ? (
-              <Badge className="shrink-0 text-[10px] border-[#74ddc7]/30 bg-[#74ddc7]/10 text-[#74ddc7] animate-pulse">
-                LIVE
-              </Badge>
-            ) : (
+  const toggle = useCallback(() => {
+    const next = !expanded;
+    setExpanded(next);
+    // Lazy-load the song log the first time this session is opened.
+    if (next && tracks === null && !loadingTracks) {
+      setLoadingTracks(true);
+      fetchSessionTracks(entry.id, entry.startedAtMs, entry.listenedSeconds)
+        .then((t) => setTracks(t), () => setTracks([]))
+        .finally(() => setLoadingTracks(false));
+    }
+  }, [expanded, tracks, loadingTracks, entry.id, entry.startedAtMs, entry.listenedSeconds]);
+
+  return (
+    <Card className="overflow-hidden transition-colors hover:bg-accent/50">
+      {/* Clickable summary row */}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        onClick={toggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggle();
+          }
+        }}
+        className="cursor-pointer"
+      >
+        <CardContent className="flex items-center gap-4 py-3">
+          {/* Content Type Icon */}
+          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${getContentBgColor(entry.type)}`}>
+            <span className={getContentColor(entry.type)}>{getContentIcon(entry.type)}</span>
+          </div>
+
+          {/* Main Info */}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="truncate text-sm font-semibold">
+                {entry.type === "live" ? entry.streamName : entry.title}
+              </h3>
               <Badge className={`shrink-0 text-[10px] ${getContentBadgeStyle(entry.type)}`}>
                 {entry.type === "live" ? entry.streamName : getContentLabel(entry.type)}
               </Badge>
+            </div>
+
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+              <span>{entry.type === "live" && entry.title !== entry.streamName ? entry.title : entry.artist}</span>
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {entry.listenedDuration}
+                {hasProgress && !isComplete && (
+                  <span className="text-muted-foreground/60"> / {entry.totalDuration}</span>
+                )}
+              </span>
+              <span>{entry.timestamp}</span>
+            </div>
+
+            {/* Progress Bar (for partially listened content) */}
+            {hasProgress && (
+              <div className="mt-2 flex items-center gap-2">
+                <div className="h-1.5 flex-1 rounded-full bg-muted">
+                  <div
+                    className={`h-1.5 rounded-full transition-all ${
+                      isComplete ? "bg-emerald-500" : entry.type === "mix" ? "bg-teal-500" : "bg-purple-500"
+                    }`}
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+                <span className="shrink-0 text-[10px] text-muted-foreground">
+                  {isComplete ? "Completed" : `${progressPercent}%`}
+                </span>
+              </div>
             )}
           </div>
 
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-            <span>{entry.type === "live" && entry.title !== entry.streamName ? entry.title : entry.artist}</span>
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              {entry.listenedDuration}
-              {entry.isActive && (
-                <span className="text-[#74ddc7]"> (listening)</span>
-              )}
-              {hasProgress && !isComplete && (
-                <span className="text-muted-foreground/60">
-                  {" "}
-                  / {entry.totalDuration}
-                </span>
-              )}
-            </span>
-            <span>{entry.timestamp}</span>
-          </div>
-
-          {/* Progress Bar (for partially listened content) */}
-          {hasProgress && (
-            <div className="mt-2 flex items-center gap-2">
-              <div className="h-1.5 flex-1 rounded-full bg-muted">
-                <div
-                  className={`h-1.5 rounded-full transition-all ${
-                    isComplete
-                      ? "bg-emerald-500"
-                      : entry.type === "mix"
-                        ? "bg-teal-500"
-                        : "bg-purple-500"
-                  }`}
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-              <span className="shrink-0 text-[10px] text-muted-foreground">
-                {isComplete ? "Completed" : `${progressPercent}%`}
+          {/* Right: points earned this session + expand chevron */}
+          <div className="flex shrink-0 items-center gap-2">
+            {sessionPoints > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#7401df]/10 px-2 py-0.5 text-[11px] font-bold text-[#7401df]">
+                <Award className="h-3 w-3" /> {sessionPoints}
               </span>
+            )}
+            <Badge variant="outline" className={`hidden text-[10px] sm:inline-flex ${getContentBadgeStyle(entry.type)}`}>
+              {entry.listenedDuration}
+            </Badge>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
+          </div>
+        </CardContent>
+      </div>
+
+      {/* Expanded: songs heard + per-song points */}
+      {expanded && (
+        <div className="border-t border-border bg-muted/20 px-4 py-3">
+          {loadingTracks ? (
+            <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+              <RotateCcw className="h-3.5 w-3.5 animate-spin" /> Loading songs…
+            </div>
+          ) : tracks && tracks.length > 0 ? (
+            <>
+              <div className="mb-2 flex items-center justify-between">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Songs you heard ({tracks.length})
+                </h4>
+                <span className="text-[11px] font-medium text-[#7401df]">
+                  {sessionPoints} pt{sessionPoints === 1 ? "" : "s"} this session
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {tracks.map((t) => (
+                  <div key={t.id} className="flex items-center gap-2.5 rounded-lg border border-border bg-card p-2">
+                    {t.albumArt ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={t.albumArt} alt="" className="h-9 w-9 shrink-0 rounded-md object-cover" />
+                    ) : (
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#74ddc7]/10">
+                        <Music className="h-4 w-4 text-[#74ddc7]" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-medium">{t.title}</p>
+                      <p className="truncate text-[10px] text-muted-foreground">{t.artist}</p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-0.5">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#7401df]/10 px-2 py-0.5 text-[10px] font-bold text-[#7401df]">
+                        <Award className="h-3 w-3" /> +{t.points}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground/70">
+                        {t.timeLabel} · {t.listenedLabel}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-[10px] text-muted-foreground/70">
+                Points are earned at 1 per 90 seconds of listening, split across the songs that played.
+              </p>
+            </>
+          ) : (
+            <div className="py-2 text-xs text-muted-foreground">
+              {entry.title && entry.title !== "Listening session" && entry.title !== entry.streamName ? (
+                <>
+                  Per-song details weren&apos;t recorded for this session. Last track:{" "}
+                  <span className="font-medium text-foreground">{entry.title}</span> — {entry.artist}.
+                </>
+              ) : (
+                <>Per-song details weren&apos;t recorded for this session. New sessions log every song you hear.</>
+              )}
             </div>
           )}
         </div>
-
-        {/* Listening Indicator / Replay */}
-        {entry.isActive ? (
-          <div className="flex items-center gap-1 shrink-0 text-[#74ddc7]">
-            <div className="flex gap-0.5">
-              <span className="inline-block w-0.5 h-3 bg-[#74ddc7] rounded-full animate-[bounce_1s_ease-in-out_infinite]" />
-              <span className="inline-block w-0.5 h-3 bg-[#74ddc7] rounded-full animate-[bounce_1s_ease-in-out_0.2s_infinite]" />
-              <span className="inline-block w-0.5 h-3 bg-[#74ddc7] rounded-full animate-[bounce_1s_ease-in-out_0.4s_infinite]" />
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col items-end shrink-0 gap-1">
-            <Badge variant="outline" className={`text-[10px] ${getContentBadgeStyle(entry.type)}`}>
-              {entry.listenedDuration}
-            </Badge>
-          </div>
-        )}
-      </CardContent>
+      )}
     </Card>
   );
 }
