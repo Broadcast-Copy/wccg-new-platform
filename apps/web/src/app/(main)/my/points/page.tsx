@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Gift, ChevronRight } from "lucide-react";
 import { PointsHistory } from "@/components/points/points-history";
+import { ListeningPassport } from "@/components/points/listening-passport";
 
 export const metadata = {
   title: "Points History | WCCG 104.5 FM",
@@ -16,6 +17,7 @@ export default function MyPointsPage() {
         </p>
       </div>
       <PointsHistory />
+      <ListeningPassport />
       <div className="flex justify-center">
         <Link
           href="/rewards"

@@ -10,6 +10,8 @@ import {
 } from "@/lib/listening-history";
 import { useNowPlaying } from "@/hooks/use-now-playing";
 import { createClient } from "@/lib/supabase/client";
+import { geoRewardsEnabled, captureListeningLocation, GEO_BADGES } from "@/lib/geo";
+import { toast } from "sonner";
 
 /**
  * Hook that tracks listening sessions based on the stream overlay state.
@@ -79,6 +81,21 @@ export function useListeningTracker(isListening: boolean) {
             dbSessionIdRef.current = (data?.id as string) ?? null;
           } catch { /* noop */ }
         })();
+      }
+
+      // Geo travel rewards (opt-in): record the listening location + award
+      // bonus points / badges for listening from a new city or state.
+      if (uid && geoRewardsEnabled()) {
+        captureListeningLocation(createClient()).then((res) => {
+          if (!res) return;
+          for (const a of res.awarded ?? []) {
+            toast.success(`📍 +${a.points} pts — new ${a.type}: ${a.label}!`);
+          }
+          for (const b of res.new_badges ?? []) {
+            const meta = GEO_BADGES[b];
+            toast.success(`${meta?.emoji ?? "🏅"} Badge unlocked — ${meta?.label ?? b}`);
+          }
+        }, () => {});
       }
 
       durationIntervalRef.current = setInterval(() => {
