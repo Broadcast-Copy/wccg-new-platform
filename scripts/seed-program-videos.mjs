@@ -8,20 +8,30 @@
 const STATION_USER = "f9c9b54a-b4a0-4dad-b2ae-d76f7eaa39ac"; // "WCCG 104.5 FM" account
 const PER_CHANNEL = 8;
 
-// program → channel. category/rating drive the wall's grouping + parental gate.
+// program → channel. The wall groups rows by `program`, so several channels can
+// share a program label to form one combined row (e.g. all Sports, all Gospel).
 // Talk/hip-hop shows are PG-13 (visible but flagged); news PG; gospel/sports G.
 const PROGRAMS = [
+  // Talk & culture — one row per show
   { program: "Way Up with Angela Yee", category: "Talk & Culture", rating: "PG-13", channelId: "UCJVR_M2dXZT6uXIapYGHtTA" },
   { program: "Posted on The Corner", category: "Talk & Culture", rating: "PG-13", channelId: "UCB4JlD2jIkXanFehab9CbDw" },
   { program: "The Bootleg Kev Show", category: "Talk & Culture", rating: "PG-13", channelId: "UCBgOGeH-NL4o2WGutwverqQ" },
+  { program: "Put Me On Game", category: "Talk & Culture", rating: "PG-13", channelId: "UCMZlwNcYLu5eV2Zm2lLmF-Q" },
+
+  // News
   { program: "ABC News", category: "News", rating: "PG", channelId: "UCBi2mrWuNuyYy4gbM6fU18Q" },
-  { program: "Duke Basketball", category: "Sports", rating: "G", channelId: "UC9KCzNMmf0IRcEIsFDgt2bg" },
-  { program: "Duke Football", category: "Sports", rating: "G", channelId: "UC-v9UWlnqtYeCQtPDO1lGVQ" },
-  { program: "Grace Plus Nothing Ministries", category: "Faith & Gospel", rating: "G", channelId: "UCRqRVNSRMdIQqZw60bAgN1w" },
-  { program: "The Encouraging Moment", category: "Faith & Gospel", rating: "G", channelId: "UCvxWyn4rfcI2H9APhfUIB1Q" },
-  { program: "Family Fellowship Worship Center", category: "Faith & Gospel", rating: "G", channelId: "UCxTzK_2da5bZag5WTAbiVzQ" },
-  { program: "Mt. Pisgah Missionary Baptist Church", category: "Faith & Gospel", rating: "G", channelId: "UCavo4QHyzuMM2FED2W6PwEg" },
-  { program: "Lewis Chapel Baptist Church", category: "Faith & Gospel", rating: "G", channelId: "UCOe1fQxFPHNf3N7Rb55ySTA" },
+
+  // Sports — Duke + Pick'em Pros combined into one "Sports" row
+  { program: "Sports", category: "Sports", rating: "G", channelId: "UC9KCzNMmf0IRcEIsFDgt2bg" }, // Duke Basketball
+  { program: "Sports", category: "Sports", rating: "G", channelId: "UC-v9UWlnqtYeCQtPDO1lGVQ" }, // Duke Football
+  { program: "Sports", category: "Sports", rating: "PG", channelId: "UC4DI4UXm2vIS5-6fhuCAh6g" }, // Pick'em Pros
+
+  // Gospel — every gospel broadcast combined into one "Gospel" row
+  { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCvxWyn4rfcI2H9APhfUIB1Q" }, // The Encouraging Moment (Dr. Tony Haire)
+  { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCRqRVNSRMdIQqZw60bAgN1w" }, // Grace Plus Nothing Ministries
+  { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCxTzK_2da5bZag5WTAbiVzQ" }, // Family Fellowship Worship Center
+  { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCavo4QHyzuMM2FED2W6PwEg" }, // Mt. Pisgah Missionary Baptist Church
+  { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCOe1fQxFPHNf3N7Rb55ySTA" }, // Lewis Chapel Baptist Church
 ];
 
 function decode(s) {
