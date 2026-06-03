@@ -75,6 +75,9 @@ jobs:
         with:
           name: knownhost-build
           path: apps/web/out
+          # v4 drops dotfiles by default — without this, .htaccess (HTTPS
+          # redirect, clean URLs, SPA fallback) never reaches the artifact/server.
+          include-hidden-files: true
 
   deploy-knownhost:
     runs-on: ubuntu-latest
