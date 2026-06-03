@@ -15,6 +15,7 @@ import {
   CalendarDays,
   Users2,
   ShoppingBag,
+  MapPin,
   CloudSun,
   Clapperboard,
   Megaphone,
@@ -210,6 +211,39 @@ export default function HomePage() {
 
       {/* Duke Game Day */}
       <DukeGameTile />
+
+      {/* Quick access — Marketplace · Local Resources · Events */}
+      <section className="px-4 md:px-[50px]">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {[
+            { href: "/marketplace", label: "Marketplace", desc: "Shop local vendors, merch & more", icon: ShoppingBag, color: "#f59e0b" },
+            { href: "/community", label: "Local Resources", desc: "Find services & places near you", icon: MapPin, color: "#14b8a6" },
+            { href: "/events", label: "Events", desc: "Concerts, contests & community happenings", icon: CalendarDays, color: "#7401df" },
+          ].map((c) => {
+            const Icon = c.icon;
+            return (
+              <Link
+                key={c.href}
+                href={c.href}
+                className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-0.5 hover:shadow-md"
+                style={{ "--c": c.color } as React.CSSProperties}
+              >
+                <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full opacity-10 blur-2xl" style={{ backgroundColor: c.color }} />
+                <div className="relative flex items-center gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: `${c.color}1a`, color: c.color }}>
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-foreground">{c.label}</p>
+                    <p className="text-sm text-muted-foreground">{c.desc}</p>
+                  </div>
+                  <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-[color:var(--c)]" />
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
 
       {/* Platform Headline */}
       <section className="text-center py-4">
