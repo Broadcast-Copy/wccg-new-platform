@@ -6,6 +6,17 @@
 
 import { createClient } from "@/lib/supabase/client";
 
+/** Content rating used by the parental-controls feature on the video wall. */
+export type VideoRating = "G" | "PG" | "PG-13" | "R" | "NR";
+
+/** Ratings hidden/gated when parental controls are locked. */
+export const MATURE_RATINGS: ReadonlySet<VideoRating> = new Set<VideoRating>(["R", "NR"]);
+
+/** Is this rating gated behind parental controls when locked? */
+export function isMatureRating(rating: string | null | undefined): boolean {
+  return MATURE_RATINGS.has((rating ?? "") as VideoRating);
+}
+
 export interface VideoRecord {
   id: string;
   user_id: string;
@@ -19,6 +30,7 @@ export interface VideoRecord {
   thumbnail_url: string | null;
   duration_seconds: number | null;
   category: string | null;
+  rating: VideoRating;
   tags: string[] | null;
   visibility: "public" | "unlisted" | "private";
   status: "draft" | "processing" | "published" | "removed";
@@ -29,7 +41,7 @@ export interface VideoRecord {
 }
 
 const SELECT_COLS =
-  "id,user_id,creator_name,title,description,storage_path,video_url,youtube_id,youtube_url,thumbnail_url,duration_seconds,category,tags,visibility,status,views,likes,published_at,created_at";
+  "id,user_id,creator_name,title,description,storage_path,video_url,youtube_id,youtube_url,thumbnail_url,duration_seconds,category,rating,tags,visibility,status,views,likes,published_at,created_at";
 
 export async function browseVideos(opts: { q?: string; category?: string; limit?: number } = {}): Promise<VideoRecord[]> {
   const supabase = createClient();
@@ -117,6 +129,55 @@ export function timeAgo(iso: string | null): string {
   const mo = Math.round(d / 30);
   if (mo < 12) return `${mo} month${mo === 1 ? "" : "s"} ago`;
   return `${Math.round(mo / 12)} year${Math.round(mo / 12) === 1 ? "" : "s"} ago`;
+}
+
+/** All selectable content ratings, in order of increasing maturity. */
+export const VIDEO_RATINGS: readonly VideoRating[] = ["G", "PG", "PG-13", "R", "NR"];
+
+// ─── Parental controls (client-side localStorage lock) ──────────────────────
+
+/** localStorage key holding the parental-lock state. */
+export const PARENTAL_LOCK_KEY = "wccg_parental_lock";
+
+/**
+ * Read the parental lock from localStorage. Defaults to LOCKED (true) for
+ * safety — mature content is hidden until the visitor explicitly unlocks it.
+ * Returns `true` during SSR / when storage is unavailable.
+ */
+export function readParentalLock(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    return window.localStorage.getItem(PARENTAL_LOCK_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+/** Persist the parental lock state to localStorage. */
+export function writeParentalLock(locked: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(PARENTAL_LOCK_KEY, locked ? "on" : "off");
+  } catch {
+    /* ignore quota / privacy-mode errors */
+  }
+}
+
+/** Tailwind classes for a small rating badge, colour-coded by maturity. */
+export function ratingBadgeClasses(rating: string | null | undefined): string {
+  switch (rating) {
+    case "G":
+      return "border border-[#74ddc7]/40 bg-[#74ddc7]/15 text-[#74ddc7]";
+    case "PG":
+      return "border border-sky-400/40 bg-sky-400/15 text-sky-300";
+    case "PG-13":
+      return "border border-amber-400/40 bg-amber-400/15 text-amber-300";
+    case "R":
+      return "border border-red-500/50 bg-red-500/20 text-red-300";
+    case "NR":
+    default:
+      return "border border-border bg-foreground/[0.08] text-muted-foreground";
+  }
 }
 
 /** Extract a YouTube id from a URL or bare id. */

@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Film, Loader2, Upload, Youtube } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
-import { parseYouTubeId } from "@/lib/videos";
+import { parseYouTubeId, VIDEO_RATINGS, type VideoRating } from "@/lib/videos";
 
 const CATEGORIES = ["Studio", "Community", "Music", "Sports", "Shows", "Events", "Other"];
 
@@ -32,6 +32,7 @@ export default function PublishVideoPage() {
     title: "",
     description: "",
     category: "Studio",
+    rating: "G" as VideoRating,
     visibility: "public" as "public" | "unlisted" | "private",
     youtubeUrl: "",
   });
@@ -132,6 +133,7 @@ export default function PublishVideoPage() {
           thumbnail_path,
           duration_seconds: duration,
           category: meta.category,
+          rating: meta.rating,
           visibility: meta.visibility,
           status: "published",
           published_at: new Date().toISOString(),
@@ -251,6 +253,13 @@ export default function PublishVideoPage() {
           <select value={meta.category} onChange={(e) => setMeta({ ...meta, category: e.target.value })} className="w-full rounded-full border border-border bg-card px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#74ddc7]/40">
             {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-muted-foreground">Content rating</label>
+          <select value={meta.rating} onChange={(e) => setMeta({ ...meta, rating: e.target.value as VideoRating })} className="w-full rounded-full border border-border bg-card px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#74ddc7]/40">
+            {VIDEO_RATINGS.map((r) => <option key={r} value={r}>{r === "NR" ? "NR — Not rated" : r}</option>)}
+          </select>
+          <p className="mt-1 text-[11px] text-muted-foreground">R and NR are hidden behind parental controls on the wall.</p>
         </div>
         <div>
           <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-muted-foreground">Visibility</label>

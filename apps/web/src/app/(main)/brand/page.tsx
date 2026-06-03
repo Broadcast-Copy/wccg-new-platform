@@ -40,9 +40,9 @@ const SUB_BRANDS: { src: string; label: string }[] = [
 
 const TYPE_SCALE: { label: string; cls: string; sample: string }[] = [
   { label: "Display / H1 · 48–64", cls: "text-5xl font-bold tracking-tight", sample: "The Hip Hop Station" },
-  { label: "Heading / H2 · 30", cls: "text-3xl font-bold", sample: "104.5 FM · Augusta" },
+  { label: "Heading / H2 · 30", cls: "text-3xl font-bold", sample: "104.5 FM · Fayetteville, NC" },
   { label: "Subhead / H3 · 20", cls: "text-xl font-semibold", sample: "Community-powered radio" },
-  { label: "Body · 16", cls: "text-base", sample: "WCCG broadcasts hip hop, R&B, and the culture of the CSRA — 24/7." },
+  { label: "Body · 16", cls: "text-base", sample: "WCCG broadcasts hip hop, R&B, and the culture of Fayetteville, NC — 24/7." },
   { label: "Mono / data · 14", cls: "text-sm font-mono", sample: "DJB_76051.mp3 · 104.5 MHz" },
 ];
 
@@ -107,10 +107,10 @@ export default function BrandGuidelinesPage() {
           <Sparkles className="h-3.5 w-3.5 text-[#74ddc7]" /> Brand Guidelines
         </p>
         <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
-          <Image src="/images/logos/wccg-logo.png" alt="WCCG 104.5 FM" width={160} height={80} className="h-16 w-auto object-contain" />
+          <Image src="/images/logos/wccg-logo.png" alt="WCCG 104.5 FM" width={240} height={120} className="h-20 w-auto object-contain" />
           <div>
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">WCCG 104.5 FM</h1>
-            <p className="mt-1 text-muted-foreground">The Hip Hop Station — visual identity, voice, and usage for the CSRA’s community radio super-app.</p>
+            <p className="mt-1 text-muted-foreground">The Hip Hop Station — Fayetteville, NC. Visual identity, voice, and usage for the community radio super-app.</p>
           </div>
         </div>
       </header>
@@ -119,13 +119,32 @@ export default function BrandGuidelinesPage() {
       <Section icon={Sparkles} title="Logo" kicker="The wordmark is the heart of the brand. Give it room to breathe.">
         <div className="grid gap-4 sm:grid-cols-3">
           {LOGOS.map((l) => (
-            <div key={l.label} className="overflow-hidden rounded-2xl border border-border bg-card">
-              <div className={`flex h-32 items-center justify-center ${l.bg}`}>
-                <Image src={l.src} alt={l.label} width={180} height={90} className="h-14 w-auto object-contain" />
+            <div key={l.label} className="rounded-2xl border border-border bg-card p-3">
+              <div className={`flex h-48 items-center justify-center rounded-xl ${l.bg}`}>
+                <Image src={l.src} alt={l.label} width={360} height={180} className="h-28 w-auto max-w-[84%] object-contain" />
               </div>
-              <p className="px-4 py-3 text-sm font-medium">{l.label}</p>
+              <p className="px-1 pt-3 text-sm font-medium">{l.label}</p>
             </div>
           ))}
+        </div>
+
+        {/* 104.5FM wordmark — color treatments (white/black derived from the red source) */}
+        <div className="mt-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">104.5FM wordmark — color treatments</p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {[
+              { label: "Red (primary)", bg: "bg-white", filter: "none" },
+              { label: "White (on dark)", bg: "bg-[#0a0a0f]", filter: "brightness(0) invert(1)" },
+              { label: "Black (on light)", bg: "bg-white", filter: "brightness(0)" },
+            ].map((t) => (
+              <div key={t.label} className="rounded-2xl border border-border bg-card p-3">
+                <div className={`flex h-32 items-center justify-center rounded-xl ${t.bg}`}>
+                  <Image src="/images/logos/1045fm-logo.png" alt={`104.5FM ${t.label}`} width={300} height={120} className="h-16 w-auto max-w-[84%] object-contain" style={{ filter: t.filter }} />
+                </div>
+                <p className="px-1 pt-3 text-sm font-medium">{t.label}</p>
+              </div>
+            ))}
+          </div>
         </div>
         <div className="mt-4">
           <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Sub-brands & formats</p>
@@ -167,7 +186,7 @@ export default function BrandGuidelinesPage() {
       <Section icon={Megaphone} title="Voice & Tone" kicker="How WCCG sounds — on air and on screen.">
         <div className="grid gap-4 sm:grid-cols-3">
           {[
-            { h: "Local & proud", b: "Augusta-first. We name neighborhoods, schools, and our own DJs. The CSRA is the star." },
+            { h: "Local & proud", b: "Fayetteville-first. We name neighborhoods, schools, and our own DJs. The 'Ville — Fayetteville &amp; Fort Bragg, NC — is the star." },
             { h: "Hip hop authentic", b: "Speak the culture without trying too hard. Confident, warm, never corporate." },
             { h: "Community-powered", b: "Listeners, vendors, and creators are family. Invite, celebrate, and shout people out." },
           ].map((c) => (

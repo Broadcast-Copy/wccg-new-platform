@@ -20,6 +20,7 @@ import { useNowPlaying } from "@/hooks/use-now-playing";
 import {
   Compass,
   CalendarDays,
+  Video,
   Users2,
   Mail,
   Home,
@@ -58,6 +59,7 @@ const mobileNavLinks = [
   { href: "/", label: "Home", icon: Home },
   { href: "/events", label: "Events", icon: CalendarDays },
   { href: "/discover", label: "Discover", icon: Compass },
+  { href: "/videos", label: "Watch", icon: Video },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
   { href: "/community", label: "Directory", icon: MapPin },
   { href: "/contact", label: "Connect", icon: Mail },
@@ -304,6 +306,8 @@ export default function MainLayout({
             <NavLink href="/discover" label="Discover" pathname={pathname} />
             {/* Streaming mega menu */}
             <StreamingMegaMenu />
+            {/* Watch — public video wall */}
+            <NavLink href="/videos" label="Watch" pathname={pathname} />
             {/* Support */}
             <NavLink href="/contact" label="Support" pathname={pathname} />
           </nav>

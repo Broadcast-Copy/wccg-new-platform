@@ -6,10 +6,10 @@
  * "Up next" rail of related videos.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Eye, Loader2, ThumbsUp, Youtube } from "lucide-react";
+import { ArrowLeft, Eye, Loader2, Lock, ShieldAlert, ThumbsUp, Youtube } from "lucide-react";
 import {
   getVideo,
   relatedVideos,
@@ -18,6 +18,10 @@ import {
   fmtDuration,
   fmtViews,
   timeAgo,
+  isMatureRating,
+  ratingBadgeClasses,
+  readParentalLock,
+  writeParentalLock,
   type VideoRecord,
 } from "@/lib/videos";
 
@@ -30,20 +34,50 @@ export default function WatchClient() {
   const [notFound, setNotFound] = useState(false);
   const viewedRef = useRef(false);
 
+  // Parental controls — shares the same localStorage lock as the video wall.
+  // Default LOCKED; the persisted value is read once on mount.
+  const [locked, setLocked] = useState(true);
+
+  useEffect(() => {
+    // Mount-only read of the persisted lock; deferred out of the synchronous
+    // effect body (react-hooks/set-state-in-effect). Stays LOCKED until resolved.
+    let active = true;
+    queueMicrotask(() => {
+      if (active) setLocked(readParentalLock());
+    });
+    return () => { active = false; };
+  }, []);
+
+  const unlock = useCallback(() => {
+    const ok = window.confirm("Show mature content? This unlocks R-rated videos.");
+    if (!ok) return;
+    setLocked(false);
+    writeParentalLock(false);
+  }, []);
+
   useEffect(() => {
     if (!id || id === "_placeholder") return;
-    setLoading(true);
-    getVideo(id)
-      .then((v) => {
+    // setState kept out of the synchronous effect body (react-hooks/
+    // set-state-in-effect); an async worker drives the fetch behind the guard.
+    let active = true;
+    void (async () => {
+      setLoading(true);
+      try {
+        const v = await getVideo(id);
+        if (!active) return;
         if (!v) { setNotFound(true); return; }
         setVideo(v);
         if (!viewedRef.current) {
           viewedRef.current = true;
           void incrementViews(v.id);
         }
-        return relatedVideos(v.id, v.category, 12).then(setRelated);
-      })
-      .finally(() => setLoading(false));
+        const rel = await relatedVideos(v.id, v.category, 12);
+        if (active) setRelated(rel);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
   }, [id]);
 
   if (!id || id === "_placeholder") {
@@ -65,6 +99,8 @@ export default function WatchClient() {
     );
   }
 
+  const gated = locked && isMatureRating(video.rating);
+
   return (
     <div className="py-6">
       <Link href="/videos" className="mb-4 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">
@@ -75,7 +111,29 @@ export default function WatchClient() {
         {/* Player + meta */}
         <div className="space-y-4">
           <div className="aspect-video overflow-hidden rounded-2xl border border-border bg-black">
-            {video.youtube_id ? (
+            {gated ? (
+              <div className="relative h-full w-full">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={videoThumb(video)} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-2xl" />
+                <div className="relative flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#74ddc7]/15 text-[#74ddc7]">
+                    <ShieldAlert className="h-6 w-6" />
+                  </div>
+                  <p className="text-base font-bold text-white">
+                    This video is rated {video.rating} — mature content is locked
+                  </p>
+                  <p className="max-w-sm text-xs text-white/70">
+                    Parental controls are on. Unlock to watch R-rated and unrated videos on this device.
+                  </p>
+                  <button
+                    onClick={unlock}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[#74ddc7] px-4 py-2 text-sm font-bold text-[#0a0a0f] hover:bg-[#74ddc7]/90"
+                  >
+                    <Lock className="h-4 w-4" /> Unlock to watch
+                  </button>
+                </div>
+              </div>
+            ) : video.youtube_id ? (
               <iframe
                 className="h-full w-full"
                 src={`https://www.youtube.com/embed/${video.youtube_id}`}
@@ -92,7 +150,12 @@ export default function WatchClient() {
           </div>
 
           <div>
-            <h1 className="text-xl font-black tracking-tight text-foreground md:text-2xl">{video.title}</h1>
+            <h1 className="flex flex-wrap items-center gap-2 text-xl font-black tracking-tight text-foreground md:text-2xl">
+              <span className={`rounded px-1.5 py-0.5 text-[11px] font-black uppercase tracking-wide ${ratingBadgeClasses(video.rating)}`}>
+                {video.rating ?? "NR"}
+              </span>
+              {video.title}
+            </h1>
             <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#74ddc7]/30 to-[#7401df]/30 text-sm font-black text-foreground">

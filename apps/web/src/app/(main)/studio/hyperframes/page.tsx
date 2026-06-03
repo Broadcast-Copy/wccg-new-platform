@@ -659,9 +659,9 @@ function FrameMode({
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
       {/* Preview + presets */}
-      <div className="space-y-4">
+      <div className="min-w-0 flex-1 space-y-4">
         <div className="flex flex-wrap gap-2">
           {FRAME_PRESETS.map((p) => (
             <Button
@@ -676,8 +676,11 @@ function FrameMode({
           ))}
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-border bg-card">
-          <canvas ref={canvasRef} className="block h-auto w-full" />
+        <div className="flex max-w-full justify-center overflow-hidden rounded-2xl border border-border bg-card">
+          <canvas
+            ref={canvasRef}
+            className="block h-auto max-h-[60vh] w-full object-contain"
+          />
         </div>
 
         {warn && (
@@ -703,7 +706,7 @@ function FrameMode({
       </div>
 
       {/* Controls */}
-      <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
+      <div className="w-full shrink-0 space-y-4 rounded-2xl border border-border bg-card p-4 lg:w-80">
         <div className="inline-flex w-full rounded-lg border border-border p-0.5">
           {(["frame", "overlay"] as const).map((v) => (
             <button
@@ -850,8 +853,8 @@ function EmbedMode({
   const ratio = EMBED_RATIOS[cfg.ratio];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="space-y-4">
+    <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+      <div className="min-w-0 flex-1 space-y-4">
         {/* Live preview */}
         <div className="rounded-2xl border border-border bg-card p-4">
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -901,7 +904,7 @@ function EmbedMode({
       </div>
 
       {/* Controls */}
-      <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
+      <div className="w-full shrink-0 space-y-4 rounded-2xl border border-border bg-card p-4 lg:w-80">
         <Field label="Source URL">
           <Input
             value={cfg.sourceUrl}
@@ -1001,14 +1004,14 @@ function PromoMode({
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="space-y-4">
+    <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+      <div className="min-w-0 flex-1 space-y-4">
         {/* Live preview at true size */}
         <div className="rounded-2xl border border-border bg-card p-4">
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Live preview — {w}×{h} ({PROMO_SIZES[cfg.size].label})
           </p>
-          <div className="flex justify-center overflow-auto">
+          <div className="flex max-w-full justify-center overflow-auto">
             <iframe
               key={cfg.size}
               title="Promo preview"
@@ -1017,7 +1020,7 @@ function PromoMode({
               height={h}
               className="shrink-0 rounded-lg"
               sandbox="allow-popups"
-              style={{ border: "0", width: w, height: h }}
+              style={{ border: "0", width: w, height: h, maxWidth: "100%" }}
             />
           </div>
         </div>
@@ -1045,7 +1048,7 @@ function PromoMode({
       </div>
 
       {/* Controls */}
-      <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
+      <div className="w-full shrink-0 space-y-4 rounded-2xl border border-border bg-card p-4 lg:w-80">
         <Field label="Size">
           <div className="grid grid-cols-1 gap-1.5">
             {(Object.keys(PROMO_SIZES) as PromoSizeKey[]).map((key) => (

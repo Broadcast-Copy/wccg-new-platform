@@ -53,6 +53,7 @@ import {
 import { LoginRequired } from "@/components/auth/login-required";
 import { AppImage } from "@/components/ui/app-image";
 import { createClient } from "@/lib/supabase/client";
+import { VIDEO_RATINGS, type VideoRating } from "@/lib/videos";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -2847,6 +2848,7 @@ function PublishToWallDialog({ item, onClose }: { item: MediaItem; onClose: () =
   const [title, setTitle] = useState(item.name.replace(/\.[^.]+$/, ""));
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("Studio");
+  const [rating, setRating] = useState<VideoRating>("G");
   const [visibility, setVisibility] = useState<"public" | "unlisted" | "private">("public");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -2881,6 +2883,7 @@ function PublishToWallDialog({ item, onClose }: { item: MediaItem; onClose: () =
           video_url,
           duration_seconds: item.durationSecs ? Math.round(item.durationSecs) : null,
           category,
+          rating,
           visibility,
           status: "published",
           published_at: new Date().toISOString(),
@@ -2927,6 +2930,13 @@ function PublishToWallDialog({ item, onClose }: { item: MediaItem; onClose: () =
               <div>
                 <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Description</label>
                 <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#74ddc7]/40" />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Content rating</label>
+                <select value={rating} onChange={(e) => setRating(e.target.value as VideoRating)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                  {VIDEO_RATINGS.map((r) => <option key={r} value={r}>{r === "NR" ? "NR — Not rated" : r}</option>)}
+                </select>
+                <p className="mt-1 text-[11px] text-muted-foreground">R and NR are hidden behind parental controls on the wall.</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
