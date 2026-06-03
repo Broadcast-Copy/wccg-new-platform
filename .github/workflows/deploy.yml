@@ -140,32 +140,16 @@ jobs:
         if: steps.preflight.outputs.can_deploy == 'true' && env.DEPLOY_SAFE == 'true'
         env:
           KH_PASS: ${{ secrets.KNOWNHOST_SSH_PASSWORD }}
+          KH_USER: ${{ secrets.KNOWNHOST_SSH_USER }}
+          KH_HOST: ${{ secrets.KNOWNHOST_SSH_HOST }}
+          KH_PORT: ${{ secrets.KNOWNHOST_SSH_PORT }}
         run: |
           set -x
-          PORT="${{ secrets.KNOWNHOST_SSH_PORT }}"
-          PORT="${PORT:-22}"
-          USER="${{ secrets.KNOWNHOST_SSH_USER }}"
-          HOST="${{ secrets.KNOWNHOST_SSH_HOST }}"
-          # lftp's "mirror -R" pushes a local directory to a remote one over
-          # SFTP. --parallel keeps the transfer fast; --delete removes stale
-          # files so the deploy is idempotent.
-          lftp -u "$USER,$KH_PASS" -p "$PORT" sftp://"$HOST" <<EOF
-            set sftp:auto-confirm yes
-            set net:max-retries 2
-            set net:timeout 30
-            set mirror:parallel-transfer-count 4
-            mirror --reverse --delete --verbose=1 \
-              --exclude-glob "cgi-bin/" \
-              --exclude-glob ".well-known/" \
-              --exclude-glob ".htaccess*" \
-              out/ public_html/
-            cls -l public_html/index.html public_html/djs/index.html public_html/on-air/index.html
-            bye
-          EOF
+          PORT="${KH_PORT:-22}"
+          # Push out/ to public_html over SFTP. mirror --reverse --delete makes the
+          # deploy idempotent; cgi-bin/.well-known are excluded so --delete can't
+          # remove server-managed paths. Commands go through lftp -e (NOT a heredoc)
+          # so the workflow YAML and the shell both parse cleanly.
+          lftp -u "$KH_USER,$KH_PASS" -p "$PORT" "sftp://$KH_HOST" -e "set sftp:auto-confirm yes; set net:max-retries 2; set net:timeout 30; set mirror:parallel-transfer-count 4; mirror --reverse --delete --verbose=1 --exclude-glob cgi-bin/ --exclude-glob .well-known/ out/ public_html/; cls -l public_html/index.html; bye"
           echo "=== Sanity-check the upload via SSH ==="
-          SSHPASS="$KH_PASS" sshpass -e ssh -p "$PORT" -o StrictHostKeyChecking=no \
-            "$USER@$HOST" <<'REMOTE'
-              for f in public_html/index.html public_html/djs/index.html public_html/on-air/index.html public_html/my/messages/index.html; do
-                if [ -f "$f" ]; then echo "OK   $f $(stat -c %s "$f") bytes"; else echo "MISS $f"; fi
-              done
-REMOTE
+          SSHPASS="$KH_PASS" sshpass -e ssh -p "$PORT" -o StrictHostKeyChecking=no "$KH_USER@$KH_HOST" 'for f in public_html/index.html public_html/videos/index.html public_html/my/points/index.html; do if [ -f "$f" ]; then echo "OK   $f"; else echo "MISS $f"; fi; done'
