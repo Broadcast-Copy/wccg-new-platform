@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles } from "@/hooks/use-user-roles";
+import { createClient } from "@/lib/supabase/client";
 import { ProductionMixshows } from "@/components/studio/production-mixshows";
 import Link from "next/link";
 import {
@@ -354,16 +355,29 @@ function stripExtension(filename: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Persistence
+// Persistence — per-user, DB-backed
+//
+// The library used to live ONLY in browser localStorage under a single global
+// key, so folders/files were lost on a cache clear or a different device and
+// weren't tied to the account. It's now stored per-user in Supabase
+// (media_manager_state), with localStorage kept only as a fast cache / offline
+// fallback and as a one-time recovery source for libraries built before this.
 // ---------------------------------------------------------------------------
 
-function loadState(): MediaManagerState {
-  if (typeof window === "undefined") return seedState();
+function userStorageKey(userId: string | null): string {
+  return userId ? `${STORAGE_KEY}_${userId}` : STORAGE_KEY;
+}
+
+/** Read a cached/legacy library from localStorage: the per-user key, then the
+ *  old global key, then the even-older dj_mixes migration. Null if none. */
+function loadLocalState(userId: string | null): MediaManagerState | null {
+  if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw =
+      localStorage.getItem(userStorageKey(userId)) ||
+      (userId ? localStorage.getItem(STORAGE_KEY) : null);
     if (raw) return JSON.parse(raw) as MediaManagerState;
 
-    // Migration from legacy
     const legacy = localStorage.getItem(LEGACY_KEY);
     if (legacy) {
       const mixes: LegacyMix[] = JSON.parse(legacy);
@@ -379,27 +393,92 @@ function loadState(): MediaManagerState {
         createdAt: m.createdAt,
         updatedAt: new Date().toISOString(),
       }));
-      const state: MediaManagerState = {
+      return {
         files: [...migratedFiles, ...SEED_FILES.filter((sf) => !migratedFiles.find((mf) => mf.id === sf.id))],
         folders: SEED_FOLDERS,
         djbPattern: DEFAULT_DJB,
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      return state;
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+function persistLocalState(userId: string | null, state: MediaManagerState) {
+  if (typeof window === "undefined") return;
+  try { localStorage.setItem(userStorageKey(userId), JSON.stringify(state)); } catch { /* ignore */ }
+}
+
+/** Untouched seed library (no real edits)? Lets us avoid a pristine seed row in
+ *  the DB clobbering genuine edits still sitting in this browser's localStorage. */
+function isPristineSeed(s: MediaManagerState): boolean {
+  const seedIds = new Set(SEED_FOLDERS.map((f) => f.id));
+  return (
+    s.folders.length === SEED_FOLDERS.length &&
+    s.folders.every((f) => seedIds.has(f.id)) &&
+    s.files.length === SEED_FILES.length
+  );
+}
+
+/**
+ * Load the signed-in user's library. The DB is the source of truth; on first
+ * use we migrate any local/legacy library into the DB (recovering work made
+ * before DB persistence), and if the DB only holds a pristine seed we still
+ * prefer real local edits. Falls back to local cache/seed when signed out or
+ * the DB is unreachable.
+ */
+async function loadStateForUser(userId: string | null): Promise<MediaManagerState> {
+  if (!userId) return loadLocalState(null) ?? seedState();
+
+  const supabase = createClient();
+  try {
+    const { data } = await supabase
+      .from("media_manager_state")
+      .select("state")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const local = loadLocalState(userId);
+
+    if (data?.state) {
+      const dbState = data.state as MediaManagerState;
+      // Recover: the DB only has the seed but this device has real edits.
+      if (local && isPristineSeed(dbState) && !isPristineSeed(local)) {
+        await supabase.from("media_manager_state").upsert(
+          { user_id: userId, state: local, updated_at: new Date().toISOString() },
+          { onConflict: "user_id" },
+        );
+        persistLocalState(userId, local);
+        return local;
+      }
+      persistLocalState(userId, dbState);
+      return dbState;
     }
 
-    // First load — seed
-    const state = seedState();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    return state;
+    // No DB row yet → seed it from local edits (recovery) or the default seed.
+    const initial = local ?? seedState();
+    await supabase.from("media_manager_state").upsert(
+      { user_id: userId, state: initial, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" },
+    );
+    persistLocalState(userId, initial);
+    return initial;
   } catch {
-    return seedState();
+    return loadLocalState(userId) ?? seedState();
   }
 }
 
-function persistState(state: MediaManagerState) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+let _mmSaveTimer: ReturnType<typeof setTimeout> | null = null;
+/** Persist on change: localStorage immediately (cache), DB debounced (per user). */
+function persistStateForUser(userId: string | null, state: MediaManagerState) {
+  persistLocalState(userId, state);
+  if (!userId) return;
+  if (_mmSaveTimer) clearTimeout(_mmSaveTimer);
+  _mmSaveTimer = setTimeout(() => {
+    createClient()
+      .from("media_manager_state")
+      .upsert({ user_id: userId, state, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
+      .then(() => {}, () => {});
+  }, 700);
 }
 
 // ---------------------------------------------------------------------------
@@ -1500,17 +1579,34 @@ export default function MediaManagerPage() {
 
   useEffect(() => {
     setMounted(true);
-    setState(loadState());
   }, []);
 
-  // Persist on change
-  const updateState = useCallback((updater: (prev: MediaManagerState) => MediaManagerState) => {
-    setState((prev) => {
-      const next = updater(prev);
-      persistState(next);
-      return next;
-    });
-  }, []);
+  // Load the user's library — DB-backed + per-user, so it survives cache clears
+  // and syncs across devices. Falls back to the local cache/seed when signed
+  // out or offline. Re-runs once auth resolves / the signed-in user changes.
+  useEffect(() => {
+    if (authLoading) return;
+    let active = true;
+    void (async () => {
+      const loaded = await loadStateForUser(user?.id ?? null);
+      if (active) setState(loaded);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [authLoading, user?.id]);
+
+  // Persist on change — localStorage immediately, DB debounced (per user).
+  const updateState = useCallback(
+    (updater: (prev: MediaManagerState) => MediaManagerState) => {
+      setState((prev) => {
+        const next = updater(prev);
+        persistStateForUser(user?.id ?? null, next);
+        return next;
+      });
+    },
+    [user?.id],
+  );
 
   // ---------------------------------------------------------------------------
   // Current folder context
