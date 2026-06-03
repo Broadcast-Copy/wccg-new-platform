@@ -31,12 +31,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  getHistoryEntries,
-  getListeningStats,
-  getSessions,
-  type HistoryEntry,
-} from "@/lib/listening-history";
+import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import {
   fetchTodaySongs,
   formatTime as formatSongTime,
@@ -44,10 +40,7 @@ import {
 } from "@/lib/song-history";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
-import {
-  getListeningPoints,
-  getListeningProgress,
-} from "@/hooks/use-listening-points";
+import { getListeningProgress } from "@/hooks/use-listening-points";
 import {
   SongDetailModal,
   useSongDetailModal,
@@ -57,6 +50,64 @@ import {
 
 type ContentType = "all" | "live" | "mix" | "podcast";
 type DateRange = "today" | "week" | "month" | "all";
+
+/**
+ * A flattened listening session for the history list. Built from real
+ * `public.listening_sessions` rows (RLS-scoped to the signed-in user),
+ * with all dates derived from the row's `started_at` timestamp.
+ */
+interface HistoryEntry {
+  id: string;
+  type: "live" | "mix" | "podcast";
+  title: string;
+  artist: string;
+  listenedDuration: string; // e.g. "2h 15m"
+  totalDuration: string | null;
+  listenedMinutes: number;
+  totalMinutes: number | null;
+  timestamp: string; // e.g. "8:00 AM" or "Feb 14, 8:00 PM"
+  date: string; // YYYY-MM-DD
+  dateGroup: "Today" | "Yesterday" | "This Week" | "Earlier This Month" | "Older";
+  /** Whether this session is currently active (ended_at is null). */
+  isActive: boolean;
+  /** Stream the user was listening to (e.g. "WCCG 104.5 FM"). */
+  streamName: string;
+  /** Precise start time (ms) — used by the active-session live timer. */
+  startedAtMs: number;
+}
+
+/** Raw `listening_sessions` row shape from Supabase. */
+interface ListeningSessionRow {
+  id: string;
+  stream_name: string | null;
+  title: string | null;
+  artist: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  duration_secs: number | null;
+}
+
+interface ListeningStats {
+  totalHours: number;
+  remainingMinutes: number;
+  totalSessions: number;
+  totalTracks: number;
+  topArtist: string;
+  activeSessions: number;
+  lastSessionDate: string | null;
+  lastSessionTimestamp: string | null;
+}
+
+const EMPTY_STATS: ListeningStats = {
+  totalHours: 0,
+  remainingMinutes: 0,
+  totalSessions: 0,
+  totalTracks: 0,
+  topArtist: "—",
+  activeSessions: 0,
+  lastSessionDate: null,
+  lastSessionTimestamp: null,
+};
 
 // ─── Helpers ───────────────────────────────────────────────────────────
 
@@ -115,6 +166,128 @@ function getContentLabel(type: HistoryEntry["type"]): string {
   }
 }
 
+// ─── Date / duration helpers (derive everything from started_at) ───────
+
+function formatDurationFromSeconds(totalSec: number): string {
+  const hours = Math.floor(totalSec / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h`;
+  if (minutes > 0) return `${minutes}m`;
+  return "< 1m";
+}
+
+function startOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function getDateGroup(date: Date): HistoryEntry["dateGroup"] {
+  const now = new Date();
+  const today = startOfDay(now);
+  const yesterday = new Date(today.getTime() - 86400000);
+  const entryDate = startOfDay(date);
+
+  if (entryDate.getTime() === today.getTime()) return "Today";
+  if (entryDate.getTime() === yesterday.getTime()) return "Yesterday";
+
+  const weekAgo = new Date(today.getTime() - 7 * 86400000);
+  if (entryDate >= weekAgo) return "This Week";
+
+  if (date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
+    return "Earlier This Month";
+  }
+  return "Older";
+}
+
+/** "8:00 AM" for recent days, otherwise "Feb 14, 8:00 PM". */
+function formatTimestamp(date: Date): string {
+  const time = date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  const group = getDateGroup(date);
+  if (group === "Today" || group === "Yesterday") return time;
+  if (group === "This Week") {
+    const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
+    return `${dayName} ${time}`;
+  }
+  const monthStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return `${monthStr}, ${time}`;
+}
+
+function toDateString(date: Date): string {
+  // Local calendar day (YYYY-MM-DD), not UTC.
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** Map a real listening_sessions row into a HistoryEntry. */
+function sessionRowToEntry(row: ListeningSessionRow): HistoryEntry | null {
+  if (!row.started_at) return null;
+  const started = new Date(row.started_at);
+  if (Number.isNaN(started.getTime())) return null;
+
+  const isActive = row.ended_at === null;
+  const durationSeconds = isActive
+    ? Math.floor((Date.now() - started.getTime()) / 1000)
+    : row.duration_secs ?? 0;
+  const minutes = Math.max(1, Math.round(durationSeconds / 60));
+  const streamName = row.stream_name?.trim() || "WCCG 104.5 FM";
+
+  return {
+    id: row.id,
+    type: "live",
+    title: row.title?.trim() || "Listening session",
+    artist: row.artist?.trim() || streamName,
+    listenedDuration: formatDurationFromSeconds(durationSeconds),
+    totalDuration: null,
+    listenedMinutes: minutes,
+    totalMinutes: null,
+    timestamp: formatTimestamp(started),
+    date: toDateString(started),
+    dateGroup: getDateGroup(started),
+    isActive,
+    streamName,
+    startedAtMs: started.getTime(),
+  };
+}
+
+function computeStats(entries: HistoryEntry[]): ListeningStats {
+  const totalMinutes = entries.reduce((sum, e) => sum + e.listenedMinutes, 0);
+  const completed = entries.filter((e) => !e.isActive);
+
+  // Distinct songs / most-heard artist from each session's last-known track.
+  // (listening_sessions stores one title/artist per session, not a full
+  // per-track log, so these are derived honestly from what's recorded.)
+  const songKeys = new Set<string>();
+  const artistCount: Record<string, number> = {};
+  for (const e of entries) {
+    if (e.title && e.title !== "Listening session") {
+      songKeys.add(`${e.title}|${e.artist}`.toLowerCase());
+    }
+    const artist = e.artist?.trim();
+    if (artist && artist !== e.streamName) {
+      artistCount[artist] = (artistCount[artist] ?? 0) + 1;
+    }
+  }
+  const topArtist =
+    Object.entries(artistCount).sort(([, a], [, b]) => b - a)[0]?.[0] ?? "—";
+
+  return {
+    totalHours: Math.floor(totalMinutes / 60),
+    remainingMinutes: totalMinutes % 60,
+    totalSessions: entries.length,
+    totalTracks: songKeys.size,
+    topArtist,
+    activeSessions: entries.filter((e) => e.isActive).length,
+    lastSessionDate: completed[0]?.date ?? null,
+    lastSessionTimestamp: completed[0]?.timestamp ?? null,
+  };
+}
+
 function filterByDateRange(entries: HistoryEntry[], range: DateRange): HistoryEntry[] {
   if (range === "all") return entries;
 
@@ -157,42 +330,67 @@ const DATE_GROUP_ORDER: HistoryEntry["dateGroup"][] = [
 // ─── Component ─────────────────────────────────────────────────────────
 
 export function ListeningHistory() {
+  const { user, isLoading: authLoading } = useAuth();
   const [contentType, setContentType] = useState<ContentType>("all");
   const [dateRange, setDateRange] = useState<DateRange>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  // Initialize with data immediately to avoid flash of empty state on navigation
-  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>(() => {
-    try { return getHistoryEntries(); } catch { return []; }
-  });
+  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
+  const [stats, setStats] = useState<ListeningStats>(EMPTY_STATS);
+  const [loaded, setLoaded] = useState(false);
+  const [reloadNonce, setReloadNonce] = useState(0);
   const [showMissed, setShowMissed] = useState(false);
-  const [stats, setStats] = useState(() => {
-    try { return getListeningStats(); } catch {
-      return {
-        totalHours: 0,
-        remainingMinutes: 0,
-        totalSessions: 0,
-        totalTracks: 0,
-        topArtist: "—",
-        activeSessions: 0,
-        lastSessionDate: null as string | null,
-        lastSessionTimestamp: null as string | null,
-      };
-    }
-  });
-  const [refreshKey, setRefreshKey] = useState(0);
   const [missedSongs, setMissedSongs] = useState<SongHistoryEntry[]>([]);
   const [missedLoading, setMissedLoading] = useState(false);
 
   const { open: openStreamPlayer } = useStreamPlayer();
   const songModal = useSongDetailModal();
 
-  // Load history from localStorage
+  // ── Load the user's REAL listening sessions from the DB (30s refresh) ──
+  // RLS scopes rows to the signed-in user. Dates are derived from
+  // started_at, so the list is always correctly dated (no stale seed data).
   useEffect(() => {
-    setHistoryEntries(getHistoryEntries());
-    setStats(getListeningStats());
-  }, [refreshKey]);
+    if (authLoading) return;
+    if (!user) {
+      setHistoryEntries([]);
+      setStats(EMPTY_STATS);
+      setLoaded(true);
+      return;
+    }
 
-  // Fetch "Songs You Missed" when toggled on
+    let active = true;
+    const supabase = createClient();
+
+    async function load() {
+      const { data } = await supabase
+        .from("listening_sessions")
+        .select("id, stream_name, title, artist, started_at, ended_at, duration_secs")
+        .eq("user_id", user!.id)
+        .order("started_at", { ascending: false })
+        .limit(500);
+      if (!active) return;
+
+      const rows = (data as ListeningSessionRow[] | null) ?? [];
+      const entries = rows
+        .map(sessionRowToEntry)
+        .filter((e): e is HistoryEntry => e !== null)
+        // Drop ultra-short completed sessions (likely accidental taps).
+        .filter((e) => e.isActive || e.listenedMinutes >= 1);
+
+      setHistoryEntries(entries);
+      setStats(computeStats(entries));
+      setLoaded(true);
+    }
+
+    load();
+    const interval = setInterval(load, 30_000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [user, authLoading, reloadNonce]);
+
+  // Fetch "Songs You Missed" when toggled on. Listening ranges come from the
+  // real session entries so "missed" means played while NOT in a session.
   useEffect(() => {
     if (!showMissed) return;
     let cancelled = false;
@@ -202,14 +400,10 @@ export function ListeningHistory() {
       try {
         const stationSongs = await fetchTodaySongs("WCCG", 50);
 
-        // Get all listening sessions to find time ranges when user was listening
-        const sessions = getSessions();
-        const listeningRanges: { start: number; end: number }[] = sessions.map(
-          (s) => ({
-            start: new Date(s.startedAt).getTime(),
-            end: s.endedAt ? new Date(s.endedAt).getTime() : Date.now(),
-          }),
-        );
+        const listeningRanges = historyEntries.map((e) => ({
+          start: e.startedAtMs,
+          end: e.isActive ? Date.now() : e.startedAtMs + e.listenedMinutes * 60000,
+        }));
 
         // A song is "missed" if it played while the user was NOT in any session
         const missed = stationSongs.filter((song) => {
@@ -231,16 +425,7 @@ export function ListeningHistory() {
     return () => {
       cancelled = true;
     };
-  }, [showMissed, refreshKey]);
-
-  // Refresh history every 10 seconds for real-time updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setHistoryEntries(getHistoryEntries());
-      setStats(getListeningStats());
-    }, 10_000);
-    return () => clearInterval(interval);
-  }, []);
+  }, [showMissed, historyEntries]);
 
   // Filter entries
   const filteredEntries = useMemo(() => {
@@ -460,7 +645,7 @@ export function ListeningHistory() {
       {activeEntries.length > 0 && (
         <ActiveSessionsSection
           entries={activeEntries}
-          onSessionEnded={() => setRefreshKey((k) => k + 1)}
+          onSessionEnded={() => setReloadNonce((k) => k + 1)}
           onSongClick={(title, artist) => songModal.open({ title, artist })}
         />
       )}
@@ -540,7 +725,17 @@ export function ListeningHistory() {
       )}
 
       {/* ─── History List ────────────────────────────────────────────── */}
-      {!hasAnyEntries ? (
+      {!loaded ? (
+        /* Loading skeleton — avoids flashing the empty state on first paint */
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
+            <RotateCcw className="h-6 w-6 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              Loading your listening sessions...
+            </p>
+          </CardContent>
+        </Card>
+      ) : !hasAnyEntries ? (
         /* Empty State */
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
@@ -550,12 +745,12 @@ export function ListeningHistory() {
             <div>
               <h3 className="text-lg font-semibold">
                 {historyEntries.length === 0
-                  ? "No listening history yet"
-                  : "No listening history found"}
+                  ? "No listening sessions yet"
+                  : "No listening sessions found"}
               </h3>
               <p className="mt-1 text-sm text-muted-foreground max-w-sm">
                 {historyEntries.length === 0
-                  ? "Start listening to WCCG 104.5 FM and your history will appear here automatically."
+                  ? "Press play to start earning — your listening sessions will appear here automatically."
                   : "Try adjusting your filters or search to find what you are looking for."}
               </p>
             </div>
@@ -746,12 +941,8 @@ function ActiveSessionItem({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
-    // Find the session startedAt from localStorage to get precise start time
-    const sessions = getSessions();
-    const session = sessions.find((s) => s.id === entry.id);
-    const startTime = session
-      ? new Date(session.startedAt).getTime()
-      : Date.now();
+    // Precise start time comes from the real session row (started_at).
+    const startTime = entry.startedAtMs || Date.now();
 
     const tick = () => {
       const diff = Math.floor((Date.now() - startTime) / 1000);
@@ -771,22 +962,25 @@ function ActiveSessionItem({
     tick(); // Initial tick
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [entry.id]);
+  }, [entry.startedAtMs]);
 
   // ── Session points calculation ──────────────────────────────────────
   // 1 point per 90 seconds of listening
   const sessionPoints = Math.floor(elapsedSeconds / 90);
-  const totalPoints = getListeningPoints();
   const progressToNext = getListeningProgress();
+
+  // Current track for this session (listening_sessions stores the latest
+  // title/artist on the row, not a full per-track log).
+  const hasSong = entry.title !== "Listening session" && entry.title !== entry.streamName;
 
   // ── End session handler ─────────────────────────────────────────────
   const handleEndSession = useCallback(() => {
     stop();   // Stop audio playback
-    close();  // Close stream player (ends listening tracker)
-    // Small delay to let the tracker end the session in localStorage
+    close();  // Close stream player → tracker writes ended_at on the DB row
+    // Small delay to let the tracker persist the session end, then reload.
     setTimeout(() => {
       onSessionEnded();
-    }, 300);
+    }, 600);
   }, [stop, close, onSessionEnded]);
 
   return (
@@ -815,11 +1009,6 @@ function ActiveSessionItem({
             <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
               <span>{entry.title !== entry.streamName ? entry.title : entry.artist}</span>
               <span>{entry.timestamp}</span>
-              {entry.tracks.length > 0 && (
-                <span className="text-[#74ddc7]">
-                  {entry.tracks.length} track{entry.tracks.length !== 1 ? "s" : ""} heard
-                </span>
-              )}
             </div>
           </div>
 
@@ -872,30 +1061,25 @@ function ActiveSessionItem({
       </CardContent>
     </Card>
 
-    {/* Track list — songs heard during this session, rendered outside the card */}
-    {entry.tracks.length > 0 && (
+    {/* Now playing — the current track on this session (click for details) */}
+    {hasSong && (
       <div className="space-y-2 mt-3">
         <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Songs This Session ({entry.tracks.length})
+          Now Playing
         </h4>
-        <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-          {entry.tracks.map((track, i) => (
-            <button
-              key={`${track.title}-${i}`}
-              className="flex items-center gap-2.5 rounded-lg border border-border bg-card p-2.5 text-left transition-colors hover:bg-muted/50 group w-full"
-              onClick={() => onSongClick(track.title, track.artist)}
-            >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#74ddc7]/10">
-                <Music className="h-3.5 w-3.5 text-[#74ddc7]" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium truncate">{track.title}</p>
-                <p className="text-[10px] text-muted-foreground truncate">{track.artist}</p>
-              </div>
-              <Info className="h-3 w-3 shrink-0 text-muted-foreground/40 group-hover:text-foreground transition-colors" />
-            </button>
-          ))}
-        </div>
+        <button
+          className="flex w-full items-center gap-2.5 rounded-lg border border-border bg-card p-2.5 text-left transition-colors hover:bg-muted/50 group"
+          onClick={() => onSongClick(entry.title, entry.artist)}
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#74ddc7]/10">
+            <Music className="h-3.5 w-3.5 text-[#74ddc7]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium truncate">{entry.title}</p>
+            <p className="text-[10px] text-muted-foreground truncate">{entry.artist}</p>
+          </div>
+          <Info className="h-3 w-3 shrink-0 text-muted-foreground/40 group-hover:text-foreground transition-colors" />
+        </button>
       </div>
     )}
   </>
@@ -974,11 +1158,6 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
               )}
             </span>
             <span>{entry.timestamp}</span>
-            {entry.isActive && entry.tracks.length > 0 && (
-              <span className="text-[#74ddc7]">
-                {entry.tracks.length} track{entry.tracks.length !== 1 ? "s" : ""} heard
-              </span>
-            )}
           </div>
 
           {/* Progress Bar (for partially listened content) */}

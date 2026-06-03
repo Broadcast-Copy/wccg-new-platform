@@ -156,8 +156,9 @@ export default function ListenersPage() {
               />
             </div>
 
-            {/* Right rail: mini calendar widget */}
-            <aside className="hidden lg:block w-full lg:w-80 shrink-0">
+            {/* Right rail: members + mini calendar widget */}
+            <aside className="hidden lg:block w-full lg:w-80 shrink-0 space-y-4">
+              <HubMembersCard supabase={supabase} />
               <EventsCalendarRail supabase={supabase} />
             </aside>
           </div>
@@ -289,6 +290,72 @@ function ymdKey(d: Date): string {
 
 function isContest(category: string | null): boolean {
   return !!category && category.toLowerCase().includes("contest");
+}
+
+function HubMembersCard({ supabase }: { supabase: SupabaseClient }) {
+  const [count, setCount] = useState(0);
+  const [members, setMembers] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    async function load() {
+      const { data, count: c } = await supabase
+        .from("hub_memberships")
+        .select("user_id", { count: "exact" })
+        .eq("hub_type", "listener")
+        .limit(48);
+      if (!active) return;
+      const ids = (data ?? []).map((r) => (r as { user_id: string }).user_id);
+      let profs: { id: string; display_name: string | null; avatar_url: string | null }[] = [];
+      if (ids.length) {
+        const { data: pd } = await supabase
+          .from("profiles_public")
+          .select("id, display_name, avatar_url")
+          .in("id", ids);
+        profs = (pd as typeof profs) ?? [];
+      }
+      setCount(c ?? ids.length);
+      setMembers(profs.slice(0, 9).map((p) => ({ id: p.id, name: p.display_name || "Listener", avatar: p.avatar_url })));
+    }
+    load();
+    return () => { active = false; };
+  }, [supabase]);
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="flex items-center gap-2 text-sm font-bold">
+          <Users className="h-4 w-4 text-[#14b8a6]" /> Members
+        </h3>
+        <span className="text-xs font-semibold text-[#14b8a6]">{count.toLocaleString()}</span>
+      </div>
+      {members.length === 0 ? (
+        <p className="text-xs text-muted-foreground">Be the first to join the hub.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {members.map((m) => (
+            <div
+              key={m.id}
+              title={m.name}
+              className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border bg-[#14b8a6]/10 text-[11px] font-semibold text-[#14b8a6]"
+            >
+              {m.avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={m.avatar} alt={m.name} className="h-full w-full object-cover" />
+              ) : (
+                m.name.slice(0, 2).toUpperCase()
+              )}
+            </div>
+          ))}
+          {count > members.length && (
+            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-muted text-[10px] font-semibold text-muted-foreground">
+              +{count - members.length}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function EventsCalendarRail({ supabase }: { supabase: SupabaseClient }) {

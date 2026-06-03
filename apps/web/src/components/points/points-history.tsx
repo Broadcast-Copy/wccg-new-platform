@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -11,11 +11,8 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { Coins, Loader2, History, Trophy } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
-import { readAllPoints } from "@/lib/points-storage";
-import { reconcileSessionPoints } from "@/hooks/use-listening-points";
 import { MILESTONES, loadUnlockedMilestones } from "@/lib/milestones";
 
 type PointsReason =
@@ -36,14 +33,24 @@ interface PointsTransaction {
   id: string;
   amount: number;
   reason: PointsReason;
-  referenceType: string | null;
-  referenceId: string | null;
-  balance: number;
+  /** What the user was listening to when this was earned (correlated from sessions). */
+  program: string;
   createdAt: string;
 }
 
-interface PointsBalance {
-  balance: number;
+/** Raw row shapes from Supabase. */
+interface PointsHistoryRow {
+  id: string;
+  amount: number | null;
+  reason: string | null;
+  description: string | null;
+  created_at: string;
+}
+
+interface SessionWindow {
+  start: number;
+  end: number;
+  label: string;
 }
 
 const REASON_LABELS: Record<string, string> = {
@@ -81,63 +88,139 @@ function ReasonBadge({ reason }: { reason: string }) {
   );
 }
 
-/** Read points data from localStorage using shared utility */
-function loadLocalPointsData(email: string | null | undefined): {
-  balance: number;
-  history: PointsTransaction[];
-} {
-  const data = readAllPoints(email);
-  return {
-    balance: data.balance,
-    history: data.history.map((h) => ({
-      id: h.id,
-      amount: h.amount,
-      reason: h.reason as PointsReason,
-      referenceType: null,
-      referenceId: h.program || null,
-      balance: 0,
-      createdAt: h.createdAt,
-    })),
-  };
+/**
+ * Build the "Program" cell for a points row: the song the user was
+ * listening to when the points were earned.
+ *
+ * Correlates the row's timestamp against the listening-session windows
+ * `[started_at, coalesce(ended_at, now)]`. Falls back to the row's own
+ * description when it looks like a real song/label, otherwise a clean
+ * generic label — never "WCCG 104.5 FM".
+ */
+function resolveProgram(
+  createdAt: string,
+  description: string | null,
+  sessions: SessionWindow[],
+): string {
+  const ts = new Date(createdAt).getTime();
+  if (!Number.isNaN(ts)) {
+    const match = sessions.find((s) => ts >= s.start && ts <= s.end);
+    if (match) return match.label;
+  }
+
+  // No matching session — fall back to the row's description when it's a
+  // real label (not an empty value or the generic station name).
+  const desc = description?.trim();
+  if (desc && desc.toLowerCase() !== "wccg 104.5 fm") {
+    return desc;
+  }
+
+  return "Live radio";
 }
 
 export function PointsHistory() {
-  const { user } = useAuth();
   const [balance, setBalance] = useState<number | null>(null);
   const [transactions, setTransactions] = useState<PointsTransaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [unlockedIds, setUnlockedIds] = useState<string[]>([]);
-
-  const fetchData = useCallback(async () => {
-    reconcileSessionPoints();
-    setLoading(true);
+  // Unlocked milestones are read from localStorage once (client-only) via a
+  // lazy initializer — avoids a synchronous setState inside an effect.
+  const [unlockedIds] = useState<string[]>(() => {
     try {
-      const [balanceRes, historyRes] = await Promise.all([
-        apiClient<PointsBalance>("/points/balance"),
-        apiClient<{ data: PointsTransaction[] }>("/points/history"),
-      ]);
-      setBalance(balanceRes.balance);
-      setTransactions(historyRes.data);
+      return loadUnlockedMilestones();
     } catch {
-      // Fall back to localStorage
-      const local = loadLocalPointsData(user?.email);
-      setBalance(local.balance);
-      setTransactions(local.history);
-    } finally {
+      return [];
+    }
+  });
+
+  // Read the user's real points + balance from Supabase, refreshed every 30s.
+  // All setState happens after an await behind an `active` guard, so there is
+  // no synchronous setState in the effect body.
+  useEffect(() => {
+    let active = true;
+
+    async function load() {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!active) return;
+
+      if (!user) {
+        setBalance(0);
+        setTransactions([]);
+        setLoading(false);
+        return;
+      }
+
+      // Balance, the user's own points history, and their listening sessions
+      // (to correlate each points row with the song that was playing) — all
+      // gated by RLS to the signed-in user's rows.
+      const [balanceRes, historyRes, sessionsRes] = await Promise.all([
+        supabase
+          .from("user_points")
+          .select("balance")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+        supabase
+          .from("points_history")
+          .select("id, amount, reason, description, created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(100),
+        supabase
+          .from("listening_sessions")
+          .select("title, artist, started_at, ended_at")
+          .eq("user_id", user.id),
+      ]);
+      if (!active) return;
+
+      // Build session windows for correlation: [started_at, ended_at|now].
+      const now = Date.now();
+      const windows: SessionWindow[] = (
+        (sessionsRes.data as
+          | {
+              title: string | null;
+              artist: string | null;
+              started_at: string | null;
+              ended_at: string | null;
+            }[]
+          | null) ?? []
+      )
+        .filter((s) => s.started_at && (s.title || s.artist))
+        .map((s) => {
+          const artist = s.artist?.trim();
+          const title = s.title?.trim();
+          const label =
+            artist && title
+              ? `${artist} — ${title}`
+              : title || artist || "Live radio";
+          return {
+            start: new Date(s.started_at as string).getTime(),
+            end: s.ended_at ? new Date(s.ended_at).getTime() : now,
+            label,
+          };
+        });
+
+      const rows = (historyRes.data as PointsHistoryRow[] | null) ?? [];
+      const txns: PointsTransaction[] = rows.map((r) => ({
+        id: r.id,
+        amount: r.amount ?? 0,
+        reason: (r.reason as PointsReason) ?? "LISTENING",
+        program: resolveProgram(r.created_at, r.description, windows),
+        createdAt: r.created_at,
+      }));
+
+      setBalance(Number(balanceRes.data?.balance ?? 0));
+      setTransactions(txns);
       setLoading(false);
     }
-  }, [user?.email]);
 
-  // Refresh every 30s
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 30_000);
-    return () => clearInterval(interval);
-  }, [fetchData]);
-
-  // Load milestones once
-  useEffect(() => {
-    setUnlockedIds(loadUnlockedMilestones());
+    load();
+    const interval = setInterval(load, 30_000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
   }, []);
 
   if (loading) {
@@ -228,7 +311,7 @@ export function PointsHistory() {
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Program</TableHead>
-                <TableHead>Reason</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
               </TableRow>
             </TableHeader>
@@ -249,7 +332,7 @@ export function PointsHistory() {
                         })}
                       </span>
                     </TableCell>
-                    <TableCell className="text-sm">{tx.referenceId || "WCCG 104.5 FM"}</TableCell>
+                    <TableCell className="text-sm">{tx.program}</TableCell>
                     <TableCell>
                       <ReasonBadge reason={tx.reason} />
                     </TableCell>

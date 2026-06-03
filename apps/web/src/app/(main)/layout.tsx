@@ -332,6 +332,17 @@ export default function MainLayout({
             <MobileNav navLinks={mobileNavLinks} />
           </div>
         </div>
+
+        {/* Secondary text menu — Shop · Directory · Events */}
+        <div className="border-t border-border/60">
+          <div className="container flex items-center justify-center gap-3 py-1.5 text-[13px] font-medium">
+            <Link href="/marketplace" className="text-muted-foreground transition-colors hover:text-[#74ddc7]">Shop</Link>
+            <span className="h-3.5 w-px bg-border" />
+            <Link href="/community" className="text-muted-foreground transition-colors hover:text-[#74ddc7]">Directory</Link>
+            <span className="h-3.5 w-px bg-border" />
+            <Link href="/events" className="text-muted-foreground transition-colors hover:text-[#74ddc7]">Events</Link>
+          </div>
+        </div>
       </header>
 
       {/* Main content — pb accounts for bottom tab bar + player */}
