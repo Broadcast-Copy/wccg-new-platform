@@ -33,6 +33,9 @@ import {
   MapPin,
   Megaphone,
   Film,
+  Wand2,
+  Frame,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -62,11 +65,14 @@ export const creatorNav: RoleNavItem[] = [
   { href: "/my/studio", label: "Broadcast Studio", icon: Mic },
   { href: "/my/studio/publish", label: "Publish Video", icon: Film },
   { href: "/videos", label: "Video Wall", icon: Film },
+  { href: "/studio/image-generator", label: "Image Generator", icon: Wand2 },
+  { href: "/studio/hyperframes", label: "Hyperframes", icon: Frame },
   { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
   { href: "/my/blog", label: "Blog Manager", icon: FileText },
   { href: "/my/events", label: "Events Manager", icon: CalendarDays },
   { href: "/my/podcast-rss", label: "Podcast RSS", icon: Radio },
   { href: "/my/vendor/media", label: "Creator Marketing", icon: BarChart3 },
+  { href: "/brand", label: "Brand Kit", icon: BookOpen },
   { href: "/my/settings", label: "Settings", icon: Settings },
 ];
 

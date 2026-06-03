@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles } from "@/hooks/use-user-roles";
 import { ProductionMixshows } from "@/components/studio/production-mixshows";
@@ -38,6 +38,14 @@ import {
   FileText,
   ChevronDown,
   AlertCircle,
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  CheckSquare,
+  Square,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,8 +67,17 @@ interface MediaFile {
   size: number;
   folderId: string | null;
   djbName?: string;
+  /** Optional playable source. Demo/seed files have none → Play shows a toast. */
+  url?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/** A track the bottom audio player can load. */
+interface PlayerTrack {
+  id: string;
+  name: string;
+  src: string;
 }
 
 interface MediaFolder {
@@ -115,6 +132,10 @@ interface LegacyMix {
 
 const STORAGE_KEY = "wccg_media_manager";
 const LEGACY_KEY = "wccg_dj_mixes";
+
+// Custom MIME marking our internal file drag payload (a JSON array of file ids),
+// so folder/breadcrumb drop targets only react to in-app file drags.
+const DRAG_FILE_MIME = "application/x-wccg-media-files";
 
 const CATEGORY_LABELS: Record<MediaCategory, string> = {
   mix: "Mix",
@@ -180,9 +201,11 @@ const SEED_FILES: MediaFile[] = [
   { id: "fl3", name: "Spring Auto Sale 30s.wav", type: "file", category: "commercial", format: "wav", duration: 30, size: 4_800_000, folderId: "mf2", createdAt: "2026-03-01T10:00:00Z", updatedAt: now },
   { id: "fl4", name: "Health Fair Spot 15s.wav", type: "file", category: "commercial", format: "wav", duration: 15, size: 2_400_000, folderId: "mf2", createdAt: "2026-03-03T14:00:00Z", updatedAt: now },
   { id: "fl5", name: "Weekend Events Promo.mp3", type: "file", category: "promo", format: "mp3", duration: 22, size: 3_600_000, folderId: "mf3", createdAt: "2026-03-02T09:00:00Z", updatedAt: now },
-  { id: "fl6", name: "WCCG Station ID.wav", type: "file", category: "jingle", format: "wav", duration: 8, size: 1_200_000, folderId: null, createdAt: "2026-01-15T10:00:00Z", updatedAt: now },
+  // A couple of seed files carry a real public sample URL so the inline player
+  // is demonstrable; the rest are url-less (Play → "No audio source" toast).
+  { id: "fl6", name: "WCCG Station ID.wav", type: "file", category: "jingle", format: "wav", duration: 8, size: 1_200_000, folderId: null, url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", createdAt: "2026-01-15T10:00:00Z", updatedAt: now },
   { id: "fl7", name: "Smooth Jazz Bed.wav", type: "file", category: "music_bed", format: "wav", duration: 60, size: 12_000_000, folderId: "mf5", createdAt: "2026-02-25T16:00:00Z", updatedAt: now },
-  { id: "fl8", name: "Morning Show Intro VO.mp3", type: "file", category: "voiceover", format: "mp3", duration: 12, size: 1_800_000, folderId: "mf4", createdAt: "2026-02-18T08:00:00Z", updatedAt: now },
+  { id: "fl8", name: "Morning Show Intro VO.mp3", type: "file", category: "voiceover", format: "mp3", duration: 12, size: 1_800_000, folderId: "mf4", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", createdAt: "2026-02-18T08:00:00Z", updatedAt: now },
 ];
 
 const DEFAULT_DJB: DJBPattern = {
@@ -306,6 +329,14 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / 1_000).toFixed(1)} KB`;
 }
 
+/** mm:ss clock for the player's current/total time. */
+function fmtClock(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 function formatDate(dateStr?: string): string {
   if (!dateStr) return "";
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -377,15 +408,30 @@ function persistState(state: MediaManagerState) {
 function BreadcrumbNav({
   path,
   onNavigate,
+  onDropRoot,
+  rootDropActive,
+  onRootDragOver,
+  onRootDragLeave,
 }: {
   path: { id: string; name: string }[];
   onNavigate: (index: number) => void;
+  onDropRoot?: (e: React.DragEvent) => void;
+  rootDropActive?: boolean;
+  onRootDragOver?: (e: React.DragEvent) => void;
+  onRootDragLeave?: () => void;
 }) {
   return (
     <div className="flex items-center gap-1 text-sm overflow-x-auto scrollbar-hide">
       <button
         onClick={() => onNavigate(-1)}
-        className="flex items-center gap-1 text-muted-foreground hover:text-[#74ddc7] transition-colors shrink-0"
+        onDragOver={onRootDragOver}
+        onDragLeave={onRootDragLeave}
+        onDrop={onDropRoot}
+        className={`flex items-center gap-1 rounded-md px-1.5 py-1 transition-colors shrink-0 ${
+          rootDropActive
+            ? "bg-[#74ddc7]/15 text-[#74ddc7] ring-1 ring-[#74ddc7]/40"
+            : "text-muted-foreground hover:text-[#74ddc7]"
+        }`}
       >
         <Home className="h-3.5 w-3.5" />
         <span className="font-medium">My Media</span>
@@ -403,6 +449,144 @@ function BreadcrumbNav({
           </button>
         </div>
       ))}
+    </div>
+  );
+}
+
+/**
+ * Fixed bottom audio player. Driven by a queue + active index from the parent.
+ * One <audio> element; play/pause, seek with current/total time, prev/next
+ * through the queue, mute, and the now-playing name.
+ */
+function AudioPlayerBar({
+  queue,
+  index,
+  onIndexChange,
+  onClose,
+}: {
+  queue: PlayerTrack[];
+  index: number;
+  onIndexChange: (i: number) => void;
+  onClose: () => void;
+}) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [current, setCurrent] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [muted, setMuted] = useState(false);
+
+  const track = queue[index] as PlayerTrack | undefined;
+  const hasPrev = index > 0;
+  const hasNext = index < queue.length - 1;
+
+  // Load + autoplay the active track when the index/track changes.
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el || !track) return;
+    setCurrent(0);
+    setDuration(0);
+    el.src = track.src;
+    el.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, track?.id]);
+
+  const toggle = () => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (playing) { el.pause(); setPlaying(false); }
+    else { el.play().then(() => setPlaying(true)).catch(() => setPlaying(false)); }
+  };
+
+  const seek = (value: number) => {
+    const el = audioRef.current;
+    if (!el || !Number.isFinite(value)) return;
+    el.currentTime = value;
+    setCurrent(value);
+  };
+
+  if (!track) return null;
+
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+      <audio
+        ref={audioRef}
+        onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
+        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+        onEnded={() => { if (hasNext) onIndexChange(index + 1); else setPlaying(false); }}
+      />
+      <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 sm:gap-4">
+        {/* Now playing */}
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10 border border-border">
+            <FileAudio className="h-5 w-5 text-[#74ddc7]" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-foreground">{track.name}</p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {queue.length > 1 ? `Track ${index + 1} of ${queue.length}` : "Now playing"}
+            </p>
+          </div>
+        </div>
+
+        {/* Transport */}
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            onClick={() => hasPrev && onIndexChange(index - 1)}
+            disabled={!hasPrev}
+            aria-label="Previous track"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <SkipBack className="h-4 w-4" />
+          </button>
+          <button
+            onClick={toggle}
+            aria-label={playing ? "Pause" : "Play"}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#74ddc7] text-[#0a0a0f] hover:bg-[#74ddc7]/90 transition-colors"
+          >
+            {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+          </button>
+          <button
+            onClick={() => hasNext && onIndexChange(index + 1)}
+            disabled={!hasNext}
+            aria-label="Next track"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <SkipForward className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Seek */}
+        <div className="hidden flex-1 items-center gap-2 sm:flex">
+          <span className="w-10 text-right font-mono text-[11px] tabular-nums text-muted-foreground">{fmtClock(current)}</span>
+          <input
+            type="range"
+            min={0}
+            max={duration || 0}
+            value={Math.min(current, duration || 0)}
+            step={0.1}
+            onChange={(e) => seek(Number(e.target.value))}
+            aria-label="Seek"
+            className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-foreground/[0.12] accent-[#74ddc7]"
+          />
+          <span className="w-10 font-mono text-[11px] tabular-nums text-muted-foreground">{fmtClock(duration)}</span>
+        </div>
+
+        {/* Mute + close */}
+        <button
+          onClick={() => { const el = audioRef.current; if (el) { el.muted = !muted; setMuted(!muted); } }}
+          aria-label={muted ? "Unmute" : "Mute"}
+          className="hidden h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground transition-colors sm:flex"
+        >
+          {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+        </button>
+        <button
+          onClick={onClose}
+          aria-label="Close player"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -466,23 +650,52 @@ function FolderCard({
   onAction,
   itemCount,
   viewMode,
+  onDropFiles,
 }: {
   folder: MediaFolder;
   onClick: () => void;
   onAction: (action: string, folder: MediaFolder) => void;
   itemCount: number;
   viewMode: "grid" | "list";
+  /** Called when file(s) are dropped onto this folder (drag-to-move target). */
+  onDropFiles: (folderId: string) => void;
 }) {
+  const [dropActive, setDropActive] = useState(false);
+
+  // Shared DnD handlers — folders accept the app's internal file drag payload.
+  const dndProps = {
+    onDragOver: (e: React.DragEvent) => {
+      if (e.dataTransfer.types.includes(DRAG_FILE_MIME)) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        setDropActive(true);
+      }
+    },
+    onDragLeave: () => setDropActive(false),
+    onDrop: (e: React.DragEvent) => {
+      if (e.dataTransfer.types.includes(DRAG_FILE_MIME)) {
+        e.preventDefault();
+        setDropActive(false);
+        onDropFiles(folder.id);
+      }
+    },
+  };
+
   if (viewMode === "list") {
     return (
-      <div className="group flex items-center gap-4 w-full rounded-xl border border-border bg-card p-3 sm:p-4 transition-all hover:border-input">
+      <div
+        {...dndProps}
+        className={`group flex items-center gap-4 w-full rounded-xl border bg-card p-3 sm:p-4 transition-all ${
+          dropActive ? "border-[#74ddc7] ring-2 ring-[#74ddc7]/30 bg-[#74ddc7]/[0.04]" : "border-border hover:border-input"
+        }`}
+      >
         <button onClick={onClick} className="flex flex-1 items-center gap-4 min-w-0 text-left">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10 border border-border">
             <Folder className="h-5 w-5 text-[#74ddc7]" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors truncate">{folder.name}</p>
-            <p className="text-xs text-muted-foreground/70 mt-0.5">{itemCount} items</p>
+            <p className="text-xs text-muted-foreground/70 mt-0.5">{dropActive ? "Drop to move here" : `${itemCount} items`}</p>
           </div>
           <div className="hidden sm:block text-xs text-muted-foreground/60">{formatDate(folder.createdAt)}</div>
         </button>
@@ -492,17 +705,22 @@ function FolderCard({
   }
 
   return (
-    <div className="group relative flex flex-col items-center gap-3 rounded-2xl border border-border bg-card p-5 transition-all hover:border-input text-center">
+    <div
+      {...dndProps}
+      className={`group relative flex flex-col items-center gap-3 rounded-2xl border bg-card p-5 transition-all text-center ${
+        dropActive ? "border-[#74ddc7] ring-2 ring-[#74ddc7]/30 bg-[#74ddc7]/[0.04]" : "border-border hover:border-input"
+      }`}
+    >
       <div className="absolute right-1.5 top-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
         <FolderMenu folder={folder} onAction={onAction} />
       </div>
       <button onClick={onClick} className="flex flex-col items-center gap-3 w-full">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10 border border-border group-hover:border-[#74ddc7]/20 transition-colors">
+        <div className={`flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10 border transition-colors ${dropActive ? "border-[#74ddc7]/50" : "border-border group-hover:border-[#74ddc7]/20"}`}>
           <Folder className="h-8 w-8 text-[#74ddc7]" />
         </div>
         <div>
           <p className="text-sm font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors truncate max-w-[140px]">{folder.name}</p>
-          <p className="text-[11px] text-muted-foreground/70 mt-1">{itemCount} items</p>
+          <p className="text-[11px] text-muted-foreground/70 mt-1">{dropActive ? "Drop to move here" : `${itemCount} items`}</p>
         </div>
       </button>
     </div>
@@ -513,14 +731,27 @@ function FileCard({
   file,
   viewMode,
   onAction,
+  selected,
+  onToggleSelect,
+  onDragStartFile,
+  onDragEndFile,
+  onPlay,
+  isPlaying,
 }: {
   file: MediaFile;
   viewMode: "grid" | "list";
   onAction: (action: string, file: MediaFile) => void;
+  selected: boolean;
+  onToggleSelect: (file: MediaFile, e: React.MouseEvent) => void;
+  onDragStartFile: (file: MediaFile, e: React.DragEvent) => void;
+  onDragEndFile: () => void;
+  onPlay: (file: MediaFile) => void;
+  isPlaying: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const menuItems = [
+    { key: "play", icon: Play, label: "Play" },
     { key: "rename", icon: Pencil, label: "Rename" },
     { key: "copy", icon: Copy, label: "Copy" },
     { key: "cut", icon: Scissors, label: "Cut (move)" },
@@ -531,14 +762,39 @@ function FileCard({
     { key: "delete", icon: Trash2, label: "Delete", danger: true },
   ];
 
+  // Drag payload is set by the parent (so it can include the whole selection).
+  const dragProps = {
+    draggable: true,
+    onDragStart: (e: React.DragEvent) => onDragStartFile(file, e),
+    onDragEnd: onDragEndFile,
+  };
+
   if (viewMode === "list") {
     return (
-      <div className="group flex items-center gap-4 w-full rounded-xl border border-border bg-card p-3 sm:p-4 transition-all hover:border-input">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#7401df]/10 to-[#74ddc7]/5 border border-border">
-          <FileAudio className="h-5 w-5 text-muted-foreground" />
-        </div>
+      <div
+        {...dragProps}
+        className={`group flex items-center gap-3 w-full rounded-xl border bg-card p-3 sm:p-4 transition-all ${
+          selected ? "border-[#74ddc7]/60 ring-1 ring-[#74ddc7]/30 bg-[#74ddc7]/[0.04]" : "border-border hover:border-input"
+        }`}
+      >
+        {/* Selection checkbox */}
+        <button
+          onClick={(e) => onToggleSelect(file, e)}
+          aria-label={selected ? "Deselect file" : "Select file"}
+          className="flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-[#74ddc7]"
+        >
+          {selected ? <CheckSquare className="h-4.5 w-4.5 text-[#74ddc7]" /> : <Square className="h-4.5 w-4.5" />}
+        </button>
+        {/* Drag handle + Play */}
+        <button
+          onClick={() => onPlay(file)}
+          aria-label="Play file"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-gradient-to-br from-[#7401df]/10 to-[#74ddc7]/5 text-muted-foreground transition-colors hover:border-[#74ddc7]/40 hover:text-[#74ddc7]"
+        >
+          {isPlaying ? <Volume2 className="h-5 w-5 text-[#74ddc7]" /> : <Play className="h-4.5 w-4.5" />}
+        </button>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground truncate">{file.name}</p>
+          <p className={`text-sm font-semibold truncate ${isPlaying ? "text-[#74ddc7]" : "text-foreground"}`}>{file.name}</p>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <span className={`text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border ${CATEGORY_COLORS[file.category]}`}>
               {CATEGORY_LABELS[file.category]}
@@ -595,7 +851,12 @@ function FileCard({
 
   // Grid card
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-input">
+    <div
+      {...dragProps}
+      className={`group relative overflow-hidden rounded-2xl border bg-card transition-all ${
+        selected ? "border-[#74ddc7]/60 ring-1 ring-[#74ddc7]/30" : "border-border hover:border-input"
+      }`}
+    >
       <div className="relative h-20 overflow-hidden bg-gradient-to-br from-[#7401df]/10 to-[#74ddc7]/5 flex items-center justify-center">
         <FileAudio className="h-8 w-8 text-foreground/10" />
         {file.duration !== undefined && (
@@ -606,6 +867,26 @@ function FileCard({
         <div className={`absolute top-2 left-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${FORMAT_COLORS[file.format] || "bg-foreground/[0.06] text-muted-foreground"}`}>
           {file.format}
         </div>
+        {/* Selection checkbox (always visible when selected; else on hover) */}
+        <button
+          onClick={(e) => onToggleSelect(file, e)}
+          aria-label={selected ? "Deselect file" : "Select file"}
+          className={`absolute top-2 right-9 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white/80 backdrop-blur-sm transition-all hover:bg-black/70 ${
+            selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          }`}
+        >
+          {selected ? <CheckSquare className="h-4 w-4 text-[#74ddc7]" /> : <Square className="h-4 w-4" />}
+        </button>
+        {/* Play overlay button (center, on hover) */}
+        <button
+          onClick={() => onPlay(file)}
+          aria-label="Play file"
+          className={`absolute inset-0 m-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#74ddc7] text-[#0a0a0f] shadow-lg transition-all hover:bg-[#74ddc7]/90 ${
+            isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          }`}
+        >
+          {isPlaying ? <Volume2 className="h-4.5 w-4.5" /> : <Play className="h-4.5 w-4.5" />}
+        </button>
         {/* Menu */}
         <div className="absolute top-2 right-2">
           <button
@@ -637,7 +918,7 @@ function FileCard({
         </div>
       </div>
       <div className="p-3.5 space-y-1.5">
-        <p className="text-sm font-semibold text-foreground truncate">{file.name}</p>
+        <p className={`text-sm font-semibold truncate ${isPlaying ? "text-[#74ddc7]" : "text-foreground"}`}>{file.name}</p>
         <div className="flex items-center justify-between">
           <span className={`text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border ${CATEGORY_COLORS[file.category]}`}>
             {CATEGORY_LABELS[file.category]}
@@ -1111,6 +1392,52 @@ function MoveToFolderModal({
   );
 }
 
+/** Bulk variant of MoveToFolderModal — moves N selected files at once. */
+function MoveManyToFolderModal({
+  count,
+  folders,
+  onClose,
+  onMove,
+}: {
+  count: number;
+  folders: MediaFolder[];
+  onClose: () => void;
+  onMove: (folderId: string | null) => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+            <Move className="h-4 w-4 text-[#74ddc7]" /> Move {count} File{count !== 1 ? "s" : ""}
+          </h3>
+          <button onClick={onClose} className="h-7 w-7 flex items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/[0.06] transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground">Choose a destination for the selected file{count !== 1 ? "s" : ""}.</p>
+        <div className="space-y-1 max-h-60 overflow-y-auto">
+          <button
+            onClick={() => { onMove(null); onClose(); }}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-foreground/[0.04]"
+          >
+            <Home className="h-4 w-4" /> Root (My Media)
+          </button>
+          {folders.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => { onMove(f.id); onClose(); }}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-foreground/[0.04]"
+            >
+              <Folder className="h-4 w-4" /> {f.name}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -1143,6 +1470,28 @@ export default function MediaManagerPage() {
     { kind: "folder" | "file"; id: string; op: "copy" | "cut"; name: string } | null
   >(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Multi-select (files in the current folder)
+  const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
+  const [anchorFileId, setAnchorFileId] = useState<string | null>(null);
+  const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
+
+  // Drag-to-move: ids being dragged (the dragged file, plus any selection).
+  const draggingFileIds = useRef<string[]>([]);
+  const [rootDropActive, setRootDropActive] = useState(false);
+
+  // Inline audio player
+  const [playerQueue, setPlayerQueue] = useState<PlayerTrack[]>([]);
+  const [playerIndex, setPlayerIndex] = useState<number | null>(null);
+
+  // Lightweight toast (e.g. "No audio source (demo file)")
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2600);
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Init
@@ -1210,6 +1559,143 @@ export default function MediaManagerPage() {
   }, [state.files, state.folders]);
 
   // ---------------------------------------------------------------------------
+  // Multi-select + drag + player derived state / handlers
+  // ---------------------------------------------------------------------------
+
+  // The file id currently loaded in the player (for now-playing highlight).
+  const playingFileId = playerIndex !== null ? playerQueue[playerIndex]?.id ?? null : null;
+
+  // Selection restricted to what's actually visible in the current folder.
+  const visibleSelectedIds = useMemo(
+    () => currentFiles.filter((f) => selectedFileIds.has(f.id)),
+    [currentFiles, selectedFileIds],
+  );
+  const allVisibleSelected = currentFiles.length > 0 && visibleSelectedIds.length === currentFiles.length;
+
+  // Toggle a file's selection, honouring shift (range) + ctrl/cmd (toggle).
+  const toggleSelectFile = useCallback((file: MediaFile, e: React.MouseEvent) => {
+    setSelectedFileIds((prev) => {
+      const next = new Set(prev);
+      if (e.shiftKey && anchorFileId) {
+        const a = currentFiles.findIndex((f) => f.id === anchorFileId);
+        const b = currentFiles.findIndex((f) => f.id === file.id);
+        if (a !== -1 && b !== -1) {
+          const [lo, hi] = a < b ? [a, b] : [b, a];
+          for (let i = lo; i <= hi; i++) next.add(currentFiles[i].id);
+          return next;
+        }
+      }
+      if (next.has(file.id)) next.delete(file.id);
+      else next.add(file.id);
+      return next;
+    });
+    if (!e.shiftKey) setAnchorFileId(file.id);
+  }, [anchorFileId, currentFiles]);
+
+  const selectAllOrClear = useCallback(() => {
+    if (allVisibleSelected) { setSelectedFileIds(new Set()); return; }
+    setSelectedFileIds(new Set(currentFiles.map((f) => f.id)));
+  }, [allVisibleSelected, currentFiles]);
+
+  const clearSelection = useCallback(() => { setSelectedFileIds(new Set()); setAnchorFileId(null); }, []);
+
+  // ── Inline player ────────────────────────────────────────────────────────
+  // Play a file in the bottom bar. Demo files have no url → show a toast.
+  const handlePlayFile = useCallback((file: MediaFile) => {
+    if (!file.url) {
+      showToast("No audio source (demo file)");
+      return;
+    }
+    // Queue = all playable (url-bearing) files in the current folder, so
+    // next/prev work; start at the clicked file.
+    const playable = currentFiles.filter((f) => !!f.url);
+    const tracks: PlayerTrack[] = playable.map((f) => ({ id: f.id, name: f.name, src: f.url as string }));
+    const start = Math.max(0, tracks.findIndex((t) => t.id === file.id));
+    setPlayerQueue(tracks);
+    setPlayerIndex(start);
+  }, [currentFiles, showToast]);
+
+  // ── Drag-to-move ───────────────────────────────────────────────────────
+  const handleDragStartFile = useCallback((file: MediaFile, e: React.DragEvent) => {
+    // If the dragged file is part of the current selection, move the whole
+    // selection; otherwise just this file.
+    const ids = selectedFileIds.has(file.id) && selectedFileIds.size > 0
+      ? Array.from(selectedFileIds)
+      : [file.id];
+    draggingFileIds.current = ids;
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData(DRAG_FILE_MIME, JSON.stringify(ids));
+    // Plain-text fallback so the drag is valid in all browsers.
+    e.dataTransfer.setData("text/plain", file.name);
+  }, [selectedFileIds]);
+
+  const handleDragEndFile = useCallback(() => { draggingFileIds.current = []; }, []);
+
+  // Move a set of files to a destination folder (or root) + persist.
+  const moveFilesTo = useCallback((ids: string[], folderId: string | null) => {
+    if (ids.length === 0) return;
+    const idSet = new Set(ids);
+    updateState((prev) => ({
+      ...prev,
+      files: prev.files.map((f) =>
+        idSet.has(f.id) ? { ...f, folderId, updatedAt: new Date().toISOString() } : f,
+      ),
+    }));
+  }, [updateState]);
+
+  // Drop handler shared by folder cards.
+  const handleDropOnFolder = useCallback((folderId: string) => {
+    const ids = draggingFileIds.current;
+    moveFilesTo(ids, folderId);
+    draggingFileIds.current = [];
+    setSelectedFileIds(new Set());
+  }, [moveFilesTo]);
+
+  // Breadcrumb "My Media" root drop target → move dragged file(s) to root.
+  const handleRootDragOver = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes(DRAG_FILE_MIME)) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      setRootDropActive(true);
+    }
+  }, []);
+  const handleDropOnRoot = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes(DRAG_FILE_MIME)) {
+      e.preventDefault();
+      setRootDropActive(false);
+      moveFilesTo(draggingFileIds.current, null);
+      draggingFileIds.current = [];
+      setSelectedFileIds(new Set());
+    }
+  }, [moveFilesTo]);
+
+  // ── Bulk actions ───────────────────────────────────────────────────────
+  // All bulk ops act on the *visible* selection so filtering/search can never
+  // silently move or delete something the user can't currently see.
+  const bulkMove = useCallback((folderId: string | null) => {
+    moveFilesTo(visibleSelectedIds.map((f) => f.id), folderId);
+    setSelectedFileIds(new Set());
+  }, [moveFilesTo, visibleSelectedIds]);
+
+  const bulkDownload = useCallback(() => {
+    const withUrl = visibleSelectedIds.filter((f) => !!f.url);
+    if (withUrl.length === 0) {
+      showToast("No downloadable source (demo files)");
+      return;
+    }
+    for (const f of withUrl) window.open(f.url as string, "_blank");
+  }, [visibleSelectedIds, showToast]);
+
+  const bulkDelete = useCallback(() => {
+    const ids = visibleSelectedIds.map((f) => f.id);
+    if (ids.length === 0) return;
+    if (!window.confirm(`Delete ${ids.length} file${ids.length !== 1 ? "s" : ""}? This can't be undone.`)) return;
+    const idSet = new Set(ids);
+    updateState((prev) => ({ ...prev, files: prev.files.filter((f) => !idSet.has(f.id)) }));
+    setSelectedFileIds(new Set());
+  }, [visibleSelectedIds, updateState]);
+
+  // ---------------------------------------------------------------------------
   // Handlers
   // ---------------------------------------------------------------------------
 
@@ -1217,12 +1703,14 @@ export default function MediaManagerPage() {
     setFolderPath((prev) => [...prev, { id: folder.id, name: folder.name }]);
     setSearchQuery("");
     setCategoryFilter("all");
+    clearSelection();
   };
 
   const breadcrumbNavigate = (index: number) => {
     setFolderPath((prev) => (index === -1 ? [] : prev.slice(0, index + 1)));
     setSearchQuery("");
     setCategoryFilter("all");
+    clearSelection();
   };
 
   const createFolder = (name: string) => {
@@ -1348,6 +1836,9 @@ export default function MediaManagerPage() {
 
   const handleFileAction = (action: string, file: MediaFile) => {
     switch (action) {
+      case "play":
+        handlePlayFile(file);
+        break;
       case "rename": {
         const newName = window.prompt("Rename file:", file.name);
         if (newName && newName.trim() && newName.trim() !== file.name) {
@@ -1374,8 +1865,12 @@ export default function MediaManagerPage() {
         setDjbFile(file);
         break;
       case "download":
-        // In a real app this would trigger a download from storage
-        alert(`Download "${file.name}" — feature requires backend storage integration.`);
+        if (file.url) {
+          window.open(file.url, "_blank");
+        } else {
+          // Demo/seed files have no source.
+          showToast("No download source (demo file)");
+        }
         break;
       case "delete":
         if (window.confirm(`Delete "${file.name}"?`)) {
@@ -1533,7 +2028,14 @@ export default function MediaManagerPage() {
             Back
           </button>
         )}
-        <BreadcrumbNav path={folderPath} onNavigate={breadcrumbNavigate} />
+        <BreadcrumbNav
+          path={folderPath}
+          onNavigate={breadcrumbNavigate}
+          onDropRoot={handleDropOnRoot}
+          rootDropActive={rootDropActive}
+          onRootDragOver={handleRootDragOver}
+          onRootDragLeave={() => setRootDropActive(false)}
+        />
       </div>
 
       {/* Toolbar */}
@@ -1683,14 +2185,14 @@ export default function MediaManagerPage() {
       )}
 
       {/* Content */}
-      <div className="space-y-3">
+      <div className={`space-y-3 ${playerIndex !== null ? "pb-24" : visibleSelectedIds.length > 0 ? "pb-20" : ""}`}>
         {/* Folders */}
         {filteredFolders.length > 0 && (
           <div>
             <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-2">Folders</p>
             <div className={viewMode === "grid" ? "grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2" : "flex flex-col gap-2"}>
               {filteredFolders.map((folder) => (
-                <FolderCard key={folder.id} folder={folder} onClick={() => navigateToFolder(folder)} onAction={handleFolderAction} itemCount={folderItemCounts[folder.id] || 0} viewMode={viewMode} />
+                <FolderCard key={folder.id} folder={folder} onClick={() => navigateToFolder(folder)} onAction={handleFolderAction} itemCount={folderItemCounts[folder.id] || 0} viewMode={viewMode} onDropFiles={handleDropOnFolder} />
               ))}
             </div>
           </div>
@@ -1699,10 +2201,30 @@ export default function MediaManagerPage() {
         {/* Files */}
         {currentFiles.length > 0 && (
           <div>
-            <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-2">Files</p>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest">Files</p>
+              <button
+                onClick={selectAllOrClear}
+                className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:text-[#74ddc7]"
+              >
+                {allVisibleSelected ? <CheckSquare className="h-3.5 w-3.5 text-[#74ddc7]" /> : <Square className="h-3.5 w-3.5" />}
+                {allVisibleSelected ? "Clear" : "Select all"}
+              </button>
+            </div>
             <div className={viewMode === "grid" ? "grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2" : "flex flex-col gap-2"}>
               {currentFiles.map((file) => (
-                <FileCard key={file.id} file={file} viewMode={viewMode} onAction={handleFileAction} />
+                <FileCard
+                  key={file.id}
+                  file={file}
+                  viewMode={viewMode}
+                  onAction={handleFileAction}
+                  selected={selectedFileIds.has(file.id)}
+                  onToggleSelect={toggleSelectFile}
+                  onDragStartFile={handleDragStartFile}
+                  onDragEndFile={handleDragEndFile}
+                  onPlay={handlePlayFile}
+                  isPlaying={playingFileId === file.id}
+                />
               ))}
             </div>
           </div>
@@ -1771,6 +2293,62 @@ export default function MediaManagerPage() {
           config={state.ftpConfig}
           onClose={() => setShowFTP(false)}
           onSave={handleSaveFTP}
+        />
+      )}
+      {bulkMoveOpen && (
+        <MoveManyToFolderModal
+          count={visibleSelectedIds.length}
+          folders={state.folders}
+          onClose={() => setBulkMoveOpen(false)}
+          onMove={bulkMove}
+        />
+      )}
+
+      {/* Sticky bulk-action bar (≥1 file selected) */}
+      {visibleSelectedIds.length > 0 && (
+        <div className={`fixed inset-x-0 z-30 px-4 ${playerIndex !== null ? "bottom-20" : "bottom-4"}`}>
+          <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#74ddc7]/40 bg-card/95 px-4 py-3 shadow-2xl backdrop-blur">
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[#74ddc7] px-1.5 text-xs font-bold text-[#0a0a0f]">
+                {visibleSelectedIds.length}
+              </span>
+              selected
+              <button onClick={clearSelection} className="ml-1 text-xs text-muted-foreground hover:text-foreground">
+                Clear
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => setBulkMoveOpen(true)} className="rounded-full">
+                <Move className="mr-1.5 h-3.5 w-3.5" /> Move
+              </Button>
+              <Button size="sm" variant="outline" onClick={bulkDownload} className="rounded-full">
+                <Download className="mr-1.5 h-3.5 w-3.5" /> Download
+              </Button>
+              <Button size="sm" variant="outline" onClick={bulkDelete} className="rounded-full border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-400">
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast (e.g. no audio source for demo files) */}
+      {toast && (
+        <div className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2">
+          <div className="flex items-center gap-2 rounded-full border border-border bg-card/95 px-4 py-2 text-sm font-medium text-foreground shadow-2xl backdrop-blur">
+            <AlertCircle className="h-4 w-4 text-amber-400" />
+            {toast}
+          </div>
+        </div>
+      )}
+
+      {/* Inline bottom player */}
+      {playerIndex !== null && playerQueue.length > 0 && (
+        <AudioPlayerBar
+          queue={playerQueue}
+          index={playerIndex}
+          onIndexChange={setPlayerIndex}
+          onClose={() => { setPlayerIndex(null); setPlayerQueue([]); }}
         />
       )}
     </div>
