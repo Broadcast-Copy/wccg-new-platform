@@ -5,6 +5,7 @@ import { useSupabase } from "@/components/providers/supabase-provider";
 import { useAuth } from "@/hooks/use-auth";
 import { HubFeed } from "@/components/social/hub-feed";
 import { HubSidebar } from "@/components/social/hub-sidebar";
+import { HubRail } from "@/components/social/hub-rail";
 import {
   Music,
   Podcast,
@@ -16,7 +17,6 @@ import {
   Users,
   FolderOpen,
   CalendarDays,
-  BarChart3,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -81,9 +81,23 @@ export default function CreatorsPage() {
   const [stats, setStats] = useState({ creators: 0, projects: 0, thisWeek: 0 });
 
   useEffect(() => {
-    if (!user) { setMemberLoading(false); return; }
-    supabase.from('hub_memberships').select('id').eq('user_id', user.id).eq('hub_type', 'creator').single()
-      .then(({ data }) => { setIsMember(!!data); setMemberLoading(false); });
+    let active = true;
+    async function checkMembership(): Promise<boolean> {
+      if (!user) return false;
+      const { data } = await supabase
+        .from('hub_memberships')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('hub_type', 'creator')
+        .single();
+      return !!data;
+    }
+    checkMembership().then((member) => {
+      if (!active) return;
+      setIsMember(member);
+      setMemberLoading(false);
+    });
+    return () => { active = false; };
   }, [user, supabase]);
 
   async function handleJoin() {
@@ -133,34 +147,81 @@ export default function CreatorsPage() {
   }
 
   if (isMember) {
+    const firstName =
+      user?.user_metadata?.display_name?.split(" ")[0] ||
+      user?.email?.split("@")[0] ||
+      "creator";
     return (
       <HubSidebar hubType="creator" color="#7401df">
-        <div className="space-y-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#7401df]/10">
-                <Mic className="h-5 w-5 text-[#7401df]" />
+        <div className="space-y-6">
+          {/* Warm welcome banner */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#9b4dff] via-[#7401df] to-[#5a01b0]">
+            <div className="absolute -right-6 -top-8 h-32 w-32 rounded-full bg-white/20 blur-2xl" />
+            <div className="absolute -bottom-10 left-10 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
+            <div className="relative flex flex-wrap items-center justify-between gap-4 px-5 py-5 sm:px-7">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 shadow-lg backdrop-blur-sm">
+                  <Mic className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="flex items-center gap-2 text-xl font-bold text-white">
+                    Hey {firstName}! <span className="text-2xl">🎤</span>
+                  </h1>
+                  <p className="text-sm text-white/75">
+                    Welcome back to the Creator Hub — share your latest and grow your following.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-xl font-bold">Creator Hub</h1>
-                <span className="text-xs text-[#7401df] font-medium">Member</span>
-              </div>
+              <button
+                onClick={handleLeave}
+                className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white/25"
+              >
+                Leave Hub
+              </button>
             </div>
-            <button onClick={handleLeave} className="text-xs text-muted-foreground hover:text-red-400 transition-colors">
-              Leave Hub
-            </button>
           </div>
-          <HubFeed
-            hubType="creator"
-            accentColor="#7401df"
-            placeholder="Share a project, update, or milestone..."
-            postTypes={[
-              { value: "project", label: "Project" },
-              { value: "update", label: "Update" },
-              { value: "milestone", label: "Milestone" },
-              { value: "resource", label: "Resource" },
-            ]}
-          />
+
+          {/* Quick-stats strip */}
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Creators", value: stats.creators, icon: Users },
+              { label: "Projects Shared", value: stats.projects, icon: FolderOpen },
+              { label: "This Week", value: stats.thisWeek, icon: CalendarDays },
+            ].map((s) => (
+              <div
+                key={s.label}
+                className="flex items-center gap-3 rounded-xl border border-border bg-card p-3"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#7401df]/10">
+                  <s.icon className="h-4 w-4 text-[#7401df]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-lg font-bold leading-none text-foreground">
+                    {s.value.toLocaleString()}
+                  </p>
+                  <p className="truncate text-[11px] text-muted-foreground">{s.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Feed + right rail (members + groups + calendar) */}
+          <div className="flex flex-col lg:flex-row gap-8">
+            <div className="flex-1 min-w-0">
+              <HubFeed
+                hubType="creator"
+                accentColor="#7401df"
+                placeholder="Share a project, update, or milestone..."
+                postTypes={[
+                  { value: "project", label: "Project" },
+                  { value: "update", label: "Update" },
+                  { value: "milestone", label: "Milestone" },
+                  { value: "resource", label: "Resource" },
+                ]}
+              />
+            </div>
+            <HubRail hubType="creator" accentColor="#7401df" supabase={supabase} />
+          </div>
         </div>
       </HubSidebar>
     );

@@ -9,7 +9,10 @@ import { cn } from "@/lib/utils"
 function DropdownMenu({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
-  return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />
+  // modal={false} by default: the modal scroll-lock sets pointer-events:none
+  // on <body>, which breaks tap/click in embedded/older browsers (e.g. the
+  // Tesla in-car browser). Callers can still override via props.
+  return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" modal={false} {...props} />
 }
 
 function DropdownMenuPortal({

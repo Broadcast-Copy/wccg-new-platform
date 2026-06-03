@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { useAuth } from "@/hooks/use-auth";
-import { Heart, ChevronDown, ImageIcon, Link2, LogIn } from "lucide-react";
+import { Heart, ChevronDown, Link2, LogIn, Sparkles, LayoutList, Clapperboard } from "lucide-react";
 import Link from "next/link";
+import { HubReels } from "@/components/social/hub-reels";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -73,6 +74,31 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
+/** A friendly emoji for a post type, matched loosely by keyword so any hub's
+ *  custom post types still get something fun. Falls back to a speech balloon. */
+function postEmoji(value: string, label: string): string {
+  const k = `${value} ${label}`.toLowerCase();
+  if (k.includes("now") || k.includes("playing") || k.includes("track") || k.includes("song")) return "🎵";
+  if (k.includes("review")) return "⭐";
+  if (k.includes("shout")) return "📣";
+  if (k.includes("milestone") || k.includes("achieve")) return "🏆";
+  if (k.includes("question") || k.includes("ask")) return "❓";
+  if (k.includes("event") || k.includes("show")) return "📅";
+  if (k.includes("deal") || k.includes("offer") || k.includes("promo")) return "🏷️";
+  if (k.includes("hire") || k.includes("job") || k.includes("gig")) return "💼";
+  if (k.includes("release") || k.includes("drop") || k.includes("new")) return "🚀";
+  if (k.includes("collab")) return "🤝";
+  return "💬";
+}
+
+/** Pleasant, deterministic avatar gradient derived from a name so each member
+ *  gets a consistent splash of colour (kept in the accent family via the ring). */
+function avatarHue(name: string): number {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+  return h;
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -81,6 +107,10 @@ const PAGE_SIZE = 20;
 export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFeedProps) {
   const { supabase } = useSupabase();
   const { user } = useAuth();
+
+  // Feed vs. Reels (TikTok-style) view. Defaults to the post feed; kept in
+  // component state so switching tabs doesn't lose the loaded post list.
+  const [mode, setMode] = useState<"feed" | "reels">("feed");
 
   // Composer state
   const [content, setContent] = useState("");
@@ -94,9 +124,11 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
   const [page, setPage] = useState(0);
 
   // ------- Fetch posts -------
-  const fetchPosts = useCallback(
-    async (pageNum: number, append = false) => {
-      setLoading(true);
+  // Pure async loader: fetches one page + enriches it, and returns the rows.
+  // It never calls setState itself — callers own that (so the mount effect can
+  // set results inside a `.then`, satisfying react-hooks/set-state-in-effect).
+  const fetchPage = useCallback(
+    async (pageNum: number): Promise<{ posts: HubPost[]; hasMore: boolean } | null> => {
       const from = pageNum * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
@@ -107,12 +139,7 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
         .order("created_at", { ascending: false })
         .range(from, to);
 
-      if (!rawPosts) {
-        setLoading(false);
-        return;
-      }
-
-      setHasMore(rawPosts.length === PAGE_SIZE);
+      if (!rawPosts) return null;
 
       // Fetch profile display names
       const userIds = [...new Set(rawPosts.map((p) => p.user_id))];
@@ -145,21 +172,41 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
         liked: likedSet.has(p.id),
       }));
 
-      setPosts((prev) => (append ? [...prev, ...enriched] : enriched));
-      setLoading(false);
+      return { posts: enriched, hasMore: rawPosts.length === PAGE_SIZE };
     },
     [supabase, hubType, user]
   );
 
+  // Initial load (and reload when hub/user identity changes). setState lives in
+  // the `.then` (post-await) + an `active` guard drops results from a stale run.
   useEffect(() => {
-    fetchPosts(0);
-  }, [fetchPosts]);
+    let active = true;
+    fetchPage(0).then((res) => {
+      if (!active) return;
+      if (res) {
+        setPosts(res.posts);
+        setHasMore(res.hasMore);
+      }
+      setPage(0);
+      setLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [fetchPage]);
 
   // ------- Load more -------
   const loadMore = () => {
     const next = page + 1;
     setPage(next);
-    fetchPosts(next, true);
+    setLoading(true);
+    fetchPage(next).then((res) => {
+      if (res) {
+        setPosts((prev) => [...prev, ...res.posts]);
+        setHasMore(res.hasMore);
+      }
+      setLoading(false);
+    });
   };
 
   // ------- Submit post -------
@@ -177,7 +224,11 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
     if (!error) {
       setContent("");
       setPage(0);
-      fetchPosts(0);
+      const res = await fetchPage(0);
+      if (res) {
+        setPosts(res.posts);
+        setHasMore(res.hasMore);
+      }
     }
     setSubmitting(false);
   };
@@ -223,48 +274,105 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
   // ------- Render -------
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-foreground">Community Feed</h2>
+      {/* ---- Header + mode toggle ---- */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-xl font-bold text-foreground">
+          <Sparkles className="h-5 w-5" style={{ color: accentColor }} />
+          Community Feed
+        </h2>
+        {/* Feed / Reels pills */}
+        <div className="inline-flex rounded-full border border-border bg-card p-1">
+          {([
+            { key: "feed", label: "Feed", Icon: LayoutList },
+            { key: "reels", label: "Reels", Icon: Clapperboard },
+          ] as const).map(({ key, label, Icon }) => {
+            const on = mode === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setMode(key)}
+                aria-pressed={on}
+                className="inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-bold transition-colors"
+                style={
+                  on
+                    ? { backgroundColor: accentColor, color: "#fff" }
+                    : { color: "var(--muted-foreground)" }
+                }
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
+      {/* ---- Reels (TikTok-style) ---- */}
+      {mode === "reels" ? (
+        <HubReels accentColor={accentColor} />
+      ) : (
+      <>
       {/* ---- Composer ---- */}
       {user ? (
-        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder={placeholder}
-            rows={3}
-            className="w-full rounded-lg border border-border bg-foreground/[0.04] px-4 py-2.5 text-sm text-foreground placeholder:text-foreground/20 focus:border-[var(--accent)] focus:outline-none resize-none"
-            style={{ "--accent": accentColor } as React.CSSProperties}
-          />
-          <div className="flex items-center justify-between gap-3">
-            <select
-              value={postType}
-              onChange={(e) => setPostType(e.target.value)}
-              className="rounded-lg border border-border bg-foreground/[0.04] px-3 py-1.5 text-sm text-foreground focus:outline-none"
-            >
-              {postTypes.map((pt) => (
-                <option key={pt.value} value={pt.value} className="bg-card">
-                  {pt.label}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={handleSubmit}
-              disabled={submitting || !content.trim()}
-              className="rounded-full px-6 py-2 text-sm font-bold text-white disabled:opacity-50 transition-colors"
-              style={{ backgroundColor: accentColor }}
-            >
-              {submitting ? "Posting..." : "Post"}
-            </button>
+        <div
+          className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md"
+        >
+          {/* Friendly gradient header */}
+          <div
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-white"
+            style={{ background: `linear-gradient(90deg, ${accentColor}, ${accentColor}b3)` }}
+          >
+            <Sparkles className="h-4 w-4" />
+            What&apos;s on your mind?
+          </div>
+          <div className="space-y-3 p-4">
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder={placeholder}
+              rows={3}
+              className="w-full resize-none rounded-xl border border-border bg-foreground/[0.04] px-4 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
+              style={{ "--accent": accentColor } as React.CSSProperties}
+            />
+            <div className="flex items-center justify-between gap-3">
+              <select
+                value={postType}
+                onChange={(e) => setPostType(e.target.value)}
+                className="rounded-full border border-border bg-foreground/[0.04] px-3 py-1.5 text-sm text-foreground focus:outline-none"
+              >
+                {postTypes.map((pt) => (
+                  <option key={pt.value} value={pt.value} className="bg-card">
+                    {postEmoji(pt.value, pt.label)} {pt.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleSubmit}
+                disabled={submitting || !content.trim()}
+                className="rounded-full px-6 py-2 text-sm font-bold text-white shadow-sm transition-all hover:brightness-105 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+                style={{ backgroundColor: accentColor }}
+              >
+                {submitting ? "Posting..." : "Share 🎉"}
+              </button>
+            </div>
           </div>
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-card p-6 text-center">
-          <LogIn className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
-          <p className="text-sm text-muted-foreground mb-3">Sign in to share with the community</p>
+        <div
+          className="rounded-2xl border border-border p-6 text-center"
+          style={{ background: `linear-gradient(135deg, ${accentColor}14, transparent)` }}
+        >
+          <div
+            className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full"
+            style={{ backgroundColor: `${accentColor}1f`, color: accentColor }}
+          >
+            <LogIn className="h-5 w-5" />
+          </div>
+          <p className="mb-3 text-sm text-muted-foreground">Sign in to join the conversation 👋</p>
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold text-white"
+            className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold text-white shadow-sm transition-transform hover:scale-105"
             style={{ backgroundColor: accentColor }}
           >
             Sign In
@@ -281,29 +389,42 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
           />
         </div>
       ) : posts.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-8 text-center">
-          <p className="text-muted-foreground">No posts yet — be the first to share!</p>
+        <div
+          className="rounded-2xl border border-dashed border-border p-10 text-center"
+          style={{ background: `linear-gradient(135deg, ${accentColor}12, transparent)` }}
+        >
+          <div className="mb-2 text-4xl" aria-hidden>
+            🎉
+          </div>
+          <p className="font-semibold text-foreground">It&apos;s quiet in here</p>
+          <p className="mt-1 text-sm text-muted-foreground">Be the first to share 🎉</p>
         </div>
       ) : (
         <div className="space-y-4">
           {posts.map((post) => {
             const ytId = post.link_url ? getYouTubeId(post.link_url) : null;
+            const name = post.display_name ?? "";
+            const hue = avatarHue(name || post.user_id);
 
             return (
               <div
                 key={post.id}
-                className="rounded-xl border border-border bg-card p-4 space-y-3"
+                className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-input hover:shadow-md"
               >
                 {/* Header */}
                 <div className="flex items-center gap-3">
                   <div
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                    style={{ backgroundColor: accentColor }}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm ring-2"
+                    style={{
+                      background: `linear-gradient(135deg, hsl(${hue} 70% 55%), hsl(${(hue + 40) % 360} 70% 45%))`,
+                      // colored ring in the hub accent to tie members together
+                      ["--tw-ring-color" as string]: `${accentColor}66`,
+                    }}
                   >
-                    {initials(post.display_name ?? "")}
+                    {initials(name)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <span className="font-semibold text-sm text-foreground">
+                    <span className="text-sm font-semibold text-foreground">
                       {post.display_name}
                     </span>
                     <span className="mx-2 text-muted-foreground/40">·</span>
@@ -312,12 +433,13 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
                     </span>
                   </div>
                   <span
-                    className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+                    className="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
                     style={{
-                      backgroundColor: `${accentColor}15`,
+                      backgroundColor: `${accentColor}1f`,
                       color: accentColor,
                     }}
                   >
+                    <span aria-hidden>{postEmoji(post.post_type, typeLabel(post.post_type))}</span>
                     {typeLabel(post.post_type)}
                   </span>
                 </div>
@@ -330,6 +452,7 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
                 {/* Media */}
                 {post.media_url && (
                   <div className="rounded-lg overflow-hidden border border-border">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={post.media_url}
                       alt="Post media"
@@ -366,15 +489,15 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
                 )}
 
                 {/* Actions */}
-                <div className="flex items-center gap-4 pt-1">
+                <div className="flex items-center gap-2 pt-1">
                   <button
                     onClick={() => toggleLike(post)}
                     disabled={!user}
-                    className="flex items-center gap-1.5 text-sm transition-colors disabled:opacity-40"
+                    className="group/like inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-colors hover:bg-foreground/[0.05] disabled:opacity-40 disabled:hover:bg-transparent"
                     style={{ color: post.liked ? accentColor : undefined }}
                   >
                     <Heart
-                      className="h-4 w-4"
+                      className="h-4 w-4 transition-transform group-active/like:scale-125"
                       fill={post.liked ? accentColor : "none"}
                       stroke={post.liked ? accentColor : "currentColor"}
                     />
@@ -390,13 +513,15 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
             <button
               onClick={loadMore}
               disabled={loading}
-              className="w-full rounded-xl border border-border bg-card py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-input transition-colors flex items-center justify-center gap-2"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-input hover:text-foreground"
             >
               <ChevronDown className="h-4 w-4" />
               {loading ? "Loading..." : "Load more"}
             </button>
           )}
         </div>
+      )}
+      </>
       )}
     </div>
   );
