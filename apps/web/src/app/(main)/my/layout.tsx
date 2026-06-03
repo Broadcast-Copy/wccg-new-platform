@@ -379,7 +379,11 @@ function SidebarContent({ pathname }: { pathname: string }) {
     <>
       {/* User info + Toggle */}
       <div className="border-b border-border px-4 py-4 space-y-2">
-        <div className="flex items-center gap-3">
+        <Link
+          href="/my/settings"
+          className="-mx-1 flex items-center gap-3 rounded-lg px-1 py-1 transition-colors hover:bg-foreground/[0.04]"
+          title="View your profile & settings"
+        >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#74ddc7]/30 to-[#7401df]/30 border border-border">
             <User className="h-4 w-4 text-foreground/70" />
           </div>
@@ -391,7 +395,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
               {user?.email || ""}
             </p>
           </div>
-        </div>
+        </Link>
         <SidebarModeToggle />
       </div>
 
