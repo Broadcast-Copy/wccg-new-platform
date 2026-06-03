@@ -8,6 +8,7 @@ import Link from "next/link";
 import {
   FolderOpen,
   FolderPlus,
+  CalendarPlus,
   Upload,
   LayoutGrid,
   LayoutList,
@@ -1728,6 +1729,35 @@ export default function MediaManagerPage() {
     setShowNewFolder(false);
   };
 
+  // Next Monday's dated on-air folder — auto-named from the dated folders in
+  // the current folder (latest + 7 days), keeping their exact suffix style
+  // (e.g. "onair" vs "on-air"). Shown only when this folder already holds at
+  // least one MMDDYYYY-onair folder (i.e. you're inside a time-slot folder).
+  const nextOnairFolder = useMemo(() => {
+    const re = /^(\d{2})(\d{2})(\d{4})-(on-?air)$/i;
+    let latest: { date: Date; suffix: string } | null = null;
+    for (const f of currentFolders) {
+      const m = f.name.match(re);
+      if (!m) continue;
+      const d = new Date(Number(m[3]), Number(m[1]) - 1, Number(m[2]));
+      if (Number.isNaN(d.getTime())) continue;
+      if (!latest || d > latest.date) latest = { date: d, suffix: m[4] };
+    }
+    if (!latest) return null;
+    const next = new Date(latest.date);
+    next.setDate(next.getDate() + 7);
+    const name =
+      `${String(next.getMonth() + 1).padStart(2, "0")}` +
+      `${String(next.getDate()).padStart(2, "0")}` +
+      `${next.getFullYear()}-${latest.suffix}`;
+    const exists = currentFolders.some((f) => f.name.toLowerCase() === name.toLowerCase());
+    return { name, exists };
+  }, [currentFolders]);
+
+  const createNextMonday = () => {
+    if (nextOnairFolder && !nextOnairFolder.exists) createFolder(nextOnairFolder.name);
+  };
+
   // ─── Folder actions (rename / copy / cut / delete) ──────────────────────
   const handleFolderAction = (action: string, folder: MediaFolder) => {
     switch (action) {
@@ -2076,6 +2106,20 @@ export default function MediaManagerPage() {
             <Button variant="ghost" size="sm" onClick={handlePaste} className="h-8 text-xs text-[#74ddc7] hover:text-[#74ddc7] hover:bg-[#74ddc7]/10">
               <ClipboardPaste className="mr-1.5 h-3.5 w-3.5" />
               Paste {clipboard.op === "cut" ? "(move)" : ""} “{clipboard.name.length > 14 ? clipboard.name.slice(0, 14) + "…" : clipboard.name}”
+            </Button>
+          )}
+
+          {/* Create next Monday's on-air folder (contextual) */}
+          {nextOnairFolder && !nextOnairFolder.exists && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={createNextMonday}
+              title={`Create ${nextOnairFolder.name}`}
+              className="h-8 text-xs text-[#7401df] hover:text-[#7401df] hover:bg-[#7401df]/10"
+            >
+              <CalendarPlus className="mr-1.5 h-3.5 w-3.5" />
+              Next Monday · {nextOnairFolder.name}
             </Button>
           )}
 
