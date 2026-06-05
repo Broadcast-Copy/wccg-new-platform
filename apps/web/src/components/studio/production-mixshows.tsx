@@ -37,6 +37,8 @@ import {
   VolumeX,
   X,
   UserCircle2,
+  Users,
+  CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -63,6 +65,9 @@ function fmtClock(seconds: number): string {
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 // Production week order: Mon → Sun
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+// Path key used for the DJ folder holding slots with no assigned DJ.
+const UNASSIGNED_DJ_KEY = "__unassigned__";
+const PLAYABLE_STATUSES = ["uploaded", "validated", "published"];
 
 interface DjRef { slug: string; display_name: string }
 interface Slot {
@@ -292,14 +297,97 @@ function AudioPlayerBar({
   );
 }
 
-export function ProductionMixshows({ focusSlotId }: { focusSlotId?: string }) {
+/**
+ * A single on-air file row. Shared verbatim by the By-Day file view and the
+ * By-DJ folder so behaviour/markup match. `subtitle` injects an extra line
+ * under the filename (the By-DJ view uses it for the airing's day + time).
+ */
+function FileRow({
+  slot,
+  code,
+  drop,
+  present,
+  isSelected,
+  isNowPlaying,
+  busyUrl,
+  rowKey,
+  subtitle,
+  onToggleSelect,
+  onPlay,
+}: {
+  slot: Slot;
+  code: string;
+  drop: Drop | undefined;
+  present: boolean;
+  isSelected: boolean;
+  isNowPlaying: boolean;
+  busyUrl: string | null;
+  rowKey: string;
+  subtitle?: React.ReactNode;
+  onToggleSelect: (dropId: string, rowKey: string, e: React.MouseEvent) => void;
+  onPlay: (slot: Slot, drop: Drop) => void;
+}) {
+  return (
+    <div
+      className={`flex items-center gap-3 rounded-xl border bg-card px-4 py-3 transition-colors ${
+        isSelected ? "border-[#74ddc7]/50 bg-[#74ddc7]/[0.04]" : "border-border"
+      }`}
+    >
+      {/* Selection checkbox — only for uploaded (actionable) files */}
+      {present && drop ? (
+        <button
+          onClick={(e) => onToggleSelect(drop.id, rowKey, e)}
+          aria-label={isSelected ? "Deselect file" : "Select file"}
+          className="flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-[#74ddc7]"
+        >
+          {isSelected ? <CheckSquare className="h-4.5 w-4.5 text-[#74ddc7]" /> : <Square className="h-4.5 w-4.5" />}
+        </button>
+      ) : (
+        <span className="h-5 w-5 shrink-0" />
+      )}
+      <FileAudio className={`h-5 w-5 shrink-0 ${present ? "text-[#74ddc7]" : "text-muted-foreground/40"}`} />
+      <div className="flex-1 min-w-0">
+        <p className="flex items-center gap-2 font-mono text-sm font-bold text-foreground">
+          <span className="truncate">{code}.{drop?.format ?? "mp3"}</span>
+          {isNowPlaying && (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#74ddc7]/15 px-2 py-0.5 text-[10px] font-bold text-[#74ddc7]">
+              <Volume2 className="h-3 w-3" /> Playing
+            </span>
+          )}
+        </p>
+        {subtitle && <p className="mt-0.5 text-[11px] text-muted-foreground">{subtitle}</p>}
+        <p className="text-xs text-muted-foreground">
+          {present ? (
+            <span className="inline-flex items-center gap-1 text-[#74ddc7]"><CheckCircle2 className="h-3 w-3" /> {drop!.status}{drop!.uploaded_at ? ` · ${new Date(drop!.uploaded_at).toLocaleDateString()}` : ""}</span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-muted-foreground/60"><Circle className="h-3 w-3" /> not uploaded yet</span>
+          )}
+        </p>
+      </div>
+      {present && drop?.storage_path && (
+        <Button size="sm" variant="outline" className="rounded-full" disabled={busyUrl === drop.id} onClick={() => onPlay(slot, drop)}>
+          {busyUrl === drop.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="mr-1 h-3.5 w-3.5" />}
+          Play
+        </Button>
+      )}
+    </div>
+  );
+}
+
+export function ProductionMixshows({ focusSlotId, focusDjId }: { focusSlotId?: string; focusDjId?: string }) {
   const [weekOf, setWeekOf] = useState(isoMondayOfNow());
   const [slots, setSlots] = useState<Slot[]>([]);
   const [drops, setDrops] = useState<Drop[]>([]);
   const [djs, setDjs] = useState<DjRef[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Navigation path: [] = days, [day] = slots in day, [day, slotId] = files
+  // How the folder tree is grouped at the top level.
+  //   "day" → Day › Time › files (the original schedule view)
+  //   "dj"  → DJ › that DJ's on-air mixes for the week (mirrors D:\WCCG\b-mixshows\<dj>\on-air)
+  const [groupBy, setGroupBy] = useState<"day" | "dj">("day");
+  // Navigation path. Meaning depends on groupBy:
+  //   day-mode: [] = days, [day] = slots in day, [day, slotId] = files
+  //   dj-mode:  [] = DJ folders, [djKey] = that DJ's on-air mixes
   const [path, setPath] = useState<Array<number | string>>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [busyUrl, setBusyUrl] = useState<string | null>(null);
@@ -342,16 +430,27 @@ export function ProductionMixshows({ focusSlotId }: { focusSlotId?: string }) {
 
   useEffect(() => { load(); }, [load]);
 
-  // Deep-link: when opened from the DJ-slots admin with ?slot=<id>, jump
-  // straight into that slot's files once the schedule has loaded.
+  // Deep-link (one-shot): jump straight to a slot or a DJ folder once the
+  // schedule has loaded. ?dj=<id> wins over ?slot=<id>; ?dj opens the By-DJ
+  // grouping at that DJ's on-air folder, ?slot opens the By-Day file view.
   const focusedRef = useRef(false);
   useEffect(() => {
-    if (focusedRef.current || !focusSlotId || slots.length === 0) return;
-    const slot = slots.find((s) => s.id === focusSlotId);
-    if (!slot) return;
-    focusedRef.current = true;
-    queueMicrotask(() => setPath([slot.day_of_week, slot.id]));
-  }, [focusSlotId, slots]);
+    if (focusedRef.current || slots.length === 0) return;
+    if (focusDjId) {
+      // Only focus a DJ that actually has slots this schedule.
+      const hasSlots = slots.some((s) => s.dj_id === focusDjId);
+      if (!hasSlots) return;
+      focusedRef.current = true;
+      queueMicrotask(() => { setGroupBy("dj"); setPath([focusDjId]); });
+      return;
+    }
+    if (focusSlotId) {
+      const slot = slots.find((s) => s.id === focusSlotId);
+      if (!slot) return;
+      focusedRef.current = true;
+      queueMicrotask(() => { setGroupBy("day"); setPath([slot.day_of_week, slot.id]); });
+    }
+  }, [focusDjId, focusSlotId, slots]);
 
   // Drops keyed by slot+code for quick lookup
   const dropByKey = useMemo(() => {
@@ -368,6 +467,42 @@ export function ProductionMixshows({ focusSlotId }: { focusSlotId?: string }) {
 
   const slotsForDay = (day: number) =>
     slots.filter((s) => s.day_of_week === day).sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+  // ── By-DJ grouping ───────────────────────────────────────────────────────
+  // A flat on-air mix the player/file-row can render: one file_code from a
+  // specific slot. We carry the owning slot so play/download act on it exactly
+  // as the By-Day view does.
+  interface DjMix { slot: Slot; code: string; drop: Drop | undefined; present: boolean }
+
+  // Group slots → DJ folders. Each folder is keyed by dj_id (or the Unassigned
+  // sentinel), ordered with named DJs A→Z first and Unassigned last. Only DJs
+  // that actually have a slot get a folder. `fileCount` counts on-air files
+  // (uploaded/validated/published drops) across the DJ's slots this week.
+  const djFolders = useMemo(() => {
+    const groups = new Map<string, { key: string; label: string; slots: Slot[] }>();
+    for (const s of slots) {
+      const key = s.dj_id ?? UNASSIGNED_DJ_KEY;
+      const existing = groups.get(key);
+      if (existing) existing.slots.push(s);
+      else groups.set(key, { key, label: s.djs?.display_name ?? "Unassigned", slots: [s] });
+    }
+    return Array.from(groups.values())
+      .map((g) => {
+        let fileCount = 0;
+        for (const s of g.slots) {
+          for (const code of s.file_codes) {
+            const d = dropByKey.get(`${s.id}|${code}`);
+            if (d && d.storage_path && PLAYABLE_STATUSES.includes(d.status)) fileCount++;
+          }
+        }
+        return { ...g, fileCount };
+      })
+      .sort((a, b) => {
+        if (a.key === UNASSIGNED_DJ_KEY) return 1;
+        if (b.key === UNASSIGNED_DJ_KEY) return -1;
+        return a.label.localeCompare(b.label);
+      });
+  }, [slots, dropByKey]);
 
   // Resolve a fresh 1h signed URL for a drop's storage object (lazy, per-play).
   const resolveSignedUrl = useCallback(async (storagePath: string): Promise<string | null> => {
@@ -440,85 +575,114 @@ export function ProductionMixshows({ focusSlotId }: { focusSlotId?: string }) {
     return [`DJB_${max + 1}`, `DJB_${max + 2}`];
   }, [slots]);
 
-  const level = path.length; // 0 days, 1 day, 2 slot
-  const currentDay = level >= 1 ? (path[0] as number) : null;
-  const currentSlot = level >= 2 ? slots.find((s) => s.id === path[1]) : null;
+  // In day-mode: 0 days, 1 day, 2 slot.  In dj-mode: 0 DJ folders, 1 DJ's mixes.
+  const level = path.length;
+  const currentDay = groupBy === "day" && level >= 1 ? (path[0] as number) : null;
+  const currentSlot = groupBy === "day" && level >= 2 ? slots.find((s) => s.id === path[1]) : null;
 
-  // ── Multi-select over the active slot's UPLOADED file codes ──────────────
-  // Only uploaded files are selectable (you can't act on a missing file).
-  const selectableCodes = useMemo(() => {
-    if (!currentSlot) return [] as string[];
-    return currentSlot.file_codes.filter((c) => {
-      const d = dropByKey.get(`${currentSlot.id}|${c}`);
-      return d && d.storage_path && ["uploaded", "validated", "published"].includes(d.status);
-    });
-  }, [currentSlot, dropByKey]);
+  // The DJ folder currently open (dj-mode, level 1).
+  const currentDjKey = groupBy === "dj" && level >= 1 ? (path[0] as string) : null;
+  const currentDjFolder = useMemo(
+    () => (currentDjKey ? djFolders.find((f) => f.key === currentDjKey) ?? null : null),
+    [currentDjKey, djFolders],
+  );
 
-  // Drop ids of the currently-selected codes, in slot order.
-  const selectedDrops = useMemo(() => {
-    if (!currentSlot) return [] as { code: string; drop: Drop }[];
-    return selectableCodes
-      .map((code) => ({ code, drop: dropByKey.get(`${currentSlot.id}|${code}`) }))
-      .filter((x): x is { code: string; drop: Drop } => !!x.drop && selected.has(x.drop.id));
-  }, [currentSlot, selectableCodes, dropByKey, selected]);
+  // Flat on-air mix list for the open DJ folder: every file_code across that
+  // DJ's slots (sorted by day then start time), each tied to its owning slot.
+  const djMixes = useMemo<DjMix[]>(() => {
+    if (!currentDjFolder) return [];
+    const ordered = [...currentDjFolder.slots].sort(
+      (a, b) => DAY_ORDER.indexOf(a.day_of_week) - DAY_ORDER.indexOf(b.day_of_week) || a.start_time.localeCompare(b.start_time),
+    );
+    const out: DjMix[] = [];
+    for (const slot of ordered) {
+      for (const code of slot.file_codes) {
+        const drop = dropByKey.get(`${slot.id}|${code}`);
+        const present = !!drop && !!drop.storage_path && PLAYABLE_STATUSES.includes(drop.status);
+        out.push({ slot, code, drop, present });
+      }
+    }
+    return out;
+  }, [currentDjFolder, dropByKey]);
 
-  const allSelected = selectableCodes.length > 0 && selectedDrops.length === selectableCodes.length;
+  // ── Multi-select over the active view's UPLOADED files ────────────────────
+  // Unified selection model: one entry per selectable (on-air) file in the
+  // current view, carrying its owning slot so play/download act correctly in
+  // both the By-Day file view and the By-DJ folder. Only on-air files are
+  // selectable (you can't act on a missing file).
+  const selectableItems = useMemo<{ slot: Slot; code: string; drop: Drop }[]>(() => {
+    const src = currentSlot
+      ? currentSlot.file_codes.map((code) => ({ slot: currentSlot, code }))
+      : currentDjFolder
+        ? djMixes.map(({ slot, code }) => ({ slot, code }))
+        : [];
+    return src
+      .map(({ slot, code }) => ({ slot, code, drop: dropByKey.get(`${slot.id}|${code}`) }))
+      .filter((x): x is { slot: Slot; code: string; drop: Drop } =>
+        !!x.drop && !!x.drop.storage_path && PLAYABLE_STATUSES.includes(x.drop.status));
+  }, [currentSlot, currentDjFolder, djMixes, dropByKey]);
 
-  // Clear selection whenever we leave the file view or switch slot/week.
+  // The currently-selected entries, in view order.
+  const selectedDrops = useMemo(
+    () => selectableItems.filter((x) => selected.has(x.drop.id)),
+    [selectableItems, selected],
+  );
+
+  const allSelected = selectableItems.length > 0 && selectedDrops.length === selectableItems.length;
+
+  // Clear selection whenever we leave the file/DJ view or switch slot/DJ/week.
   useEffect(() => {
     setSelected(new Set());
     setAnchorCode(null);
-  }, [currentSlot?.id, weekOf]);
+  }, [currentSlot?.id, currentDjKey, weekOf]);
 
   // Toggle a row, honouring shift (range from anchor) + ctrl/cmd (toggle).
-  const toggleSelect = useCallback((code: string, e: React.MouseEvent) => {
-    if (!currentSlot) return;
-    const drop = dropByKey.get(`${currentSlot.id}|${code}`);
-    if (!drop) return;
+  // `key` identifies the row within the current view (slot|code), so the same
+  // code under different slots stays distinct in the By-DJ view.
+  const toggleSelect = useCallback((dropId: string, key: string, e: React.MouseEvent) => {
     setSelected((prev) => {
       const next = new Set(prev);
       if (e.shiftKey && anchorCode) {
-        const a = selectableCodes.indexOf(anchorCode);
-        const b = selectableCodes.indexOf(code);
+        const a = selectableItems.findIndex((x) => `${x.slot.id}|${x.code}` === anchorCode);
+        const b = selectableItems.findIndex((x) => `${x.slot.id}|${x.code}` === key);
         if (a !== -1 && b !== -1) {
           const [lo, hi] = a < b ? [a, b] : [b, a];
-          for (let i = lo; i <= hi; i++) {
-            const d = dropByKey.get(`${currentSlot.id}|${selectableCodes[i]}`);
-            if (d) next.add(d.id);
-          }
+          for (let i = lo; i <= hi; i++) next.add(selectableItems[i].drop.id);
           return next;
         }
       }
       // ctrl/cmd or plain click → toggle this one
-      if (next.has(drop.id)) next.delete(drop.id);
-      else next.add(drop.id);
+      if (next.has(dropId)) next.delete(dropId);
+      else next.add(dropId);
       return next;
     });
-    if (!e.shiftKey) setAnchorCode(code);
-  }, [currentSlot, dropByKey, anchorCode, selectableCodes]);
+    if (!e.shiftKey) setAnchorCode(key);
+  }, [anchorCode, selectableItems]);
 
   const selectAllOrClear = useCallback(() => {
-    if (!currentSlot) return;
     if (allSelected) { setSelected(new Set()); return; }
-    const next = new Set<string>();
-    for (const code of selectableCodes) {
-      const d = dropByKey.get(`${currentSlot.id}|${code}`);
-      if (d) next.add(d.id);
-    }
-    setSelected(next);
-  }, [currentSlot, allSelected, selectableCodes, dropByKey]);
+    setSelected(new Set(selectableItems.map((x) => x.drop.id)));
+  }, [allSelected, selectableItems]);
 
-  // Bulk: play every selected file as a queue (in slot order).
+  // Bulk: play every selected file as a queue (in view order).
   const playSelected = useCallback(() => {
     const tracks = selectedDrops.map(({ code, drop }) => trackForDrop(code, drop));
     playQueue(tracks);
   }, [selectedDrops, trackForDrop, playQueue]);
 
-  // Bulk: open signed URLs for every selected file.
+  // Bulk: open signed URLs for every selected file. Selected files may span
+  // multiple slots (By-DJ view), so resolve each via its own owning slot.
   const downloadSelected = useCallback(() => {
-    if (!currentSlot) return;
-    void downloadDrops(currentSlot, selectedDrops.map((x) => x.code));
-  }, [currentSlot, downloadDrops, selectedDrops]);
+    void (async () => {
+      for (const { slot, code } of selectedDrops) await downloadDrops(slot, [code]);
+    })();
+  }, [downloadDrops, selectedDrops]);
+
+  // Switch the top-level grouping; reset navigation to that grouping's root.
+  const setGrouping = useCallback((g: "day" | "dj") => {
+    setGroupBy(g);
+    setPath([]);
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -526,9 +690,9 @@ export function ProductionMixshows({ focusSlotId }: { focusSlotId?: string }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm">
           <button onClick={() => setPath([])} className="inline-flex items-center gap-1 font-bold text-foreground hover:text-[#74ddc7]">
-            <Home className="h-3.5 w-3.5" /> DJ Mixshows
+            <Home className="h-3.5 w-3.5" /> {groupBy === "dj" ? "DJs" : "DJ Mixshows"}
           </button>
-          {currentDay !== null && (
+          {groupBy === "day" && currentDay !== null && (
             <>
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
               <button onClick={() => setPath([currentDay])} className="font-bold text-foreground hover:text-[#74ddc7]">
@@ -536,14 +700,35 @@ export function ProductionMixshows({ focusSlotId }: { focusSlotId?: string }) {
               </button>
             </>
           )}
-          {currentSlot && (
+          {groupBy === "day" && currentSlot && (
             <>
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="font-bold text-[#74ddc7]">{fmt12h(currentSlot.start_time)}</span>
             </>
           )}
+          {groupBy === "dj" && currentDjFolder && (
+            <>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="font-bold text-[#74ddc7]">{currentDjFolder.label}</span>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-2">
+          {/* Grouping toggle: By Day (schedule) vs By DJ (per-DJ on-air folder) */}
+          <div className="flex items-center gap-0.5 rounded-full border border-border bg-card p-0.5 text-xs">
+            <button
+              onClick={() => setGrouping("day")}
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold transition-colors ${groupBy === "day" ? "bg-[#74ddc7] text-[#0a0a0f]" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <CalendarDays className="h-3.5 w-3.5" /> By Day
+            </button>
+            <button
+              onClick={() => setGrouping("dj")}
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold transition-colors ${groupBy === "dj" ? "bg-[#7401df] text-white" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <Users className="h-3.5 w-3.5" /> By DJ
+            </button>
+          </div>
           {/* Week nav */}
           <div className="flex items-center gap-1 rounded-full border border-border bg-card px-1 py-0.5 text-xs">
             <button onClick={() => setWeekOf((w) => addWeeks(w, -1))} className="rounded-full px-2 py-1 hover:bg-foreground/[0.06]">‹</button>
@@ -563,6 +748,74 @@ export function ProductionMixshows({ focusSlotId }: { focusSlotId?: string }) {
 
       {loading && slots.length === 0 ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading schedule…</div>
+      ) : groupBy === "dj" ? (
+        currentDjFolder ? (
+          /* ── One DJ's on-air mixes (flat, every airing this week) ── */
+          <div className={`space-y-2 ${playerIndex !== null ? "pb-24" : ""}`}>
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card/50 px-4 py-2 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <UserCircle2 className="h-3.5 w-3.5" />
+                {currentDjFolder.label} · on-air mixes · week of {weekOf}
+              </span>
+              {selectableItems.length > 0 && (
+                <button
+                  onClick={selectAllOrClear}
+                  className="inline-flex items-center gap-1.5 font-medium text-muted-foreground transition-colors hover:text-[#74ddc7]"
+                >
+                  {allSelected ? <CheckSquare className="h-3.5 w-3.5 text-[#74ddc7]" /> : <Square className="h-3.5 w-3.5" />}
+                  {allSelected ? "Clear" : "Select all"}
+                </button>
+              )}
+            </div>
+            {djMixes.length === 0 && (
+              <p className="rounded-xl border border-dashed border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
+                No mixshow files for this DJ this week.
+              </p>
+            )}
+            {djMixes.map(({ slot, code, drop, present }) => {
+              const rowKey = `${slot.id}|${code}`;
+              const isSelected = !!drop && selected.has(drop.id);
+              const isNowPlaying = playerIndex !== null && !!drop && queue[playerIndex]?.id === drop.id;
+              return (
+                <FileRow
+                  key={rowKey}
+                  slot={slot}
+                  code={code}
+                  drop={drop}
+                  present={present}
+                  isSelected={isSelected}
+                  isNowPlaying={isNowPlaying}
+                  busyUrl={busyUrl}
+                  rowKey={rowKey}
+                  subtitle={`${DAY_NAMES[slot.day_of_week]} · ${fmt12h(slot.start_time)}–${fmt12h(slot.end_time)}`}
+                  onToggleSelect={toggleSelect}
+                  onPlay={playDrop}
+                />
+              );
+            })}
+          </div>
+        ) : (
+          /* ── DJ folders ── */
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {djFolders.map((folder) => (
+              <button key={folder.key} onClick={() => setPath([folder.key])} className="group flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5 transition-all hover:border-[#74ddc7]/40">
+                <div className="relative">
+                  <Folder className="h-9 w-9 text-[#74ddc7]" />
+                  <UserCircle2 className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-card text-[#7401df]" />
+                </div>
+                <p className="text-center font-bold text-foreground group-hover:text-[#74ddc7]">
+                  {folder.key === UNASSIGNED_DJ_KEY ? <span className="italic text-amber-500">Unassigned</span> : folder.label}
+                </p>
+                <p className="text-[11px] text-muted-foreground">{folder.fileCount} on-air file{folder.fileCount === 1 ? "" : "s"}</p>
+              </button>
+            ))}
+            {djFolders.length === 0 && (
+              <p className="col-span-full rounded-xl border border-dashed border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
+                No DJs scheduled yet. Click “Create new mixshow”.
+              </p>
+            )}
+          </div>
+        )
       ) : level === 0 ? (
         /* ── Days ── */
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -619,7 +872,7 @@ export function ProductionMixshows({ focusSlotId }: { focusSlotId?: string }) {
               {fmtDateLong(dateForDay(weekOf, currentSlot.day_of_week))} · {fmt12h(currentSlot.start_time)}–{fmt12h(currentSlot.end_time)} ·{" "}
               {currentSlot.djs?.display_name ?? "Unassigned"}
             </span>
-            {selectableCodes.length > 0 && (
+            {selectableItems.length > 0 && (
               <button
                 onClick={selectAllOrClear}
                 className="inline-flex items-center gap-1.5 font-medium text-muted-foreground transition-colors hover:text-[#74ddc7]"
@@ -631,60 +884,30 @@ export function ProductionMixshows({ focusSlotId }: { focusSlotId?: string }) {
           </div>
           {currentSlot.file_codes.map((code) => {
             const drop = dropByKey.get(`${currentSlot.id}|${code}`);
-            const present = drop && drop.storage_path && ["uploaded", "validated", "published"].includes(drop.status);
+            const present = !!drop && !!drop.storage_path && PLAYABLE_STATUSES.includes(drop.status);
             const isSelected = !!drop && selected.has(drop.id);
             const isNowPlaying = playerIndex !== null && !!drop && queue[playerIndex]?.id === drop.id;
             return (
-              <div
+              <FileRow
                 key={code}
-                className={`flex items-center gap-3 rounded-xl border bg-card px-4 py-3 transition-colors ${
-                  isSelected ? "border-[#74ddc7]/50 bg-[#74ddc7]/[0.04]" : "border-border"
-                }`}
-              >
-                {/* Selection checkbox — only for uploaded (actionable) files */}
-                {present && drop ? (
-                  <button
-                    onClick={(e) => toggleSelect(code, e)}
-                    aria-label={isSelected ? "Deselect file" : "Select file"}
-                    className="flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-[#74ddc7]"
-                  >
-                    {isSelected ? <CheckSquare className="h-4.5 w-4.5 text-[#74ddc7]" /> : <Square className="h-4.5 w-4.5" />}
-                  </button>
-                ) : (
-                  <span className="h-5 w-5 shrink-0" />
-                )}
-                <FileAudio className={`h-5 w-5 shrink-0 ${present ? "text-[#74ddc7]" : "text-muted-foreground/40"}`} />
-                <div className="flex-1 min-w-0">
-                  <p className="flex items-center gap-2 font-mono text-sm font-bold text-foreground">
-                    <span className="truncate">{code}.{drop?.format ?? "mp3"}</span>
-                    {isNowPlaying && (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#74ddc7]/15 px-2 py-0.5 text-[10px] font-bold text-[#74ddc7]">
-                        <Volume2 className="h-3 w-3" /> Playing
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {present ? (
-                      <span className="inline-flex items-center gap-1 text-[#74ddc7]"><CheckCircle2 className="h-3 w-3" /> {drop!.status}{drop!.uploaded_at ? ` · ${new Date(drop!.uploaded_at).toLocaleDateString()}` : ""}</span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-muted-foreground/60"><Circle className="h-3 w-3" /> not uploaded yet</span>
-                    )}
-                  </p>
-                </div>
-                {present && drop?.storage_path && (
-                  <Button size="sm" variant="outline" className="rounded-full" disabled={busyUrl === drop.id} onClick={() => playDrop(currentSlot, drop)}>
-                    {busyUrl === drop.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="mr-1 h-3.5 w-3.5" />}
-                    Play
-                  </Button>
-                )}
-              </div>
+                slot={currentSlot}
+                code={code}
+                drop={drop}
+                present={present}
+                isSelected={isSelected}
+                isNowPlaying={isNowPlaying}
+                busyUrl={busyUrl}
+                rowKey={`${currentSlot.id}|${code}`}
+                onToggleSelect={toggleSelect}
+                onPlay={playDrop}
+              />
             );
           })}
         </div>
       ) : null}
 
-      {/* Sticky bulk-action bar (file view, ≥1 selected) */}
-      {currentSlot && selectedDrops.length > 0 && (
+      {/* Sticky bulk-action bar (file / DJ view, ≥1 selected) */}
+      {selectedDrops.length > 0 && (
         <div className={`sticky z-30 ${playerIndex !== null ? "bottom-20" : "bottom-4"}`}>
           <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#74ddc7]/40 bg-card/95 px-4 py-3 shadow-2xl backdrop-blur">
             <div className="flex items-center gap-2 text-sm font-medium text-foreground">

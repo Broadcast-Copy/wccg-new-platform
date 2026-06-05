@@ -1530,17 +1530,21 @@ export default function MediaManagerPage() {
   const canSeeProduction = isProduction || isManagement || isAdmin || isSuperAdmin;
   const [managerMode, setManagerMode] = useState<"media" | "mixshows">("media");
   const [focusSlotId, setFocusSlotId] = useState<string | undefined>(undefined);
+  const [focusDjId, setFocusDjId] = useState<string | undefined>(undefined);
 
-  // Deep-link from the DJ-slots admin: ?view=mixshows&slot=<id> opens the
-  // production mixshow view focused on that slot's files.
+  // Deep-link from the DJ-slots admin:
+  //   ?view=mixshows&slot=<id> opens the production view on that slot's files.
+  //   ?view=mixshows&dj=<id>   opens that DJ's By-DJ on-air folder.
   useEffect(() => {
     let active = true;
     queueMicrotask(() => {
       if (!active || typeof window === "undefined") return;
       const params = new URLSearchParams(window.location.search);
       const slot = params.get("slot") || undefined;
-      if (params.get("view") === "mixshows" || slot) setManagerMode("mixshows");
+      const dj = params.get("dj") || undefined;
+      if (params.get("view") === "mixshows" || slot || dj) setManagerMode("mixshows");
       if (slot) setFocusSlotId(slot);
+      if (dj) setFocusDjId(dj);
     });
     return () => { active = false; };
   }, []);
@@ -2105,7 +2109,7 @@ export default function MediaManagerPage() {
           </div>
           {modeToggle}
         </div>
-        <ProductionMixshows focusSlotId={focusSlotId} />
+        <ProductionMixshows focusSlotId={focusSlotId} focusDjId={focusDjId} />
       </div>
     );
   }
