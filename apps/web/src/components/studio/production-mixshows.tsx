@@ -466,7 +466,7 @@ export function ProductionMixshows({
   // How the folder tree is grouped at the top level.
   //   "day" → Day › Time › files (the original schedule view)
   //   "dj"  → DJ › that DJ's on-air mixes for the week (mirrors D:\WCCG\b-mixshows\<dj>\on-air)
-  const [groupBy, setGroupBy] = useState<"day" | "dj">("day");
+  const [groupBy, setGroupBy] = useState<"day" | "dj">("dj");
   // Navigation path. Meaning depends on groupBy:
   //   day-mode: [] = days, [day] = slots in day, [day, slotId] = files
   //   dj-mode:  [] = DJ folders, [djKey] = that DJ's on-air mixes
@@ -603,11 +603,16 @@ export function ProductionMixshows({
   // (uploaded/validated/published drops) across the DJ's slots this week.
   const djFolders = useMemo(() => {
     const groups = new Map<string, { key: string; label: string; slots: Slot[] }>();
+    // Seed a folder for every active DJ so admins see the full roster — even
+    // DJs with no slots or uploads yet.
+    for (const d of djs) {
+      groups.set(d.id, { key: d.id, label: d.display_name, slots: [] });
+    }
     for (const s of slots) {
       const key = s.dj_id ?? UNASSIGNED_DJ_KEY;
       const existing = groups.get(key);
       if (existing) existing.slots.push(s);
-      else groups.set(key, { key, label: s.djs?.display_name ?? "Unassigned", slots: [s] });
+      else groups.set(key, { key, label: key === UNASSIGNED_DJ_KEY ? "Unassigned" : (s.djs?.display_name ?? djNameById(key)), slots: [s] });
     }
     return Array.from(groups.values())
       .map((g) => {
@@ -625,7 +630,7 @@ export function ProductionMixshows({
         if (b.key === UNASSIGNED_DJ_KEY) return -1;
         return a.label.localeCompare(b.label);
       });
-  }, [slots, dropByKey]);
+  }, [djs, slots, dropByKey, djNameById]);
 
   // Resolve a fresh 1h signed URL for a drop's storage object (lazy, per-play).
   const resolveSignedUrl = useCallback(async (storagePath: string): Promise<string | null> => {
@@ -882,18 +887,22 @@ export function ProductionMixshows({
   // bucket under the Unassigned sentinel. Self-scoped viewers see only their own.
   const digitalFolders = useMemo(() => {
     const groups = new Map<string, { key: string; label: string; mixes: MixItem[] }>();
+    // Seed every active DJ so admins get a folder per DJ even with no mixes yet.
+    for (const d of djs) {
+      groups.set(d.id, { key: d.id, label: d.display_name, mixes: [] });
+    }
     for (const m of mixes) {
       const key = m.dj_id ?? UNASSIGNED_DJ_KEY;
       const existing = groups.get(key);
       if (existing) existing.mixes.push(m);
-      else groups.set(key, { key, label: m.dj_id ? djNameById(m.dj_id) : "Unassigned", mixes: [m] });
+      else groups.set(key, { key, label: key === UNASSIGNED_DJ_KEY ? "Unassigned" : djNameById(key), mixes: [m] });
     }
     return Array.from(groups.values()).sort((a, b) => {
       if (a.key === UNASSIGNED_DJ_KEY) return 1;
       if (b.key === UNASSIGNED_DJ_KEY) return -1;
       return a.label.localeCompare(b.label);
     });
-  }, [mixes, djNameById]);
+  }, [djs, mixes, djNameById]);
 
   const visibleDigitalFolders = useMemo(
     () => (isSelfScoped ? digitalFolders.filter((f) => f.key === selfDjId) : digitalFolders),
