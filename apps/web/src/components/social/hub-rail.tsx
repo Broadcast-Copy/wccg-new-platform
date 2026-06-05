@@ -53,7 +53,7 @@ function isContest(category: string | null): boolean {
 export function HubMembersCard({ hubType, accentColor, supabase }: RailProps) {
   const [count, setCount] = useState(0);
   const [members, setMembers] = useState<
-    { id: string; name: string; avatar: string | null }[]
+    { id: string; name: string; avatar: string | null; username: string | null }[]
   >([]);
 
   useEffect(() => {
@@ -65,11 +65,16 @@ export function HubMembersCard({ hubType, accentColor, supabase }: RailProps) {
         .eq("hub_type", hubType)
         .limit(48);
       const ids = (data ?? []).map((r) => (r as { user_id: string }).user_id);
-      let profs: { id: string; display_name: string | null; avatar_url: string | null }[] = [];
+      let profs: {
+        id: string;
+        display_name: string | null;
+        avatar_url: string | null;
+        username: string | null;
+      }[] = [];
       if (ids.length) {
         const { data: pd } = await supabase
           .from("profiles_public")
-          .select("id, display_name, avatar_url")
+          .select("id, display_name, avatar_url, username")
           .in("id", ids);
         profs = (pd as typeof profs) ?? [];
       }
@@ -78,7 +83,12 @@ export function HubMembersCard({ hubType, accentColor, supabase }: RailProps) {
       setMembers(
         profs
           .slice(0, 9)
-          .map((p) => ({ id: p.id, name: p.display_name || memberNoun(hubType), avatar: p.avatar_url })),
+          .map((p) => ({
+            id: p.id,
+            name: p.display_name || memberNoun(hubType),
+            avatar: p.avatar_url,
+            username: p.username,
+          })),
       );
     }
     load();
@@ -103,18 +113,34 @@ export function HubMembersCard({ hubType, accentColor, supabase }: RailProps) {
         <div className="flex flex-wrap gap-2">
           {members.map((m) => (
             <div key={m.id} className="group relative h-9 w-9">
-              <div
-                title={m.name}
-                className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border text-[11px] font-semibold"
-                style={{ backgroundColor: `${accentColor}1a`, color: accentColor }}
-              >
-                {m.avatar ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={m.avatar} alt={m.name} className="h-full w-full object-cover" />
-                ) : (
-                  m.name.slice(0, 2).toUpperCase()
-                )}
-              </div>
+              {m.username ? (
+                <Link
+                  href={`/u/${m.username}`}
+                  title={m.name}
+                  className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border text-[11px] font-semibold"
+                  style={{ backgroundColor: `${accentColor}1a`, color: accentColor }}
+                >
+                  {m.avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m.avatar} alt={m.name} className="h-full w-full object-cover" />
+                  ) : (
+                    m.name.slice(0, 2).toUpperCase()
+                  )}
+                </Link>
+              ) : (
+                <div
+                  title={m.name}
+                  className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border text-[11px] font-semibold"
+                  style={{ backgroundColor: `${accentColor}1a`, color: accentColor }}
+                >
+                  {m.avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m.avatar} alt={m.name} className="h-full w-full object-cover" />
+                  ) : (
+                    m.name.slice(0, 2).toUpperCase()
+                  )}
+                </div>
+              )}
               {/* DM this member — revealed on hover/focus so the avatar grid
                   stays clean. Hidden by MessageButton itself if m is me. */}
               <div className="absolute -bottom-1 -right-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">

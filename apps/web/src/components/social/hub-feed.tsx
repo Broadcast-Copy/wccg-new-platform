@@ -35,6 +35,7 @@ interface HubPost {
   created_at: string;
   // joined
   display_name?: string;
+  username?: string;
   liked?: boolean;
 }
 
@@ -149,17 +150,22 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
 
       if (!rawPosts) return null;
 
-      // Fetch profile display names
+      // Fetch profile display names + usernames (for /u/<username> links)
       const userIds = [...new Set(rawPosts.map((p) => p.user_id))];
       const { data: profiles } = userIds.length
         ? await supabase
             .from("profiles_public")
-            .select("id, display_name")
+            .select("id, display_name, username")
             .in("id", userIds)
         : { data: [] };
 
       const profileMap = new Map(
-        (profiles ?? []).map((p: { id: string; display_name: string }) => [p.id, p.display_name])
+        (profiles ?? []).map(
+          (p: { id: string; display_name: string | null; username: string | null }) => [
+            p.id,
+            { display_name: p.display_name, username: p.username },
+          ]
+        )
       );
 
       // Check which posts the current user has liked
@@ -174,11 +180,15 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
         likedSet = new Set((likes ?? []).map((l: { post_id: string }) => l.post_id));
       }
 
-      const enriched: HubPost[] = rawPosts.map((p) => ({
-        ...p,
-        display_name: profileMap.get(p.user_id) ?? "Unknown",
-        liked: likedSet.has(p.id),
-      }));
+      const enriched: HubPost[] = rawPosts.map((p) => {
+        const prof = profileMap.get(p.user_id);
+        return {
+          ...p,
+          display_name: prof?.display_name ?? "Unknown",
+          username: prof?.username ?? undefined,
+          liked: likedSet.has(p.id),
+        };
+      });
 
       return { posts: enriched, hasMore: rawPosts.length === PAGE_SIZE };
     },
@@ -448,25 +458,54 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
               >
                 {/* Header */}
                 <div className="flex items-center gap-3">
-                  <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm ring-2"
-                    style={{
-                      background: `linear-gradient(135deg, hsl(${hue} 70% 55%), hsl(${(hue + 40) % 360} 70% 45%))`,
-                      // colored ring in the hub accent to tie members together
-                      ["--tw-ring-color" as string]: `${accentColor}66`,
-                    }}
-                  >
-                    {initials(name)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="text-sm font-semibold text-foreground">
-                      {post.display_name}
-                    </span>
-                    <span className="mx-2 text-muted-foreground/40">·</span>
-                    <span className="text-xs text-muted-foreground">
-                      {relativeTime(post.created_at)}
-                    </span>
-                  </div>
+                  {post.username ? (
+                    <Link
+                      href={`/u/${post.username}`}
+                      className="group/author flex min-w-0 flex-1 items-center gap-3"
+                    >
+                      <div
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm ring-2"
+                        style={{
+                          background: `linear-gradient(135deg, hsl(${hue} 70% 55%), hsl(${(hue + 40) % 360} 70% 45%))`,
+                          // colored ring in the hub accent to tie members together
+                          ["--tw-ring-color" as string]: `${accentColor}66`,
+                        }}
+                      >
+                        {initials(name)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-sm font-semibold text-foreground group-hover/author:underline">
+                          {post.display_name}
+                        </span>
+                        <span className="mx-2 text-muted-foreground/40">·</span>
+                        <span className="text-xs text-muted-foreground">
+                          {relativeTime(post.created_at)}
+                        </span>
+                      </div>
+                    </Link>
+                  ) : (
+                    <>
+                      <div
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm ring-2"
+                        style={{
+                          background: `linear-gradient(135deg, hsl(${hue} 70% 55%), hsl(${(hue + 40) % 360} 70% 45%))`,
+                          // colored ring in the hub accent to tie members together
+                          ["--tw-ring-color" as string]: `${accentColor}66`,
+                        }}
+                      >
+                        {initials(name)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-sm font-semibold text-foreground">
+                          {post.display_name}
+                        </span>
+                        <span className="mx-2 text-muted-foreground/40">·</span>
+                        <span className="text-xs text-muted-foreground">
+                          {relativeTime(post.created_at)}
+                        </span>
+                      </div>
+                    </>
+                  )}
                   <span
                     className="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
                     style={{

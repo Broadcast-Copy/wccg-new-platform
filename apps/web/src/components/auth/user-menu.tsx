@@ -204,6 +204,31 @@ export function UserMenu() {
   // Real notification counts from Supabase — must be before early returns
   const [adminNotifications, setAdminNotifications] = useState({ production: 0, sales: 0, bookings: 0, points: 0 });
 
+  // The signed-in user's public handle, used to link their name to /u/<username>.
+  const [username, setUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const userId = user?.id ?? null;
+    async function fetchUsername() {
+      if (!userId) {
+        if (active) setUsername(null);
+        return;
+      }
+      const { data } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", userId)
+        .maybeSingle();
+      if (!active) return;
+      setUsername((data as { username: string | null } | null)?.username ?? null);
+    }
+    fetchUsername();
+    return () => {
+      active = false;
+    };
+  }, [user, supabase]);
+
   useEffect(() => {
     if (!user) return;
     async function fetchCounts() {
@@ -364,7 +389,16 @@ export function UserMenu() {
         {/* User info + toggle */}
         <div className="px-2 py-1.5 space-y-2">
           <div>
-            <p className="text-sm font-medium">{displayName}</p>
+            {username ? (
+              <Link
+                href={`/u/${username}`}
+                className="text-sm font-medium hover:underline"
+              >
+                {displayName}
+              </Link>
+            ) : (
+              <p className="text-sm font-medium">{displayName}</p>
+            )}
             <p className="text-xs text-muted-foreground">{user.email}</p>
           </div>
           {isAdminMode ? (

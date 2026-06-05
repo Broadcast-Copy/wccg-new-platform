@@ -38,6 +38,7 @@ import {
   Music,
   Play,
   Store,
+  UserPlus,
   UserRound,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -197,6 +198,15 @@ export default function ProfileClient() {
   const [notFound, setNotFound] = useState(false);
   const [tab, setTab] = useState<TabKey>("posts");
 
+  // Social graph: the signed-in viewer (or null), follower/following totals for
+  // this profile, and whether the viewer already follows it. Loaded after the
+  // profile resolves; mutated optimistically by the Follow button.
+  const [viewerId, setViewerId] = useState<string | null>(null);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followPending, setFollowPending] = useState(false);
+
   // Load the profile + everything that hangs off it, in one effect, once the
   // handle is known. All setState happens post-await behind the `active` guard.
   useEffect(() => {
@@ -283,6 +293,41 @@ export default function ProfileClient() {
                 ? "videos"
                 : "posts",
         );
+
+        // 4) Social graph (follows). Resolve the viewer + follower/following
+        // totals in parallel, then (only for a signed-in, non-self viewer)
+        // whether they already follow this profile. Every setState below the
+        // awaits is gated on `active`.
+        const [{ data: auth }, followersRes, followingRes] = await Promise.all([
+          supabase.auth.getUser(),
+          supabase
+            .from("follows")
+            .select("*", { count: "exact", head: true })
+            .eq("following_id", p.id),
+          supabase
+            .from("follows")
+            .select("*", { count: "exact", head: true })
+            .eq("follower_id", p.id),
+        ]);
+
+        if (!active) return;
+        const vId = auth.user?.id ?? null;
+        setViewerId(vId);
+        setFollowerCount(followersRes.count ?? 0);
+        setFollowingCount(followingRes.count ?? 0);
+
+        if (vId && vId !== p.id) {
+          const { data: rel } = await supabase
+            .from("follows")
+            .select("follower_id")
+            .eq("follower_id", vId)
+            .eq("following_id", p.id)
+            .maybeSingle();
+          if (!active) return;
+          setIsFollowing(!!rel);
+        } else {
+          setIsFollowing(false);
+        }
       } catch {
         if (active) setNotFound(true);
       } finally {
@@ -304,6 +349,52 @@ export default function ProfileClient() {
     if (videos.length > 0) t.push("videos");
     return t;
   }, [posts.length, mixes.length, videos.length]);
+
+  // Follow: optimistically flip to following + bump the count, then INSERT.
+  // RLS allows the row only when auth.uid() = follower_id, so a signed-in,
+  // non-self viewer is required (the button enforces this too). Revert on error.
+  async function handleFollow() {
+    const targetId = profile?.id;
+    if (!viewerId || !targetId || viewerId === targetId || followPending) return;
+    setFollowPending(true);
+    setIsFollowing(true);
+    setFollowerCount((c) => c + 1);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("follows")
+        .insert({ follower_id: viewerId, following_id: targetId });
+      if (error) throw error;
+    } catch {
+      setIsFollowing(false);
+      setFollowerCount((c) => Math.max(0, c - 1));
+    } finally {
+      setFollowPending(false);
+    }
+  }
+
+  // Unfollow: optimistically clear following + decrement, then DELETE the row.
+  async function handleUnfollow() {
+    const targetId = profile?.id;
+    if (!viewerId || !targetId || viewerId === targetId || followPending) return;
+    setFollowPending(true);
+    setIsFollowing(false);
+    setFollowerCount((c) => Math.max(0, c - 1));
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("follows")
+        .delete()
+        .eq("follower_id", viewerId)
+        .eq("following_id", targetId);
+      if (error) throw error;
+    } catch {
+      setIsFollowing(true);
+      setFollowerCount((c) => c + 1);
+    } finally {
+      setFollowPending(false);
+    }
+  }
 
   // ── Early states ──────────────────────────────────────────────────────────
   if (!handle || handle === "_placeholder") {
@@ -348,6 +439,8 @@ export default function ProfileClient() {
     profile.username ||
     "WCCG member";
   const since = memberSince(profile.created_at);
+  // Show the follow control for everyone except the profile's own owner.
+  const canFollow = viewerId !== profile.id;
 
   // Banner gradient: a WCCG-branded blue/teal for internal DJs, neutral for all.
   const bannerClass = isWccgDj
@@ -375,15 +468,26 @@ export default function ProfileClient() {
               )}
             </div>
 
-            {/* DJ page link */}
-            {dj?.slug && (
-              <Link
-                href={`/djs/${dj.slug}`}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#74ddc7]/40 bg-[#74ddc7]/10 px-4 py-1.5 text-sm font-bold text-[#0f9e88] transition-colors hover:bg-[#74ddc7]/20 dark:text-[#74ddc7]"
-              >
-                View DJ page <ExternalLink className="h-3.5 w-3.5" />
-              </Link>
-            )}
+            {/* Header actions: Follow control + (for DJs) a link to the DJ page. */}
+            <div className="flex flex-wrap items-center gap-2">
+              {canFollow && (
+                <FollowButton
+                  viewerId={viewerId}
+                  isFollowing={isFollowing}
+                  pending={followPending}
+                  onFollow={handleFollow}
+                  onUnfollow={handleUnfollow}
+                />
+              )}
+              {dj?.slug && (
+                <Link
+                  href={`/djs/${dj.slug}`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#74ddc7]/40 bg-[#74ddc7]/10 px-4 py-1.5 text-sm font-bold text-[#0f9e88] transition-colors hover:bg-[#74ddc7]/20 dark:text-[#74ddc7]"
+                >
+                  View DJ page <ExternalLink className="h-3.5 w-3.5" />
+                </Link>
+              )}
+            </div>
           </div>
 
           {/* Name + badges */}
@@ -414,6 +518,10 @@ export default function ProfileClient() {
               </span>
             )}
             <span className="inline-flex items-center gap-3">
+              <Stat label="Followers" value={followerCount} strong />
+              <span className="text-muted-foreground/40">·</span>
+              <Stat label="Following" value={followingCount} strong />
+              <span className="text-muted-foreground/40">·</span>
               <Stat label="Posts" value={posts.length} />
               <span className="text-muted-foreground/40">·</span>
               <Stat label="Shows" value={mixes.length} />
@@ -502,12 +610,84 @@ function ProfileBadges({
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ label, value, strong = false }: { label: string; value: number; strong?: boolean }) {
   return (
     <span className="inline-flex items-baseline gap-1">
       <span className="font-black text-foreground">{value}</span>
-      <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
+      <span
+        className={
+          strong
+            ? "text-sm font-bold text-foreground"
+            : "text-xs uppercase tracking-wide text-muted-foreground"
+        }
+      >
+        {label}
+      </span>
     </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Follow button
+// ---------------------------------------------------------------------------
+
+/**
+ * The header follow control. Three states:
+ *  • signed out (`viewerId === null`)  → a teal "Follow" that routes to /login.
+ *  • following                         → an outline "Following" pill that flips
+ *                                        to red "Unfollow" styling on hover.
+ *  • not following                     → a solid teal "Follow" button.
+ * The owner's own profile never renders this (the parent gates on it).
+ */
+function FollowButton({
+  viewerId,
+  isFollowing,
+  pending,
+  onFollow,
+  onUnfollow,
+}: {
+  viewerId: string | null;
+  isFollowing: boolean;
+  pending: boolean;
+  onFollow: () => void;
+  onUnfollow: () => void;
+}) {
+  // Signed out: no optimistic write — send them to log in first.
+  if (!viewerId) {
+    return (
+      <Link
+        href="/login"
+        className="inline-flex items-center gap-1.5 rounded-full bg-[#74ddc7] px-4 py-1.5 text-sm font-bold text-[#0a0a0f] transition-opacity hover:opacity-90"
+      >
+        <UserPlus className="h-3.5 w-3.5" /> Follow
+      </Link>
+    );
+  }
+
+  if (isFollowing) {
+    return (
+      <button
+        type="button"
+        onClick={onUnfollow}
+        disabled={pending}
+        className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-transparent px-4 py-1.5 text-sm font-bold text-foreground transition-colors hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-600 disabled:opacity-60 dark:hover:text-red-400"
+      >
+        <BadgeCheck className="h-3.5 w-3.5 group-hover:hidden" />
+        <span className="group-hover:hidden">Following</span>
+        <span className="hidden group-hover:inline">Unfollow</span>
+      </button>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onFollow}
+      disabled={pending}
+      className="inline-flex items-center gap-1.5 rounded-full bg-[#74ddc7] px-4 py-1.5 text-sm font-bold text-[#0a0a0f] transition-opacity hover:opacity-90 disabled:opacity-60"
+    >
+      <UserPlus className="h-3.5 w-3.5" /> Follow
+    </button>
   );
 }
 

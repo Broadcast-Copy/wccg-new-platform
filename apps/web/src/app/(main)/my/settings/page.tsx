@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Settings,
   User,
+  UserCircle,
   Bell,
   Monitor,
   Shield,
@@ -14,11 +16,43 @@ import {
   Laptop,
   Eye,
   EyeOff,
-  Lock,
   Trash2,
   KeyRound,
   ChevronDown,
+  Loader2,
+  ExternalLink,
 } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+import { createClient } from "@/lib/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+
+// ---------------------------------------------------------------------------
+// Username handle normalization
+//   - lowercase
+//   - only [a-z0-9-]; invalid chars become a hyphen
+//   - collapse runs of hyphens
+//   - trim leading/trailing hyphens
+//   - cap at 30 chars (the public handle used in /u/<username>)
+// ---------------------------------------------------------------------------
+const USERNAME_MAX = 30;
+const USERNAME_MIN = 3;
+
+function normalizeUsername(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, USERNAME_MAX);
+}
+
+function isValidUsername(value: string): boolean {
+  return /^[a-z0-9-]{3,30}$/.test(value);
+}
 
 // ---------------------------------------------------------------------------
 // Toggle Switch Component
@@ -113,6 +147,63 @@ function SectionCard({
 }
 
 // ---------------------------------------------------------------------------
+// Input field helper
+// ---------------------------------------------------------------------------
+function InputField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  readOnly = false,
+}: {
+  label: string;
+  value: string;
+  onChange?: (v: string) => void;
+  placeholder?: string;
+  type?: string;
+  readOnly?: boolean;
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-sm font-medium text-foreground/70">
+        {label}
+      </label>
+      <input
+        type={type}
+        value={value}
+        readOnly={readOnly}
+        onChange={(e) => onChange?.(e.target.value)}
+        placeholder={placeholder}
+        className={`w-full rounded-lg border border-border bg-foreground/[0.04] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:border-[#74ddc7]/50 focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/30 ${
+          readOnly ? "cursor-not-allowed opacity-60" : ""
+        }`}
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Notification row helper
+// ---------------------------------------------------------------------------
+function NotifRow({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between py-2">
+      <span className="text-sm text-foreground/80">{label}</span>
+      <Toggle checked={checked} onChange={onChange} />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Streams list
 // ---------------------------------------------------------------------------
 const STREAMS = [
@@ -189,60 +280,82 @@ export default function SettingsPage() {
   }
 
   // -------------------------------------------------------------------------
-  // Input field helper
+  // Public profile (persisted to the `profiles` table)
   // -------------------------------------------------------------------------
-  function InputField({
-    label,
-    value,
-    onChange,
-    placeholder,
-    type = "text",
-    readOnly = false,
-  }: {
-    label: string;
-    value: string;
-    onChange?: (v: string) => void;
-    placeholder?: string;
-    type?: string;
-    readOnly?: boolean;
-  }) {
-    return (
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-foreground/70">
-          {label}
-        </label>
-        <input
-          type={type}
-          value={value}
-          readOnly={readOnly}
-          onChange={(e) => onChange?.(e.target.value)}
-          placeholder={placeholder}
-          className={`w-full rounded-lg border border-border bg-foreground/[0.04] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:border-[#74ddc7]/50 focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/30 ${
-            readOnly ? "cursor-not-allowed opacity-60" : ""
-          }`}
-        />
-      </div>
-    );
-  }
+  const { user, isLoading: authLoading } = useAuth();
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [ppDisplayName, setPpDisplayName] = useState("");
+  const [ppUsername, setPpUsername] = useState("");
+  const [ppBio, setPpBio] = useState("");
+  const [ppAvatarUrl, setPpAvatarUrl] = useState("");
 
-  // -------------------------------------------------------------------------
-  // Notification row helper
-  // -------------------------------------------------------------------------
-  function NotifRow({
-    label,
-    checked,
-    onChange,
-  }: {
-    label: string;
-    checked: boolean;
-    onChange: (v: boolean) => void;
-  }) {
-    return (
-      <div className="flex items-center justify-between py-2">
-        <span className="text-sm text-foreground/80">{label}</span>
-        <Toggle checked={checked} onChange={onChange} />
-      </div>
-    );
+  useEffect(() => {
+    if (authLoading || !user) return;
+    let active = true;
+    const supabase = createClient();
+    async function load() {
+      const { data } = await supabase
+        .from("profiles")
+        .select("display_name, username, bio, avatar_url")
+        .eq("id", user!.id)
+        .maybeSingle();
+      if (!active) return;
+      setPpDisplayName(data?.display_name ?? "");
+      setPpUsername(data?.username ?? "");
+      setPpBio(data?.bio ?? "");
+      setPpAvatarUrl(data?.avatar_url ?? "");
+      setProfileLoading(false);
+    }
+    load();
+    return () => {
+      active = false;
+    };
+  }, [user, authLoading]);
+
+  const usernameValid = isValidUsername(ppUsername);
+
+  async function handleSaveProfile() {
+    if (!user) return;
+    const username = normalizeUsername(ppUsername);
+    setPpUsername(username);
+    if (!username) {
+      toast.error("Please choose a username.");
+      return;
+    }
+    if (!isValidUsername(username)) {
+      toast.error(
+        `Username must be ${USERNAME_MIN}-${USERNAME_MAX} characters, using only lowercase letters, numbers, and hyphens.`,
+      );
+      return;
+    }
+
+    setProfileSaving(true);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        display_name: ppDisplayName.trim() || null,
+        username,
+        bio: ppBio.trim() || null,
+        avatar_url: ppAvatarUrl.trim() || null,
+      })
+      .eq("id", user.id);
+    setProfileSaving(false);
+
+    if (error) {
+      // Unique violation on the public handle -> friendly, actionable message.
+      if (
+        error.code === "23505" ||
+        error.message?.includes("profiles_username_lower_key")
+      ) {
+        toast.error("That handle is already taken — try another.");
+        return;
+      }
+      toast.error("Couldn't save your profile. Please try again.");
+      return;
+    }
+    toast.success("Public profile saved");
   }
 
   return (
@@ -261,6 +374,162 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* ----------------------------------------------------------------- */}
+      {/* Public Profile (persisted to `profiles`)                           */}
+      {/* ----------------------------------------------------------------- */}
+      <SectionCard icon={UserCircle} title="Public Profile">
+        {authLoading || (user && profileLoading) ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : !user ? (
+          <div className="py-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              Sign in to edit your public profile.
+            </p>
+            <Link
+              href="/login"
+              className="mt-3 inline-flex rounded-lg bg-[#74ddc7] px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-[#5ec4af]"
+            >
+              Sign in
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground/80">
+              This is how you appear to others on WCCG. Your handle powers your
+              public profile URL.
+            </p>
+
+            {/* Avatar */}
+            <div>
+              <Label
+                htmlFor="pp-avatar"
+                className="mb-1.5 block text-sm font-medium text-foreground/70"
+              >
+                Avatar
+              </Label>
+              <div className="flex items-center gap-3">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-foreground/[0.04]">
+                  {ppAvatarUrl.trim() ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={ppAvatarUrl.trim()}
+                      alt="Avatar preview"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <UserCircle className="h-7 w-7 text-muted-foreground/50" />
+                  )}
+                </div>
+                <Input
+                  id="pp-avatar"
+                  type="url"
+                  inputMode="url"
+                  value={ppAvatarUrl}
+                  onChange={(e) => setPpAvatarUrl(e.target.value)}
+                  placeholder="https://example.com/avatar.jpg"
+                  className="bg-foreground/[0.04]"
+                />
+              </div>
+            </div>
+
+            {/* Display name */}
+            <div>
+              <Label
+                htmlFor="pp-display-name"
+                className="mb-1.5 block text-sm font-medium text-foreground/70"
+              >
+                Display Name
+              </Label>
+              <Input
+                id="pp-display-name"
+                value={ppDisplayName}
+                onChange={(e) => setPpDisplayName(e.target.value)}
+                placeholder="Your public name"
+                className="bg-foreground/[0.04]"
+              />
+            </div>
+
+            {/* Username / handle */}
+            <div>
+              <Label
+                htmlFor="pp-username"
+                className="mb-1.5 block text-sm font-medium text-foreground/70"
+              >
+                Username
+              </Label>
+              <Input
+                id="pp-username"
+                value={ppUsername}
+                onChange={(e) => setPpUsername(normalizeUsername(e.target.value))}
+                onBlur={() => setPpUsername((v) => normalizeUsername(v))}
+                placeholder="your-handle"
+                aria-invalid={ppUsername.length > 0 && !usernameValid}
+                className="bg-foreground/[0.04] lowercase"
+              />
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                <span className="text-muted-foreground/70">
+                  app.wccg1045fm.com/u/
+                  <span className="text-foreground/80">
+                    {ppUsername || "your-handle"}
+                  </span>
+                </span>
+                {ppUsername && usernameValid && (
+                  <Link
+                    href={`/u/${ppUsername}`}
+                    className="inline-flex items-center gap-1 font-medium text-[#74ddc7] hover:underline"
+                  >
+                    View profile
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                )}
+              </div>
+              {ppUsername.length > 0 && !usernameValid && (
+                <p className="mt-1 text-xs text-red-400">
+                  Use {USERNAME_MIN}–{USERNAME_MAX} characters: lowercase
+                  letters, numbers, and hyphens.
+                </p>
+              )}
+            </div>
+
+            {/* Bio */}
+            <div>
+              <Label
+                htmlFor="pp-bio"
+                className="mb-1.5 block text-sm font-medium text-foreground/70"
+              >
+                Bio
+              </Label>
+              <Textarea
+                id="pp-bio"
+                value={ppBio}
+                onChange={(e) => setPpBio(e.target.value)}
+                placeholder="Tell people a little about yourself..."
+                rows={4}
+                className="resize-none bg-foreground/[0.04]"
+              />
+            </div>
+
+            <div className="pt-1">
+              <Button
+                type="button"
+                onClick={handleSaveProfile}
+                disabled={profileSaving || !usernameValid}
+                className="bg-[#74ddc7] text-black hover:bg-[#5ec4af]"
+              >
+                {profileSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                {profileSaving ? "Saving..." : "Save Public Profile"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </SectionCard>
 
       {/* ----------------------------------------------------------------- */}
       {/* Profile Settings                                                   */}
