@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles } from "@/hooks/use-user-roles";
 import { createClient } from "@/lib/supabase/client";
-import { Star, Clock, Headphones, Settings, Pencil, Loader2, ShieldCheck } from "lucide-react";
+import { Star, Clock, Headphones, Settings, Pencil, Loader2, ShieldCheck, ExternalLink } from "lucide-react";
 
 interface ProfileRow {
   display_name: string | null;
@@ -14,6 +14,7 @@ interface ProfileRow {
   last_name: string | null;
   user_type: string | null;
   created_at: string | null;
+  username: string | null;
 }
 
 function fmtHours(secs: number): string {
@@ -42,7 +43,7 @@ export default function MyProfilePage() {
     const supabase = createClient();
     async function load() {
       const [p, pts, sess] = await Promise.all([
-        supabase.from("profiles").select("display_name, avatar_url, first_name, last_name, user_type, created_at").eq("id", user!.id).maybeSingle(),
+        supabase.from("profiles").select("display_name, avatar_url, first_name, last_name, user_type, created_at, username").eq("id", user!.id).maybeSingle(),
         supabase.from("user_points").select("balance").eq("user_id", user!.id).maybeSingle(),
         supabase.from("listening_sessions").select("duration_secs", { count: "exact" }).eq("user_id", user!.id),
       ]);
@@ -109,9 +110,16 @@ export default function MyProfilePage() {
             </div>
             {memberSince && <p className="mt-1 text-xs text-muted-foreground/70">Member since {memberSince}</p>}
           </div>
-          <Link href="/my/settings" className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium transition hover:border-[#74ddc7]/50">
-            <Pencil className="h-3.5 w-3.5" /> Edit
-          </Link>
+          <div className="flex shrink-0 flex-col gap-2">
+            <Link href="/my/settings" className="inline-flex items-center justify-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium transition hover:border-[#74ddc7]/50">
+              <Pencil className="h-3.5 w-3.5" /> Edit
+            </Link>
+            {profile?.username && (
+              <Link href={`/u/${profile.username}`} className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[#74ddc7] px-4 py-2 text-sm font-bold text-[#0a0a0f] transition hover:bg-[#74ddc7]/90">
+                <ExternalLink className="h-3.5 w-3.5" /> Public profile
+              </Link>
+            )}
+          </div>
         </div>
       </div>
 

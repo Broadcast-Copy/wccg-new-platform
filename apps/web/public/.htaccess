@@ -38,6 +38,9 @@ RewriteRule ^shop/[^/]+/?$ /shop/_placeholder.html [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^wiki/[^/]+/?$ /wiki/_placeholder.html [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^u/[^/]+/?$ /u/_placeholder.html [L]
 
 # Fallback to 404 page
 ErrorDocument 404 /404.html
