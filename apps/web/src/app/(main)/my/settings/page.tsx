@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Settings,
@@ -21,6 +21,7 @@ import {
   ChevronDown,
   Loader2,
   ExternalLink,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
@@ -315,6 +316,66 @@ export default function SettingsPage() {
 
   const usernameValid = isValidUsername(ppUsername);
 
+  // Avatar upload (Storage `avatars` bucket -> public URL persisted to profile)
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const AVATAR_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+  const AVATAR_ACCEPTED = [
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/gif",
+  ];
+
+  async function handleAvatarFile(file: File) {
+    if (!user) return;
+
+    // 1. Validate type + size.
+    if (!AVATAR_ACCEPTED.includes(file.type)) {
+      toast.error("Please choose a PNG, JPEG, WebP, or GIF image.");
+      return;
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      toast.error("Image is too large — please keep it under 5 MB.");
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const supabase = createClient();
+
+      // 2. Upload to Storage (overwrite the user's single avatar object).
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (uploadError) {
+        toast.error("Couldn't upload your photo. Please try again.");
+        return;
+      }
+
+      // 3. Build a cache-busted public URL (the path is reused on re-upload).
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      const url = `${data.publicUrl}?t=${Date.now()}`;
+
+      // 4. Reflect immediately + persist so the new avatar is live without Save.
+      setPpAvatarUrl(url);
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: url })
+        .eq("id", user.id);
+      if (updateError) {
+        toast.error("Photo uploaded, but saving it failed. Please try again.");
+        return;
+      }
+
+      toast.success("Photo updated");
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
   async function handleSaveProfile() {
     if (!user) return;
     const username = normalizeUsername(ppUsername);
@@ -404,14 +465,23 @@ export default function SettingsPage() {
 
             {/* Avatar */}
             <div>
-              <Label
-                htmlFor="pp-avatar"
-                className="mb-1.5 block text-sm font-medium text-foreground/70"
-              >
+              <span className="mb-1.5 block text-sm font-medium text-foreground/70">
                 Avatar
-              </Label>
+              </span>
               <div className="flex items-center gap-3">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-foreground/[0.04]">
+                {/* Preview doubles as a drop zone */}
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (avatarUploading) return;
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) void handleAvatarFile(file);
+                  }}
+                  className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-foreground/[0.04]"
+                >
                   {ppAvatarUrl.trim() ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -422,7 +492,55 @@ export default function SettingsPage() {
                   ) : (
                     <UserCircle className="h-7 w-7 text-muted-foreground/50" />
                   )}
+                  {avatarUploading && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
+                      <Loader2 className="h-5 w-5 animate-spin text-white" />
+                    </div>
+                  )}
                 </div>
+
+                {/* Upload control */}
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      // Reset so re-selecting the same file fires onChange again.
+                      e.target.value = "";
+                      if (file) void handleAvatarFile(file);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={avatarUploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {avatarUploading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                    {avatarUploading ? "Uploading…" : "Upload photo"}
+                  </Button>
+                  <p className="mt-1 text-xs text-muted-foreground/60">
+                    PNG, JPEG, WebP, or GIF · up to 5&nbsp;MB
+                  </p>
+                </div>
+              </div>
+
+              {/* Secondary: paste an image URL instead */}
+              <div className="mt-3">
+                <Label
+                  htmlFor="pp-avatar"
+                  className="mb-1.5 block text-xs font-medium text-muted-foreground/70"
+                >
+                  Or paste an image URL
+                </Label>
                 <Input
                   id="pp-avatar"
                   type="url"
@@ -430,6 +548,7 @@ export default function SettingsPage() {
                   value={ppAvatarUrl}
                   onChange={(e) => setPpAvatarUrl(e.target.value)}
                   placeholder="https://example.com/avatar.jpg"
+                  disabled={avatarUploading}
                   className="bg-foreground/[0.04]"
                 />
               </div>
