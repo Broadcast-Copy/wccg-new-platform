@@ -38,6 +38,7 @@ import {
   Store,
 } from "lucide-react";
 import { useSupabase } from "@/components/providers/supabase-provider";
+import { useUserRoles } from "@/hooks/use-user-roles";
 
 // Desktop nav
 const navLinks = [
@@ -243,6 +244,25 @@ export default function MainLayout({
   const { supabase } = useSupabase();
   const [tabBadges, setTabBadges] = useState<{ shows: boolean; shop: number }>({ shows: false, shop: 0 });
 
+  // Staff brand toggle — internal (Carson Communications) logins can flip the
+  // header between the WCCG station brand and the Carson Communications brand.
+  const { isInternal } = useUserRoles();
+  const [brand, setBrand] = useState<"wccg" | "carson">("wccg");
+  useEffect(() => {
+    let active = true;
+    queueMicrotask(() => {
+      if (!active || typeof window === "undefined") return;
+      try {
+        if (localStorage.getItem("wccg_brand_mode") === "carson") setBrand("carson");
+      } catch { /* noop */ }
+    });
+    return () => { active = false; };
+  }, []);
+  const setBrandMode = (b: "wccg" | "carson") => {
+    setBrand(b);
+    try { localStorage.setItem("wccg_brand_mode", b); } catch { /* noop */ }
+  };
+
   useEffect(() => {
     async function fetchBadges() {
       try {
@@ -282,13 +302,43 @@ export default function MainLayout({
       {/* Top Header */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-xl">
         <div className="container flex items-center pt-[10px] pb-[10px]">
-          {/* Left: Logo */}
-          <Link
-            href="/"
-            className="flex items-center gap-2.5 group shrink-0"
-          >
-            <ThemeLogo width={120} priority />
+          {/* Left: Logo — flips to Carson Communications in staff brand mode */}
+          <Link href="/" className="flex items-center gap-2.5 group shrink-0">
+            {isInternal && brand === "carson" ? (
+              <>
+                {/* White wordmark on dark; inverted to dark on light (matches footer). */}
+                <span className="hidden dark:block">
+                  <Image src="/images/logos/carson-communications-logo.png" alt="Carson Communications" width={420} height={140} style={{ width: "150px", height: "auto", objectFit: "contain" }} priority />
+                </span>
+                <span className="block dark:hidden">
+                  <Image src="/images/logos/carson-communications-logo.png" alt="Carson Communications" width={420} height={140} style={{ width: "150px", height: "auto", objectFit: "contain", filter: "invert(1)" }} priority />
+                </span>
+              </>
+            ) : (
+              <ThemeLogo width={120} priority />
+            )}
           </Link>
+          {/* Staff brand toggle — only for internal Carson Communications logins */}
+          {isInternal && (
+            <div className="ml-2 hidden items-center rounded-full border border-border bg-muted/50 p-0.5 sm:inline-flex">
+              <button
+                type="button"
+                onClick={() => setBrandMode("wccg")}
+                title="WCCG 104.5 FM — station brand"
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold transition-colors ${brand === "wccg" ? "bg-[#74ddc7] text-[#0a0a0f]" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                WCCG
+              </button>
+              <button
+                type="button"
+                onClick={() => setBrandMode("carson")}
+                title="Carson Communications — staff brand"
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold transition-colors ${brand === "carson" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Carson
+              </button>
+            </div>
+          )}
 
           {/* Center: Nav links — Home, Discover, Streaming, Support */}
           <nav className="hidden lg:flex items-center justify-center gap-0.5 flex-1">

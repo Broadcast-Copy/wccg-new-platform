@@ -73,6 +73,8 @@ interface UseUserRolesReturn {
   isPromotions: boolean;
   isEditor: boolean;
   isEmployee: boolean;
+  /** TRUE if the user is internal to Carson Communications (staff/employee/DJ/admin). */
+  isInternal: boolean;
   /** TRUE only if the user's REAL (non-preview) roles include admin/super_admin. */
   isRealAdmin: boolean;
   department: string | null;
@@ -117,6 +119,7 @@ export function useUserRoles(): UseUserRolesReturn {
   const { user, isLoading: authLoading } = useAuth();
   const { supabase } = useSupabase();
   const [realRoles, setRealRoles] = useState<UserRole[]>([]);
+  const [profileIsInternal, setProfileIsInternal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [roleOverride, setRoleOverrideState] = useState<UserRole | null>(readOverride);
@@ -128,6 +131,7 @@ export function useUserRoles(): UseUserRolesReturn {
     if (!user) {
       setRealRoles([]);
       realRolesRef.current = [];
+      setProfileIsInternal(false);
       setIsLoading(false);
       setRoleOverrideState(null);
       try { localStorage.removeItem(ROLE_OVERRIDE_KEY); } catch { /* noop */ }
@@ -145,7 +149,7 @@ export function useUserRoles(): UseUserRolesReturn {
           supabase.from("user_roles").select("role_id").eq("profile_id", user!.id),
           supabase
             .from("profiles")
-            .select("user_type, has_creator_access, has_vendor_access")
+            .select("user_type, has_creator_access, has_vendor_access, is_internal")
             .eq("id", user!.id)
             .maybeSingle(),
         ]);
@@ -160,7 +164,7 @@ export function useUserRoles(): UseUserRolesReturn {
 
         // 2) roles implied by the profile record
         const profile = profileRes.data as
-          | { user_type: string | null; has_creator_access: boolean | null; has_vendor_access: boolean | null }
+          | { user_type: string | null; has_creator_access: boolean | null; has_vendor_access: boolean | null; is_internal: boolean | null }
           | null;
         if (profile) {
           const ut = normaliseRole(profile.user_type ?? "");
@@ -168,6 +172,7 @@ export function useUserRoles(): UseUserRolesReturn {
           if (profile.has_creator_access) set.add("content_creator");
           if (profile.has_vendor_access) set.add("vendor");
         }
+        if (!cancelled) setProfileIsInternal(!!profile?.is_internal);
 
         // every authenticated user is at least a listener
         set.add("listener");
@@ -280,6 +285,7 @@ export function useUserRoles(): UseUserRolesReturn {
     isPromotions: effectiveRoles.includes("promotions"),
     isEditor: effectiveRoles.includes("editor"),
     isEmployee: effectiveRoles.some((r) => EMPLOYEE_ROLES.includes(r)),
+    isInternal: profileIsInternal || effectiveRoles.some((r) => EMPLOYEE_ROLES.includes(r)) || isRealAdmin,
     isRealAdmin,
     department,
     isLoading: authLoading || isLoading,
