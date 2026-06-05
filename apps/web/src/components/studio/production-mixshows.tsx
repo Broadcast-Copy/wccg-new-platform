@@ -39,6 +39,7 @@ import {
   UserCircle2,
   Users,
   CalendarDays,
+  UploadCloud,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -312,8 +313,11 @@ function FileRow({
   busyUrl,
   rowKey,
   subtitle,
+  canUpload,
+  uploading,
   onToggleSelect,
   onPlay,
+  onUpload,
 }: {
   slot: Slot;
   code: string;
@@ -324,9 +328,15 @@ function FileRow({
   busyUrl: string | null;
   rowKey: string;
   subtitle?: React.ReactNode;
+  /** Whether an Upload/Replace control is shown (slot must route to a DJ). */
+  canUpload: boolean;
+  /** This row's upload is in flight. */
+  uploading: boolean;
   onToggleSelect: (dropId: string, rowKey: string, e: React.MouseEvent) => void;
   onPlay: (slot: Slot, drop: Drop) => void;
+  onUpload: (slot: Slot, code: string, file: File) => void;
 }) {
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
   return (
     <div
       className={`flex items-center gap-3 rounded-xl border bg-card px-4 py-3 transition-colors ${
@@ -370,11 +380,50 @@ function FileRow({
           Play
         </Button>
       )}
+      {canUpload && (
+        <>
+          <input
+            ref={uploadInputRef}
+            type="file"
+            accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.currentTarget.files?.[0];
+              if (f) onUpload(slot, code, f);
+              e.currentTarget.value = "";
+            }}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-full"
+            disabled={uploading}
+            onClick={() => uploadInputRef.current?.click()}
+          >
+            {uploading ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <UploadCloud className="mr-1 h-3.5 w-3.5" />}
+            {uploading ? "Uploading…" : present ? "Replace" : "Upload"}
+          </Button>
+        </>
+      )}
     </div>
   );
 }
 
-export function ProductionMixshows({ focusSlotId, focusDjId }: { focusSlotId?: string; focusDjId?: string }) {
+export function ProductionMixshows({
+  focusSlotId,
+  focusDjId,
+  selfDjId,
+}: {
+  focusSlotId?: string;
+  focusDjId?: string;
+  /**
+   * When set, scopes the view to a single DJ viewing their own folder: forces
+   * the By-DJ grouping, auto-opens that DJ's folder, and hides the grouping
+   * toggle / other DJ folders / the admin "Create new mixshow" button. When
+   * null/undefined (admin/production) the full view is shown.
+   */
+  selfDjId?: string | null;
+}) {
   const [weekOf, setWeekOf] = useState(isoMondayOfNow());
   const [slots, setSlots] = useState<Slot[]>([]);
   const [drops, setDrops] = useState<Drop[]>([]);
@@ -391,6 +440,8 @@ export function ProductionMixshows({ focusSlotId, focusDjId }: { focusSlotId?: s
   const [path, setPath] = useState<Array<number | string>>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [busyUrl, setBusyUrl] = useState<string | null>(null);
+  // The "slot.id|code" of the row whose upload is currently in flight.
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
 
   // Inline player: a queue of tracks + the active index. null index = closed.
   const [queue, setQueue] = useState<PlayerTrack[]>([]);
@@ -431,11 +482,22 @@ export function ProductionMixshows({ focusSlotId, focusDjId }: { focusSlotId?: s
   useEffect(() => { load(); }, [load]);
 
   // Deep-link (one-shot): jump straight to a slot or a DJ folder once the
-  // schedule has loaded. ?dj=<id> wins over ?slot=<id>; ?dj opens the By-DJ
-  // grouping at that DJ's on-air folder, ?slot opens the By-Day file view.
+  // schedule has loaded. A self-scoped DJ viewer (selfDjId) wins over all deep
+  // links and lands directly in their own By-DJ folder. Otherwise ?dj=<id>
+  // wins over ?slot=<id>; ?dj opens the By-DJ grouping at that DJ's on-air
+  // folder, ?slot opens the By-Day file view.
   const focusedRef = useRef(false);
   useEffect(() => {
-    if (focusedRef.current || slots.length === 0) return;
+    if (focusedRef.current) return;
+    if (selfDjId) {
+      // A DJ viewing their own folder: land them there once, even before slots
+      // load (their folder is the only place they go). Done on mount, not
+      // gated on slots, so a DJ with no slots yet still lands correctly.
+      focusedRef.current = true;
+      queueMicrotask(() => { setGroupBy("dj"); setPath([selfDjId]); });
+      return;
+    }
+    if (slots.length === 0) return;
     if (focusDjId) {
       // Only focus a DJ that actually has slots this schedule.
       const hasSlots = slots.some((s) => s.dj_id === focusDjId);
@@ -450,7 +512,7 @@ export function ProductionMixshows({ focusSlotId, focusDjId }: { focusSlotId?: s
       focusedRef.current = true;
       queueMicrotask(() => { setGroupBy("day"); setPath([slot.day_of_week, slot.id]); });
     }
-  }, [focusDjId, focusSlotId, slots]);
+  }, [selfDjId, focusDjId, focusSlotId, slots]);
 
   // Drops keyed by slot+code for quick lookup
   const dropByKey = useMemo(() => {
@@ -553,6 +615,64 @@ export function ProductionMixshows({ focusSlotId, focusDjId }: { focusSlotId?: s
     setQueue(tracks);
     setPlayerIndex(0);
   }, []);
+
+  // Upload (or replace) a single file_code for a slot. Mirrors the DJ portal's
+  // upload (browser → Supabase Storage → dj_drops upsert). RLS scopes writes:
+  // a DJ may only write their own drops; staff may write any. The slot must
+  // route to a DJ (dj_id + slug) so the storage path + drop row are valid.
+  const handleUpload = useCallback(async (slot: Slot, code: string, file: File) => {
+    const slug = slot.djs?.slug;
+    if (!slot.dj_id || !slug) return;
+    const key = `${slot.id}|${code}`;
+    setError(null);
+
+    // Validate: audio only + ≤ 200 MB (mixes are large).
+    const isAudio = file.type.startsWith("audio/") || /\.(mp3|wav|flac|m4a|ogg)$/i.test(file.name);
+    if (!isAudio) {
+      setError(`"${file.name}" is not an audio file. Upload mp3, wav, flac, m4a, or ogg.`);
+      return;
+    }
+    if (file.size > 200 * 1024 * 1024) {
+      setError(`"${file.name}" is ${(file.size / 1024 / 1024).toFixed(0)} MB — over the 200 MB limit.`);
+      return;
+    }
+
+    setUploadingKey(key);
+    try {
+      const supabase = createClient();
+      const ext = (file.name.match(/\.(mp3|wav|flac|m4a|ogg)$/i)?.[1] ?? "mp3").toLowerCase();
+      const storagePath = `${slug}/${weekOf}/${code}.${ext}`;
+
+      const { error: upErr } = await supabase.storage
+        .from("dj-drops")
+        .upload(storagePath, file, { upsert: true, contentType: file.type || `audio/${ext}` });
+      if (upErr) throw new Error(`Storage upload failed: ${upErr.message}`);
+
+      const { error: rowErr } = await supabase.from("dj_drops").upsert(
+        {
+          dj_id: slot.dj_id,
+          slot_id: slot.id,
+          file_code: code,
+          week_of: weekOf,
+          status: "uploaded",
+          source: "web",
+          storage_path: storagePath,
+          size_bytes: file.size,
+          format: ext,
+          uploaded_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "slot_id,file_code,week_of" },
+      );
+      if (rowErr) throw new Error(rowErr.message);
+
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setUploadingKey(null);
+    }
+  }, [weekOf, load]);
 
   // Open one or more signed URLs (used by bulk Download in the file view).
   const downloadDrops = useCallback(async (slot: Slot, codes: string[]) => {
@@ -684,6 +804,17 @@ export function ProductionMixshows({ focusSlotId, focusDjId }: { focusSlotId?: s
     setPath([]);
   }, []);
 
+  // ── Self-scoping (a DJ viewing their own folder) ──────────────────────────
+  // When selfDjId is set we hide the grouping toggle + create button and only
+  // ever surface this DJ's own folder. The focus effect forces By-DJ + opens
+  // their folder; this just guarantees the folder grid (the slotless fallback)
+  // never leaks other DJs.
+  const isSelfScoped = !!selfDjId;
+  const visibleDjFolders = useMemo(
+    () => (isSelfScoped ? djFolders.filter((f) => f.key === selfDjId) : djFolders),
+    [isSelfScoped, djFolders, selfDjId],
+  );
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -714,21 +845,24 @@ export function ProductionMixshows({ focusSlotId, focusDjId }: { focusSlotId?: s
           )}
         </div>
         <div className="flex items-center gap-2">
-          {/* Grouping toggle: By Day (schedule) vs By DJ (per-DJ on-air folder) */}
-          <div className="flex items-center gap-0.5 rounded-full border border-border bg-card p-0.5 text-xs">
-            <button
-              onClick={() => setGrouping("day")}
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold transition-colors ${groupBy === "day" ? "bg-[#74ddc7] text-[#0a0a0f]" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              <CalendarDays className="h-3.5 w-3.5" /> By Day
-            </button>
-            <button
-              onClick={() => setGrouping("dj")}
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold transition-colors ${groupBy === "dj" ? "bg-[#7401df] text-white" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              <Users className="h-3.5 w-3.5" /> By DJ
-            </button>
-          </div>
+          {/* Grouping toggle: By Day (schedule) vs By DJ (per-DJ on-air folder).
+              Hidden for a self-scoped DJ — they only ever see their own folder. */}
+          {!isSelfScoped && (
+            <div className="flex items-center gap-0.5 rounded-full border border-border bg-card p-0.5 text-xs">
+              <button
+                onClick={() => setGrouping("day")}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold transition-colors ${groupBy === "day" ? "bg-[#74ddc7] text-[#0a0a0f]" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                <CalendarDays className="h-3.5 w-3.5" /> By Day
+              </button>
+              <button
+                onClick={() => setGrouping("dj")}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold transition-colors ${groupBy === "dj" ? "bg-[#7401df] text-white" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                <Users className="h-3.5 w-3.5" /> By DJ
+              </button>
+            </div>
+          )}
           {/* Week nav */}
           <div className="flex items-center gap-1 rounded-full border border-border bg-card px-1 py-0.5 text-xs">
             <button onClick={() => setWeekOf((w) => addWeeks(w, -1))} className="rounded-full px-2 py-1 hover:bg-foreground/[0.06]">‹</button>
@@ -738,9 +872,12 @@ export function ProductionMixshows({ focusSlotId, focusDjId }: { focusSlotId?: s
           <Button variant="ghost" size="sm" onClick={load} className="rounded-full text-xs">
             <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
-          <Button size="sm" onClick={() => setShowCreate(true)} className="rounded-full bg-[#7401df] text-white hover:bg-[#7401df]/90">
-            <Plus className="mr-1.5 h-3.5 w-3.5" /> Create new mixshow
-          </Button>
+          {/* Admin-only: a self-scoped DJ can't create slots, only drop files. */}
+          {!isSelfScoped && (
+            <Button size="sm" onClick={() => setShowCreate(true)} className="rounded-full bg-[#7401df] text-white hover:bg-[#7401df]/90">
+              <Plus className="mr-1.5 h-3.5 w-3.5" /> Create new mixshow
+            </Button>
+          )}
         </div>
       </div>
 
@@ -788,8 +925,11 @@ export function ProductionMixshows({ focusSlotId, focusDjId }: { focusSlotId?: s
                   busyUrl={busyUrl}
                   rowKey={rowKey}
                   subtitle={`${DAY_NAMES[slot.day_of_week]} · ${fmt12h(slot.start_time)}–${fmt12h(slot.end_time)}`}
+                  canUpload={!!slot.dj_id && !!slot.djs?.slug}
+                  uploading={uploadingKey === rowKey}
                   onToggleSelect={toggleSelect}
                   onPlay={playDrop}
+                  onUpload={handleUpload}
                 />
               );
             })}
@@ -797,7 +937,7 @@ export function ProductionMixshows({ focusSlotId, focusDjId }: { focusSlotId?: s
         ) : (
           /* ── DJ folders ── */
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {djFolders.map((folder) => (
+            {visibleDjFolders.map((folder) => (
               <button key={folder.key} onClick={() => setPath([folder.key])} className="group flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5 transition-all hover:border-[#74ddc7]/40">
                 <div className="relative">
                   <Folder className="h-9 w-9 text-[#74ddc7]" />
@@ -809,9 +949,11 @@ export function ProductionMixshows({ focusSlotId, focusDjId }: { focusSlotId?: s
                 <p className="text-[11px] text-muted-foreground">{folder.fileCount} on-air file{folder.fileCount === 1 ? "" : "s"}</p>
               </button>
             ))}
-            {djFolders.length === 0 && (
+            {visibleDjFolders.length === 0 && (
               <p className="col-span-full rounded-xl border border-dashed border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
-                No DJs scheduled yet. Click “Create new mixshow”.
+                {isSelfScoped
+                  ? "No mixshow slots assigned to you yet. Reach out to production to get scheduled."
+                  : "No DJs scheduled yet. Click “Create new mixshow”."}
               </p>
             )}
           </div>
@@ -883,7 +1025,8 @@ export function ProductionMixshows({ focusSlotId, focusDjId }: { focusSlotId?: s
             )}
           </div>
           {currentSlot.file_codes.map((code) => {
-            const drop = dropByKey.get(`${currentSlot.id}|${code}`);
+            const rowKey = `${currentSlot.id}|${code}`;
+            const drop = dropByKey.get(rowKey);
             const present = !!drop && !!drop.storage_path && PLAYABLE_STATUSES.includes(drop.status);
             const isSelected = !!drop && selected.has(drop.id);
             const isNowPlaying = playerIndex !== null && !!drop && queue[playerIndex]?.id === drop.id;
@@ -897,9 +1040,12 @@ export function ProductionMixshows({ focusSlotId, focusDjId }: { focusSlotId?: s
                 isSelected={isSelected}
                 isNowPlaying={isNowPlaying}
                 busyUrl={busyUrl}
-                rowKey={`${currentSlot.id}|${code}`}
+                rowKey={rowKey}
+                canUpload={!!currentSlot.dj_id && !!currentSlot.djs?.slug}
+                uploading={uploadingKey === rowKey}
                 onToggleSelect={toggleSelect}
                 onPlay={playDrop}
+                onUpload={handleUpload}
               />
             );
           })}

@@ -1532,6 +1532,45 @@ export default function MediaManagerPage() {
   const [focusSlotId, setFocusSlotId] = useState<string | undefined>(undefined);
   const [focusDjId, setFocusDjId] = useState<string | undefined>(undefined);
 
+  // The viewer's own DJ id (if their account is linked to a DJ profile). A DJ
+  // who isn't production/admin gets a self-scoped mixshow folder: they land in
+  // their own folder and can drop files, but never see other DJs.
+  const [viewerDjId, setViewerDjId] = useState<string | null>(null);
+  const isDjViewer = !!viewerDjId && !canSeeProduction;
+  // Tracks whether managerMode has been seeded yet (by a deep-link or the
+  // DJ-viewer default) so async DJ resolution can't stomp a manual choice.
+  const modeSeededRef = useRef(false);
+
+  // Resolve the viewer's DJ id once auth settles, and default a self-scoped DJ
+  // viewer into their mixshow folder. All setState happens inside the async
+  // callback behind the `active` guard (never synchronously in the effect
+  // body) so we satisfy react-hooks/set-state-in-effect.
+  useEffect(() => {
+    if (authLoading) return;
+    let active = true;
+    void (async () => {
+      if (!user) {
+        if (active) setViewerDjId(null);
+        return;
+      }
+      const { data } = await createClient()
+        .from("djs")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!active) return;
+      const djId = (data?.id as string | undefined) ?? null;
+      setViewerDjId(djId);
+      // Land a DJ-only viewer in their mixshow folder by default — unless a
+      // deep-link or a manual toggle already chose a mode.
+      if (djId && !canSeeProduction && !modeSeededRef.current) {
+        modeSeededRef.current = true;
+        setManagerMode("mixshows");
+      }
+    })();
+    return () => { active = false; };
+  }, [authLoading, user, canSeeProduction]);
+
   // Deep-link from the DJ-slots admin:
   //   ?view=mixshows&slot=<id> opens the production view on that slot's files.
   //   ?view=mixshows&dj=<id>   opens that DJ's By-DJ on-air folder.
@@ -1542,7 +1581,10 @@ export default function MediaManagerPage() {
       const params = new URLSearchParams(window.location.search);
       const slot = params.get("slot") || undefined;
       const dj = params.get("dj") || undefined;
-      if (params.get("view") === "mixshows" || slot || dj) setManagerMode("mixshows");
+      if (params.get("view") === "mixshows" || slot || dj) {
+        modeSeededRef.current = true;
+        setManagerMode("mixshows");
+      }
       if (slot) setFocusSlotId(slot);
       if (dj) setFocusDjId(dj);
     });
@@ -2075,41 +2117,52 @@ export default function MediaManagerPage() {
 
   if (!mounted) return null;
 
-  // Media | DJ Mixshows mode toggle (production-tier only).
-  const modeToggle = canSeeProduction ? (
+  // Media | DJ Mixshows mode toggle. Shown to production-tier staff AND to DJ
+  // viewers (so a DJ can flip between their personal media library and their
+  // mixshow folder). A manual choice seeds the mode so async resolution won't
+  // override it.
+  const modeToggle = canSeeProduction || isDjViewer ? (
     <div className="inline-flex items-center rounded-full border border-border bg-card p-0.5">
       <button
-        onClick={() => setManagerMode("media")}
+        onClick={() => { modeSeededRef.current = true; setManagerMode("media"); }}
         className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${managerMode === "media" ? "bg-[#74ddc7] text-[#0a0a0f]" : "text-muted-foreground hover:text-foreground"}`}
       >
         My Media
       </button>
       <button
-        onClick={() => setManagerMode("mixshows")}
+        onClick={() => { modeSeededRef.current = true; setManagerMode("mixshows"); }}
         className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${managerMode === "mixshows" ? "bg-[#7401df] text-white" : "text-muted-foreground hover:text-foreground"}`}
       >
-        DJ Mixshows
+        {isDjViewer ? "My Mixshows" : "DJ Mixshows"}
       </button>
     </div>
   ) : null;
 
-  // Production: DJ Mixshows schedule-as-folders view.
-  if (managerMode === "mixshows" && canSeeProduction) {
+  // DJ Mixshows schedule-as-folders view. Production-tier staff get the full
+  // view (all DJs, create slots, upload on anyone's behalf); a DJ viewer gets
+  // a self-scoped drop surface — their own folder only, where they upload.
+  if (managerMode === "mixshows" && (canSeeProduction || isDjViewer)) {
     return (
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
               <FolderOpen className="h-6 w-6 text-[#7401df]" />
-              DJ Mixshows
+              {isDjViewer ? "My Mixshows" : "DJ Mixshows"}
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              The live weekly schedule as folders — Day › Time › files. DJ uploads populate automatically.
+              {isDjViewer
+                ? "Your weekly mixshow folder — drop each week's files into their slot. Uploads appear here instantly."
+                : "The live weekly schedule as folders — Day › Time › files. DJ uploads populate automatically."}
             </p>
           </div>
           {modeToggle}
         </div>
-        <ProductionMixshows focusSlotId={focusSlotId} focusDjId={focusDjId} />
+        <ProductionMixshows
+          focusSlotId={focusSlotId}
+          focusDjId={focusDjId}
+          selfDjId={isDjViewer ? viewerDjId : undefined}
+        />
       </div>
     );
   }
