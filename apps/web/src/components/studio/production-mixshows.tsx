@@ -40,6 +40,10 @@ import {
   Users,
   CalendarDays,
   UploadCloud,
+  Radio,
+  Disc3,
+  Music,
+  Podcast,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -70,7 +74,27 @@ const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const UNASSIGNED_DJ_KEY = "__unassigned__";
 const PLAYABLE_STATUSES = ["uploaded", "validated", "published"];
 
-interface DjRef { slug: string; display_name: string }
+interface DjRef { id: string; slug: string; display_name: string }
+/**
+ * A leaf audio item from `dj_mixes` — the Off-Air / Digital catalog. Unlike
+ * on-air drops these live in the public `dj-mixes` bucket, so `audio_url` is a
+ * directly-playable URL (no signing needed before handing it to the player).
+ */
+interface MixItem {
+  id: string;
+  dj_id: string | null;
+  host_id: string | null;
+  title: string;
+  description: string | null;
+  audio_url: string;
+  cover_image_url: string | null;
+  duration: number | null;
+  genre: string | null;
+  play_count: number | null;
+  item_type: string | null;
+  is_published: boolean;
+  created_at: string;
+}
 interface Slot {
   id: string;
   dj_id: string | null;
@@ -427,9 +451,18 @@ export function ProductionMixshows({
   const [weekOf, setWeekOf] = useState(isoMondayOfNow());
   const [slots, setSlots] = useState<Slot[]>([]);
   const [drops, setDrops] = useState<Drop[]>([]);
+  const [mixes, setMixes] = useState<MixItem[]>([]);
   const [djs, setDjs] = useState<DjRef[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Top-level category. null = the "My Mixshows" root (two folder cards);
+  //   "onair"   → scheduled broadcast drops (the original schedule view, now
+  //               nested under a {year} folder)
+  //   "digital" → the on-demand dj_mixes catalog (DJ folder → that DJ's mixes)
+  const [section, setSection] = useState<"onair" | "digital" | null>(null);
+  // On-Air only: have we stepped through the {year} folder into the schedule?
+  // (false → show the single year folder card; true → the existing Day/DJ view)
+  const [inYear, setInYear] = useState(false);
   // How the folder tree is grouped at the top level.
   //   "day" → Day › Time › files (the original schedule view)
   //   "dj"  → DJ › that DJ's on-air mixes for the week (mirrors D:\WCCG\b-mixshows\<dj>\on-air)
@@ -455,7 +488,7 @@ export function ProductionMixshows({
     setLoading(true);
     try {
       const supabase = createClient();
-      const [{ data: s, error: sErr }, { data: d }, { data: dj }] = await Promise.all([
+      const [{ data: s, error: sErr }, { data: d }, { data: dj }, { data: mx }] = await Promise.all([
         supabase
           .from("dj_slots")
           .select("id,dj_id,day_of_week,start_time,end_time,file_codes,status,notes,djs(slug,display_name)")
@@ -465,12 +498,19 @@ export function ProductionMixshows({
           .from("dj_drops")
           .select("id,slot_id,file_code,status,storage_path,format,size_bytes,uploaded_at")
           .eq("week_of", weekOf),
-        supabase.from("djs").select("slug,display_name").eq("is_active", true).order("display_name"),
+        supabase.from("djs").select("id,slug,display_name").eq("is_active", true).order("display_name"),
+        // Off-Air / Digital catalog. RLS governs visibility (published, staff, or
+        // owning DJ); the dj-mixes bucket is public so audio_url plays directly.
+        supabase
+          .from("dj_mixes")
+          .select("id, dj_id, host_id, title, description, audio_url, cover_image_url, duration, genre, play_count, item_type, is_published, created_at")
+          .order("created_at", { ascending: false }),
       ]);
       if (sErr) throw new Error(sErr.message);
       setSlots((s ?? []) as unknown as Slot[]);
       setDrops((d ?? []) as Drop[]);
       setDjs((dj ?? []) as DjRef[]);
+      setMixes((mx ?? []) as MixItem[]);
       setError(null);
     } catch (e) {
       setError((e as Error).message);
@@ -486,6 +526,10 @@ export function ProductionMixshows({
   // links and lands directly in their own By-DJ folder. Otherwise ?dj=<id>
   // wins over ?slot=<id>; ?dj opens the By-DJ grouping at that DJ's on-air
   // folder, ?slot opens the By-Day file view.
+  // All deep links / self-scope resolve INTO the On-Air section, through the
+  // {year} folder, to the right By-DJ / By-Day target. setState is kept out of
+  // the synchronous effect body (react-hooks/set-state-in-effect): a queued
+  // microtask applies everything once, behind the focusedRef guard.
   const focusedRef = useRef(false);
   useEffect(() => {
     if (focusedRef.current) return;
@@ -494,7 +538,7 @@ export function ProductionMixshows({
       // load (their folder is the only place they go). Done on mount, not
       // gated on slots, so a DJ with no slots yet still lands correctly.
       focusedRef.current = true;
-      queueMicrotask(() => { setGroupBy("dj"); setPath([selfDjId]); });
+      queueMicrotask(() => { setSection("onair"); setInYear(true); setGroupBy("dj"); setPath([selfDjId]); });
       return;
     }
     if (slots.length === 0) return;
@@ -503,14 +547,14 @@ export function ProductionMixshows({
       const hasSlots = slots.some((s) => s.dj_id === focusDjId);
       if (!hasSlots) return;
       focusedRef.current = true;
-      queueMicrotask(() => { setGroupBy("dj"); setPath([focusDjId]); });
+      queueMicrotask(() => { setSection("onair"); setInYear(true); setGroupBy("dj"); setPath([focusDjId]); });
       return;
     }
     if (focusSlotId) {
       const slot = slots.find((s) => s.id === focusSlotId);
       if (!slot) return;
       focusedRef.current = true;
-      queueMicrotask(() => { setGroupBy("day"); setPath([slot.day_of_week, slot.id]); });
+      queueMicrotask(() => { setSection("onair"); setInYear(true); setGroupBy("day"); setPath([slot.day_of_week, slot.id]); });
     }
   }, [selfDjId, focusDjId, focusSlotId, slots]);
 
@@ -520,6 +564,23 @@ export function ProductionMixshows({
     for (const d of drops) m.set(`${d.slot_id}|${d.file_code}`, d);
     return m;
   }, [drops]);
+
+  // The On-Air {year} folder label. Mirrors local D:\WCCG\Mixshows\<YYYY>\;
+  // derived from the active week (a Monday ISO date) so week-nav within a year
+  // stays under the same folder.
+  const year = weekOf.slice(0, 4);
+
+  // Resolve a dj_id to a display name from the loaded DJs / scheduled slots,
+  // falling back to the id so a folder always has a label.
+  const djNameById = useCallback(
+    (id: string): string => {
+      const fromList = djs.find((d) => d.id === id)?.display_name;
+      if (fromList) return fromList;
+      const fromSlot = slots.find((s) => s.dj_id === id)?.djs?.display_name;
+      return fromSlot ?? id;
+    },
+    [djs, slots],
+  );
 
   // Days that have slots, in production order
   const daysWithSlots = useMemo(() => {
@@ -815,15 +876,93 @@ export function ProductionMixshows({
     [isSelfScoped, djFolders, selfDjId],
   );
 
+  // ── Off-Air / Digital catalog (dj_mixes) ──────────────────────────────────
+  // Level 0: one folder per DJ that has mixes (keyed by dj_id, so it lines up
+  // with selfDjId / focusDjId and the on-air By-DJ folders). Mixes with no DJ
+  // bucket under the Unassigned sentinel. Self-scoped viewers see only their own.
+  const digitalFolders = useMemo(() => {
+    const groups = new Map<string, { key: string; label: string; mixes: MixItem[] }>();
+    for (const m of mixes) {
+      const key = m.dj_id ?? UNASSIGNED_DJ_KEY;
+      const existing = groups.get(key);
+      if (existing) existing.mixes.push(m);
+      else groups.set(key, { key, label: m.dj_id ? djNameById(m.dj_id) : "Unassigned", mixes: [m] });
+    }
+    return Array.from(groups.values()).sort((a, b) => {
+      if (a.key === UNASSIGNED_DJ_KEY) return 1;
+      if (b.key === UNASSIGNED_DJ_KEY) return -1;
+      return a.label.localeCompare(b.label);
+    });
+  }, [mixes, djNameById]);
+
+  const visibleDigitalFolders = useMemo(
+    () => (isSelfScoped ? digitalFolders.filter((f) => f.key === selfDjId) : digitalFolders),
+    [isSelfScoped, digitalFolders, selfDjId],
+  );
+
+  // The digital DJ folder currently open (digital section, level ≥ 1). Reuses
+  // `path` exactly like the on-air By-DJ view: path[0] holds the dj_id.
+  const currentDigitalKey = section === "digital" && path.length >= 1 ? (path[0] as string) : null;
+  const currentDigitalFolder = useMemo(
+    () => (currentDigitalKey ? digitalFolders.find((f) => f.key === currentDigitalKey) ?? null : null),
+    [currentDigitalKey, digitalFolders],
+  );
+
+  // Build a player queue from a DJ folder's mixes. The dj-mixes bucket is public
+  // so audio_url is directly playable — no signed-URL resolve step needed.
+  const trackForMix = useCallback(
+    (m: MixItem): PlayerTrack => ({ id: m.id, name: m.title, src: m.audio_url }),
+    [],
+  );
+
+  // Play one mix; queue = its whole DJ folder so prev/next walk that catalog.
+  const playMix = useCallback((folderMixes: MixItem[], mix: MixItem) => {
+    if (!mix.audio_url) return;
+    const tracks = folderMixes.filter((m) => m.audio_url).map(trackForMix);
+    const start = Math.max(0, tracks.findIndex((t) => t.id === mix.id));
+    setQueue(tracks);
+    setPlayerIndex(start);
+  }, [trackForMix]);
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm">
-          <button onClick={() => setPath([])} className="inline-flex items-center gap-1 font-bold text-foreground hover:text-[#74ddc7]">
-            <Home className="h-3.5 w-3.5" /> {groupBy === "dj" ? "DJs" : "DJ Mixshows"}
+          {/* "My Mixshows" home → back to the two category cards. */}
+          <button
+            onClick={() => { setSection(null); setInYear(false); setPath([]); }}
+            className="inline-flex items-center gap-1 font-bold text-foreground hover:text-[#74ddc7]"
+          >
+            <Home className="h-3.5 w-3.5" /> My Mixshows
           </button>
-          {groupBy === "day" && currentDay !== null && (
+
+          {/* Category crumb. */}
+          {section !== null && (
+            <>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+              <button
+                onClick={() => { setInYear(false); setPath([]); }}
+                className={`font-bold transition-colors ${
+                  section === "onair" && !inYear ? "text-[#74ddc7]" : section === "digital" && path.length === 0 ? "text-[#74ddc7]" : "text-foreground hover:text-[#74ddc7]"
+                }`}
+              >
+                {section === "onair" ? "On-Air Mixshows" : "Off-Air / Digital Mixshows"}
+              </button>
+            </>
+          )}
+
+          {/* On-Air: {year} crumb (once inside the year). */}
+          {section === "onair" && inYear && (
+            <>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+              <button onClick={() => setPath([])} className={`font-bold transition-colors ${level === 0 ? "text-[#74ddc7]" : "text-foreground hover:text-[#74ddc7]"}`}>
+                {year}
+              </button>
+            </>
+          )}
+
+          {section === "onair" && inYear && groupBy === "day" && currentDay !== null && (
             <>
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
               <button onClick={() => setPath([currentDay])} className="font-bold text-foreground hover:text-[#74ddc7]">
@@ -831,49 +970,63 @@ export function ProductionMixshows({
               </button>
             </>
           )}
-          {groupBy === "day" && currentSlot && (
+          {section === "onair" && inYear && groupBy === "day" && currentSlot && (
             <>
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="font-bold text-[#74ddc7]">{fmt12h(currentSlot.start_time)}</span>
             </>
           )}
-          {groupBy === "dj" && currentDjFolder && (
+          {section === "onair" && inYear && groupBy === "dj" && currentDjFolder && (
             <>
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="font-bold text-[#74ddc7]">{currentDjFolder.label}</span>
             </>
           )}
+
+          {/* Digital: open DJ folder crumb. */}
+          {section === "digital" && currentDigitalFolder && (
+            <>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="font-bold text-[#74ddc7]">{currentDigitalFolder.label}</span>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          {/* Grouping toggle: By Day (schedule) vs By DJ (per-DJ on-air folder).
-              Hidden for a self-scoped DJ — they only ever see their own folder. */}
-          {!isSelfScoped && (
-            <div className="flex items-center gap-0.5 rounded-full border border-border bg-card p-0.5 text-xs">
-              <button
-                onClick={() => setGrouping("day")}
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold transition-colors ${groupBy === "day" ? "bg-[#74ddc7] text-[#0a0a0f]" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                <CalendarDays className="h-3.5 w-3.5" /> By Day
-              </button>
-              <button
-                onClick={() => setGrouping("dj")}
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold transition-colors ${groupBy === "dj" ? "bg-[#7401df] text-white" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                <Users className="h-3.5 w-3.5" /> By DJ
-              </button>
-            </div>
+          {/* On-Air, inside the {year}: By Day (schedule) vs By DJ (per-DJ on-air
+              folder), the week nav, and the admin Create button. These only make
+              sense once you're inside the year's schedule. Hidden for a
+              self-scoped DJ — they only ever see their own folder. */}
+          {section === "onair" && inYear && (
+            <>
+              {!isSelfScoped && (
+                <div className="flex items-center gap-0.5 rounded-full border border-border bg-card p-0.5 text-xs">
+                  <button
+                    onClick={() => setGrouping("day")}
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold transition-colors ${groupBy === "day" ? "bg-[#74ddc7] text-[#0a0a0f]" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    <CalendarDays className="h-3.5 w-3.5" /> By Day
+                  </button>
+                  <button
+                    onClick={() => setGrouping("dj")}
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold transition-colors ${groupBy === "dj" ? "bg-[#7401df] text-white" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    <Users className="h-3.5 w-3.5" /> By DJ
+                  </button>
+                </div>
+              )}
+              {/* Week nav */}
+              <div className="flex items-center gap-1 rounded-full border border-border bg-card px-1 py-0.5 text-xs">
+                <button onClick={() => setWeekOf((w) => addWeeks(w, -1))} className="rounded-full px-2 py-1 hover:bg-foreground/[0.06]">‹</button>
+                <span className="inline-flex items-center gap-1 px-1 font-mono"><Calendar className="h-3 w-3" />{weekOf}</span>
+                <button onClick={() => setWeekOf((w) => addWeeks(w, 1))} className="rounded-full px-2 py-1 hover:bg-foreground/[0.06]">›</button>
+              </div>
+            </>
           )}
-          {/* Week nav */}
-          <div className="flex items-center gap-1 rounded-full border border-border bg-card px-1 py-0.5 text-xs">
-            <button onClick={() => setWeekOf((w) => addWeeks(w, -1))} className="rounded-full px-2 py-1 hover:bg-foreground/[0.06]">‹</button>
-            <span className="inline-flex items-center gap-1 px-1 font-mono"><Calendar className="h-3 w-3" />{weekOf}</span>
-            <button onClick={() => setWeekOf((w) => addWeeks(w, 1))} className="rounded-full px-2 py-1 hover:bg-foreground/[0.06]">›</button>
-          </div>
           <Button variant="ghost" size="sm" onClick={load} className="rounded-full text-xs">
             <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
           {/* Admin-only: a self-scoped DJ can't create slots, only drop files. */}
-          {!isSelfScoped && (
+          {section === "onair" && inYear && !isSelfScoped && (
             <Button size="sm" onClick={() => setShowCreate(true)} className="rounded-full bg-[#7401df] text-white hover:bg-[#7401df]/90">
               <Plus className="mr-1.5 h-3.5 w-3.5" /> Create new mixshow
             </Button>
@@ -883,7 +1036,134 @@ export function ProductionMixshows({
 
       {error && <div className="rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>}
 
-      {loading && slots.length === 0 ? (
+      {section === null ? (
+        /* ── Category root: the two top-level folders ── */
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <button
+            onClick={() => { setSection("onair"); setInYear(false); setPath([]); }}
+            className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left transition-all hover:border-[#74ddc7]/40"
+          >
+            <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10 border border-border">
+              <Folder className="h-8 w-8 text-[#74ddc7]" />
+              <Radio className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-card p-0.5 text-[#7401df]" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold text-foreground group-hover:text-[#74ddc7]">On-Air Mixshows</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Scheduled broadcast drops</p>
+            </div>
+            <ChevronRight className="ml-auto h-5 w-5 shrink-0 text-muted-foreground" />
+          </button>
+          <button
+            onClick={() => { setSection("digital"); setInYear(false); setPath([]); }}
+            className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left transition-all hover:border-[#74ddc7]/40"
+          >
+            <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10 border border-border">
+              <Folder className="h-8 w-8 text-[#74ddc7]" />
+              <Disc3 className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-card p-0.5 text-[#7401df]" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold text-foreground group-hover:text-[#74ddc7]">Off-Air / Digital Mixshows</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">On-demand mixes &amp; podcasts</p>
+            </div>
+            <ChevronRight className="ml-auto h-5 w-5 shrink-0 text-muted-foreground" />
+          </button>
+        </div>
+      ) : section === "digital" ? (
+        /* ── Off-Air / Digital (dj_mixes) ── */
+        loading && mixes.length === 0 ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading digital mixes…</div>
+        ) : currentDigitalFolder ? (
+          /* One DJ's on-demand mixes. */
+          <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 ${playerIndex !== null ? "pb-24" : ""}`}>
+            {currentDigitalFolder.mixes.length === 0 && (
+              <p className="col-span-full rounded-xl border border-dashed border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
+                No digital mixes yet.
+              </p>
+            )}
+            {currentDigitalFolder.mixes.map((mix) => {
+              const isNowPlaying = playerIndex !== null && queue[playerIndex]?.id === mix.id;
+              return (
+                <div
+                  key={mix.id}
+                  className={`group overflow-hidden rounded-2xl border bg-card transition-all ${
+                    isNowPlaying ? "border-[#74ddc7]/50" : "border-border hover:border-[#74ddc7]/40"
+                  }`}
+                >
+                  <div className="relative h-32 overflow-hidden">
+                    {mix.cover_image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={mix.cover_image_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#7401df]/30 to-[#74ddc7]/15">
+                        <Music className="h-10 w-10 text-[#74ddc7]" />
+                      </div>
+                    )}
+                    {mix.item_type === "podcast" && (
+                      <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-[#7401df] px-2 py-0.5 text-[10px] font-bold text-white">
+                        <Podcast className="h-3 w-3" /> Podcast
+                      </span>
+                    )}
+                    {mix.duration != null && mix.duration > 0 && (
+                      <span className="absolute bottom-2 right-2 rounded-md bg-black/70 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
+                        {fmtClock(mix.duration)}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => playMix(currentDigitalFolder.mixes, mix)}
+                      aria-label={isNowPlaying ? "Now playing" : "Play mix"}
+                      className={`absolute inset-0 m-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#74ddc7] text-[#0a0a0f] shadow-lg transition-all hover:bg-[#74ddc7]/90 ${
+                        isNowPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                      }`}
+                    >
+                      {isNowPlaying ? <Volume2 className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                    </button>
+                  </div>
+                  <div className="space-y-1 p-3.5">
+                    <p className={`truncate text-sm font-bold ${isNowPlaying ? "text-[#74ddc7]" : "text-foreground"}`}>{mix.title}</p>
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                      {mix.genre && <span className="rounded bg-foreground/[0.06] px-1.5 py-0.5 font-medium">{mix.genre}</span>}
+                      <span className="inline-flex items-center gap-1"><Play className="h-3 w-3" /> {mix.play_count ?? 0}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* DJ folders for the digital catalog. */
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {visibleDigitalFolders.map((folder) => (
+              <button key={folder.key} onClick={() => setPath([folder.key])} className="group flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5 transition-all hover:border-[#74ddc7]/40">
+                <div className="relative">
+                  <Folder className="h-9 w-9 text-[#74ddc7]" />
+                  <Disc3 className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-card text-[#7401df]" />
+                </div>
+                <p className="text-center font-bold text-foreground group-hover:text-[#74ddc7]">
+                  {folder.key === UNASSIGNED_DJ_KEY ? <span className="italic text-amber-500">Unassigned</span> : folder.label}
+                </p>
+                <p className="text-[11px] text-muted-foreground">{folder.mixes.length} mix{folder.mixes.length === 1 ? "" : "es"}</p>
+              </button>
+            ))}
+            {visibleDigitalFolders.length === 0 && (
+              <p className="col-span-full rounded-xl border border-dashed border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
+                No digital mixes yet.
+              </p>
+            )}
+          </div>
+        )
+      ) : !inYear ? (
+        /* ── On-Air: the {year} folder (mirrors D:\WCCG\Mixshows\<YYYY>\) ── */
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <button onClick={() => { setInYear(true); setPath([]); }} className="group flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5 transition-all hover:border-[#74ddc7]/40">
+            <div className="relative">
+              <Folder className="h-9 w-9 text-[#74ddc7]" />
+              <Calendar className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-card text-[#7401df]" />
+            </div>
+            <p className="font-bold text-foreground group-hover:text-[#74ddc7]">{year}</p>
+            <p className="text-[11px] text-muted-foreground">Broadcast schedule</p>
+          </button>
+        </div>
+      ) : loading && slots.length === 0 ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading schedule…</div>
       ) : groupBy === "dj" ? (
         currentDjFolder ? (
