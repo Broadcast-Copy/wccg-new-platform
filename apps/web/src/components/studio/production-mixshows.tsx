@@ -292,7 +292,7 @@ function AudioPlayerBar({
   );
 }
 
-export function ProductionMixshows() {
+export function ProductionMixshows({ focusSlotId }: { focusSlotId?: string }) {
   const [weekOf, setWeekOf] = useState(isoMondayOfNow());
   const [slots, setSlots] = useState<Slot[]>([]);
   const [drops, setDrops] = useState<Drop[]>([]);
@@ -341,6 +341,17 @@ export function ProductionMixshows() {
   }, [weekOf]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Deep-link: when opened from the DJ-slots admin with ?slot=<id>, jump
+  // straight into that slot's files once the schedule has loaded.
+  const focusedRef = useRef(false);
+  useEffect(() => {
+    if (focusedRef.current || !focusSlotId || slots.length === 0) return;
+    const slot = slots.find((s) => s.id === focusSlotId);
+    if (!slot) return;
+    focusedRef.current = true;
+    queueMicrotask(() => setPath([slot.day_of_week, slot.id]));
+  }, [focusSlotId, slots]);
 
   // Drops keyed by slot+code for quick lookup
   const dropByKey = useMemo(() => {

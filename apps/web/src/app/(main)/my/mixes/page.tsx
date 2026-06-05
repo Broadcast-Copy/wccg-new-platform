@@ -1529,6 +1529,21 @@ export default function MediaManagerPage() {
   // schedule view (Day > Time > files), backed by dj_slots / dj_drops.
   const canSeeProduction = isProduction || isManagement || isAdmin || isSuperAdmin;
   const [managerMode, setManagerMode] = useState<"media" | "mixshows">("media");
+  const [focusSlotId, setFocusSlotId] = useState<string | undefined>(undefined);
+
+  // Deep-link from the DJ-slots admin: ?view=mixshows&slot=<id> opens the
+  // production mixshow view focused on that slot's files.
+  useEffect(() => {
+    let active = true;
+    queueMicrotask(() => {
+      if (!active || typeof window === "undefined") return;
+      const params = new URLSearchParams(window.location.search);
+      const slot = params.get("slot") || undefined;
+      if (params.get("view") === "mixshows" || slot) setManagerMode("mixshows");
+      if (slot) setFocusSlotId(slot);
+    });
+    return () => { active = false; };
+  }, []);
 
   const [mounted, setMounted] = useState(false);
   const [state, setState] = useState<MediaManagerState>(seedState());
@@ -2090,7 +2105,7 @@ export default function MediaManagerPage() {
           </div>
           {modeToggle}
         </div>
-        <ProductionMixshows />
+        <ProductionMixshows focusSlotId={focusSlotId} />
       </div>
     );
   }
