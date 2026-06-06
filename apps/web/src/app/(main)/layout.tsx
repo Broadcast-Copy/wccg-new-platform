@@ -92,7 +92,7 @@ function NavLink({
           : "text-muted-foreground hover:text-foreground/80 hover:bg-foreground/[0.04]"
       }`}
     >
-      {Icon ? <Icon className="h-4 w-4" /> : null}
+      {Icon ? <Icon className="h-4 w-4 shrink-0 text-[#74ddc7]" /> : null}
       {label}
     </Link>
   );

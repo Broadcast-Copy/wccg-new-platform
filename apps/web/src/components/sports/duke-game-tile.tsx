@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
   DUKE_BASKETBALL,
-  DUKE_FOOTBALL,
   type PlayByPlayEntry,
   type PostGameEntry,
 } from "@/data/sports";
@@ -18,6 +17,7 @@ import {
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { setDukeGameLive } from "@/lib/multipliers";
 import { useDukeNews } from "@/hooks/use-duke-news";
+import { createClient } from "@/lib/supabase/client";
 
 type GameMode = "pre" | "live" | "post";
 
@@ -962,92 +962,127 @@ function DukeNewsAndVideos() {
   );
 }
 
-// ── Latest YouTube upload for a channel (RSS via CORS proxy) ────────
-function useLatestYouTubeVideo(channelId: string | undefined) {
-  const [video, setVideo] = useState<{ id: string; title: string } | null>(null);
+// ── Duke video slider — latest Duke basketball + football from Supabase ──
+// Client-side YouTube RSS is CORS-blocked (that's why the card only showed the
+// logo), so we read the real videos the seeder marked as "Duke Blue Devils".
+// Real thumbnails, no logo fallback. Horizontally scrollable → naturally shows
+// fewer videos as the card narrows.
+interface DukeVid {
+  id: string;
+  title: string;
+  youtube_id: string | null;
+  thumbnail_url: string | null;
+}
+
+function DukeVideoSlider() {
+  const [vids, setVids] = useState<DukeVid[]>([]);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    if (!channelId) return;
-    const controller = new AbortController();
     let active = true;
-    const rss = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-    // Try a direct fetch first; YouTube's feed usually lacks CORS headers, so
-    // fall back to a public CORS proxy. Either way we degrade to a branded
-    // placeholder tile if both fail.
-    const sources = [rss, `https://api.allorigins.win/raw?url=${encodeURIComponent(rss)}`];
     (async () => {
-      for (const url of sources) {
-        try {
-          const res = await fetch(url, { signal: controller.signal });
-          if (!res.ok) continue;
-          const text = await res.text();
-          const doc = new DOMParser().parseFromString(text, "text/xml");
-          const entry = doc.querySelector("entry");
-          const id = entry?.querySelector("yt\\:videoId, videoId")?.textContent ?? null;
-          const title = entry?.querySelector("title")?.textContent ?? "";
-          if (id && active) {
-            setVideo({ id, title });
-            return;
-          }
-        } catch {
-          /* try next source */
-        }
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("videos")
+          .select("id,title,youtube_id,thumbnail_url")
+          .eq("creator_name", "Duke Blue Devils")
+          .eq("status", "published")
+          .eq("visibility", "public")
+          .order("published_at", { ascending: false })
+          .limit(16);
+        if (active) setVids((data ?? []) as DukeVid[]);
+      } catch {
+        /* leave empty — fallback link renders below */
       }
     })();
     return () => {
       active = false;
-      controller.abort();
     };
-  }, [channelId]);
-  return video;
-}
+  }, []);
 
-// ── One Duke video thumbnail (latest upload → opens on YouTube) ──────
-function DukeVideoThumb({
-  team,
-  label,
-  accent,
-}: {
-  team: typeof DUKE_BASKETBALL;
-  label: string;
-  accent: "basketball" | "football";
-}) {
-  const video = useLatestYouTubeVideo(team.youtube.channelId);
-  const href = video ? `https://www.youtube.com/watch?v=${video.id}` : team.youtube.channelUrl;
-  const thumb = video ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : null;
-  const captionColor =
-    accent === "basketball"
-      ? "text-[#0d9488] dark:text-[#74ddc7]"
-      : "text-[#b45309] dark:text-[#f59e0b]";
+  const scrollBy = useCallback((dir: -1 | 1) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * Math.max(el.clientWidth * 0.8, 260), behavior: "smooth" });
+  }, []);
+
+  if (vids.length === 0) {
+    return (
+      <a
+        href={DUKE_BASKETBALL.youtube.channelUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex aspect-[16/6] w-full items-center justify-center rounded-xl border border-white/15 bg-[#0a0e1a]/40 text-xs font-semibold text-[#003087]/70 dark:text-white/60"
+      >
+        Latest Duke videos on YouTube →
+      </a>
+    );
+  }
+
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group block"
-      aria-label={`Latest Duke ${label} video`}
-    >
-      {/* Just the thumbnail — larger, no play button or overlay on the video */}
-      <div className="relative aspect-video overflow-hidden rounded-xl border border-white/15 bg-[#0a0e1a] shadow-sm">
-        {thumb ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={thumb}
-            alt={video?.title || `Duke ${label}`}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-            loading="lazy"
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#003087] to-[#0a0a1a]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={team.logoUrl} alt={`Duke ${label}`} className="h-12 w-12 object-contain opacity-70" />
-          </div>
-        )}
+    <div className="group/slider relative">
+      <div
+        ref={scrollerRef}
+        className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-1"
+      >
+        {vids.map((v) => {
+          const thumb =
+            v.thumbnail_url ||
+            (v.youtube_id ? `https://i.ytimg.com/vi/${v.youtube_id}/hqdefault.jpg` : null);
+          const href = v.youtube_id
+            ? `https://www.youtube.com/watch?v=${v.youtube_id}`
+            : `/videos/${v.id}`;
+          return (
+            <a
+              key={v.id}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group block w-[220px] shrink-0 snap-start sm:w-[260px]"
+              aria-label={v.title}
+            >
+              {/* Just the thumbnail — larger, no play button / overlay */}
+              <div className="relative aspect-video overflow-hidden rounded-xl border border-white/15 bg-[#0a0e1a] shadow-sm">
+                {thumb ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={thumb}
+                    alt={v.title}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                    loading="lazy"
+                  />
+                ) : null}
+              </div>
+              <p className="mt-1.5 line-clamp-1 text-[11px] font-semibold text-[#003087]/80 dark:text-white/70">
+                {v.title}
+              </p>
+            </a>
+          );
+        })}
       </div>
-      {/* Caption sits BELOW the thumbnail (never overlaying the video) */}
-      <p className={`mt-1.5 truncate text-[11px] font-bold uppercase tracking-wider ${captionColor}`}>
-        {label}
-      </p>
-    </a>
+
+      {/* Trailing fade — signals more videos (matches the card's right edge) */}
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[#cdddf6] to-transparent dark:from-[#0a0a1a]" />
+
+      {/* Scroll controls — desktop, on hover */}
+      <button
+        type="button"
+        onClick={() => scrollBy(-1)}
+        aria-label="Scroll videos left"
+        className="absolute left-1 top-[42%] z-10 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity hover:bg-black/75 group-hover/slider:opacity-100 sm:flex"
+      >
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+      </button>
+      <button
+        type="button"
+        onClick={() => scrollBy(1)}
+        aria-label="Scroll videos right"
+        className="absolute right-1 top-[42%] z-10 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity hover:bg-black/75 group-hover/slider:opacity-100 sm:flex"
+      >
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+      </button>
+    </div>
   );
 }
 
@@ -1100,9 +1135,9 @@ function DukeOffseasonCard({
           <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.3) 0%, transparent 50%)" }} />
         </div>
 
-        <div className="relative z-10 flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5">
-          {/* Identity + rotating headline */}
-          <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+        <div className="relative z-10 flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:gap-5 sm:p-5">
+          {/* Left: Duke identity + rotating news coverage */}
+          <div className="flex min-w-0 items-start gap-3 sm:w-[300px] sm:shrink-0 sm:gap-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={DUKE_BASKETBALL.logoUrl}
@@ -1110,7 +1145,7 @@ function DukeOffseasonCard({
               className="h-12 w-12 shrink-0 object-contain drop-shadow-lg sm:h-14 sm:w-14"
             />
             <div className="min-w-0 flex-1">
-              <div className="mb-0.5 flex items-center gap-2">
+              <div className="mb-0.5 flex flex-wrap items-center gap-2">
                 <h2 className="text-base font-black tracking-tight text-[#001a4d] dark:text-white sm:text-lg">DUKE SPORTS</h2>
                 <span className="rounded-full border border-[#003087]/20 bg-[#003087]/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-[#003087]/70 dark:border-white/10 dark:bg-white/10 dark:text-white/50 sm:text-[9px]">
                   Offseason
@@ -1129,10 +1164,10 @@ function DukeOffseasonCard({
                   </span>
                 )}
               </div>
-              {/* Rotating headline — fills the empty middle (up to two lines) */}
+              {/* Rotating Duke news headline */}
               <div className="min-h-[2.5rem]">
                 <p
-                  className={`line-clamp-2 text-xs text-[#003087]/75 transition-opacity duration-500 dark:text-white/60 sm:text-sm ${
+                  className={`line-clamp-3 text-xs text-[#003087]/75 transition-opacity duration-500 dark:text-white/60 sm:text-sm ${
                     fade ? "opacity-100" : "opacity-0"
                   }`}
                 >
@@ -1149,10 +1184,9 @@ function DukeOffseasonCard({
             </div>
           </div>
 
-          {/* Latest videos — larger basketball + football thumbnails */}
-          <div className="grid w-full shrink-0 grid-cols-2 gap-3 sm:w-[440px]">
-            <DukeVideoThumb team={DUKE_BASKETBALL} label="Basketball" accent="basketball" />
-            <DukeVideoThumb team={DUKE_FOOTBALL} label="Football" accent="football" />
+          {/* Right: multi-video slider — latest Duke basketball + football */}
+          <div className="min-w-0 flex-1">
+            <DukeVideoSlider />
           </div>
         </div>
 
