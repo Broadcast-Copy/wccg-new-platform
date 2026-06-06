@@ -24,8 +24,6 @@ import {
   Mail,
 } from "lucide-react";
 import { DukeGameTile } from "@/components/sports/duke-game-tile";
-import { LiveNowRail } from "@/components/home/live-now-rail";
-import { UpNextRail } from "@/components/home/up-next-rail";
 
 interface EventItem {
   id: string;
@@ -283,10 +281,6 @@ export default function HomePage() {
           })}
         </div>
       </section>
-
-      {/* Live now + up next — pulled from the live stream schedule */}
-      <LiveNowRail />
-      <UpNextRail />
 
       {/* Platform Headline */}
       <section className="text-center py-4">
