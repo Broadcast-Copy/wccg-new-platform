@@ -4,7 +4,7 @@ import { useState } from "react";
 import { RewardsContent } from "./rewards-content";
 import { PointsHistory } from "./points-history";
 import { ListeningHistory } from "@/components/history/listening-history";
-import { Gift, History, Radio, ShoppingBag } from "lucide-react";
+import { History, Radio, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Reward {

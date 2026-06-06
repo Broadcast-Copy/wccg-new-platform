@@ -151,6 +151,20 @@
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* Auto-scrolling marquee rows (home "Explore the Platform"). The row's cards
+   are duplicated; translating one copy's width (-50%) loops seamlessly. */
+@keyframes marquee-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes marquee-right {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [style*="marquee-left"], [style*="marquee-right"] { animation: none !important; }
+}
+
 /* Hero progress */
 @keyframes hero-progress {
   from { width: 0%; }

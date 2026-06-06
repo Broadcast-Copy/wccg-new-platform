@@ -16,14 +16,11 @@ import {
   FileText,
   MessageSquare,
   Calendar,
-  ArrowRight,
-  MoreHorizontal,
   Eye,
   Edit,
   ChevronRight,
   Activity,
   CheckCircle2,
-  XCircle,
   AlertCircle,
   Send,
   PhoneCall,
@@ -52,7 +49,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -604,7 +600,7 @@ function daysAgo(iso: string): string {
 
 /* ---------- Pipeline Stages Bar ---------- */
 
-function PipelineBar({ clients }: { clients: Client[] }) {
+function PipelineBar({ clients: _clients }: { clients: Client[] }) {
   const stages: PipelineStage[] = [
     "Lead",
     "Contacted",
@@ -666,7 +662,7 @@ function PipelineBar({ clients }: { clients: Client[] }) {
 
       {/* Arrow flow */}
       <div className="hidden sm:flex items-center justify-between mt-3 px-4">
-        {stages.slice(0, -1).map((stage, i) => (
+        {stages.slice(0, -1).map((stage) => (
           <div key={stage} className="flex items-center gap-1 text-foreground/20">
             <ChevronRight className="h-3 w-3" />
           </div>

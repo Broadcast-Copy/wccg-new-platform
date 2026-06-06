@@ -8,7 +8,6 @@ import {
   CheckCircle,
   AlertTriangle,
   Plus,
-  User,
 } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatCard } from "@/components/admin/stat-card";
@@ -16,7 +15,7 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { DataTable, type Column } from "@/components/admin/data-table";
 import { DetailModal } from "@/components/admin/detail-modal";
 import { TabsNav } from "@/components/admin/tabs-nav";
-import { loadOrSeed, persist, genId, formatDate } from "@/lib/admin-storage";
+import { loadOrSeed, persist, formatDate } from "@/lib/admin-storage";
 
 // ---------------------------------------------------------------------------
 // Types

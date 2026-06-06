@@ -1,4 +1,4 @@
-import { Users, FileText, ExternalLink } from "lucide-react";
+import { Users, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 

@@ -153,7 +153,7 @@ export default function ProductionPage() {
 
   // -- State ----------------------------------------------------------------
   const [jobs, setJobs] = useState<ProductionJob[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [studios, setStudios] = useState<Studio[]>(initialStudios);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<JobStatus | "All">("All");
@@ -228,7 +228,7 @@ export default function ProductionPage() {
   });
 
   // -- Approve / Reject helpers --------------------------------------------
-  async function handleApprove(id: string) {
+  async function _handleApprove(id: string) {
     if (!supabase || !user) return;
     const { error } = await supabase
       .from("productions")
@@ -248,7 +248,7 @@ export default function ProductionPage() {
     }
   }
 
-  async function handleReject(id: string, reason: string) {
+  async function _handleReject(id: string, reason: string) {
     if (!supabase || !user) return;
     const { error } = await supabase
       .from("productions")

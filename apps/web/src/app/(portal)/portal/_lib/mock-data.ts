@@ -23,13 +23,11 @@ import {
   CalendarDays,
   Image,
   Shield,
-  Activity,
   Settings,
   Database,
   Clock,
   Zap,
   CheckCircle,
-  AlertTriangle,
   Server,
 } from "lucide-react";
 

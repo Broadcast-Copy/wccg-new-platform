@@ -17,7 +17,7 @@ export function AddToPlaylistButton({
 }: {
   song: { title: string; artist: string; albumArt?: string };
 }) {
-  const { playlists, addSong, createPlaylist, updatePlaylist } = usePlaylists();
+  const { playlists, addSong, createPlaylist, updatePlaylist: _updatePlaylist } = usePlaylists();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [builderOpen, setBuilderOpen] = useState(false);
 
@@ -37,7 +37,7 @@ export function AddToPlaylistButton({
   const handleCreateNew = (
     name: string,
     description: string,
-    songs: Song[]
+    _songs: Song[]
   ) => {
     const newPlaylist = createPlaylist(name, description);
     if (newPlaylist) {

@@ -4,7 +4,6 @@ import { AppImage } from "@/components/ui/app-image";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import {
-  User,
   Clock,
   Info,
   Megaphone,
@@ -107,7 +106,7 @@ function isShowOnAir(timeSlot?: string, days?: string): boolean {
   const parts = timeSlot.split(" - ");
   if (parts.length !== 2) return false;
   const start = parseTime(parts[0]);
-  let end = parseTime(parts[1]);
+  const end = parseTime(parts[1]);
   if (start < 0 || end < 0) {
     // Handle "Midnight"
     if (parts[1].trim().toLowerCase() === "midnight") {
@@ -170,13 +169,13 @@ export function ShowCard({
   genre,
   hosts,
   imageUrl,
-  category,
+  category: _category,
   streamId,
   isSyndicated,
   youtubeUrl,
   youtubeThumbnailUrl,
   youtubeVideoTitle,
-  podcastRss,
+  podcastRss: _podcastRss,
 }: ShowCardProps) {
   const { open } = useStreamPlayer();
   const primaryHost = hosts?.find((h) => h.avatarUrl) ?? hosts?.[0];
@@ -377,39 +376,39 @@ export function ShowCard({
               href={youtubeUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="relative aspect-square w-36 sm:w-32 md:w-40 rounded-xl overflow-hidden bg-muted group/thumb"
+              className="group/thumb block w-44 sm:w-48 md:w-56"
             >
-              <AppImage
-                src={youtubeThumbnailUrl}
-                alt={youtubeVideoTitle || `${title} latest`}
-                fill
-                className="object-cover opacity-80 group-hover/thumb:opacity-100 transition-opacity"
-                sizes="160px"
-              />
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 group-hover/thumb:bg-black/20 transition-colors rounded-xl">
-                <Play className="h-8 w-8 text-white drop-shadow-md" />
-                <span className="mt-1 text-[10px] font-semibold text-white uppercase tracking-wider drop-shadow-md line-clamp-2 px-2 text-center">
-                  {youtubeVideoTitle || "Latest Episode"}
-                </span>
+              {/* Full 16:9 thumbnail — no play button, no overlay on the video */}
+              <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-muted">
+                <AppImage
+                  src={youtubeThumbnailUrl}
+                  alt={youtubeVideoTitle || `${title} latest`}
+                  fill
+                  className="object-cover transition-transform duration-300 group-hover/thumb:scale-105"
+                  sizes="224px"
+                />
               </div>
+              {/* Caption sits BELOW the video */}
+              <p className="mt-1.5 line-clamp-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground transition-colors group-hover/thumb:text-foreground">
+                {youtubeVideoTitle || "Latest Episode"}
+              </p>
             </a>
           ) : youtubeUrl ? (
-            <div className="relative aspect-square w-36 sm:w-32 md:w-40 rounded-xl overflow-hidden bg-muted">
-              {avatarUrl && (
-                <AppImage
-                  src={avatarUrl}
-                  alt={title}
-                  fill
-                  className="object-cover opacity-40"
-                  sizes="160px"
-                />
-              )}
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 rounded-xl">
-                <Play className="h-6 w-6 text-white/40" />
-                <span className="mt-1.5 text-[10px] font-semibold text-white/60 uppercase tracking-wider">
-                  Coming Soon
-                </span>
+            <div className="w-44 sm:w-48 md:w-56">
+              <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-muted">
+                {avatarUrl && (
+                  <AppImage
+                    src={avatarUrl}
+                    alt={title}
+                    fill
+                    className="object-cover opacity-40"
+                    sizes="224px"
+                  />
+                )}
               </div>
+              <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                Coming Soon
+              </p>
             </div>
           ) : (
             <button

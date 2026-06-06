@@ -113,7 +113,7 @@ export default function VendorOrdersPage() {
     setUpdatingId(orderId);
     const tracking = trackingInputs[orderId] || null;
 
-    const updatePayload: Record<string, any> = { status: newStatus };
+    const updatePayload: Record<string, unknown> = { status: newStatus };
     if (tracking) updatePayload.tracking_number = tracking;
 
     const { error } = await supabase

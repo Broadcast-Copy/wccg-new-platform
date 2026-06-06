@@ -10,9 +10,7 @@ import {
   ChevronUp,
   Coins,
   ShoppingBag,
-  CalendarDays,
   Repeat,
-  TrendingUp,
   User,
 } from "lucide-react";
 
@@ -44,6 +42,19 @@ interface Customer {
   tokenLog: TokenLog[];
 }
 
+/** Raw `vendor_customers` row shape as returned by Supabase. */
+interface VendorCustomerRow {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  total_purchases?: number | null;
+  tokens_received?: number | null;
+  last_visit?: string | null;
+  visit_count?: number | null;
+  purchases?: PurchaseRecord[] | null;
+  token_log?: TokenLog[] | null;
+}
+
 type FilterOption = "All" | "Recent" | "Top Spenders" | "Token Recipients";
 
 // ---------------------------------------------------------------------------
@@ -72,7 +83,7 @@ export default function VendorCustomersPage() {
   const { user } = useAuth();
 
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterOption>("All");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -88,7 +99,7 @@ export default function VendorCustomersPage() {
         .eq('vendor_id', user!.id)
         .order('last_visit', { ascending: false });
       if (!error && data) {
-        setCustomers(data.map((row: any) => ({
+        setCustomers(data.map((row: VendorCustomerRow) => ({
           id: row.id,
           name: row.name ?? '',
           email: row.email ?? '',
@@ -115,7 +126,7 @@ export default function VendorCustomersPage() {
   }
 
   // CRUD helpers
-  async function handleAddCustomer(customerData: Omit<Customer, 'id'>) {
+  async function _handleAddCustomer(customerData: Omit<Customer, 'id'>) {
     const { data, error } = await supabase
       .from('vendor_customers')
       .insert({
@@ -146,8 +157,8 @@ export default function VendorCustomersPage() {
     }
   }
 
-  async function handleUpdateCustomer(id: string, updates: Partial<Customer>) {
-    const dbUpdates: any = {};
+  async function _handleUpdateCustomer(id: string, updates: Partial<Customer>) {
+    const dbUpdates: Record<string, unknown> = {};
     if (updates.name !== undefined) dbUpdates.name = updates.name;
     if (updates.email !== undefined) dbUpdates.email = updates.email;
     if (updates.totalPurchases !== undefined) dbUpdates.total_purchases = updates.totalPurchases;
@@ -169,7 +180,7 @@ export default function VendorCustomersPage() {
     }
   }
 
-  async function handleDeleteCustomer(id: string) {
+  async function _handleDeleteCustomer(id: string) {
     const { error } = await supabase
       .from('vendor_customers')
       .delete()

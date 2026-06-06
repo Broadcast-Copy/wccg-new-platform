@@ -32,7 +32,6 @@ export function useFileUpload(bucket: string) {
 
       try {
         // Generate unique path: userId/timestamp_filename
-        const ext = file.name.split(".").pop() || "bin";
         const safeName = file.name
           .replace(/[^a-zA-Z0-9._-]/g, "_")
           .toLowerCase();

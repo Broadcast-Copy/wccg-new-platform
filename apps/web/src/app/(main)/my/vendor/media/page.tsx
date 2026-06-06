@@ -58,6 +58,37 @@ interface PromotableItem {
   detail: string; // price or date
 }
 
+/** Raw `media_campaigns` row shape as returned by Supabase. */
+interface MediaCampaignRow {
+  id: string;
+  name: string;
+  type?: CampaignType | null;
+  status?: CampaignStatus | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  impressions?: number | null;
+  clicks?: number | null;
+  budget?: number | null;
+  spend?: number | null;
+  promoted_item_id?: string | null;
+  promoted_item_type?: string | null;
+  promoted_item_name?: string | null;
+}
+
+/**
+ * Raw promotable record shape — a superset of the product/event/booking rows
+ * read when building the "promote an item" picker.
+ */
+interface PromotableRow {
+  id: string;
+  name?: string | null;
+  title?: string | null;
+  price?: number | null;
+  event_date?: string | null;
+  start_date?: string | null;
+  service_name?: string | null;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -173,7 +204,7 @@ export default function VendorMediaPage() {
         .order("created_at", { ascending: false });
       if (!error && data) {
         setCampaigns(
-          data.map((row: any) => ({
+          data.map((row: MediaCampaignRow) => ({
             id: row.id,
             name: row.name,
             type: row.type ?? "Radio Spot",
@@ -208,7 +239,7 @@ export default function VendorMediaPage() {
           .eq("status", "active");
         if (data) {
           setItems(
-            data.map((p: any) => ({
+            data.map((p: PromotableRow) => ({
               id: p.id,
               name: p.name ?? p.title ?? "Untitled",
               detail: p.price != null ? `$${Number(p.price).toFixed(2)}` : "No price",
@@ -222,7 +253,7 @@ export default function VendorMediaPage() {
           .eq("vendor_id", user.id);
         if (data) {
           setItems(
-            data.map((e: any) => ({
+            data.map((e: PromotableRow) => ({
               id: e.id,
               name: e.name ?? e.title ?? "Untitled",
               detail: e.event_date ?? e.start_date ?? "No date set",
@@ -237,7 +268,7 @@ export default function VendorMediaPage() {
           .eq("status", "active");
         if (data) {
           setItems(
-            data.map((s: any) => ({
+            data.map((s: PromotableRow) => ({
               id: s.id,
               name: s.name ?? s.service_name ?? s.title ?? "Untitled",
               detail: s.price != null ? `$${Number(s.price).toFixed(2)}` : "No price",

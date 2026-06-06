@@ -7,8 +7,6 @@ import {
   Search,
   Plus,
   X,
-  ChevronDown,
-  ChevronUp,
   Edit3,
   Check,
   Clock,
@@ -23,9 +21,7 @@ import {
   Mail,
   Phone,
   MapPin,
-  Tag,
   Gift,
-  Trash2,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------

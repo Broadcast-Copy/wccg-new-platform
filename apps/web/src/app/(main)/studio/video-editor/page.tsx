@@ -39,7 +39,6 @@ import {
   Loader2,
   X,
   Copy,
-  ArrowUpDown,
   Mic,
   Video,
   RefreshCw,
@@ -123,7 +122,6 @@ const TRACKS = ["V2", "V1", "A1", "A2"];
 
 // Recording limits
 const MAX_RECORD_SECONDS = 300; // 5 minutes
-const MAX_STORAGE_MB = 500; // 500 MB local storage limit
 
 const TRACK_COLORS: Record<string, string> = {
   V2: "bg-[#74ddc7]/50",
@@ -285,8 +283,6 @@ export default function VideoEditorPage() {
 
   // Supported file formats
   const SUPPORTED_VIDEO = ["video/mp4", "video/webm", "video/ogg", "video/quicktime", "video/x-matroska"];
-  const SUPPORTED_AUDIO = ["audio/mpeg", "audio/wav", "audio/ogg", "audio/webm", "audio/aac", "audio/mp4"];
-  const SUPPORTED_IMAGE = ["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"];
 
   // Load a video/audio file
   const loadMediaFile = useCallback((file: File) => {
@@ -1012,7 +1008,7 @@ export default function VideoEditorPage() {
   );
 
   // Context menu actions
-  const duplicateClip = useCallback(
+  const _duplicateClip = useCallback(
     (clipId: string) => {
       const clip = timelineClips.find((c) => c.id === clipId);
       if (!clip) return;
@@ -1029,7 +1025,7 @@ export default function VideoEditorPage() {
     [timelineClips, showStatus]
   );
 
-  const moveClipToTrack = useCallback(
+  const _moveClipToTrack = useCallback(
     (clipId: string, newTrack: string) => {
       setTimelineClips((prev) =>
         prev.map((c) =>
@@ -1659,7 +1655,6 @@ export default function VideoEditorPage() {
             >
               <div className="relative w-full max-w-3xl max-h-full aspect-video bg-black/80 rounded-sm mx-4 flex items-center justify-center overflow-hidden">
                 {/* Video element ALWAYS in DOM so ref is available for file loading */}
-                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                 <video
                   ref={videoRef}
                   className={`absolute inset-0 w-full h-full object-contain ${hasVideo && !showRecordModal ? "z-[1]" : "hidden"}`}
@@ -1805,7 +1800,6 @@ export default function VideoEditorPage() {
                     <div className="flex flex-col items-center w-full max-w-2xl px-4">
                       {/* Live preview */}
                       <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden mb-4 border border-white/10">
-                        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                         <video
                           ref={recordPreviewRef}
                           autoPlay
@@ -2687,7 +2681,6 @@ export default function VideoEditorPage() {
               <div className="relative aspect-video bg-black rounded-lg overflow-hidden border border-border">
                 {settingsPreviewStream ? (
                   <>
-                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                     <video
                       ref={settingsPreviewRef}
                       autoPlay

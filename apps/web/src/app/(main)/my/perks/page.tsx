@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
 import {
-  Gift,
   Dumbbell,
   Coffee,
   Ticket,

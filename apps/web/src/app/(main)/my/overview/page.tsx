@@ -11,7 +11,6 @@ import {
   BarChart3,
   Megaphone,
   Settings,
-  Shield,
   ChevronRight,
   DollarSign,
   ShoppingBag,

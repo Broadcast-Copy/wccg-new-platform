@@ -7,7 +7,6 @@ import {
   TrendingUp,
   Percent,
   Plus,
-  X,
   GripVertical,
   Building2,
   Clock,

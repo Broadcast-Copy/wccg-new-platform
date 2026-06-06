@@ -22,14 +22,11 @@ import {
   CheckCircle,
   AlertTriangle,
   XCircle,
-  Clock,
   ChevronRight,
   Play,
   Radio,
   Music,
   Mic,
-  Heart,
-  Star,
   Ticket,
   Headphones,
 } from "lucide-react";
@@ -235,7 +232,6 @@ function AdminDashboard() {
 // ---------------------------------------------------------------------------
 
 function SalesDashboard() {
-  const config = ROLE_CONFIGS.sales;
   const data = MOCK_DATA.sales;
   const { message, showMessage } = useStatusMessage();
 
@@ -425,7 +421,6 @@ function SalesDashboard() {
 // ---------------------------------------------------------------------------
 
 function DjDashboard() {
-  const config = ROLE_CONFIGS.dj;
   const data = MOCK_DATA.dj;
   const { message, showMessage } = useStatusMessage();
 
@@ -618,7 +613,6 @@ function DjDashboard() {
 // ---------------------------------------------------------------------------
 
 function CreatorDashboard() {
-  const config = ROLE_CONFIGS.creator;
   const data = MOCK_DATA.creator;
   const { message, showMessage } = useStatusMessage();
 
@@ -797,7 +791,6 @@ function CreatorDashboard() {
 // ---------------------------------------------------------------------------
 
 function AdvertiserDashboard() {
-  const config = ROLE_CONFIGS.advertiser;
   const data = MOCK_DATA.advertiser;
   const { message, showMessage } = useStatusMessage();
 
@@ -960,7 +953,6 @@ function AdvertiserDashboard() {
 // ---------------------------------------------------------------------------
 
 function ListenerDashboard() {
-  const config = ROLE_CONFIGS.listener;
   const data = MOCK_DATA.listener;
   const { message, showMessage } = useStatusMessage();
 

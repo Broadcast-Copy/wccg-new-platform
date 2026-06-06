@@ -251,7 +251,13 @@ function VideosWall() {
               href={`/videos?program=${encodeURIComponent(pr.program)}`}
             >
               {pr.videos.map((v) => (
-                <PosterCard key={v.id} v={v} locked={locked} onUnlock={toggleLock} />
+                <PosterCard
+                  key={v.id}
+                  v={v}
+                  locked={locked}
+                  onUnlock={toggleLock}
+                  big={pr.program === "Gospel"}
+                />
               ))}
             </Row>
           ))}
@@ -461,7 +467,17 @@ function Thumb({ v, gated, children }: { v: VideoRecord; gated: boolean; childre
 }
 
 /** A standard poster card used in program rows and grids. Fixed width in rails. */
-function PosterCard({ v, locked, onUnlock }: { v: VideoRecord; locked: boolean; onUnlock: () => void }) {
+function PosterCard({
+  v,
+  locked,
+  onUnlock,
+  big = false,
+}: {
+  v: VideoRecord;
+  locked: boolean;
+  onUnlock: () => void;
+  big?: boolean;
+}) {
   const gated = locked && isMatureRating(v.rating);
   const body = (
     <>
@@ -488,7 +504,9 @@ function PosterCard({ v, locked, onUnlock }: { v: VideoRecord; locked: boolean; 
     </>
   );
 
-  const cls = "group block w-[15rem] shrink-0 snap-start sm:w-[16rem]";
+  const cls = `group block shrink-0 snap-start ${
+    big ? "w-[19.5rem] sm:w-[20.5rem]" : "w-[15rem] sm:w-[16rem]"
+  }`;
   if (gated) return <div className={cls}>{body}</div>;
   return (
     <Link href={`/videos/${v.id}`} className={cls}>

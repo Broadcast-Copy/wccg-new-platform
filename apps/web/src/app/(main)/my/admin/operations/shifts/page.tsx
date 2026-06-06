@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatCard } from "@/components/admin/stat-card";
-import { TabsNav } from "@/components/admin/tabs-nav";
 import { loadOrSeed } from "@/lib/admin-storage";
 
 // ---------------------------------------------------------------------------
@@ -31,11 +30,6 @@ interface Shift {
   startHour: number; // 0-23
   endHour: number; // 0-23
   notes?: string;
-}
-
-interface WeekSchedule {
-  weekStart: string; // ISO date of Monday
-  shifts: Shift[];
 }
 
 // ---------------------------------------------------------------------------
@@ -296,9 +290,6 @@ export default function ShiftSchedulingPage() {
                 </div>
                 {DAYS.map((_, dayIdx) => {
                   const isToday = weekDates[dayIdx].toDateString() === new Date().toDateString();
-                  const dayShifts = filteredShifts.filter(
-                    (s) => s.day === dayIdx && s.startHour <= hour && s.endHour > hour
-                  );
                   // Only render the block at the start hour
                   const startingShifts = filteredShifts.filter(
                     (s) => s.day === dayIdx && s.startHour === hour

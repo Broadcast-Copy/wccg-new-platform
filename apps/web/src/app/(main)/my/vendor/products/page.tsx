@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  Package,
   Plus,
   Pencil,
   Trash2,
@@ -32,6 +30,19 @@ interface Product {
   inventory: number;
   tokenEligible: boolean;
   giftCardEligible: boolean;
+}
+
+/** Raw `vendor_products` row shape as returned by Supabase. */
+interface VendorProductRow {
+  id: string;
+  name: string;
+  description?: string | null;
+  price?: number | null;
+  category?: string | null;
+  image_url?: string | null;
+  inventory?: number | null;
+  token_eligible?: boolean | null;
+  gift_card_eligible?: boolean | null;
 }
 
 type ProductCategory = "Food" | "Fashion" | "Services" | "Entertainment" | "Other";
@@ -95,7 +106,7 @@ export default function ProductsPage() {
   const { user } = useAuth();
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -112,7 +123,7 @@ export default function ProductsPage() {
         .eq('vendor_id', user!.id)
         .order('created_at', { ascending: false });
       if (!error && data) {
-        setProducts(data.map((row: any) => ({
+        setProducts(data.map((row: VendorProductRow) => ({
           id: row.id,
           name: row.name,
           description: row.description ?? '',

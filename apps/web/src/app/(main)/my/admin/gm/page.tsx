@@ -8,8 +8,6 @@ import {
   Users,
   Radio,
   ShieldCheck,
-  TrendingUp,
-  TrendingDown,
   AlertTriangle,
   ChevronRight,
   BarChart3,
@@ -22,7 +20,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatCard } from "@/components/admin/stat-card";
-import { loadSingle, persistSingle } from "@/lib/admin-storage";
+import { loadSingle } from "@/lib/admin-storage";
 
 // ---------------------------------------------------------------------------
 // Types & Seed

@@ -377,7 +377,6 @@ export default function EmailCampaignsPage() {
     .filter((c) => c.status === "sent")
     .reduce((s, c) => s + c.sent_count, 0);
   const totalOpens = campaigns.reduce((s, c) => s + c.open_count, 0);
-  const totalClicks = campaigns.reduce((s, c) => s + c.click_count, 0);
   const avgOpenRate =
     totalSent > 0 ? ((totalOpens / totalSent) * 100).toFixed(1) : "0.0";
 

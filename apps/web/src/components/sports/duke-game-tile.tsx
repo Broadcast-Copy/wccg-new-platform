@@ -1039,7 +1039,7 @@ function DukeVideoSlider() {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="group block w-[220px] shrink-0 snap-start sm:w-[260px]"
+              className="group block w-[275px] shrink-0 snap-start sm:w-[325px]"
               aria-label={v.title}
             >
               {/* Just the thumbnail — larger, no play button / overlay */}
@@ -1184,8 +1184,9 @@ function DukeOffseasonCard({
             </div>
           </div>
 
-          {/* Right: multi-video slider — latest Duke basketball + football */}
-          <div className="min-w-0 flex-1">
+          {/* Right: multi-video slider — latest Duke basketball + football.
+              sm:pt-7 clears the absolute "News" toggle in the card's top-right. */}
+          <div className="min-w-0 flex-1 sm:pt-7">
             <DukeVideoSlider />
           </div>
         </div>
@@ -1274,7 +1275,6 @@ export function DukeGameTile() {
 
         // Parse events
         const events = data.events ?? [];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         for (const event of events) {
           const comp = event.competitions?.[0];
           if (!comp) continue;

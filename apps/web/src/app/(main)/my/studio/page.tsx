@@ -8,7 +8,6 @@ import {
   Podcast,
   Film,
   AudioLines,
-  Music,
   ArrowRight,
   Calendar,
   Plus,
@@ -16,7 +15,6 @@ import {
   Check,
   FolderOpen,
   UserPlus,
-  QrCode,
   Copy,
   CheckCircle2,
 } from "lucide-react";
@@ -26,8 +24,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { StudioProjects } from "@/components/studio/studio-projects";
 

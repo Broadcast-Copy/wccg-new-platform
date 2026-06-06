@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   Shield,
   DollarSign,
@@ -12,7 +11,6 @@ import {
   Radio,
   ChevronDown,
   ChevronRight,
-  ArrowLeft,
   Users,
   BarChart3,
   Settings,
@@ -50,9 +48,6 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -534,7 +529,7 @@ const PRD_DATA: RolePRD[] = [
 // Collapsible Section Component
 // ---------------------------------------------------------------------------
 
-function CollapsibleModule({ module, accentColor }: { module: ServiceModule; accentColor: string }) {
+function CollapsibleModule({ module, accentColor: _accentColor }: { module: ServiceModule; accentColor: string }) {
   const [open, setOpen] = useState(true);
   const Icon = module.icon;
 

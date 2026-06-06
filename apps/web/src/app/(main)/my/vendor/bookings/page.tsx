@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  CalendarCheck,
   Plus,
   X,
   Clock,
@@ -34,6 +33,18 @@ interface BookingSlot {
   capacity: number;
   available: boolean;
   description: string;
+}
+
+/** Raw `vendor_bookings` row shape as returned by Supabase. */
+interface VendorBookingRow {
+  id: string;
+  service_name?: string | null;
+  type?: BookingType | null;
+  duration_minutes?: number | null;
+  price?: number | null;
+  capacity?: number | null;
+  status?: string | null;
+  description?: string | null;
 }
 
 interface UpcomingBooking {
@@ -133,7 +144,7 @@ export default function BookingsPage() {
 
   const [slots, setSlots] = useState<BookingSlot[]>([]);
   const [bookings, setBookings] = useState<UpcomingBooking[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabFilter>("All");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -143,7 +154,7 @@ export default function BookingsPage() {
     if (!user) return;
     async function fetchBookings() {
       setLoading(true);
-      const [slotsRes, bookingsRes] = await Promise.all([
+      const [slotsRes, _bookingsRes] = await Promise.all([
         supabase
           .from('vendor_bookings')
           .select('*')
@@ -158,7 +169,7 @@ export default function BookingsPage() {
 
       if (!slotsRes.error && slotsRes.data) {
         // Map rows that represent slots (have service_name)
-        setSlots(slotsRes.data.map((row: any) => ({
+        setSlots(slotsRes.data.map((row: VendorBookingRow) => ({
           id: row.id,
           serviceName: row.service_name ?? '',
           type: row.type ?? 'Appointment',
@@ -228,7 +239,7 @@ export default function BookingsPage() {
     setForm(EMPTY_FORM);
   }
 
-  async function handleDeleteSlot(id: string) {
+  async function _handleDeleteSlot(id: string) {
     const { error } = await supabase
       .from('vendor_bookings')
       .delete()
@@ -239,7 +250,7 @@ export default function BookingsPage() {
     }
   }
 
-  async function handleUpdateBookingStatus(id: string, status: BookingStatus) {
+  async function _handleUpdateBookingStatus(id: string, status: BookingStatus) {
     const { error } = await supabase
       .from('vendor_bookings')
       .update({ status })

@@ -5,14 +5,12 @@ import {
   HardDrive,
   CheckCircle2,
   AlertTriangle,
-  Clock,
   Database,
   Zap,
   Music,
   Fuel,
 } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
-import { StatCard } from "@/components/admin/stat-card";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { DataTable, type Column } from "@/components/admin/data-table";
 import { loadOrSeed, loadSingle, persist, formatDate, formatDateTime } from "@/lib/admin-storage";

@@ -1,4 +1,4 @@
-import { HelpCircle, FileText, Phone, MapPin, Clock } from "lucide-react";
+import { HelpCircle, Phone, MapPin, Clock } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 

@@ -266,7 +266,6 @@ function FullScreenCam() {
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900">
       {hasCamera ? (
-        /* eslint-disable-next-line jsx-a11y/media-has-caption */
         <video
           ref={videoRef}
           autoPlay

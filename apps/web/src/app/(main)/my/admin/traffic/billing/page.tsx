@@ -3,10 +3,8 @@
 import { useState, useEffect } from "react";
 import {
   DollarSign,
-  TrendingUp,
   AlertTriangle,
   CheckCircle,
-  FileText,
   Clock,
 } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";

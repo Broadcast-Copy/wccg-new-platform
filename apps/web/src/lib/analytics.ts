@@ -66,7 +66,6 @@ export async function track(name: EventName, props?: Record<string, unknown>) {
   if (inst) {
     inst.capture(name, props);
   } else if (process.env.NODE_ENV !== "production") {
-    // eslint-disable-next-line no-console
     console.debug(`[analytics] ${name}`, props ?? {});
   }
 }

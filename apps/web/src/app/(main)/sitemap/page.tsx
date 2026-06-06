@@ -1,4 +1,4 @@
-import { Map, Radio, CalendarDays, Users2, ShoppingBag, Gift, Headphones, Mic, Mail, Shield, FileText, Briefcase, Megaphone, Palette, Clapperboard, Trophy, CloudSun, Music } from "lucide-react";
+import { Map, Users2, Gift, Headphones, Mic, Mail, Shield, Briefcase, Megaphone, Clapperboard, Trophy,} from "lucide-react";
 import Link from "next/link";
 
 export const metadata = {

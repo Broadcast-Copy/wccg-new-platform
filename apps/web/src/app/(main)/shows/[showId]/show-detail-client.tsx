@@ -8,13 +8,6 @@ import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { FollowButton } from "@/components/social/follow-button";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -97,15 +90,6 @@ interface RssEpisode {
   imageUrl: string | null;
   pubDate: string;
   duration: string | null;
-}
-
-function parseRssDuration(dur: string | null): number | null {
-  if (!dur) return null;
-  // HH:MM:SS or MM:SS or seconds
-  const parts = dur.split(":").map(Number);
-  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  if (parts.length === 2) return parts[0] * 60 + parts[1];
-  return parts[0] || null;
 }
 
 async function fetchRssEpisodes(rssUrl: string): Promise<RssEpisode[]> {

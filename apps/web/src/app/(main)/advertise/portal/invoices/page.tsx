@@ -15,7 +15,6 @@ import {
   Clock,
   AlertCircle,
   Eye,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -374,7 +373,7 @@ function InvoiceView({
 export default function InvoicesPage() {
   const { supabase } = useSupabase();
   const { user, isLoading: authLoading } = useAuth();
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [_campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState<InvoiceData[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(

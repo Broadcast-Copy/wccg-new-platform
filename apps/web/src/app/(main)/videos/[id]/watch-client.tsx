@@ -257,7 +257,6 @@ export default function WatchClient() {
                 allowFullScreen
               />
             ) : video.video_url ? (
-              // eslint-disable-next-line jsx-a11y/media-has-caption
               <video ref={videoElRef} className="h-full w-full" controls poster={videoThumb(video)} src={video.video_url} />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">

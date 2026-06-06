@@ -22,13 +22,6 @@ const CHECK_INTERVAL_MS = 15_000;
 /** localStorage key for the continuous play preference (set by GlobalPlayer). */
 const CONTINUOUS_PLAY_KEY = "wccg_continuous_play";
 
-/** localStorage keys to clear on inactivity logout. */
-const LISTENING_STORAGE_KEYS = [
-  "wccg_listening_history",
-  "wccg_listening_points",
-  "wccg_listening_accumulated_ms",
-] as const;
-
 /** Events that count as user activity. */
 const ACTIVITY_EVENTS: (keyof WindowEventMap)[] = [
   "mousemove",
@@ -73,8 +66,8 @@ function isContinuousPlayEnabled(): boolean {
  *   - Any user interaction resets the timer.
  */
 export function useInactivityLogout() {
-  const router = useRouter();
-  const { user, signOut } = useAuth();
+  const _router = useRouter();
+  const { user, signOut: _signOut } = useAuth();
   const { isPlaying, pause: pausePlayback } = useAudioPlayer();
 
   // Track the timestamp of the last user activity

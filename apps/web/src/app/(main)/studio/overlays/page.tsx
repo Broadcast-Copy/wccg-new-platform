@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -10,7 +10,6 @@ import {
   Upload,
   Trash2,
   Check,
-  X,
   Bold,
   Italic,
   Underline,
@@ -18,21 +17,14 @@ import {
   AlignCenter,
   AlignRight,
   Droplet,
-  Move,
-  Settings,
-  Eye,
-  EyeOff,
   Save,
-  ChevronDown,
   Palette,
-  Sparkles,
   Radio,
   Tv,
   Music,
   Trophy,
   Timer,
   Instagram,
-  MessageSquare,
   Newspaper,
   Users,
 } from "lucide-react";
@@ -225,7 +217,7 @@ const ANIMATIONS: { label: string; value: TextAnimation }[] = [
 /* ------------------------------------------------------------------ */
 
 export default function OverlaysPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
 
   // -- Active section tab --
   const [activeTab, setActiveTab] = useState<"watermark" | "overlays" | "text" | "custom">("watermark");

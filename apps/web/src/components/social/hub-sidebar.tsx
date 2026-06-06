@@ -8,7 +8,6 @@ import { useUserRoles, type UserRole } from "@/hooks/use-user-roles";
 import { useRouter } from "next/navigation";
 import {
   Menu, X, User, Lock, Shield,
-  type LucideIcon,
 } from "lucide-react";
 import { listenerNav, creatorNav, vendorNav, type RoleNavItem } from "@/lib/role-nav";
 

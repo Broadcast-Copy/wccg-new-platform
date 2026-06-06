@@ -44,14 +44,17 @@ interface DirectoryRow {
 
 const CATEGORIES = [
   "All",
-  "Restaurant",
-  "Bar",
-  "Cafe",
-  "Music Venue",
-  "Shop",
-  "Service",
-  "Park",
-  "Community",
+  "Restaurants",
+  "Beauty & Barber",
+  "Churches",
+  "Health & Wellness",
+  "Home Services",
+  "Auto Services",
+  "Education",
+  "Entertainment",
+  "Legal Services",
+  "Real Estate",
+  "Government & Services",
 ];
 
 function mapRow(row: DirectoryRow): Place {

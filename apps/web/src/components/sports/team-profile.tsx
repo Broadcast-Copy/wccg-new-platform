@@ -11,7 +11,6 @@ import {
   ExternalLink,
   ArrowLeft,
   User,
-  Hash,
   GraduationCap,
   Shield,
   Play,

@@ -670,7 +670,6 @@ export function RecordingControls({
       {/* Recording result */}
       {recordedUrl && (
         <div className="flex flex-col gap-1.5">
-          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <audio src={recordedUrl} controls className="w-full" style={{ height: 32 }} />
           <a
             href={recordedUrl}

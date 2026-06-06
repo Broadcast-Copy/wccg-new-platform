@@ -101,11 +101,11 @@ const addOnOptions = [
 ];
 
 function RadioOption({
-  name,
-  value,
+  name: _name,
+  value: _value,
   label,
   checked,
-  onChange,
+  onChange: _onChange,
 }: {
   name: string;
   value: string;
@@ -134,7 +134,7 @@ function RadioOption({
 function CheckboxOption({
   label,
   checked,
-  onChange,
+  onChange: _onChange,
 }: {
   label: string;
   checked: boolean;

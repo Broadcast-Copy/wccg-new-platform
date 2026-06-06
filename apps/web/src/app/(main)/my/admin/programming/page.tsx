@@ -127,7 +127,7 @@ function ShowStatusBadge({ status, onClick }: { status: ShowStatus; onClick?: ()
 // ---------------------------------------------------------------------------
 
 export default function ProgrammingPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
 
   // -- State ----------------------------------------------------------------
   const [shows, setShows] = useState<Show[]>(initialShows);

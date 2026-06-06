@@ -184,7 +184,6 @@ function TestResultCard({ variantA, variantB }: { variantA: ABTestVariant; varia
   const ctrA = parseFloat(ctr(variantA.impressions, variantA.clicks));
   const ctrB = parseFloat(ctr(variantB.impressions, variantB.clicks));
   const winner = ctrA > ctrB ? "A" : ctrB > ctrA ? "B" : "TIE";
-  const winnerVariant = winner === "A" ? variantA : variantB;
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">

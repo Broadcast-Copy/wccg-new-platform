@@ -7,19 +7,10 @@ import {
   ShoppingBag,
   Search,
   Shield,
-  Tag,
-  Heart,
   Gift,
   Coins,
   ChevronRight,
-  Usb,
-  Shirt,
-  Droplets,
-  Headphones,
-  Dumbbell,
-  Package,
   MapPin,
-  Award,
   Star,
   Users,
 } from "lucide-react";
@@ -132,7 +123,11 @@ export default function MarketplacePage() {
       }
 
       // Collect unique vendor IDs
-      const vendorIds = [...new Set(rawProducts.map((p: any) => p.vendor_id))];
+      const vendorIds = [
+        ...new Set(
+          rawProducts.map((p: Omit<VendorProduct, "vendorName">) => p.vendor_id),
+        ),
+      ];
 
       // Fetch vendor display names
       const { data: profiles } = await supabase
@@ -147,10 +142,12 @@ export default function MarketplacePage() {
         }
       }
 
-      const enriched: VendorProduct[] = rawProducts.map((p: any) => ({
-        ...p,
-        vendorName: vendorMap[p.vendor_id] || "Unknown Vendor",
-      }));
+      const enriched: VendorProduct[] = rawProducts.map(
+        (p: Omit<VendorProduct, "vendorName">) => ({
+          ...p,
+          vendorName: vendorMap[p.vendor_id] || "Unknown Vendor",
+        }),
+      );
 
       setProducts(enriched);
       setLoading(false);

@@ -37,7 +37,6 @@ import {
   Server,
   RefreshCw,
   Download,
-  FileText,
   ChevronDown,
   AlertCircle,
   Play,
@@ -1013,7 +1012,7 @@ function FileCard({
 function UploadDropzone({
   onClose,
   onUpload,
-  currentFolderId,
+  currentFolderId: _currentFolderId,
 }: {
   onClose: () => void;
   onUpload: (files: { name: string; size: number; category: MediaCategory }[]) => void;

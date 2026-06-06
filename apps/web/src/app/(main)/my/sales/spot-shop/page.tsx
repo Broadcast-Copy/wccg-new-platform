@@ -10,7 +10,6 @@ import {
   Check,
   DollarSign,
   Clock,
-  Radio,
   Zap,
 } from "lucide-react";
 import { useSpotCart } from "@/hooks/use-spot-cart";
@@ -31,14 +30,14 @@ export default function SpotShopPage() {
   const {
     items,
     addItem,
-    removeItem,
+    removeItem: _removeItem,
     updateQuantity,
     updateRate,
-    clearCart,
+    clearCart: _clearCart,
     itemCount,
-    totalSpots,
+    totalSpots: _totalSpots,
     cartSubtotal,
-    isCartOpen,
+    isCartOpen: _isCartOpen,
     setCartOpen,
   } = useSpotCart();
 

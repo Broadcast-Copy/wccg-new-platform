@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  Building2, FileBox, Loader2, Plus, RefreshCw, Search, Upload, X, Receipt, Download, Pencil, ExternalLink,
+  Building2, FileBox, Loader2, Plus, RefreshCw, Search, Upload, X, Receipt, Download, Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";

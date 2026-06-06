@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Music, ListMusic, Globe, User, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useSupabase } from "@/components/providers/supabase-provider";
 
 // ---------------------------------------------------------------------------

@@ -47,16 +47,12 @@ import {
   Paintbrush,
   Server,
   Eye,
-  MousePointerClick,
   TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -464,7 +460,6 @@ function PhaseCard({ phase }: { phase: Phase }) {
         <CardContent className="border-t border-border pt-4">
           <div className="space-y-2">
             {phase.tasks.map((task) => {
-              const TIcon = task.icon;
               const tsCfg = taskStatusConfig[task.status];
               const TSIcon = tsCfg.icon;
               const eCfg = effortConfig[task.effort];

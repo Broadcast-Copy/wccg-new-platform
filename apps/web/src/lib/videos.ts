@@ -193,10 +193,45 @@ export interface ProgramRow {
   videos: VideoRecord[];
 }
 
+/** Round-robin a program's videos across distinct sources (creator_name) so a
+ *  single prolific source (e.g. a burst of shorts) doesn't dominate the front of
+ *  the row. Each source keeps its own newest-first order; single-source rows are
+ *  returned unchanged. */
+function interleaveBySource(videos: VideoRecord[]): VideoRecord[] {
+  const bySource = new Map<string, VideoRecord[]>();
+  const order: string[] = [];
+  for (const v of videos) {
+    const key = (v.creator_name ?? "").trim() || programOf(v);
+    let bucket = bySource.get(key);
+    if (!bucket) {
+      bucket = [];
+      bySource.set(key, bucket);
+      order.push(key);
+    }
+    bucket.push(v);
+  }
+  if (order.length <= 1) return videos;
+  const out: VideoRecord[] = [];
+  let round = 0;
+  let added = true;
+  while (added) {
+    added = false;
+    for (const key of order) {
+      const bucket = bySource.get(key);
+      if (bucket && round < bucket.length) {
+        out.push(bucket[round]);
+        added = true;
+      }
+    }
+    round++;
+  }
+  return out;
+}
+
 /**
  * Group published videos into one row per program (`programOf`), newest-active
- * first. Pass an already-loaded list to avoid a second fetch (the wall loads
- * everything once). Empty programs never appear.
+ * first. Within a row, videos are interleaved across their sources so one
+ * source can't flood the front of the row. Empty programs never appear.
  */
 export function groupByProgram(videos: VideoRecord[]): ProgramRow[] {
   const map = new Map<string, VideoRecord[]>();
@@ -207,8 +242,11 @@ export function groupByProgram(videos: VideoRecord[]): ProgramRow[] {
     else map.set(key, [v]);
   }
   // Insertion order follows the input order (videos arrive newest-first), so the
-  // most recently-published program leads. Each row keeps that newest-first order.
-  return Array.from(map.entries()).map(([program, vids]) => ({ program, videos: vids }));
+  // most recently-published program leads. Within a row, interleave by source.
+  return Array.from(map.entries()).map(([program, vids]) => ({
+    program,
+    videos: interleaveBySource(vids),
+  }));
 }
 
 /** Fetch + group in one call when the caller doesn't already have the list. */

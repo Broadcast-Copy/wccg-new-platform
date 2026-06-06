@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
-import { useSupabase } from "@/components/providers/supabase-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,15 +21,12 @@ import {
   generateCode,
   getReferralUrl,
   getStats,
-  loadReferral,
   recordReferral,
 } from "@/lib/referral";
 
 // ---------------------------------------------------------------------------
 // Teal accent: #14b8a6
 // ---------------------------------------------------------------------------
-
-const TEAL = "#14b8a6";
 
 // Mock referral signups for the "Your Referrals" list
 const MOCK_REFERRAL_SIGNUPS = [

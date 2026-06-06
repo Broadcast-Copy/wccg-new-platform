@@ -49,6 +49,106 @@ export interface ESPNTeamData {
   coaches: Coach[];
 }
 
+// ─── ESPN API response shapes ────────────────────────────────────────
+//
+// These describe the (subset of the) JSON returned by ESPN's public API.
+// Every field is optional because the public API is undocumented and shapes
+// vary by sport/endpoint; access is guarded with optional chaining + fallbacks.
+
+interface ESPNLogo {
+  href?: string;
+  rel?: string[];
+}
+
+interface ESPNVenue {
+  fullName?: string;
+  address?: {
+    city?: string;
+    state?: string;
+  };
+}
+
+interface ESPNTeam {
+  displayName?: string;
+  logos?: ESPNLogo[];
+}
+
+interface ESPNScore {
+  value?: number;
+  displayValue?: string;
+}
+
+interface ESPNLeaderEntry {
+  displayValue?: string;
+  athlete?: {
+    displayName?: string;
+  };
+}
+
+interface ESPNLeaderCategory {
+  name?: string;
+  abbreviation?: string;
+  leaders?: ESPNLeaderEntry[];
+}
+
+interface ESPNCompetitor {
+  id?: string | number;
+  team?: ESPNTeam;
+  homeAway?: string;
+  winner?: boolean;
+  score?: ESPNScore;
+  leaders?: ESPNLeaderCategory[];
+}
+
+interface ESPNBroadcast {
+  media?: { shortName?: string };
+  names?: string[];
+}
+
+interface ESPNCompetition {
+  status?: { type?: { completed?: boolean } };
+  competitors?: ESPNCompetitor[];
+  venue?: ESPNVenue;
+  broadcasts?: ESPNBroadcast[];
+  notes?: { headline?: string }[];
+}
+
+interface ESPNEvent {
+  id?: string;
+  date?: string;
+  competitions?: ESPNCompetition[];
+}
+
+interface ESPNScheduleResponse {
+  team?: { recordSummary?: string };
+  events?: ESPNEvent[];
+}
+
+interface ESPNAthlete {
+  displayName?: string;
+  fullName?: string;
+  jersey?: string;
+  position?: { abbreviation?: string; name?: string };
+  experience?: { displayValue?: string; abbreviation?: string };
+  headshot?: { href?: string };
+}
+
+/** A roster entry is either a flat athlete or a group `{ items: ESPNAthlete[] }`. */
+interface ESPNRosterGroup {
+  items?: ESPNAthlete[];
+}
+
+interface ESPNRosterResponse {
+  athletes?: (ESPNAthlete & ESPNRosterGroup)[];
+  coach?: ESPNCoach[];
+}
+
+interface ESPNCoach {
+  firstName?: string;
+  lastName?: string;
+  headshot?: { href?: string };
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────
 
 /**
@@ -83,27 +183,25 @@ function formatGameDate(isoDate: string): string {
   }
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 /**
  * Extract the best logo URL from a competitor's team logos array.
  * Prefers the logo with rel: ["full", "default"], falls back to the first logo.
  */
-function getLogoUrl(logos?: any[]): string {
+function getLogoUrl(logos?: ESPNLogo[]): string {
   if (!logos?.length) return "";
   const defaultLogo = logos.find(
-    (l: any) =>
+    (l) =>
       Array.isArray(l?.rel) &&
       l.rel.includes("full") &&
       l.rel.includes("default"),
   );
-  return (defaultLogo?.href ?? logos[0]?.href ?? "") as string;
+  return defaultLogo?.href ?? logos[0]?.href ?? "";
 }
 
 /**
  * Build the venue string from an ESPN venue object.
  */
-function formatVenue(venue?: any): string {
+function formatVenue(venue?: ESPNVenue): string {
   if (!venue) return "TBD";
   const name = venue.fullName ?? "TBD";
   const city = venue.address?.city;
@@ -116,7 +214,7 @@ function formatVenue(venue?: any): string {
 /**
  * Fetch JSON from a URL with a timeout. Returns null on failure.
  */
-async function fetchJSON<T = any>(url: string): Promise<T | null> {
+async function fetchJSON<T = unknown>(url: string): Promise<T | null> {
   try {
     const response = await fetch(url, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
@@ -137,8 +235,6 @@ async function fetchJSON<T = any>(url: string): Promise<T | null> {
     return null;
   }
 }
-
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ─── Schedule Fetching ───────────────────────────────────────────────
 
@@ -164,14 +260,13 @@ export async function fetchESPNSchedule(
   try {
     const path = SPORT_PATHS[sport];
     const url = `${ESPN_BASE}/${path}/teams/${DUKE_TEAM_ID}/schedule`;
-    const data = await fetchJSON(url);
+    const data = await fetchJSON<ESPNScheduleResponse>(url);
     if (!data) return empty;
 
     // Extract record from the team object
-    const record: string | null =
-      (data as any)?.team?.recordSummary ?? null;
+    const record: string | null = data.team?.recordSummary ?? null;
 
-    const events: any[] = (data as any)?.events ?? [];
+    const events: ESPNEvent[] = data.events ?? [];
     const upcoming: UpcomingGame[] = [];
     const results: GameResult[] = [];
     let lastGame: LastGameResult | null = null;
@@ -186,12 +281,12 @@ export async function fetchESPNSchedule(
       const eventId: string = event?.id ?? "";
 
       // Find Duke and opponent competitors
-      const competitors: any[] = competition.competitors ?? [];
+      const competitors: ESPNCompetitor[] = competition.competitors ?? [];
       const duke = competitors.find(
-        (c: any) => String(c?.id) === DUKE_TEAM_ID,
+        (c) => String(c?.id) === DUKE_TEAM_ID,
       );
       const opponent = competitors.find(
-        (c: any) => String(c?.id) !== DUKE_TEAM_ID,
+        (c) => String(c?.id) !== DUKE_TEAM_ID,
       );
       if (!duke || !opponent) continue;
 
@@ -294,7 +389,7 @@ export async function fetchESPNSchedule(
  * Extract the top performer from a Duke competitor's leaders array.
  * Falls back to zeroed stats if data is missing.
  */
-function extractTopPerformer(dukeCompetitor: any): {
+function extractTopPerformer(dukeCompetitor: ESPNCompetitor): {
   name: string;
   points: number;
   rebounds: number;
@@ -303,11 +398,11 @@ function extractTopPerformer(dukeCompetitor: any): {
   const fallback = { name: "Unknown", points: 0, rebounds: 0, assists: 0 };
 
   try {
-    const leaders: any[] = dukeCompetitor?.leaders ?? [];
+    const leaders: ESPNLeaderCategory[] = dukeCompetitor?.leaders ?? [];
 
     // Points leader
     const pointsCategory = leaders.find(
-      (l: any) => l?.name === "points" || l?.abbreviation === "PTS",
+      (l) => l?.name === "points" || l?.abbreviation === "PTS",
     );
     const pointsLeader = pointsCategory?.leaders?.[0];
     const name: string =
@@ -316,14 +411,14 @@ function extractTopPerformer(dukeCompetitor: any): {
 
     // Rebounds leader
     const reboundsCategory = leaders.find(
-      (l: any) => l?.name === "rebounds" || l?.abbreviation === "REB",
+      (l) => l?.name === "rebounds" || l?.abbreviation === "REB",
     );
     const reboundsLeader = reboundsCategory?.leaders?.[0];
     const rebounds = Number(reboundsLeader?.displayValue ?? 0);
 
     // Assists leader
     const assistsCategory = leaders.find(
-      (l: any) => l?.name === "assists" || l?.abbreviation === "AST",
+      (l) => l?.name === "assists" || l?.abbreviation === "AST",
     );
     const assistsLeader = assistsCategory?.leaders?.[0];
     const assists = Number(assistsLeader?.displayValue ?? 0);
@@ -346,10 +441,10 @@ export async function fetchESPNRoster(
   try {
     const path = SPORT_PATHS[sport];
     const url = `${ESPN_BASE}/${path}/teams/${DUKE_TEAM_ID}/roster`;
-    const data = await fetchJSON(url);
+    const data = await fetchJSON<ESPNRosterResponse>(url);
     if (!data) return [];
 
-    const athletes: any[] = (data as any)?.athletes ?? [];
+    const athletes = data.athletes ?? [];
     const players: Player[] = [];
 
     for (const athlete of athletes) {
@@ -383,11 +478,11 @@ async function fetchESPNCoaches(sport: ESPNSport): Promise<Coach[]> {
   try {
     const path = SPORT_PATHS[sport];
     const url = `${ESPN_BASE}/${path}/teams/${DUKE_TEAM_ID}/roster`;
-    const data = await fetchJSON(url);
+    const data = await fetchJSON<ESPNRosterResponse>(url);
     if (!data) return [];
 
-    const coachList: any[] = (data as any)?.coach ?? [];
-    return coachList.map((c: any) => ({
+    const coachList: ESPNCoach[] = data.coach ?? [];
+    return coachList.map((c) => ({
       name: [c?.firstName, c?.lastName].filter(Boolean).join(" ") || "Unknown",
       title: "Head Coach",
       imageUrl: c?.headshot?.href,
@@ -405,7 +500,7 @@ async function fetchESPNCoaches(sport: ESPNSport): Promise<Coach[]> {
 /**
  * Map a single ESPN athlete object to a Player.
  */
-function mapAthlete(athlete: any): Player | null {
+function mapAthlete(athlete: ESPNAthlete): Player | null {
   if (!athlete) return null;
   const name: string = athlete.displayName ?? athlete.fullName ?? "";
   if (!name) return null;

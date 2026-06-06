@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tag, Navigation, Info, MapPin, Store } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -10,12 +9,11 @@ import { useGeolocation, getDistanceMeters } from "@/hooks/use-geolocation";
 import { DEALS, type Deal } from "@/data/deals";
 import { DealCard } from "@/components/deals/deal-card";
 import { DealRedemption } from "@/components/deals/deal-redemption";
-import Link from "next/link";
 
 const CATEGORIES = ["All", "Food", "Services", "Auto", "Beauty", "Entertainment"] as const;
 
 export default function DealsPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const { latitude, longitude, error, loading, refresh } = useGeolocation();
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);

@@ -106,11 +106,6 @@ export function DJMixPlayer({ mixes, djName, className }: DJMixPlayerProps) {
   const isPlayingFromHere =
     isPlaying && selectedMix?.audioUrl && currentStream === selectedMix.audioUrl;
 
-  // Check if any track from this player is currently playing
-  const playingMixIndex = mixes.findIndex(
-    (m) => m.audioUrl && currentStream === m.audioUrl,
-  );
-
   const handlePlayPause = useCallback(() => {
     if (!selectedMix) return;
 

@@ -92,9 +92,13 @@ export default function AdvertiserRegisterPage() {
 
       setSubmitted(true);
       toast.success("Application submitted!");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Registration error:", err);
-      toast.error(err?.message ?? "Something went wrong. Please try again.");
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.",
+      );
     } finally {
       setSubmitting(false);
     }

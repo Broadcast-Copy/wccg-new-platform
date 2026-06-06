@@ -25,30 +25,17 @@ import {
   Users2,
   Mail,
   Home,
-  Headphones,
   Radio,
   Search,
-  Mic,
-  Gift,
   ChevronDown,
   ArrowDownRight,
   ShoppingCart,
   ShoppingBag,
   MapPin,
-  Store,
   type LucideIcon,
 } from "lucide-react";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { useUserRoles } from "@/hooks/use-user-roles";
-
-// Desktop nav
-const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/discover", label: "Discover" },
-  // Streaming mega menu is rendered separately between Discover and Marketplace
-  { href: "/marketplace", label: "Marketplace" },
-  { href: "/contact", label: "Support" },
-];
 
 const streamingChannels = [
   { href: "/shows?stream=stream_wccg", label: "WCCG 104.5 FM", badge: "/images/channels/wccg-badge.png" },
@@ -65,6 +52,7 @@ const mobileNavLinks = [
   { href: "/videos", label: "Watch", icon: Video },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
   { href: "/community", label: "Directory", icon: MapPin },
+  { href: "/members", label: "Members", icon: Users2 },
   { href: "/contact", label: "Connect", icon: Mail },
 ];
 
@@ -332,6 +320,8 @@ export default function MainLayout({
             <StreamingMegaMenu />
             {/* Watch — public video wall */}
             <NavLink href="/videos" label="Watch" pathname={pathname} icon={Video} />
+            {/* Members — people directory */}
+            <NavLink href="/members" label="Members" pathname={pathname} />
             {/* Support */}
             <NavLink href="/contact" label="Support" pathname={pathname} />
           </nav>

@@ -16,8 +16,6 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatCard } from "@/components/admin/stat-card";
-import { StatusBadge } from "@/components/admin/status-badge";
-import { TabsNav } from "@/components/admin/tabs-nav";
 import { loadOrSeed, persist, formatDate } from "@/lib/admin-storage";
 
 // ---------------------------------------------------------------------------

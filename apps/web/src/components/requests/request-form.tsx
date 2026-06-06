@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Music, Star, Send, CheckCircle2 } from "lucide-react";
 import { saveRequest } from "@/lib/song-requests";
 import { useAuth } from "@/hooks/use-auth";

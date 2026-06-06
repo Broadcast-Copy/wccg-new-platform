@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -32,10 +31,8 @@ import {
   Megaphone,
   Radio,
   CheckCircle,
-  XCircle,
   ArrowLeft,
   Download,
-  Filter,
 } from "lucide-react";
 import { useDemoRole } from "../layout";
 import { ROLE_CONFIGS } from "../_lib/role-config";

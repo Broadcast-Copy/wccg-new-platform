@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import {
   Radio,
-  Zap,
   Volume2,
   Wifi,
   AlertTriangle,
@@ -188,14 +187,6 @@ export default function MasterControlPage() {
       case "Warning": return <AlertTriangle className="h-4 w-4 text-yellow-400" />;
       case "Critical": return <XCircle className="h-4 w-4 text-red-400" />;
       default: return null;
-    }
-  };
-
-  const severityColor = (severity: string) => {
-    switch (severity) {
-      case "critical": return "text-red-400";
-      case "warning": return "text-yellow-400";
-      default: return "text-muted-foreground";
     }
   };
 

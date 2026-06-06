@@ -69,7 +69,7 @@ export default function BlogManagerPage() {
   const { upload: uploadImage, isUploading: isUploadingImage } = useFileUpload("images");
 
   const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formTitle, setFormTitle] = useState("");
   const [formContent, setFormContent] = useState("");
@@ -220,7 +220,7 @@ export default function BlogManagerPage() {
     resetForm();
   }
 
-  async function handleDeletePost(id: string) {
+  async function _handleDeletePost(id: string) {
     if (!supabase) return;
     const { error } = await supabase.from("blog_posts").delete().eq("id", id);
     if (error) {
@@ -230,7 +230,7 @@ export default function BlogManagerPage() {
     setPosts((prev) => prev.filter((p) => p.id !== id));
   }
 
-  async function handleUpdatePost(id: string, updates: Partial<BlogPost>) {
+  async function _handleUpdatePost(id: string, updates: Partial<BlogPost>) {
     if (!supabase) return;
     const dbUpdates: Record<string, unknown> = {};
     if (updates.title !== undefined) dbUpdates.title = updates.title;

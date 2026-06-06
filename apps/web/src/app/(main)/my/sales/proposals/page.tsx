@@ -4,14 +4,10 @@ import { useState, useEffect } from "react";
 import {
   FileText,
   Plus,
-  X,
   DollarSign,
-  Calendar,
-  Building2,
   Trash2,
   Eye,
   Save,
-  Download,
 } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatCard } from "@/components/admin/stat-card";

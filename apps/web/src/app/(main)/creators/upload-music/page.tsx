@@ -1,7 +1,6 @@
 "use client";
 
-import { Music, Upload, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
-import Link from "next/link";
+import { Music, Upload, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoginRequired } from "@/components/auth/login-required";
 import { useState } from "react";

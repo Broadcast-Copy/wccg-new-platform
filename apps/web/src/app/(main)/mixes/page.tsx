@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
 import {
@@ -25,12 +25,9 @@ import {
   Check,
   Home,
   Search,
-  SortAsc,
-  Filter,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { apiClient } from "@/lib/api-client";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 
 // ---------------------------------------------------------------------------
@@ -61,8 +58,6 @@ interface MixFolder {
   createdAt?: string;
   updatedAt?: string;
 }
-
-type MixItem = MixFile | MixFolder;
 
 // ---------------------------------------------------------------------------
 // Mock data — will be replaced by API
@@ -568,7 +563,7 @@ function NewFolderInput({
 // ---------------------------------------------------------------------------
 
 export default function MixesPage() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: _authLoading } = useAuth();
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [searchQuery, setSearchQuery] = useState("");
   const [showUploader, setShowUploader] = useState(false);

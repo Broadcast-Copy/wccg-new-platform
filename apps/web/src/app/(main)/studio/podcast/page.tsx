@@ -15,19 +15,13 @@ import {
   Settings,
   Circle,
   Users,
-  MessageSquare,
   Eye,
   MoreHorizontal,
-  Shield,
   UserPlus,
   Copy,
   Check,
   ChevronDown,
-  LayoutGrid,
-  Columns2,
   Square,
-  Grid2x2,
-  Rows2,
   Film,
   Camera,
   Download,
@@ -277,7 +271,6 @@ function VideoTile({
   return (
     <div className="relative w-full h-full rounded-xl overflow-hidden bg-gradient-to-br from-muted via-card to-muted group">
       {hasStream ? (
-        /* eslint-disable-next-line jsx-a11y/media-has-caption */
         <video
           ref={videoCallbackRef}
           autoPlay
@@ -364,7 +357,6 @@ function ScreenShareTile({
 
   return (
     <div className="relative w-full h-full rounded-xl overflow-hidden bg-gradient-to-br from-muted via-card to-muted group">
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <video
         ref={videoCallbackRef}
         autoPlay
@@ -452,7 +444,7 @@ function PodcastStudioContent() {
   // Recording
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [isLive, setIsLive] = useState(false);
+  const [isLive, _setIsLive] = useState(false);
   const [liveViewers, setLiveViewers] = useState(0);
 
   // Camera
@@ -2545,7 +2537,6 @@ function PodcastStudioContent() {
                 <div className="bg-muted/50 rounded-lg overflow-hidden">
                   <div className="aspect-video relative bg-card">
                     {hasCamera && cameraEnabled ? (
-                      /* eslint-disable-next-line jsx-a11y/media-has-caption */
                       <video
                         ref={(el) => {
                           if (el && streamRef.current) {

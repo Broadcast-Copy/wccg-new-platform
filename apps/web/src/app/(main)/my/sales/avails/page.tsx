@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import {
   CalendarDays,
   Radio,
@@ -8,12 +8,10 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
-  Filter,
 } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatCard } from "@/components/admin/stat-card";
-import { TabsNav } from "@/components/admin/tabs-nav";
-import { loadOrSeed, persist, formatDate } from "@/lib/admin-storage";
+import { loadOrSeed, formatDate } from "@/lib/admin-storage";
 
 // ---------------------------------------------------------------------------
 // Types

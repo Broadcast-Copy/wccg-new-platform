@@ -95,10 +95,6 @@ function getEasternOffset(): string {
   // Create a date and check if it's in EDT or EST by comparing
   // the timezone offset for a date in the Eastern timezone
   const now = new Date();
-  const jan = new Date(now.getFullYear(), 0, 1);
-  const jul = new Date(now.getFullYear(), 6, 1);
-  // If standard offset differs from current, DST is active
-  const stdOffset = Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset());
   // Use a reliable method: check if a known Eastern city is in DST
   try {
     const eastern = new Intl.DateTimeFormat("en-US", {

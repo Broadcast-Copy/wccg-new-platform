@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -27,16 +26,11 @@ import {
   Plus,
   MoreHorizontal,
   DollarSign,
-  Eye,
   MousePointerClick,
   TrendingUp,
   CheckCircle,
   ArrowLeft,
   Download,
-  Pause,
-  Play,
-  BarChart3,
-  Calendar,
 } from "lucide-react";
 import { useDemoRole } from "../layout";
 import { ROLE_CONFIGS } from "../_lib/role-config";

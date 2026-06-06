@@ -15,7 +15,6 @@ import { Badge } from "@/components/ui/badge";
 import { ShareCard } from "@/components/social/share-card";
 import { getShareUrl, generateShareText } from "@/lib/share";
 import Link from "next/link";
-import Image from "next/image";
 
 /* ------------------------------------------------------------------ */
 /*  Data                                                               */

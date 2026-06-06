@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   Clock,
   DollarSign,
-  CheckCircle,
   MessageSquare,
 } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";

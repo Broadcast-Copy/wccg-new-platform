@@ -50,7 +50,6 @@ import {
 import {
   fetchSongHistory,
   formatTime,
-  type SongHistoryEntry,
   type SongHistoryGroup,
 } from "@/lib/song-history";
 import { readAllPoints } from "@/lib/points-storage";

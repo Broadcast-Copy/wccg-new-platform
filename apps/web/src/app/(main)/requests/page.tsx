@@ -2,7 +2,6 @@
 
 import { RequestForm } from "@/components/requests/request-form";
 import { RequestQueue } from "@/components/requests/request-queue";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapPin, Heart, ExternalLink } from "lucide-react";
+import { MapPin, Heart } from "lucide-react";
 import Link from "next/link";
 
 interface SavedPlace {

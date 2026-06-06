@@ -186,7 +186,7 @@ function getCampaignStatusBadge(status: CampaignStatus) {
 // ---------------------------------------------------------------------------
 
 export default function ReportsPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
 
   // -- State ----------------------------------------------------------------
   const [dateRange, setDateRange] = useState<DateRange>("month");

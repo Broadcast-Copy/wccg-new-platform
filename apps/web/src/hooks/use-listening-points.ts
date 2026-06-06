@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { getSessions } from "@/lib/listening-history";
 import { getCurrentMultiplier } from "@/lib/multipliers";
 import { markDirty } from "@/lib/user-sync";

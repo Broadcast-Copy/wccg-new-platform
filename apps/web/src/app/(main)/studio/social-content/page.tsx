@@ -74,7 +74,7 @@ const publishPlatforms = [
 ];
 
 function RadioOption({
-  name,
+  name: _name,
   value,
   label,
   checked,
@@ -111,7 +111,7 @@ function RadioOption({
 function CheckboxOption({
   label,
   checked,
-  onChange,
+  onChange: _onChange,
 }: {
   label: string;
   checked: boolean;

@@ -18,7 +18,6 @@ import {
   Shield,
   Loader2,
   Plus,
-  ChevronDown,
   ChevronUp,
   Pencil,
   X,

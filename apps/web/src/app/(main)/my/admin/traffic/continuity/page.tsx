@@ -14,7 +14,7 @@ import { PageHeader } from "@/components/admin/page-header";
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { DataTable, type Column } from "@/components/admin/data-table";
-import { loadOrSeed, persist, formatDate } from "@/lib/admin-storage";
+import { loadOrSeed,} from "@/lib/admin-storage";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -119,7 +119,6 @@ export default function ContinuityLogPage() {
 
   const totalBreaks = log.entries.reduce((s, e) => s + e.commercialBreaks, 0);
   const totalSpots = log.entries.reduce((s, e) => s + e.spotsInBreaks, 0);
-  const completeEntries = log.entries.filter((e) => e.status === "Complete").length;
   const missingEntries = log.entries.filter((e) => e.status === "Missing").length;
 
   const sourceColor: Record<string, string> = {

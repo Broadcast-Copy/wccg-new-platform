@@ -9,7 +9,6 @@ import {
   Radio,
   X,
   ChevronDown,
-  BarChart3,
   FileAudio,
   RotateCcw,
   CheckCircle2,

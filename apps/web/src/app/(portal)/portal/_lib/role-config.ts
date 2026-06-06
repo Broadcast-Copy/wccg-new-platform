@@ -20,8 +20,6 @@ import {
   Target,
   Shield,
   Settings,
-  Database,
-  Activity,
   Rocket,
   type LucideIcon,
 } from "lucide-react";

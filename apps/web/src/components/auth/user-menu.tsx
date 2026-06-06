@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSupabase } from "@/components/providers/supabase-provider";
-import { useUserRoles, type UserRole } from "@/hooks/use-user-roles";
+import { useUserRoles } from "@/hooks/use-user-roles";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,11 +11,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuLabel,
   DropdownMenuGroup,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
@@ -311,7 +307,7 @@ export function UserMenu() {
     router.refresh();
   };
 
-  const roleSection = getRoleSection({
+  const _roleSection = getRoleSection({
     isSales,
     isProduction,
     isManagement,
@@ -333,8 +329,6 @@ export function UserMenu() {
       : isOverrideActive && roleOverride === "vendor"
         ? "vendor"
         : "listener";
-
-  const currentAdminMode = isAdminMode ? (roleOverride as string) : "production";
 
   return (
     <DropdownMenu>

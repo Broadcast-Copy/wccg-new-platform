@@ -16,20 +16,14 @@ import {
   Phone,
   Pin,
   PinOff,
-  MoreVertical,
   Send,
   Copy,
   Calendar,
   Clock,
   Link2,
-  QrCode,
   Mail,
   Repeat,
   X,
-  ChevronDown,
-  Volume2,
-  VolumeX,
-  Settings,
   Pencil,
   Check,
   Trash2,
@@ -123,7 +117,7 @@ function formatDuration(totalSeconds: number) {
 /* ------------------------------------------------------------------ */
 
 export default function MeetingRoomPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
 
   // -- Meeting state --
   const [meetingTitle, setMeetingTitle] = useState("WCCG Studio Session");
@@ -159,7 +153,7 @@ export default function MeetingRoomPage() {
   const [lobbyGuests, setLobbyGuests] = useState<{ id: string; name: string; time: string }[]>([
     { id: "lobby1", name: "Bootleg Kev", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
   ]);
-  const [lobbyNotification, setLobbyNotification] = useState(true);
+  const [_lobbyNotification, setLobbyNotification] = useState(true);
 
   // -- Schedule modal --
   const [showSchedule, setShowSchedule] = useState(false);
@@ -432,7 +426,7 @@ export default function MeetingRoomPage() {
           <div
             className={`grid ${gridCols} gap-2 h-full auto-rows-fr`}
           >
-            {displayParticipants.map((p, idx) => {
+            {displayParticipants.map((p) => {
               const isPinned = pinnedId === p.id;
               const isYou = p.id === "you";
               const showCamera = isYou ? camOn : p.camera;

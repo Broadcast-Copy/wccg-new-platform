@@ -12,10 +12,8 @@ import {
   Video,
   Podcast,
   CheckCircle2,
-  XCircle,
   Clock,
   Users,
-  Settings,
   Wrench,
 } from "lucide-react";
 

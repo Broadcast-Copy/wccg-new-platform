@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { LEADERBOARD_DATA, weekStartDate, type LeaderboardEntry } from "@/data/leaderboard";
 import { Badge } from "@/components/ui/badge";
 import {

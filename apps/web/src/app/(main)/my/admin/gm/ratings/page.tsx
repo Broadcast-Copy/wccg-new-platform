@@ -14,7 +14,7 @@ import { PageHeader } from "@/components/admin/page-header";
 import { StatCard } from "@/components/admin/stat-card";
 import { DataTable, type Column } from "@/components/admin/data-table";
 import { TabsNav } from "@/components/admin/tabs-nav";
-import { loadOrSeed, persist } from "@/lib/admin-storage";
+import { loadOrSeed } from "@/lib/admin-storage";
 
 // ---------------------------------------------------------------------------
 // Types & Seed

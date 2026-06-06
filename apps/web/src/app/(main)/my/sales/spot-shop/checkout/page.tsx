@@ -4,14 +4,12 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft, ArrowRight, Check, Users, Building2, Mail, Phone, MapPin, Tag,
-  Calendar, FileText, Receipt, DollarSign, Search, Plus, X, ShoppingCart,
-  ChevronDown, CheckCircle2,
+  ArrowLeft, ArrowRight, Check, Users, Building2, Mail, Phone, MapPin,
+  Calendar, FileText, Receipt, Search, Plus, X, ShoppingCart, CheckCircle2,
 } from "lucide-react";
 import { useSpotCart } from "@/hooks/use-spot-cart";
-import {
-  DAYPARTS, CLIENT_CATEGORIES, SEED_CLIENTS, CAMPAIGNS_KEY, CLIENTS_KEY,
-  INVOICES_KEY, formatCurrency, formatDate, formatHour, generateId,
+import { CLIENT_CATEGORIES, SEED_CLIENTS, CAMPAIGNS_KEY, CLIENTS_KEY,
+  INVOICES_KEY, formatCurrency, formatDate, generateId,
   loadOrSeed, persist, computeWeeks,
   type SalesClient, type InvoiceLineItem, type SavedCampaign, type Invoice,
 } from "@/lib/sales-shared";

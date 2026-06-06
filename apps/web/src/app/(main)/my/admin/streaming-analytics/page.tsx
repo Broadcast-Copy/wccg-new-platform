@@ -20,7 +20,6 @@ import {
   fetchDailyStats,
   formatDuration,
   formatHour,
-  maskIp,
   type LiveMetrics,
   type DailyStat,
 } from "@/lib/streaming-analytics";

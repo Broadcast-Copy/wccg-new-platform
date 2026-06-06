@@ -5,7 +5,6 @@ import {
   Receipt,
   DollarSign,
   AlertTriangle,
-  Clock,
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
@@ -14,7 +13,7 @@ import { StatCard } from "@/components/admin/stat-card";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { DataTable, type Column } from "@/components/admin/data-table";
 import { TabsNav } from "@/components/admin/tabs-nav";
-import { loadOrSeed, persist, genId, formatCurrency, formatDate } from "@/lib/admin-storage";
+import { loadOrSeed, formatCurrency, formatDate } from "@/lib/admin-storage";
 
 // ---------------------------------------------------------------------------
 // Types

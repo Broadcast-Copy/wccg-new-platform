@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -28,15 +27,9 @@ import {
   MoreHorizontal,
   Headphones,
   Music,
-  Play,
-  Pause,
-  Clock,
-  CalendarDays,
   Star,
-  Users,
   CheckCircle,
   ArrowLeft,
-  Download,
   Mic2,
   Upload,
 } from "lucide-react";

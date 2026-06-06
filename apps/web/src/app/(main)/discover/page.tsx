@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,44 @@ const quickLinks = [
   { href: "/creators", icon: Mic, label: "Creator Hub", desc: "Submit your music", color: "from-[#06b6d4] to-[#0891b2]" },
   { href: "/advertise", icon: Megaphone, label: "Advertise", desc: "Reach our audience", color: "from-[#f97316] to-[#ea580c]" },
 ];
+
+// ─── Legacy streaming: 3 rotating station circles ──────────────────────
+
+const LEGACY_STATIONS = [
+  { label: "WCCG 104.5 FM", badge: "/images/channels/wccg-badge.png" },
+  { label: "SOUL 104.5 FM", badge: "/images/channels/soul-badge.png" },
+  { label: "HOT 104.5 FM", badge: "/images/channels/hot-badge.png" },
+  { label: "104.5 THE VIBE", badge: "/images/channels/vibe-badge.png" },
+];
+
+/** 3 of the 4 legacy stations as circles (like the other cards); the visible
+ *  trio rotates on each load. The random offset is set AFTER mount so the
+ *  static build and first client render match (no hydration mismatch). */
+function LegacyStreamingCircles() {
+  const [offset, setOffset] = useState(0);
+  useEffect(() => {
+    let active = true;
+    queueMicrotask(() => {
+      if (active) setOffset(Math.floor(Math.random() * LEGACY_STATIONS.length));
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+  const shown = [0, 1, 2].map((i) => LEGACY_STATIONS[(offset + i) % LEGACY_STATIONS.length]);
+  return (
+    <div className="flex items-center gap-3">
+      {shown.map((s) => (
+        <div
+          key={s.label}
+          className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-border bg-muted sm:h-24 sm:w-24"
+        >
+          <AppImage src={s.badge} alt={s.label} fill className="object-cover" sizes="96px" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // ─── Page component ────────────────────────────────────────────────────
 
@@ -223,21 +262,7 @@ export default function DiscoverPage() {
 
           {/* Card 6: Legacy Streaming */}
           <Link href="/channels" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg">
-            <div className="grid grid-cols-2 gap-2.5">
-              {[
-                { label: "WCCG 104.5 FM", badge: "/images/channels/wccg-badge.png" },
-                { label: "SOUL 104.5 FM", badge: "/images/channels/soul-badge.png" },
-                { label: "HOT 104.5 FM", badge: "/images/channels/hot-badge.png" },
-                { label: "104.5 THE VIBE", badge: "/images/channels/vibe-badge.png" },
-              ].map((s) => (
-                <div
-                  key={s.label}
-                  className="relative h-16 w-full overflow-hidden rounded-xl border border-border bg-muted sm:h-20"
-                >
-                  <AppImage src={s.badge} alt={s.label} fill className="object-cover" sizes="220px" />
-                </div>
-              ))}
-            </div>
+            <LegacyStreamingCircles />
             <div className="space-y-1.5">
               <h3 className="text-lg sm:text-xl font-bold text-foreground group-hover:text-[#74ddc7] transition-colors">Legacy Streaming</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">

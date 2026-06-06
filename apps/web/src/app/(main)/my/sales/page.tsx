@@ -12,7 +12,6 @@ import {
   Megaphone,
   Clock,
   CheckCircle2,
-  AlertCircle,
   ShoppingBag,
   Search,
   Pencil,

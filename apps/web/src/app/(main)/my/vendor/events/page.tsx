@@ -9,11 +9,9 @@ import {
   X,
   MapPin,
   Users,
-  DollarSign,
   Ticket,
   Coins,
   Clock,
-  CheckCircle2,
   ChevronDown,
   Archive,
 } from "lucide-react";
@@ -38,6 +36,21 @@ interface VendorEvent {
   ticketType: TicketType;
   tokenReward: number;
   status: EventStatus;
+}
+
+/** Raw `vendor_events` row shape as returned by Supabase. */
+interface VendorEventRow {
+  id: string;
+  title?: string | null;
+  description?: string | null;
+  date?: string | null;
+  venue?: string | null;
+  capacity?: number | null;
+  tickets_sold?: number | null;
+  price?: number | null;
+  ticket_type?: TicketType | null;
+  token_reward?: number | null;
+  status?: EventStatus | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -115,7 +128,7 @@ export default function VendorEventsPage() {
 
   const [events, setEvents] = useState<VendorEvent[]>([]);
   const [pastEvents, setPastEvents] = useState<VendorEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [distributeTokens, setDistributeTokens] = useState(true);
@@ -131,7 +144,7 @@ export default function VendorEventsPage() {
         .eq('vendor_id', user!.id)
         .order('created_at', { ascending: false });
       if (!error && data) {
-        const mapRow = (row: any): VendorEvent => ({
+        const mapRow = (row: VendorEventRow): VendorEvent => ({
           id: row.id,
           title: row.title ?? '',
           description: row.description ?? '',
@@ -143,10 +156,12 @@ export default function VendorEventsPage() {
           price: row.price ?? 0,
           ticketType: row.ticket_type ?? 'Paid',
           tokenReward: row.token_reward ?? 0,
-          status: row.status ?? 'upcoming',
+          // Preserve original runtime fallback value (`'upcoming'`), which is
+          // not a member of EventStatus; assert to keep behavior unchanged.
+          status: (row.status ?? 'upcoming') as EventStatus,
         });
-        setEvents(data.filter((r: any) => r.status !== 'Past').map(mapRow));
-        setPastEvents(data.filter((r: any) => r.status === 'Past').map(mapRow));
+        setEvents(data.filter((r: VendorEventRow) => r.status !== 'Past').map(mapRow));
+        setPastEvents(data.filter((r: VendorEventRow) => r.status === 'Past').map(mapRow));
       }
       setLoading(false);
     }
@@ -204,7 +219,7 @@ export default function VendorEventsPage() {
     setForm(EMPTY_FORM);
   }
 
-  async function handleDeleteEvent(id: string) {
+  async function _handleDeleteEvent(id: string) {
     const { error } = await supabase
       .from('vendor_events')
       .delete()
@@ -216,7 +231,7 @@ export default function VendorEventsPage() {
     }
   }
 
-  async function handleUpdateEventStatus(id: string, status: EventStatus) {
+  async function _handleUpdateEventStatus(id: string, status: EventStatus) {
     const { error } = await supabase
       .from('vendor_events')
       .update({ status })

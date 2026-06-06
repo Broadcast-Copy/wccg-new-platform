@@ -10,14 +10,12 @@ import {
   REMOTE_PACKAGES,
   DUKE_SPORTS,
   CAMPAIGN_TYPES,
-  PROMOTIONS_PACKAGES,
   formatHourRange,
 } from "@/data/rate-card";
 import {
   formatCurrency,
   formatDate,
   computeWeeks,
-  computeFlightWeeks,
   generateInvoiceNumber,
   generateId,
   type TrafficOrder,
@@ -27,7 +25,6 @@ import {
   type SalesClient,
   MARKETING_CAMPAIGNS_KEY,
   INVOICES_KEY,
-  CLIENTS_KEY,
   loadOrSeed,
   persist,
 } from "@/lib/sales-shared";
@@ -40,12 +37,10 @@ import { Separator } from "@/components/ui/separator";
 import {
   Check,
   FileText,
-  Download,
   Save,
   Radio,
   Calendar,
   DollarSign,
-  User,
   Building2,
   Clock,
   Gift,
@@ -218,7 +213,7 @@ function buildTrafficOrder(
 // ---------------------------------------------------------------------------
 
 export function StepReview() {
-  const { watch, setValue, getValues } = useFormContext<CampaignFormValues>();
+  const { watch, setValue, getValues: _getValues } = useFormContext<CampaignFormValues>();
   const values = watch();
 
   const [saved, setSaved] = useState(false);

@@ -24,6 +24,8 @@ import {
   Mail,
 } from "lucide-react";
 import { DukeGameTile } from "@/components/sports/duke-game-tile";
+import { LiveNowRail } from "@/components/home/live-now-rail";
+import { UpNextRail } from "@/components/home/up-next-rail";
 
 interface EventItem {
   id: string;
@@ -282,6 +284,10 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Live now + up next — pulled from the live stream schedule */}
+      <LiveNowRail />
+      <UpNextRail />
+
       {/* Platform Headline */}
       <section className="text-center py-4">
         <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-foreground tracking-tight">
@@ -292,40 +298,55 @@ export default function HomePage() {
         </p>
       </section>
 
-      {/* Platform Features — high-end horizontal feature scroll with a trailing fade */}
-      <section className="space-y-4">
+      {/* Platform Features — three smoothly auto-scrolling marquee rows */}
+      <section className="space-y-3">
         <h2 className="text-xl font-bold text-foreground">
           Explore the Platform
         </h2>
-        <div className="relative">
-          <div className="flex gap-3 overflow-x-auto scroll-smooth scrollbar-hide snap-x snap-mandatory pb-2 pr-10">
-            {platformFeatures.map((feature) => (
-              <Link
-                key={feature.href + feature.title}
-                href={feature.href}
-                className="group relative w-[260px] shrink-0 snap-start overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:border-input hover:shadow-lg hover:shadow-black/20 shadow-sm dark:shadow-none sm:w-[300px]"
-              >
-                <div className="flex items-start gap-4">
-                  <div
-                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${feature.color}`}
-                  >
-                    <feature.icon className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-foreground group-hover:text-[#74ddc7] transition-colors">
-                      {feature.title}
-                    </h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {feature.description}
-                    </p>
-                  </div>
-                </div>
-                <div className={`absolute -inset-1 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-[0.03] rounded-xl transition-opacity`} />
-              </Link>
-            ))}
-          </div>
-          {/* Trailing fade — signals more cards to the right (high-end scroll cue) */}
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-background to-transparent" />
+        <div className="relative space-y-3 overflow-hidden">
+          {[0, 1, 2].map((row) => {
+            // Each row = the full set rotated by row*3, duplicated for a seamless loop.
+            const items = platformFeatures.map(
+              (_, i) => platformFeatures[(i + row * 3) % platformFeatures.length],
+            );
+            const loop = [...items, ...items];
+            const anim = row % 2 === 1 ? "marquee-right" : "marquee-left";
+            const dur = 46 + row * 6; // 46s / 52s / 58s — organic, not lockstep
+            return (
+              <div key={row} className="group/marq relative overflow-hidden">
+                <ul
+                  className="flex w-max gap-3 group-hover/marq:[animation-play-state:paused]"
+                  style={{ animation: `${anim} ${dur}s linear infinite` }}
+                >
+                  {loop.map((feature, i) => (
+                    <li key={`${row}-${i}`} className="shrink-0">
+                      <Link
+                        href={feature.href}
+                        className="group flex w-[240px] items-start gap-3 overflow-hidden rounded-xl border border-border bg-card p-4 transition-all hover:border-input hover:shadow-lg sm:w-[280px]"
+                      >
+                        <div
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${feature.color}`}
+                        >
+                          <feature.icon className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="truncate font-semibold text-foreground transition-colors group-hover:text-[#74ddc7]">
+                            {feature.title}
+                          </h3>
+                          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                            {feature.description}
+                          </p>
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+          {/* Edge fades for the premium look */}
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-background to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-background to-transparent" />
         </div>
       </section>
 

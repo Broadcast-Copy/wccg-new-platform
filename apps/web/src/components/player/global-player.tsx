@@ -126,7 +126,7 @@ export function GlobalPlayer() {
   const [playerMode, setPlayerMode] = useState<PlayerMode>("mini");
 
   // Continuous play toggle
-  const [continuousPlay, setContinuousPlay] = useState(false);
+  const [_continuousPlay, setContinuousPlay] = useState(false);
 
   // Point countdown ring
   const [pointProgress, setPointProgress] = useState(0);
@@ -145,7 +145,7 @@ export function GlobalPlayer() {
   }, []);
 
   // Persist continuous play preference
-  const toggleContinuousPlay = useCallback(() => {
+  const _toggleContinuousPlay = useCallback(() => {
     setContinuousPlay((prev) => {
       const next = !prev;
       try {

@@ -44,6 +44,20 @@ export interface PlatformStats {
   reach: number;
 }
 
+/**
+ * Audience segment payload passed to a platform's `syncAudience`.
+ * Mirrors the shape produced by the DSP audience builder; the platform
+ * adapters translate it into each network's custom-audience format.
+ */
+export interface AudienceSegment {
+  id?: string;
+  name?: string;
+  /** Hashed user identifiers (emails/phones) to match against the platform. */
+  identifiers?: string[];
+  /** Targeting attributes used to define the segment. */
+  attributes?: Record<string, unknown>;
+}
+
 // ──────────────────────────── Meta (Facebook / Instagram) ────────────────────────────
 
 export const metaAds = {
@@ -68,7 +82,7 @@ export const metaAds = {
     return { impressions: 0, clicks: 0, conversions: 0, spend: 0, reach: 0 };
   },
 
-  syncAudience: async (segmentData: any): Promise<string> => {
+  syncAudience: async (_segmentData: AudienceSegment): Promise<string> => {
     // TODO: Create Custom Audience via Meta API
     console.log("[Meta] Would sync audience segment");
     return `meta_audience_${Date.now()}`;
@@ -98,7 +112,7 @@ export const tiktokAds = {
     return { impressions: 0, clicks: 0, conversions: 0, spend: 0, reach: 0 };
   },
 
-  syncAudience: async (segmentData: any): Promise<string> => {
+  syncAudience: async (_segmentData: AudienceSegment): Promise<string> => {
     // TODO: POST https://business-api.tiktok.com/open_api/v1.3/dmp/custom_audience/create/
     console.log("[TikTok] Would sync audience segment");
     return `tiktok_audience_${Date.now()}`;
@@ -128,7 +142,7 @@ export const googleAds = {
     return { impressions: 0, clicks: 0, conversions: 0, spend: 0, reach: 0 };
   },
 
-  syncAudience: async (segmentData: any): Promise<string> => {
+  syncAudience: async (_segmentData: AudienceSegment): Promise<string> => {
     // TODO: Google Ads API — UserListService
     console.log("[Google] Would sync audience segment");
     return `google_audience_${Date.now()}`;
@@ -158,7 +172,7 @@ export const snapchatAds = {
     return { impressions: 0, clicks: 0, conversions: 0, spend: 0, reach: 0 };
   },
 
-  syncAudience: async (segmentData: any): Promise<string> => {
+  syncAudience: async (_segmentData: AudienceSegment): Promise<string> => {
     // TODO: POST https://adsapi.snapchat.com/v1/adaccounts/{id}/segments
     console.log("[Snapchat] Would sync audience segment");
     return `snap_audience_${Date.now()}`;
@@ -186,7 +200,7 @@ export const wccgAds = {
     return { impressions: 0, clicks: 0, conversions: 0, spend: 0, reach: 0 };
   },
 
-  syncAudience: async (segmentData: any): Promise<string> => {
+  syncAudience: async (_segmentData: AudienceSegment): Promise<string> => {
     console.log("[WCCG] Audience synced to own inventory");
     return `wccg_audience_${Date.now()}`;
   },

@@ -9,8 +9,6 @@ import {
   Moon,
   Clock,
   Calendar,
-  Plus,
-  X,
   Pencil,
   Save,
 } from "lucide-react";

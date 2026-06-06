@@ -5,23 +5,18 @@ import {
   CalendarCheck,
   Users,
   Plus,
-  Clock,
   CheckCircle2,
-  MessageSquare,
   Phone,
-  Presentation,
-  FileText,
   Target,
   Save,
   ChevronDown,
   ChevronUp,
-  Trash2,
 } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatCard } from "@/components/admin/stat-card";
 import { DetailModal } from "@/components/admin/detail-modal";
 import { StatusBadge } from "@/components/admin/status-badge";
-import { loadOrSeed, persist, genId, formatDate, formatDateTime } from "@/lib/admin-storage";
+import { loadOrSeed, persist, genId, formatDateTime } from "@/lib/admin-storage";
 
 // ---------------------------------------------------------------------------
 // Types

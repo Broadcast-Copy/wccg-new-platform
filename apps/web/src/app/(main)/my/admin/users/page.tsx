@@ -19,7 +19,6 @@ import {
   Search,
   Users,
   BadgeCheck,
-  Palette,
   Loader2,
   RefreshCw,
 } from "lucide-react";

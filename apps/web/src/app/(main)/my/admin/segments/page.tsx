@@ -20,7 +20,6 @@ import {
   Users,
   Loader2,
   Plus,
-  ChevronDown,
   ChevronUp,
   Trash2,
   Target,

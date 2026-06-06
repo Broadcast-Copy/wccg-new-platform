@@ -9,7 +9,7 @@ import Link from "next/link";
 const INACTIVITY_MS = 60 * 60 * 1000; // 1 hour
 
 export function StillListeningModal() {
-  const { isPlaying, pause, resume } = useAudioPlayer();
+  const { isPlaying, pause, resume: _resume } = useAudioPlayer();
   const [show, setShow] = useState(false);
   const [currentShow, setCurrentShow] = useState<string | null>(null);
   const [upNext, setUpNext] = useState<string | null>(null);

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useFormContext, useFieldArray } from "react-hook-form";
+import { useEffect } from "react";
+import { useFormContext } from "react-hook-form";
 import type {
   CampaignFormValues,
   DaypartOrderValues,
@@ -14,15 +14,12 @@ import {
   SATURDAY_DAYPARTS,
   SUNDAY_DAYPARTS,
   MIX_SHOW_RATES,
-  ROS_RATE,
   REMOTE_PACKAGES,
   DUKE_SPORTS,
   PROMOTIONS_PACKAGES,
-  getDaypartsForDay,
   formatHourRange,
   type DayCategory,
   type RateCardDaypart,
-  type RemoteBroadcastPackage,
 } from "@/data/rate-card";
 import { formatCurrency, computeWeeks, generateId } from "@/lib/sales-shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,7 +31,6 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Calendar,
-  Radio,
   Clock,
   DollarSign,
   Check,
@@ -42,7 +38,6 @@ import {
   Trash2,
   Gift,
   Trophy,
-  Copy,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -210,7 +205,7 @@ function FlightVariationTile({
   onRemove: () => void;
   canRemove: boolean;
 }) {
-  const { watch, setValue, register } = useFormContext<CampaignFormValues>();
+  const { watch, setValue, register: _register } = useFormContext<CampaignFormValues>();
   const campaignType = watch("campaignType");
   const variation = watch(`flightVariations.${index}`);
 
@@ -777,7 +772,7 @@ function FlightVariationTile({
 // ===========================================================================
 
 function OnAirPanel() {
-  const { watch, setValue, control } = useFormContext<CampaignFormValues>();
+  const { watch, setValue, control: _control } = useFormContext<CampaignFormValues>();
   const flightVariations = watch("flightVariations");
   const includeMixShows = watch("includeMixShows");
   const mixShowSelections = watch("mixShowSelections");
@@ -1328,7 +1323,7 @@ const DIGITAL_PLACEMENT_OPTIONS = [
 ] as const;
 
 function DigitalPanel() {
-  const { watch, setValue, register } = useFormContext<CampaignFormValues>();
+  const { watch, setValue, register: _register } = useFormContext<CampaignFormValues>();
   const digitalPlacements = watch("digitalPlacements");
   const digitalBudget = watch("digitalBudget");
 

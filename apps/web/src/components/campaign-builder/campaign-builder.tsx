@@ -4,7 +4,6 @@ import { useState, useCallback } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import {
   campaignFormSchema,
@@ -106,7 +105,6 @@ export function CampaignBuilder() {
           {STEP_LABELS.map((label, i) => {
             const isCompleted = i < currentStep;
             const isCurrent = i === currentStep;
-            const isFuture = i > currentStep;
 
             return (
               <div key={label} className="flex items-center">

@@ -152,9 +152,6 @@ const CHANGELOG: ChangelogEntry[] = [
   },
 ];
 
-// Current version (shown in user menu)
-const CURRENT_VERSION = "0.8.0-beta";
-
 // ---------------------------------------------------------------------------
 // Tag Badge
 // ---------------------------------------------------------------------------

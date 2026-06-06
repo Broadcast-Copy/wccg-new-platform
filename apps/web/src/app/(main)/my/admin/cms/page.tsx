@@ -38,6 +38,17 @@ interface SitePage {
   };
 }
 
+/** Raw `cms_pages` row shape as returned by Supabase. */
+interface CmsPageRow {
+  id: string;
+  title?: string | null;
+  slug: string;
+  updated_at?: string | null;
+  status?: string | null;
+  meta_description?: string | null;
+  sections?: SitePage["sections"] | null;
+}
+
 // ---------------------------------------------------------------------------
 // Mock data (kept as fallback)
 // ---------------------------------------------------------------------------
@@ -97,7 +108,7 @@ export default function CmsPage() {
         .order('updated_at', { ascending: false });
       if (!error && data) {
         setPages(
-          data.map((row: any) => ({
+          data.map((row: CmsPageRow) => ({
             id: row.id,
             name: row.title ?? row.slug,
             urlPath: `/${row.slug}`,

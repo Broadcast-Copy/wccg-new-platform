@@ -92,8 +92,6 @@ interface ScheduleConfig {
    CONSTANTS
    ================================================================ */
 
-const AMBER = "#f59e0b";
-
 const OBJECTIVES: { id: Objective; label: string; desc: string; icon: typeof Target }[] = [
   { id: "awareness", label: "Awareness", desc: "Reach as many people as possible", icon: Eye },
   { id: "traffic", label: "Traffic", desc: "Drive website visits", icon: Globe },

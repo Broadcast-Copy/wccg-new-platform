@@ -16,7 +16,7 @@ import { PageHeader } from "@/components/admin/page-header";
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { DataTable, type Column } from "@/components/admin/data-table";
-import { loadOrSeed, persist, formatDate } from "@/lib/admin-storage";
+import { loadOrSeed,} from "@/lib/admin-storage";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,7 +39,7 @@ interface LogEntry {
 // Seed data — a realistic day
 // ---------------------------------------------------------------------------
 
-function generateDayLog(dateStr: string): LogEntry[] {
+function generateDayLog(_dateStr: string): LogEntry[] {
   const entries: LogEntry[] = [];
   let id = 0;
 

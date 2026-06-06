@@ -18,7 +18,6 @@ import {
   Info,
   Lock,
   Megaphone,
-  User,
 } from "lucide-react";
 import {
   WEEKDAY_SHOWS,
@@ -29,7 +28,6 @@ import {
   getDayPart,
   type ShowData,
 } from "@/data/shows";
-import { PROGRAMMING_NOTES } from "@/data/schedule";
 
 // ---------------------------------------------------------------------------
 // Stream channel info

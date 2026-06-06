@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import {
   CalendarDays,
   Plus,
-  Users,
   FileText,
   CheckCircle2,
   Clock,
@@ -17,7 +16,7 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { DetailModal } from "@/components/admin/detail-modal";
 import { TabsNav } from "@/components/admin/tabs-nav";
 import { Button } from "@/components/ui/button";
-import { loadOrSeed, persist, genId, formatDate, formatDateTime } from "@/lib/admin-storage";
+import { loadOrSeed, persist, genId, formatDateTime } from "@/lib/admin-storage";
 
 // ---------------------------------------------------------------------------
 // Types & Seed

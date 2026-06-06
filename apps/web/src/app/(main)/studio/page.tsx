@@ -2,7 +2,6 @@ import {
   Clapperboard,
   Mic,
   Video,
-  Music,
   Headphones,
   Radio,
   Palette,

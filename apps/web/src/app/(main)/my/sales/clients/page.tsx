@@ -14,11 +14,8 @@ import {
   ChevronDown,
   ChevronUp,
   MessageSquare,
-  Clock,
   TrendingUp,
   Save,
-  X,
-  Pencil,
 } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatCard } from "@/components/admin/stat-card";

@@ -7,14 +7,13 @@ import {
   TrendingUp,
   Users,
   Trophy,
-  ChevronDown,
 } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { DataTable, type Column } from "@/components/admin/data-table";
 import { TabsNav } from "@/components/admin/tabs-nav";
-import { loadOrSeed, persist, genId, formatCurrency } from "@/lib/admin-storage";
+import { loadOrSeed, genId, formatCurrency } from "@/lib/admin-storage";
 
 // ---------------------------------------------------------------------------
 // Types

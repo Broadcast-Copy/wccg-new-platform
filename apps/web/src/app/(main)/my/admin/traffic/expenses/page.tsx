@@ -7,7 +7,6 @@ import {
   DollarSign,
   TrendingUp,
   Receipt,
-  Building,
   Wrench,
   Laptop,
   Plane,

@@ -7,13 +7,9 @@ import {
   Coins,
   Send,
   ShoppingCart,
-  TrendingUp,
-  Gift,
   ChevronDown,
   ArrowRight,
   Sparkles,
-  Trophy,
-  Calendar,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -78,7 +74,7 @@ export default function VendorTokensPage() {
   const [distributions, setDistributions] = useState<DistributionEntry[]>([]);
   const [totalPurchased, setTotalPurchased] = useState(0);
   const [totalDistributed, setTotalDistributed] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
   // Deploy form state
   const [deployEmail, setDeployEmail] = useState("");

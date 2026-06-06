@@ -76,7 +76,7 @@ function getWhatsOnNow() {
     const parts = show.timeSlot.split(" - ");
     if (parts.length !== 2) continue;
     const start = parseTime(parts[0]);
-    let end = parseTime(parts[1]);
+    const end = parseTime(parts[1]);
 
     if (parts[1].trim().toLowerCase() === "midnight") {
       if (currentMinutes >= start) return show;

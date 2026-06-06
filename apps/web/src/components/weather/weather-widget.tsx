@@ -12,7 +12,6 @@ import {
   Wind,
   Droplets,
   Thermometer,
-  Eye,
   ArrowUp,
   ArrowDown,
   Loader2,
