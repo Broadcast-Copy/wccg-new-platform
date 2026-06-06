@@ -541,22 +541,25 @@ export function ProductionMixshows({
       queueMicrotask(() => { setSection("onair"); setInYear(true); setGroupBy("dj"); setPath([selfDjId]); });
       return;
     }
-    if (slots.length === 0) return;
     if (focusDjId) {
-      // Only focus a DJ that actually has slots this schedule.
-      const hasSlots = slots.some((s) => s.dj_id === focusDjId);
-      if (!hasSlots) return;
+      // The By-DJ folder is seeded for every active DJ (see `djFolders`), so land
+      // straight in it as soon as the roster OR schedule has loaded — even if this
+      // DJ has no slot this week. (Previously this required a slot, which stranded
+      // the admin at the root when they clicked "Media" for a DJ with nothing
+      // scheduled this week — the "I get lost" report.)
+      if (djs.length === 0 && slots.length === 0) return; // wait for the first load
       focusedRef.current = true;
       queueMicrotask(() => { setSection("onair"); setInYear(true); setGroupBy("dj"); setPath([focusDjId]); });
       return;
     }
+    if (slots.length === 0) return;
     if (focusSlotId) {
       const slot = slots.find((s) => s.id === focusSlotId);
       if (!slot) return;
       focusedRef.current = true;
       queueMicrotask(() => { setSection("onair"); setInYear(true); setGroupBy("day"); setPath([slot.day_of_week, slot.id]); });
     }
-  }, [selfDjId, focusDjId, focusSlotId, slots]);
+  }, [selfDjId, focusDjId, focusSlotId, slots, djs]);
 
   // Drops keyed by slot+code for quick lookup
   const dropByKey = useMemo(() => {

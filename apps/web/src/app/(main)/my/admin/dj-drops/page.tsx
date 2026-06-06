@@ -546,14 +546,22 @@ function SlotCard({
                 return (
                   <tr key={f.code} className="border-b border-border/40 last:border-0">
                     <td className="px-5 py-2.5">
-                      <div className="flex items-center gap-2">
+                      <Link
+                        href={mediaHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`Open ${sv.dj?.display_name ?? "this DJ"}'s media folder`}
+                        className="group inline-flex items-center gap-2 transition-colors hover:text-[#7401df]"
+                      >
                         <FileAudio
                           className={`h-3.5 w-3.5 ${
                             f.uploaded ? "text-[#74ddc7]" : "text-muted-foreground"
-                          }`}
+                          } group-hover:text-[#7401df]`}
                         />
-                        <span className="font-mono text-xs">{f.code}</span>
-                      </div>
+                        <span className="font-mono text-xs underline-offset-2 group-hover:underline">
+                          {f.code}
+                        </span>
+                      </Link>
                     </td>
                     <td className="px-3 py-2.5">
                       <span

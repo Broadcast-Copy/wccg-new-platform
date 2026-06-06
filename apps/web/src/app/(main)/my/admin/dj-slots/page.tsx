@@ -431,12 +431,18 @@ export default function AdminDjSlotsPage() {
                                 key={code}
                                 className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs"
                               >
-                                <span className="inline-flex items-center gap-1 font-mono">
+                                <Link
+                                  href={mediaHref}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Open this DJ's media folder"
+                                  className="group inline-flex items-center gap-1 font-mono transition-colors hover:text-[#7401df]"
+                                >
                                   <FileAudio
-                                    className={`h-3 w-3 ${uploaded ? "text-[#74ddc7]" : "text-muted-foreground"}`}
+                                    className={`h-3 w-3 ${uploaded ? "text-[#74ddc7]" : "text-muted-foreground"} group-hover:text-[#7401df]`}
                                   />
-                                  {code}
-                                </span>
+                                  <span className="underline-offset-2 group-hover:underline">{code}</span>
+                                </Link>
                                 <span
                                   className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${meta.cls}`}
                                 >
