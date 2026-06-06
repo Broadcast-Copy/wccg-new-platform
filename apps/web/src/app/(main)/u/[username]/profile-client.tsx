@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/card";
+import { MessageButton } from "@/components/messaging/message-button";
 
 // ---------------------------------------------------------------------------
 // Row shapes (small, strict — no `any`). Columns mirror the queries below.
@@ -468,7 +469,7 @@ export default function ProfileClient() {
               )}
             </div>
 
-            {/* Header actions: Follow control + (for DJs) a link to the DJ page. */}
+            {/* Header actions: Follow + Message + (for DJs) a link to the DJ page. */}
             <div className="flex flex-wrap items-center gap-2">
               {canFollow && (
                 <FollowButton
@@ -477,6 +478,14 @@ export default function ProfileClient() {
                   pending={followPending}
                   onFollow={handleFollow}
                   onUnfollow={handleUnfollow}
+                />
+              )}
+              {viewerId && viewerId !== profile.id && (
+                <MessageButton
+                  recipientId={profile.id}
+                  recipientName={name}
+                  variant="button"
+                  label="Message"
                 />
               )}
               {dj?.slug && (

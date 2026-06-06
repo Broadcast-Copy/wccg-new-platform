@@ -41,6 +41,24 @@ RewriteRule ^wiki/[^/]+/?$ /wiki/_placeholder.html [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^u/[^/]+/?$ /u/_placeholder.html [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^djs/[^/]+/?$ /djs/_placeholder.html [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^hosts/[^/]+/?$ /hosts/_placeholder.html [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^shows/[^/]+/?$ /shows/_placeholder.html [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^events/[^/]+/?$ /events/_placeholder.html [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^my/events/[^/]+/?$ /my/events/_placeholder.html [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^places/[^/]+/?$ /places/_placeholder.html [L]
 
 # Fallback to 404 page
 ErrorDocument 404 /404.html

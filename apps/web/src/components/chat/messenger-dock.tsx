@@ -668,8 +668,8 @@ export function MessengerDock() {
               </div>
               <p className="text-sm font-semibold text-foreground">No messages yet</p>
               <p className="text-xs text-muted-foreground">
-                Follow members from their profiles — once you follow each other you
-                can start a direct conversation here.
+                Follow members to keep them here as contacts — you can message any
+                member from their profile, and your conversations show up here.
               </p>
               <Link
                 href="/listeners"
