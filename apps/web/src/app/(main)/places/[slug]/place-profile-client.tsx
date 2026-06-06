@@ -3,98 +3,188 @@
 /**
  * Place profile — Phase B3.
  *
- *   - Hero with name, category, rating
- *   - Geo-validated check-in CTA (+50 WP, server-enforced)
- *   - Reviews list
+ *   - Hero with name, category, address
+ *   - Contact details (phone, email, website) + location map
+ *   - Check-in CTA (coming soon — no check-in table yet)
  *   - Wiki link (lazy-resolved to /wiki/<slug>)
+ *
+ * Data: reads `directory_listings` directly from Supabase in the browser
+ * (no API server). Reviews and check-ins are disabled because the backing
+ * `place_reviews` / `place_check_ins` tables do not exist yet.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, MapPin, Star, BookOpen } from "lucide-react";
-import { apiClient } from "@/lib/api-client";
+import { ArrowLeft, MapPin, Phone, Mail, Globe, BookOpen } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
 interface Place {
   id: string;
   slug: string;
   name: string;
-  category: string;
-  subcategory: string | null;
+  category: string | null;
   description: string | null;
   address: string | null;
   city: string | null;
+  state: string | null;
+  zipCode: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  imageUrl: string | null;
   lat: number | null;
   lng: number | null;
-  coverUrl: string | null;
-  ratingAvg: number | null;
-  ratingCount: number;
-  checkInCount: number;
-  priceTier: number | null;
-  hours: Record<string, { open: string; close: string }> | null;
-  wikiSlug: string | null;
 }
 
-interface Review {
+/** Shape of the columns we read from `directory_listings`. */
+interface DirectoryRow {
   id: string;
-  rating: number;
-  body: string | null;
-  photo_urls: string[] | null;
-  created_at: string;
-  user_id: string;
+  slug: string | null;
+  name: string | null;
+  category: string | null;
+  description: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  image_url: string | null;
+  lat: number | null;
+  lng: number | null;
+}
+
+function mapRow(row: DirectoryRow): Place {
+  return {
+    id: row.id,
+    slug: row.slug ?? row.id,
+    name: row.name ?? "Untitled",
+    category: row.category,
+    description: row.description,
+    address: row.address,
+    city: row.city,
+    state: row.state,
+    zipCode: row.zip_code,
+    phone: row.phone,
+    email: row.email,
+    website: row.website,
+    imageUrl: row.image_url,
+    lat: row.lat,
+    lng: row.lng,
+  };
+}
+
+function formatLocality(place: Place): string {
+  const cityState = [place.city, place.state].filter(Boolean).join(", ");
+  return [cityState, place.zipCode].filter(Boolean).join(" ").trim();
 }
 
 export default function PlaceProfileClient() {
   const params = useParams();
   const slug = (Array.isArray(params?.slug) ? params.slug[0] : (params?.slug as string)) ?? "";
   const [place, setPlace] = useState<Place | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  // Lazy init: start in the loading state only when there is a slug to fetch.
+  const [loading, setLoading] = useState(() => slug !== "");
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [checkInResult, setCheckInResult] = useState<string | null>(null);
+  const mapDivRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<unknown>(null);
 
+  // Fetch the listing by slug. Every setState runs post-await behind an
+  // `active` guard — never synchronously in the effect body.
   useEffect(() => {
-    apiClient<Place>(`/places/${slug}`).then(setPlace).catch((e) => setError(e.message));
-    apiClient<Review[]>(`/places/${slug}/reviews`).then(setReviews).catch(() => {});
+    if (!slug) return;
+    let active = true;
+    const supabase = createClient();
+
+    (async () => {
+      const { data, error: queryError } = await supabase
+        .from("directory_listings")
+        .select(
+          "id, slug, name, category, description, address, city, state, zip_code, phone, email, website, image_url, lat, lng",
+        )
+        .eq("slug", slug)
+        .eq("status", "ACTIVE")
+        .maybeSingle();
+
+      if (!active) return;
+      if (queryError) {
+        setError(queryError.message);
+        setPlace(null);
+      } else {
+        setPlace(data ? mapRow(data as DirectoryRow) : null);
+      }
+      setLoading(false);
+    })();
+
+    return () => {
+      active = false;
+    };
   }, [slug]);
 
-  const onCheckIn = () => {
-    if (!navigator?.geolocation) {
-      setError("Your browser doesn't support geolocation.");
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    setCheckInResult(null);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const r = await apiClient<{
-            ok: boolean;
-            pointsAwarded: number;
-            distanceMeters: number;
-          }>(`/places/${slug}/check-in`, {
-            method: "POST",
-            body: JSON.stringify({
-              lat: pos.coords.latitude,
-              lng: pos.coords.longitude,
-            }),
-          });
-          setCheckInResult(`✓ Checked in. +${r.pointsAwarded} WP. (${r.distanceMeters}m away)`);
-        } catch (e) {
-          setError((e as Error).message);
-        } finally {
-          setBusy(false);
-        }
-      },
-      (err) => {
-        setBusy(false);
-        setError(err.message);
-      },
-      { enableHighAccuracy: true, timeout: 10_000 },
-    );
-  };
+  // Lazy-load MapLibre GL from CDN and drop a marker once we have coordinates.
+  useEffect(() => {
+    if (typeof window === "undefined" || !mapDivRef.current) return;
+    if (!place || place.lat == null || place.lng == null) return;
+    const lat = place.lat;
+    const lng = place.lng;
+    let cancelled = false;
+
+    (async () => {
+      if (!document.getElementById("maplibre-css")) {
+        const link = document.createElement("link");
+        link.id = "maplibre-css";
+        link.rel = "stylesheet";
+        link.href = "https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css";
+        document.head.appendChild(link);
+      }
+      // @ts-expect-error — global injection via CDN
+      if (!window.maplibregl) {
+        await new Promise<void>((res, rej) => {
+          const s = document.createElement("script");
+          s.src = "https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.js";
+          s.onload = () => res();
+          s.onerror = () => rej(new Error("maplibre load failed"));
+          document.head.appendChild(s);
+        });
+      }
+      if (cancelled || !mapDivRef.current) return;
+      // @ts-expect-error — CDN global
+      const ml = window.maplibregl;
+      const map = new ml.Map({
+        container: mapDivRef.current,
+        style: {
+          version: 8,
+          sources: {
+            osm: {
+              type: "raster",
+              tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+              tileSize: 256,
+              attribution: "© OpenStreetMap contributors",
+            },
+          },
+          layers: [{ id: "osm", type: "raster", source: "osm" }],
+        },
+        center: [lng, lat],
+        zoom: 14,
+      });
+      new ml.Marker({ color: "#dc2626" }).setLngLat([lng, lat]).addTo(map);
+      mapRef.current = map;
+    })();
+
+    return () => {
+      cancelled = true;
+      // @ts-expect-error — runtime ref
+      mapRef.current?.remove?.();
+      mapRef.current = null;
+    };
+  }, [place]);
+
+  if (loading) {
+    return <div className="py-8 text-sm text-muted-foreground">Loading…</div>;
+  }
 
   if (error && !place) {
     return (
@@ -106,11 +196,29 @@ export default function PlaceProfileClient() {
       </div>
     );
   }
+
   if (!place) {
-    return <div className="py-8 text-sm text-muted-foreground">Loading…</div>;
+    return (
+      <div className="space-y-4 py-8">
+        <h1 className="text-2xl font-bold text-foreground">Place not found</h1>
+        <p className="text-sm text-muted-foreground">
+          We couldn&apos;t find a listing for “{slug}”. It may have been removed.
+        </p>
+        <Link href="/places" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Back to places
+        </Link>
+      </div>
+    );
   }
 
-  const wikiHref = place.wikiSlug ? `/wiki/${place.wikiSlug}` : `/wiki/${slug}`;
+  const wikiHref = `/wiki/${slug}`;
+  const locality = formatLocality(place);
+  const hasCoords = place.lat != null && place.lng != null;
+  const websiteHref = place.website
+    ? /^https?:\/\//i.test(place.website)
+      ? place.website
+      : `https://${place.website}`
+    : null;
 
   return (
     <article className="space-y-8">
@@ -123,9 +231,7 @@ export default function PlaceProfileClient() {
 
       <header className="space-y-3">
         <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-          <span>{place.category}</span>
-          {place.subcategory && <span>· {place.subcategory}</span>}
-          {place.priceTier && <span>· {"$".repeat(place.priceTier)}</span>}
+          {place.category && <span>{place.category}</span>}
         </div>
         <h1 className="text-3xl font-black tracking-tight text-foreground md:text-5xl">
           {place.name}
@@ -134,77 +240,89 @@ export default function PlaceProfileClient() {
           <p className="max-w-3xl text-base text-muted-foreground">{place.description}</p>
         )}
         <div className="flex flex-wrap items-center gap-4 text-sm">
-          {place.address && (
+          {(place.address || locality) && (
             <span className="inline-flex items-center gap-1 text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5" /> {place.address}
-              {place.city ? `, ${place.city}` : ""}
+              <MapPin className="h-3.5 w-3.5" />
+              {[place.address, locality].filter(Boolean).join(", ")}
             </span>
           )}
-          {place.ratingAvg ? (
-            <span className="inline-flex items-center gap-1 text-foreground">
-              <Star className="h-3.5 w-3.5 fill-[#f59e0b] text-[#f59e0b]" />
-              <span className="font-semibold">{place.ratingAvg.toFixed(1)}</span>
-              <span className="text-muted-foreground">({place.ratingCount} reviews)</span>
-            </span>
-          ) : null}
         </div>
       </header>
 
-      {/* Check-in CTA */}
+      {/* Hero image */}
+      {place.imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={place.imageUrl}
+          alt={place.name}
+          className="h-64 w-full rounded-2xl border border-border object-cover md:h-80"
+        />
+      )}
+
+      {/* Contact details */}
+      {(place.phone || place.email || websiteHref) && (
+        <section className="grid gap-3 rounded-2xl border border-border bg-card p-6 sm:grid-cols-3">
+          {place.phone && (
+            <a
+              href={`tel:${place.phone}`}
+              className="inline-flex items-center gap-2 text-sm text-foreground hover:text-[#74ddc7]"
+            >
+              <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="truncate">{place.phone}</span>
+            </a>
+          )}
+          {place.email && (
+            <a
+              href={`mailto:${place.email}`}
+              className="inline-flex items-center gap-2 text-sm text-foreground hover:text-[#74ddc7]"
+            >
+              <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="truncate">{place.email}</span>
+            </a>
+          )}
+          {websiteHref && (
+            <a
+              href={websiteHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm text-foreground hover:text-[#74ddc7]"
+            >
+              <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="truncate">{place.website}</span>
+            </a>
+          )}
+        </section>
+      )}
+
+      {/* Location map */}
+      {hasCoords && (
+        <section className="space-y-2">
+          <h2 className="text-xl font-bold">Location</h2>
+          <div
+            ref={mapDivRef}
+            className="h-64 w-full overflow-hidden rounded-2xl border border-border bg-muted"
+          />
+        </section>
+      )}
+
+      {/* Check-in CTA — coming soon (no check-in table yet). */}
       <section className="rounded-2xl border border-border bg-gradient-to-br from-[#0c1f12] to-[#0a1a14] p-6 text-white">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold">Check in for +50 WP</h2>
             <p className="mt-1 text-sm text-white/70">
-              You need to be within 150 meters. Up to 3 check-ins per day.
+              Geo-validated check-ins are coming soon. You&apos;ll earn Watt Points for
+              visiting verified local spots.
             </p>
-            {checkInResult && (
-              <p className="mt-2 text-sm font-semibold text-[#74ddc7]">{checkInResult}</p>
-            )}
-            {error && <p className="mt-2 text-sm text-red-300">{error}</p>}
           </div>
           <Button
             size="lg"
-            onClick={onCheckIn}
-            disabled={busy}
-            className="rounded-full bg-white px-6 font-bold text-black hover:bg-white/90 disabled:opacity-60"
+            disabled
+            className="rounded-full bg-white px-6 font-bold text-black disabled:opacity-60"
           >
-            {busy ? "Locating…" : "Check in here"}
+            Coming soon
           </Button>
         </div>
-      </section>
-
-      {/* Reviews */}
-      <section className="space-y-3">
-        <header className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">Reviews</h2>
-          <span className="text-xs text-muted-foreground">{reviews.length} total</span>
-        </header>
-        {reviews.length === 0 && (
-          <p className="rounded-xl border border-dashed border-border bg-card/50 p-6 text-center text-sm text-muted-foreground">
-            Be the first to review this place — earn +20 WP.
-          </p>
-        )}
-        <ul className="space-y-3">
-          {reviews.map((r) => (
-            <li key={r.id} className="rounded-xl border border-border bg-card p-4">
-              <div className="flex items-center gap-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`h-3.5 w-3.5 ${
-                      i < r.rating ? "fill-[#f59e0b] text-[#f59e0b]" : "text-muted-foreground/30"
-                    }`}
-                  />
-                ))}
-                <span className="ml-2 text-xs text-muted-foreground">
-                  {new Date(r.created_at).toLocaleDateString()}
-                </span>
-              </div>
-              {r.body && <p className="mt-2 text-sm text-foreground">{r.body}</p>}
-            </li>
-          ))}
-        </ul>
       </section>
 
       {/* Wiki link */}

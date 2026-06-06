@@ -17,25 +17,60 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Heart, Loader2, Radio, Tv, Trash2, MapPin, ShoppingBag, Calendar } from "lucide-react";
 
 type TargetType = "stream" | "show" | "place" | "product" | "event";
 
-interface FavoriteTarget {
-  name: string;
-  slug: string;
-  imageUrl: string | null;
+/** Row shape for the `user_favorites` table (migration 006). */
+interface UserFavoriteRow {
+  id: string;
+  user_id: string;
+  item_type: string;
+  item_id: string;
+  title: string | null;
+  created_at: string;
 }
 
 interface Favorite {
   id: string;
-  userId: string;
   targetType: TargetType;
-  targetId: string | null;
-  target: FavoriteTarget | null;
+  targetId: string;
+  name: string;
   createdAt: string;
+}
+
+/**
+ * Normalize a free-text `item_type` (consumers write "stream", "STREAM",
+ * "show", "host", …) into one of the UI's tab categories. Unknown types
+ * (e.g. "host", "podcast", "episode") fall back to "show" so they still
+ * render under the "All" tab instead of being dropped.
+ */
+function toTargetType(itemType: string): TargetType {
+  switch (itemType.toLowerCase()) {
+    case "stream":
+      return "stream";
+    case "place":
+      return "place";
+    case "product":
+      return "product";
+    case "event":
+      return "event";
+    default:
+      return "show";
+  }
+}
+
+/** Map a raw `user_favorites` row into the view model the UI renders. */
+function mapRow(row: UserFavoriteRow): Favorite {
+  return {
+    id: row.id,
+    targetType: toTargetType(row.item_type),
+    targetId: row.item_id,
+    name: row.title?.trim() || row.item_id,
+    createdAt: row.created_at,
+  };
 }
 
 function FavoriteImage({
@@ -90,16 +125,18 @@ function FavoriteImage({
 function FavoriteCard({
   favorite,
   onRemoved,
+  onRestore,
 }: {
   favorite: Favorite;
   onRemoved: (id: string) => void;
+  onRestore: (favorite: Favorite) => void;
 }) {
   const [removing, setRemoving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const name = favorite.target?.name ?? "Unknown";
-  const slug = favorite.target?.slug ?? "";
-  const imageUrl = favorite.target?.imageUrl ?? null;
+  const name = favorite.name;
+  const slug = favorite.targetId;
+  const imageUrl: string | null = null;
   const hrefMap: Record<TargetType, string> = {
     stream: `/shows?stream=${slug}`,
     show: `/shows/${slug}`,
@@ -111,15 +148,30 @@ function FavoriteCard({
 
   const handleRemove = async () => {
     setRemoving(true);
+    // Optimistically remove from the list, then delete server-side.
+    onRemoved(favorite.id);
+    setDialogOpen(false);
     try {
-      await apiClient(`/favorites/${favorite.id}`, { method: "DELETE" });
-      onRemoved(favorite.id);
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not signed in");
+
+      const { error } = await supabase
+        .from("user_favorites")
+        .delete()
+        .eq("id", favorite.id)
+        .eq("user_id", user.id);
+      if (error) throw error;
+
       toast.success(`Removed ${name} from favorites`);
     } catch {
-      // Silently handle — API endpoint may not exist yet.
+      // Roll back the optimistic removal and let the user retry.
+      onRestore(favorite);
+      toast.error(`Could not remove ${name}. Please try again.`);
     } finally {
       setRemoving(false);
-      setDialogOpen(false);
     }
   };
 
@@ -246,33 +298,90 @@ function EmptyState({ tab }: { tab: string }) {
 export function FavoritesList() {
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const fetchFavorites = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await apiClient<Favorite[]>("/favorites");
-      setFavorites(data);
-    } catch {
-      // Silently handle — API endpoint may not exist yet.
-      // The empty state UI will display.
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetchFavorites();
-  }, [fetchFavorites]);
+    let active = true;
 
-  const handleRemoved = (id: string) => {
+    (async () => {
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          if (active) {
+            setFavorites([]);
+            setLoading(false);
+          }
+          return;
+        }
+
+        const { data, error: queryError } = await supabase
+          .from("user_favorites")
+          .select("id, user_id, item_type, item_id, title, created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (!active) return;
+
+        if (queryError) {
+          setError(true);
+          setFavorites([]);
+        } else {
+          setFavorites(((data ?? []) as UserFavoriteRow[]).map(mapRow));
+        }
+      } catch {
+        if (active) {
+          setError(true);
+          setFavorites([]);
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleRemoved = useCallback((id: string) => {
     setFavorites((prev) => prev.filter((f) => f.id !== id));
-  };
+  }, []);
+
+  const handleRestore = useCallback((favorite: Favorite) => {
+    setFavorites((prev) =>
+      prev.some((f) => f.id === favorite.id)
+        ? prev
+        : [favorite, ...prev].sort((a, b) =>
+            b.createdAt.localeCompare(a.createdAt),
+          ),
+    );
+  }, []);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
         <span className="ml-2 text-muted-foreground">Loading favorites...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg border p-8">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <Heart className="size-10 text-muted-foreground/50" />
+          <div>
+            <p className="font-medium">We couldn&rsquo;t load your favorites.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Please refresh the page to try again.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -313,6 +422,7 @@ export function FavoritesList() {
                   key={fav.id}
                   favorite={fav}
                   onRemoved={handleRemoved}
+                  onRestore={handleRestore}
                 />
               ))}
             </div>

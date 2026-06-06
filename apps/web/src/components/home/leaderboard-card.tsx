@@ -4,16 +4,26 @@
  * LeaderboardCard — Phase A5.
  *
  * Public ranking is the second-cheapest engagement loop after streaks.
- * Even just seeing "you're #47 this week" lifts return rate.
+ * Even just seeing "you're #47" lifts return rate.
  *
- * Renders top-5 + the current user's rank from /points/leaderboard.
- * Period switcher: weekly (default) → monthly → all-time.
+ * Data layer: Supabase RPC `points_leaderboard(p_limit)` (SECURITY DEFINER,
+ * public) returns the global top earners — rank / user_id / display_name /
+ * avatar_url / balance — bypassing the own-read RLS on `user_points` while
+ * exposing only non-PII aggregate columns. The community-wide total is read
+ * from `community_points_total()`.
+ *
+ * Note on the period switcher: the RPC ranks by all-time balance only — there
+ * is no per-week / per-month server aggregation. The switcher is kept as a
+ * visual affordance, but every selection shows the same all-time ranking
+ * rather than fabricating period numbers the server doesn't track.
  */
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { Crown, Trophy } from "lucide-react";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
+
+const supabase = createClient();
 
 type Period = "weekly" | "monthly" | "alltime";
 
@@ -25,10 +35,21 @@ interface Entry {
   pointsEarned: number;
 }
 
-interface LeaderboardResponse {
-  period: Period;
-  top: Entry[];
-  me: { rank: number; pointsEarned: number } | null;
+/** Shape of a single row returned by the points_leaderboard RPC. */
+interface LeaderboardRow {
+  rank: number;
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  balance: number | null;
+}
+
+type Status = "loading" | "ready" | "error";
+
+interface ViewState {
+  status: Status;
+  entries: Entry[];
+  communityTotal: number | null;
 }
 
 const periodLabels: Record<Period, string> = {
@@ -37,32 +58,72 @@ const periodLabels: Record<Period, string> = {
   alltime: "All time",
 };
 
+const INITIAL_VIEW: ViewState = {
+  status: "loading",
+  entries: [],
+  communityTotal: null,
+};
+
 export function LeaderboardCard() {
-  const [period, setPeriod] = useState<Period>("weekly");
-  const [data, setData] = useState<LeaderboardResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const [period, setPeriod] = useState<Period>("alltime");
+  const [view, setView] = useState<ViewState>(INITIAL_VIEW);
 
+  // Fetch the global ranking once. The period switcher is display-only (see
+  // file header) so it is intentionally NOT a dependency — re-selecting a
+  // period must not re-query, because every period maps to the same data.
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    apiClient<LeaderboardResponse>(`/points/leaderboard?period=${period}&limit=5`)
-      .then((r) => {
-        if (!cancelled) setData(r);
-      })
-      .catch((e) => {
-        if (!cancelled) setError(e.message ?? "Couldn't load leaderboard");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [period]);
+    let active = true;
 
-  const top = useMemo(() => data?.top ?? [], [data]);
+    async function load() {
+      const [leaderboardRes, totalRes] = await Promise.all([
+        supabase.rpc("points_leaderboard", { p_limit: 10 }),
+        supabase.rpc("community_points_total"),
+      ]);
+
+      if (!active) return;
+
+      if (leaderboardRes.error) {
+        setView({ status: "error", entries: [], communityTotal: null });
+        return;
+      }
+
+      const rows = (leaderboardRes.data ?? []) as LeaderboardRow[];
+      const entries: Entry[] = rows.map((r) => ({
+        rank: Number(r.rank),
+        userId: r.user_id,
+        displayName: r.display_name ?? "Listener",
+        avatarUrl: r.avatar_url,
+        pointsEarned: Number(r.balance ?? 0),
+      }));
+
+      // community_points_total() returns a single bigint scalar.
+      const communityTotal =
+        !totalRes.error && totalRes.data != null
+          ? Number(totalRes.data)
+          : null;
+
+      setView({ status: "ready", entries, communityTotal });
+    }
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const top = useMemo(() => view.entries, [view.entries]);
+
+  // The current user's own row, only when they're inside the returned top set.
+  // We never invent a rank for someone outside the top — that would imply
+  // server state we don't have.
+  const me = useMemo(
+    () => (user ? top.find((e) => e.userId === user.id) ?? null : null),
+    [top, user],
+  );
+
+  const loading = view.status === "loading";
+  const error = view.status === "error";
 
   return (
     <section
@@ -96,18 +157,14 @@ export function LeaderboardCard() {
         {loading && Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} rank={i + 1} />)}
         {!loading && error && (
           <li className="px-5 py-6 text-center text-sm text-muted-foreground">
-            {/* 401 just means the user isn't logged in yet — soft nudge */}
-            <Link href="/login" className="font-semibold text-[#74ddc7] hover:underline">
-              Sign in
-            </Link>{" "}
-            to see the leaderboard.
+            Couldn&apos;t load the leaderboard. Please try again later.
           </li>
         )}
         {!loading &&
           !error &&
           top.length === 0 && (
             <li className="px-5 py-6 text-center text-sm text-muted-foreground">
-              Nobody's earned yet this {period === "weekly" ? "week" : period === "monthly" ? "month" : "period"}. Be the first.
+              Nobody&apos;s earned yet. Be the first.
             </li>
           )}
         {!loading &&
@@ -143,14 +200,23 @@ export function LeaderboardCard() {
           ))}
       </ol>
 
-      {data?.me && (
+      {me && (
         <footer className="flex items-center justify-between border-t border-border bg-muted/40 px-5 py-3 text-sm">
           <span className="font-semibold text-muted-foreground">
-            You're #{data.me.rank.toLocaleString()}
+            You&apos;re #{me.rank.toLocaleString()}
           </span>
           <span className="font-bold tabular-nums text-foreground">
-            {data.me.pointsEarned.toLocaleString()} WP
+            {me.pointsEarned.toLocaleString()} WP
           </span>
+        </footer>
+      )}
+
+      {!loading && !error && view.communityTotal !== null && view.communityTotal > 0 && (
+        <footer className="border-t border-border px-5 py-3 text-center text-xs text-muted-foreground">
+          <span className="font-semibold text-foreground tabular-nums">
+            {view.communityTotal.toLocaleString()}
+          </span>{" "}
+          WP earned by the community
         </footer>
       )}
     </section>

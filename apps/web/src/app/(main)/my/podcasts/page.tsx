@@ -19,8 +19,6 @@ import {
   Video,
   Radio,
   Camera,
-  MoreHorizontal,
-  Settings,
   ExternalLink,
 } from "lucide-react";
 import {
@@ -56,7 +54,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { LoginRequired } from "@/components/auth/login-required";
 
@@ -166,6 +164,17 @@ const INITIAL_EPISODE_FORM: EpisodeFormData = {
 const SERIES_KEY = "wccg_podcast_series";
 const EPISODES_KEY = "wccg_podcast_episodes";
 
+/** Browser-guarded one-shot read of the local episodes map (for lazy init). */
+function readLocalEpisodes(): Record<string, PodcastEpisode[]> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(EPISODES_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, PodcastEpisode[]>) : {};
+  } catch {
+    return {};
+  }
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────
 
 function formatDate(dateStr: string): string {
@@ -214,6 +223,57 @@ function genId(): string {
   return crypto.randomUUID?.() ?? `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// ─── Supabase ↔ podcast mapping ────────────────────────────────────────
+//
+// Podcasts are rows in the flat `dj_mixes` table with item_type='podcast'.
+// Each row maps to one PodcastSeries card. Ownership / RLS for writes is keyed
+// on `uploader_id = auth.uid()` (see 002_dj_mixes.sql), so we list, update and
+// delete by uploader_id — this matches exactly what the signed-in creator is
+// allowed to mutate and works even when the creator has no `djs` row.
+//
+// The Series → Episodes hierarchy in the UI has no backing table (dj_mixes is
+// flat: no series/episode parent-child, subscriber, category or language
+// columns). Episodes therefore remain a local-only convenience layer; only the
+// series list/create/edit/delete are backed by Supabase.
+
+/** Shape of the `dj_mixes` columns this page reads. */
+interface DjMixRow {
+  id: string;
+  title: string;
+  description: string | null;
+  genre: string | null;
+  tags: string[] | null;
+  cover_image_url: string | null;
+  is_published: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+/** Columns selected for podcast rows. */
+const DJ_MIX_PODCAST_COLUMNS =
+  "id, title, description, genre, tags, cover_image_url, is_published, created_at, updated_at";
+
+/** Map a `dj_mixes` podcast row to the PodcastSeries shape the UI renders. */
+function mapRowToSeries(row: DjMixRow): PodcastSeries {
+  const created = row.created_at ?? new Date().toISOString();
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    // dj_mixes has no category/language columns — derive a single-genre
+    // category and default language so the card renders without inventing data.
+    category: row.genre,
+    language: "en",
+    coverImageUrl: row.cover_image_url,
+    tags: row.tags ?? [],
+    status: row.is_published === false ? "DRAFT" : "ACTIVE",
+    episodeCount: 0,
+    subscriberCount: 0,
+    createdAt: created,
+    updatedAt: row.updated_at ?? created,
+  };
+}
+
 // ─── Component ─────────────────────────────────────────────────────────
 
 export default function MyPodcastsPage() {
@@ -236,10 +296,11 @@ function MyPodcastsContent() {
   const [loadingSeries, setLoadingSeries] = useState(true);
   const [expandedSeriesId, setExpandedSeriesId] = useState<string | null>(null);
 
-  // Episodes state (keyed by series ID)
+  // Episodes state (keyed by series ID). Seeded once from local storage via a
+  // lazy initializer so we never setState synchronously inside an effect.
   const [episodesBySeriesId, setEpisodesBySeriesId] = useState<
     Record<string, PodcastEpisode[]>
-  >({});
+  >(readLocalEpisodes);
   const [loadingEpisodes, setLoadingEpisodes] = useState<
     Record<string, boolean>
   >({});
@@ -283,14 +344,10 @@ function MyPodcastsContent() {
     } catch { /* quota exceeded */ }
   }, []);
 
-  const loadLocalEpisodes = useCallback((): Record<string, PodcastEpisode[]> => {
-    try {
-      const raw = localStorage.getItem(EPISODES_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  }, []);
+  const loadLocalEpisodes = useCallback(
+    (): Record<string, PodcastEpisode[]> => readLocalEpisodes(),
+    [],
+  );
 
   const saveLocalEpisodes = useCallback(
     (data: Record<string, PodcastEpisode[]>) => {
@@ -312,13 +369,25 @@ function MyPodcastsContent() {
     }
     setLoadingSeries(true);
     try {
-      const data = await apiClient<PodcastSeries[]>("/podcasts/my");
-      const apiSeries = Array.isArray(data) ? data : [];
-      const local = loadLocalSeries();
-      const apiIds = new Set(apiSeries.map((s) => s.id));
-      const merged = [...apiSeries, ...local.filter((l) => !apiIds.has(l.id))];
-      setSeries(merged);
+      // The creator's podcasts live in dj_mixes (item_type='podcast'), scoped to
+      // the signed-in user via uploader_id — the column RLS keys writes on.
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("dj_mixes")
+        .select(DJ_MIX_PODCAST_COLUMNS)
+        .eq("item_type", "podcast")
+        .eq("uploader_id", user.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+
+      const remote = ((data ?? []) as DjMixRow[]).map(mapRowToSeries);
+      // Keep any local-only series (created before this page was DB-backed, or
+      // while signed out) that don't yet exist remotely, so nothing is lost.
+      const remoteIds = new Set(remote.map((s) => s.id));
+      const local = loadLocalSeries().filter((l) => !remoteIds.has(l.id));
+      setSeries([...remote, ...local]);
     } catch {
+      // Supabase unreachable — fall back to local cache so the page still works.
       const local = loadLocalSeries();
       setSeries(local);
     } finally {
@@ -330,36 +399,18 @@ function MyPodcastsContent() {
     fetchSeries();
   }, [fetchSeries]);
 
-  // Load local episodes on mount
-  useEffect(() => {
-    const local = loadLocalEpisodes();
-    if (Object.keys(local).length > 0) {
-      setEpisodesBySeriesId(local);
-    }
-  }, [loadLocalEpisodes]);
+  // (Local episodes are seeded via the useState lazy initializer above, so no
+  // mount effect is needed — keeping setState out of effect bodies.)
 
   // ─── Fetch episodes for a series ──────────────────────────────────
 
+  // Episodes have no backing table in this schema (dj_mixes is flat — see the
+  // mapping note above), so they are loaded from this browser's local store
+  // only. Kept async + keyed-loading so the existing expand UI is unchanged.
   const fetchEpisodes = useCallback(
     async (seriesId: string) => {
       setLoadingEpisodes((prev) => ({ ...prev, [seriesId]: true }));
       try {
-        const data = await apiClient<PodcastEpisode[]>(
-          `/podcasts/${seriesId}/episodes`,
-        );
-        const apiEps = Array.isArray(data) ? data : [];
-        // Merge with local episodes
-        const localAll = loadLocalEpisodes();
-        const localEps = localAll[seriesId] || [];
-        const apiIds = new Set(apiEps.map((e) => e.id));
-        const merged = [...apiEps, ...localEps.filter((l) => !apiIds.has(l.id))];
-        setEpisodesBySeriesId((prev) => {
-          const updated = { ...prev, [seriesId]: merged };
-          saveLocalEpisodes(updated);
-          return updated;
-        });
-      } catch {
-        // API unavailable — use local
         const localAll = loadLocalEpisodes();
         const localEps = localAll[seriesId] || [];
         setEpisodesBySeriesId((prev) => ({ ...prev, [seriesId]: localEps }));
@@ -367,7 +418,7 @@ function MyPodcastsContent() {
         setLoadingEpisodes((prev) => ({ ...prev, [seriesId]: false }));
       }
     },
-    [loadLocalEpisodes, saveLocalEpisodes],
+    [loadLocalEpisodes],
   );
 
   // ─── Toggle expand ─────────────────────────────────────────────────
@@ -434,13 +485,30 @@ function MyPodcastsContent() {
 
     if (editingSeriesId) {
       // ── Update existing series ──
-      try {
-        await apiClient<PodcastSeries>(`/podcasts/${editingSeriesId}`, {
-          method: "PATCH",
-          body: JSON.stringify(payload),
-        });
-      } catch {
-        // API unavailable — update locally
+      // For podcasts backed by a dj_mixes row this persists the editable columns
+      // remotely. The .eq("uploader_id") guard means a local-only series (id not
+      // in dj_mixes) simply matches no rows — a harmless no-op — and can never
+      // touch another user's row. is_published is derived from the UI status.
+      if (user) {
+        try {
+          const supabase = createClient();
+          await supabase
+            .from("dj_mixes")
+            .update({
+              title: payload.title,
+              description: payload.description,
+              genre: payload.category,
+              cover_image_url: payload.coverImageUrl,
+              tags: payload.tags,
+              is_published: payload.status === "ACTIVE",
+              updated_at: now,
+            })
+            .eq("id", editingSeriesId)
+            .eq("uploader_id", user.id)
+            .eq("item_type", "podcast");
+        } catch {
+          // Supabase unreachable — local cache below still reflects the edit.
+        }
       }
 
       setSeries((prev) => {
@@ -456,33 +524,28 @@ function MyPodcastsContent() {
       toast.success("Series updated!");
     } else {
       // ── Create new series ──
-      let created: PodcastSeries | null = null;
+      // A podcast *series* has no single audio file at creation, but dj_mixes
+      // requires a non-null audio_url (it stores individual media items, not
+      // series). Rather than insert a semantically-empty row, the series shell
+      // is kept in local storage; publishing actual audio (which creates the
+      // dj_mixes podcast row) happens via the mix/episode upload flow. The
+      // series then appears in the Supabase-backed list once a row exists.
+      const created: PodcastSeries = {
+        id: genId(),
+        ...payload,
+        tags: payload.tags ?? [],
+        status: "DRAFT",
+        episodeCount: 0,
+        subscriberCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      };
 
-      try {
-        created = await apiClient<PodcastSeries>("/podcasts", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-      } catch {
-        created = {
-          id: genId(),
-          ...payload,
-          tags: payload.tags ?? [],
-          status: "DRAFT",
-          episodeCount: 0,
-          subscriberCount: 0,
-          createdAt: now,
-          updatedAt: now,
-        };
-      }
-
-      if (created) {
-        setSeries((prev) => {
-          const updated = [created!, ...prev];
-          saveLocalSeries(updated);
-          return updated;
-        });
-      }
+      setSeries((prev) => {
+        const updated = [created, ...prev];
+        saveLocalSeries(updated);
+        return updated;
+      });
 
       toast.success("Podcast series created!");
 
@@ -556,15 +619,7 @@ function MyPodcastsContent() {
 
     if (editingEpisodeId) {
       // ── Update existing episode ──
-      try {
-        await apiClient<PodcastEpisode>(
-          `/podcasts/${seriesId}/episodes/${editingEpisodeId}`,
-          { method: "PATCH", body: JSON.stringify(payload) },
-        );
-      } catch {
-        // API unavailable — update locally
-      }
-
+      // Episodes are a local-only layer (no backing table in this schema).
       setEpisodesBySeriesId((prev) => {
         const eps = (prev[seriesId] || []).map((ep) =>
           ep.id === editingEpisodeId
@@ -578,47 +633,36 @@ function MyPodcastsContent() {
 
       toast.success("Episode updated!");
     } else {
-      // ── Create new episode ──
-      let created: PodcastEpisode | null = null;
+      // ── Create new episode (local-only; no backing table) ──
+      const created: PodcastEpisode = {
+        id: genId(),
+        seriesId,
+        ...payload,
+        tags: [],
+        status: payload.status || "DRAFT",
+        publishedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      };
 
-      try {
-        created = await apiClient<PodcastEpisode>(
-          `/podcasts/${seriesId}/episodes`,
-          { method: "POST", body: JSON.stringify(payload) },
+      setEpisodesBySeriesId((prev) => {
+        const existing = prev[seriesId] || [];
+        const eps = [created, ...existing];
+        const updated = { ...prev, [seriesId]: eps };
+        saveLocalEpisodes(updated);
+        return updated;
+      });
+
+      // Update episode count on series
+      setSeries((prev) => {
+        const updated = prev.map((s) =>
+          s.id === seriesId
+            ? { ...s, episodeCount: s.episodeCount + 1, updatedAt: now }
+            : s,
         );
-      } catch {
-        created = {
-          id: genId(),
-          seriesId,
-          ...payload,
-          tags: [],
-          status: payload.status || "DRAFT",
-          publishedAt: null,
-          createdAt: now,
-          updatedAt: now,
-        };
-      }
-
-      if (created) {
-        setEpisodesBySeriesId((prev) => {
-          const existing = prev[seriesId] || [];
-          const eps = [created!, ...existing];
-          const updated = { ...prev, [seriesId]: eps };
-          saveLocalEpisodes(updated);
-          return updated;
-        });
-
-        // Update episode count on series
-        setSeries((prev) => {
-          const updated = prev.map((s) =>
-            s.id === seriesId
-              ? { ...s, episodeCount: s.episodeCount + 1, updatedAt: now }
-              : s,
-          );
-          saveLocalSeries(updated);
-          return updated;
-        });
-      }
+        saveLocalSeries(updated);
+        return updated;
+      });
 
       toast.success("Episode created!");
     }
@@ -632,47 +676,81 @@ function MyPodcastsContent() {
 
   // ─── Delete handler ─────────────────────────────────────────────────
 
-  function handleConfirmDelete() {
+  async function handleConfirmDelete() {
     if (!deleteTarget) return;
 
-    if (deleteTarget.type === "series") {
-      // Try API delete
-      apiClient(`/podcasts/${deleteTarget.id}`, { method: "DELETE" }).catch(
-        () => {},
-      );
+    // Snapshot before any awaits — deleteTarget is state and may be cleared.
+    const target = deleteTarget;
 
-      setSeries((prev) => {
-        const updated = prev.filter((s) => s.id !== deleteTarget.id);
-        saveLocalSeries(updated);
-        return updated;
-      });
-
-      // Remove episodes for this series
-      setEpisodesBySeriesId((prev) => {
-        const updated = { ...prev };
-        delete updated[deleteTarget.id];
-        saveLocalEpisodes(updated);
-        return updated;
-      });
-
-      if (expandedSeriesId === deleteTarget.id) {
-        setExpandedSeriesId(null);
+    if (target.type === "series") {
+      // Delete the podcast from dj_mixes. RLS only permits deleting rows where
+      // uploader_id = auth.uid(), and we additionally scope by uploader_id +
+      // item_type so a local-only series (id not in dj_mixes) is a harmless
+      // no-op. If the owner delete is somehow blocked, fall back to a
+      // soft-delete (is_published=false) so the item at least leaves the public
+      // catalog; only a hard failure of both is surfaced to the user.
+      let removeFromUi = true;
+      let messaged = false;
+      if (user) {
+        try {
+          const supabase = createClient();
+          const { error: delErr } = await supabase
+            .from("dj_mixes")
+            .delete()
+            .eq("id", target.id)
+            .eq("uploader_id", user.id)
+            .eq("item_type", "podcast");
+          if (delErr) {
+            // Fall back to soft-delete (hide it) when a hard delete is blocked.
+            const { error: softErr } = await supabase
+              .from("dj_mixes")
+              .update({ is_published: false, updated_at: new Date().toISOString() })
+              .eq("id", target.id)
+              .eq("uploader_id", user.id)
+              .eq("item_type", "podcast");
+            if (softErr) {
+              removeFromUi = false;
+              messaged = true;
+              toast.error("Could not delete podcast. Please try again.");
+            } else {
+              messaged = true;
+              toast.success("Podcast hidden.");
+            }
+          }
+        } catch {
+          removeFromUi = false;
+          messaged = true;
+          toast.error("Could not reach the server to delete this podcast.");
+        }
       }
 
-      toast.success("Series deleted.");
-    } else {
-      // Delete episode
-      const sid = deleteTarget.seriesId!;
+      if (removeFromUi) {
+        setSeries((prev) => {
+          const updated = prev.filter((s) => s.id !== target.id);
+          saveLocalSeries(updated);
+          return updated;
+        });
 
-      apiClient(
-        `/podcasts/${sid}/episodes/${deleteTarget.id}`,
-        { method: "DELETE" },
-      ).catch(() => {});
+        // Remove episodes for this series
+        setEpisodesBySeriesId((prev) => {
+          const updated = { ...prev };
+          delete updated[target.id];
+          saveLocalEpisodes(updated);
+          return updated;
+        });
+
+        if (expandedSeriesId === target.id) {
+          setExpandedSeriesId(null);
+        }
+
+        if (!messaged) toast.success("Series deleted.");
+      }
+    } else {
+      // Delete episode (local-only; no backing table).
+      const sid = target.seriesId!;
 
       setEpisodesBySeriesId((prev) => {
-        const eps = (prev[sid] || []).filter(
-          (ep) => ep.id !== deleteTarget.id,
-        );
+        const eps = (prev[sid] || []).filter((ep) => ep.id !== target.id);
         const updated = { ...prev, [sid]: eps };
         saveLocalEpisodes(updated);
         return updated;

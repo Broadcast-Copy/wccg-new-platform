@@ -1,30 +1,30 @@
 "use client";
 
 /**
- * Points outbox sync — Phase A2.
+ * Points outbox — Phase A2.
  *
  * The client side of the listen-and-earn loop earns into localStorage for
- * instant UI feedback. This module mirrors every award into a server-side
- * ledger via /points/sync, with idempotency keys + retry, so the wallet is:
+ * instant UI feedback. Historically this module also POSTed every award to a
+ * NestJS `/points/sync` endpoint that mirrored it into a server-side ledger.
  *
- *  - Cross-device (the API is the source of truth long-term)
- *  - Survivable (clearing the browser doesn't wipe earnings)
- *  - Capped (server enforces daily limits, can't be cheated by JS)
- *  - Spendable (the marketplace reads from the ledger, not localStorage)
+ * That API server is gone. In the current architecture the browser talks to
+ * Supabase directly, and — by design, for integrity — there is NO client-side
+ * award path: points/balance are written ONLY by secure server-side RPCs
+ * (the `user_points` table is own-read RLS, and a DB trigger forces
+ * `balance = sum(points_history)`, so a client cannot forge a balance even
+ * with a session token). See migrations 006/007/039.
  *
- * Design:
- *  - Every award (listening tick, daily bounty, streak, share, etc.) calls
- *    `enqueuePointEvent(...)` which appends to a localStorage outbox.
- *  - A background flusher drains the outbox every 30s when online, plus on
- *    `online` and on tab-focus.
- *  - The server returns per-event results so we can prune precisely; events
- *    that come back `awarded` or `duplicate` are removed, `capped`/`rejected`
- *    are also removed (server made a decision), only network errors retain
- *    them with backoff.
- *  - We never block the UI — failures are silent except for telemetry.
+ * Consequently the outbox flush is now a SAFE NO-OP:
+ *  - `enqueuePointEvent(...)` still records the optimistic award locally so the
+ *    UI feels instant (the displayed balance lives in `wccg_listening_points*`,
+ *    NOT in this outbox).
+ *  - `flushPointsOutbox()` no longer calls any endpoint. It simply drains the
+ *    eligible batch from the local outbox so it can't grow unbounded, and
+ *    resolves successfully. No points are inserted — awarding stays locked
+ *    behind the secure RPCs.
+ *  - The auto-flusher / timer / listeners are kept intact so callers and the
+ *    boot path are unchanged; they just no longer hit a dead URL.
  */
-
-import { apiClient } from "@/lib/api-client";
 
 // ---------------------------------------------------------------------------
 // Outbox storage
@@ -46,16 +46,6 @@ export interface OutboxEvent {
   attempts: number;
   /** Timestamp of next eligible attempt */
   nextAttemptAt: number;
-}
-
-interface SyncResult {
-  results: Array<{
-    idempotencyKey: string;
-    status: "awarded" | "duplicate" | "capped" | "rejected";
-    amount: number;
-    reason?: string;
-  }>;
-  balance: number;
 }
 
 function loadOutbox(): OutboxEvent[] {
@@ -120,68 +110,41 @@ export function enqueuePointEvent(ev: {
 }
 
 /**
- * Drain the outbox once. Returns the new server-side balance, or null on
- * failure / no events. Safe to call as often as you like; the inner gate
- * prevents concurrent flushes.
+ * Drain the outbox once.
+ *
+ * SAFE NO-OP: points are awarded exclusively by secure server-side RPCs
+ * (integrity — the client has no award path by design), so there is no
+ * endpoint to POST to. This used to mirror awards to a now-removed NestJS
+ * `/points/sync` route. We keep the signature and the auto-flusher wiring, but
+ * the body simply removes the eligible batch from the local outbox so it can't
+ * grow without bound, then resolves successfully. NOTHING is inserted and no
+ * balance is written from here.
+ *
+ * Returns null (no server balance is fetched here — the badge reads
+ * `user_points.balance` directly via Supabase). The inner gate prevents
+ * concurrent drains.
  */
 let flushInFlight = false;
 
 export async function flushPointsOutbox(): Promise<number | null> {
   if (flushInFlight) return null;
   if (typeof window === "undefined") return null;
-  if (typeof navigator !== "undefined" && navigator.onLine === false) return null;
 
   flushInFlight = true;
   try {
     const events = loadOutbox();
     if (events.length === 0) return null;
 
-    const now = Date.now();
-    const eligible = events
-      .filter((e) => e.nextAttemptAt <= now)
-      .slice(0, MAX_BATCH);
-    if (eligible.length === 0) return null;
-
-    let result: SyncResult | null = null;
-    try {
-      result = await apiClient<SyncResult>("/points/sync", {
-        method: "POST",
-        body: JSON.stringify({
-          events: eligible.map((e) => ({
-            idempotencyKey: e.idempotencyKey,
-            amount: e.amount,
-            reason: e.reason,
-            referenceType: e.referenceType,
-            referenceId: e.referenceId,
-            occurredAt: e.occurredAt,
-          })),
-        }),
-      });
-    } catch (err) {
-      // Network / 5xx — retry with backoff.
-      const refreshed = loadOutbox();
-      const eligibleKeys = new Set(eligible.map((e) => e.idempotencyKey));
-      for (const e of refreshed) {
-        if (eligibleKeys.has(e.idempotencyKey)) {
-          e.attempts = (e.attempts ?? 0) + 1;
-          // Exponential backoff capped at 5 min.
-          const backoffMs = Math.min(5 * 60_000, 1000 * 2 ** Math.min(e.attempts, 8));
-          e.nextAttemptAt = Date.now() + backoffMs;
-        }
-      }
-      saveOutbox(refreshed);
-      return null;
-    }
-
-    // Server gave a decision per-event. Remove every event the server
-    // acknowledged in any way (awarded / duplicate / capped / rejected) —
-    // we don't want to retry rejections forever, and capped is the server's
-    // call to drop until tomorrow.
-    const acknowledged = new Set(result.results.map((r) => r.idempotencyKey));
-    const remaining = loadOutbox().filter((e) => !acknowledged.has(e.idempotencyKey));
+    // Drop the batch we would historically have synced. The optimistic balance
+    // the user sees is stored separately (wccg_listening_points*), so clearing
+    // these queued events does not lose any displayed points — it only stops
+    // the outbox from accumulating dead entries forever.
+    const drained = events.slice(0, MAX_BATCH);
+    const drainedKeys = new Set(drained.map((e) => e.idempotencyKey));
+    const remaining = loadOutbox().filter((e) => !drainedKeys.has(e.idempotencyKey));
     saveOutbox(remaining);
 
-    return result.balance;
+    return null;
   } finally {
     flushInFlight = false;
   }

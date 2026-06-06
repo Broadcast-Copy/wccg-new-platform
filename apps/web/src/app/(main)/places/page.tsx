@@ -3,28 +3,43 @@
 /**
  * Places — directory map + list. Phase B3.
  *
+ * Data: reads `directory_listings` directly from Supabase in the browser
+ * (no API server; RLS-protected anon key). Static-export friendly.
+ *
  * Map: MapLibre GL via CDN (loaded lazily) on top of OSM raster tiles to
  * skip an npm dep + an API key for v1. Upgrade path: vector tiles + Mapbox.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { MapPin, Search, Star } from "lucide-react";
-import { apiClient } from "@/lib/api-client";
+import { MapPin, Search } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 interface Place {
   id: string;
   slug: string;
   name: string;
   category: string;
-  subcategory: string | null;
+  city: string | null;
   address: string | null;
   lat: number | null;
   lng: number | null;
-  coverUrl: string | null;
-  ratingAvg: number | null;
-  ratingCount: number;
-  checkInCount: number;
+  imageUrl: string | null;
+  featured: boolean;
+}
+
+/** Shape of the columns we read from `directory_listings`. */
+interface DirectoryRow {
+  id: string;
+  slug: string | null;
+  name: string | null;
+  category: string | null;
+  city: string | null;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  image_url: string | null;
+  featured: boolean | null;
 }
 
 const CATEGORIES = [
@@ -39,6 +54,21 @@ const CATEGORIES = [
   "Community",
 ];
 
+function mapRow(row: DirectoryRow): Place {
+  return {
+    id: row.id,
+    slug: row.slug ?? row.id,
+    name: row.name ?? "Untitled",
+    category: row.category ?? "",
+    city: row.city,
+    address: row.address,
+    lat: row.lat,
+    lng: row.lng,
+    imageUrl: row.image_url,
+    featured: row.featured ?? false,
+  };
+}
+
 export default function PlacesPage() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,26 +77,44 @@ export default function PlacesPage() {
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<unknown>(null);
 
-  // Fetch list whenever filters change.
+  // Fetch list whenever filters change. setState happens post-await behind an
+  // `active` guard — never synchronously in the effect body. The loading flag
+  // is raised in the filter-change handlers (event handlers), not here.
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (category !== "All") params.set("category", category);
-    if (search.trim()) params.set("search", search.trim());
-    params.set("limit", "150");
-    apiClient<Place[]>(`/places?${params}`)
-      .then((r) => {
-        if (!cancelled) setPlaces(r);
-      })
-      .catch(() => {
-        if (!cancelled) setPlaces([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    let active = true;
+    const supabase = createClient();
+    const term = search.trim();
+
+    (async () => {
+      let query = supabase
+        .from("directory_listings")
+        .select(
+          "id, slug, name, category, city, address, lat, lng, image_url, featured",
+        )
+        .eq("status", "ACTIVE")
+        .order("featured", { ascending: false })
+        .order("name", { ascending: true })
+        .limit(150);
+
+      if (category !== "All") query = query.eq("category", category);
+      if (term) {
+        query = query.or(
+          `name.ilike.%${term}%,description.ilike.%${term}%,city.ilike.%${term}%`,
+        );
+      }
+
+      const { data, error } = await query;
+      if (!active) return;
+      if (error || !data) {
+        setPlaces([]);
+      } else {
+        setPlaces((data as DirectoryRow[]).map(mapRow));
+      }
+      setLoading(false);
+    })();
+
     return () => {
-      cancelled = true;
+      active = false;
     };
   }, [category, search]);
 
@@ -124,9 +172,11 @@ export default function PlacesPage() {
 
   // Re-paint markers when places change.
   useEffect(() => {
-    const map = mapRef.current as any;
+    const map = mapRef.current as {
+      _wccgMarkers?: Array<{ remove: () => void }>;
+    } | null;
     if (!map) return;
-    const existing = (map._wccgMarkers ?? []) as Array<{ remove: () => void }>;
+    const existing = map._wccgMarkers ?? [];
     existing.forEach((m) => m.remove());
     // @ts-expect-error — CDN global
     const ml = window.maplibregl;
@@ -164,7 +214,10 @@ export default function PlacesPage() {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setLoading(true);
+              setSearch(e.target.value);
+            }}
             placeholder="Search places…"
             className="w-full rounded-full border border-border bg-card px-9 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#74ddc7]/40"
           />
@@ -174,7 +227,10 @@ export default function PlacesPage() {
             <button
               key={c}
               type="button"
-              onClick={() => setCategory(c)}
+              onClick={() => {
+                setLoading(true);
+                setCategory(c);
+              }}
               className={`rounded-full px-3 py-1.5 font-semibold transition-colors ${
                 c === category ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
               }`}
@@ -206,26 +262,24 @@ export default function PlacesPage() {
                 href={`/places/${p.slug}`}
                 className="flex items-start gap-3 rounded-xl p-3 transition-colors hover:bg-foreground/[0.04]"
               >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#3b82f6] to-[#1d4ed8]">
-                  <MapPin className="h-5 w-5 text-white" />
-                </div>
+                {p.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={p.imageUrl}
+                    alt={p.name}
+                    className="h-12 w-12 shrink-0 rounded-xl object-cover"
+                  />
+                ) : (
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#3b82f6] to-[#1d4ed8]">
+                    <MapPin className="h-5 w-5 text-white" />
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <h3 className="truncate font-semibold text-foreground">{p.name}</h3>
                   <p className="truncate text-xs text-muted-foreground">
-                    {p.subcategory ? `${p.subcategory} · ` : ""}
-                    {p.address ?? "Address pending"}
+                    {p.category ? `${p.category} · ` : ""}
+                    {p.city ?? p.address ?? "Address pending"}
                   </p>
-                  <div className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
-                    {p.ratingAvg ? (
-                      <span className="inline-flex items-center gap-1">
-                        <Star className="h-3 w-3 fill-[#f59e0b] text-[#f59e0b]" />
-                        {p.ratingAvg.toFixed(1)} ({p.ratingCount})
-                      </span>
-                    ) : (
-                      <span>No reviews yet</span>
-                    )}
-                    {p.checkInCount > 0 && <span>· {p.checkInCount} check-ins</span>}
-                  </div>
                 </div>
               </Link>
             </li>

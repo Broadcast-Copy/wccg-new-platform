@@ -20,11 +20,47 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 
 interface MixUploaderProps {
   onSuccess?: () => void;
+  /** Optional host_id hint for the dj_mixes row (host posting their own mix). */
   hostId?: string;
+}
+
+/** Browser-safe uuid for storage paths / row ids. */
+function randomUuid(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** Read duration (seconds, rounded) from an audio file via a throwaway <audio>. */
+function readAudioDuration(file: File): Promise<number | null> {
+  return new Promise((resolve) => {
+    try {
+      const url = URL.createObjectURL(file);
+      const audio = document.createElement("audio");
+      audio.preload = "metadata";
+      const cleanup = () => URL.revokeObjectURL(url);
+      audio.onloadedmetadata = () => {
+        const d = Number.isFinite(audio.duration)
+          ? Math.round(audio.duration)
+          : null;
+        cleanup();
+        resolve(d);
+      };
+      audio.onerror = () => {
+        cleanup();
+        resolve(null);
+      };
+      audio.src = url;
+    } catch {
+      resolve(null);
+    }
+  });
 }
 
 const GENRES = [
@@ -42,6 +78,7 @@ const ACCEPTED_TYPES = ".mp3,.wav,.m4a";
 const ACCEPTED_MIME = ["audio/mpeg", "audio/wav", "audio/x-m4a", "audio/mp4"];
 
 export function MixUploader({ onSuccess, hostId }: MixUploaderProps) {
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -106,12 +143,17 @@ export function MixUploader({ onSuccess, hostId }: MixUploaderProps) {
       setError("Title is required.");
       return;
     }
+    if (!user?.id) {
+      setError("Please sign in to upload a mix.");
+      return;
+    }
 
     setUploading(true);
     setProgress(0);
     setError(null);
 
-    // Mock progress animation
+    // Mock progress animation while the real upload runs (Supabase Storage's
+    // JS client gives no streaming progress events), snapped to 100% on success.
     const progressInterval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 90) {
@@ -123,25 +165,73 @@ export function MixUploader({ onSuccess, hostId }: MixUploaderProps) {
     }, 300);
 
     try {
-      const payload = {
+      const supabase = createClient();
+      const userId = user.id;
+
+      // 1) Upload the audio bytes to the public `dj-mixes` bucket (same bucket
+      //    and path convention the DJ profile uploader uses):
+      //    `${userId}/<uuid>.<ext>`. RLS lets a user write under their own id.
+      const ext = file.name.split(".").pop()?.toLowerCase() || "bin";
+      const audioPath = `${userId}/${randomUuid()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("dj-mixes")
+        .upload(audioPath, file, {
+          upsert: true,
+          contentType: file.type || undefined,
+        });
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+      const audioUrl = supabase.storage
+        .from("dj-mixes")
+        .getPublicUrl(audioPath).data.publicUrl;
+
+      // 2) Best-effort enrichment so DJ-creators' mixes surface on their public
+      //    profile (mixes are attributed by dj_id). Both are optional: a generic
+      //    creator with no DJ/host record still gets a valid, owned mix row.
+      const duration = await readAudioDuration(file);
+      const [{ data: djRow }, { data: hostRow }] = await Promise.all([
+        supabase
+          .from("djs")
+          .select("id, host_id")
+          .eq("user_id", userId)
+          .maybeSingle(),
+        supabase
+          .from("hosts")
+          .select("id")
+          .eq("profile_id", userId)
+          .limit(1)
+          .maybeSingle(),
+      ]);
+      const djId = (djRow?.id as string | undefined) ?? null;
+      const resolvedHostId =
+        hostId ||
+        ((djRow?.host_id as string | undefined) ?? null) ||
+        ((hostRow?.id as string | undefined) ?? null);
+
+      // 3) Insert the dj_mixes row. uploader_id = auth.uid() is the column RLS
+      //    enforces on INSERT, so the owner can always create their own mix.
+      const { error: insertError } = await supabase.from("dj_mixes").insert({
+        id: `mix_${randomUuid()}`,
+        uploader_id: userId,
+        dj_id: djId,
+        host_id: resolvedHostId,
         title: title.trim(),
-        description: description.trim() || undefined,
-        genre: genre || undefined,
+        description: description.trim() || null,
+        audio_url: audioUrl,
+        cover_image_url: coverImageUrl.trim() || null,
+        duration,
+        genre: genre || null,
         tags: tags
           .split(",")
           .map((t) => t.trim())
           .filter(Boolean),
-        coverImageUrl: coverImageUrl.trim() || undefined,
-        hostId: hostId || undefined,
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type,
-      };
-
-      await apiClient("/mixes", {
-        method: "POST",
-        body: JSON.stringify(payload),
+        item_type: "mix",
+        is_published: true,
       });
+      if (insertError) {
+        throw new Error(insertError.message);
+      }
 
       clearInterval(progressInterval);
       setProgress(100);
@@ -355,10 +445,17 @@ export function MixUploader({ onSuccess, hostId }: MixUploaderProps) {
         </div>
       )}
 
+      {/* Signed-out hint — uploads require an authenticated user (RLS). */}
+      {!user && (
+        <p className="text-sm text-muted-foreground">
+          Please sign in to upload a mix.
+        </p>
+      )}
+
       {/* Submit */}
       <Button
         type="submit"
-        disabled={uploading || !file || !title.trim()}
+        disabled={uploading || !file || !title.trim() || !user}
         className="w-full rounded-full bg-gradient-to-r from-[#7401df] to-[#74ddc7] text-white shadow-lg shadow-[#7401df]/20 hover:opacity-90 disabled:opacity-50"
       >
         {uploading ? (

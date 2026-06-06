@@ -9,21 +9,26 @@
  *   - Listened today          →  "✓ Locked in. 12-day streak. Back tomorrow."
  *   - Streak just hit a multiple of 7 → "Week milestone — keep it going."
  *
- * Streak source: server (/points/streak) when authed, falls back to a
- * localStorage projection so the card is never empty.
+ * ── Streak source / known gap ────────────────────────────────────────────
+ * There is NO consecutive-day streak stored on the server. `user_points` only
+ * carries single DATE markers (`last_share_date`, `last_bounty_date`) and
+ * `total_listening_ms` — nothing that counts an unbroken run of days, and
+ * there is no streak RPC. So the streak *number* is a best-effort LOCAL
+ * projection (localStorage), exactly as before. What we DO read from the
+ * server, when signed in, is `last_bounty_date` — the daily bounty is awarded
+ * on the first listen of the day, so that date is a truthful "claimed today"
+ * signal. We never display a streak count sourced from the server, because
+ * the server doesn't track one. (See report: a streak field/RPC is missing.)
  */
 
 import { useEffect, useState } from "react";
 import { Flame } from "lucide-react";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 
-interface ServerStreak {
-  streakDays: number;
-  lastListenDay: string | null;
-  streakStarted: string | null;
-}
+const supabase = createClient();
 
 const LS_KEY = "wccg_daily_streak";
 
@@ -40,7 +45,7 @@ function loadLocalStreak(): LocalStreak {
   if (typeof window === "undefined") return { lastDay: null, count: 0 };
   try {
     const raw = localStorage.getItem(LS_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) return JSON.parse(raw) as LocalStreak;
   } catch {
     // ignore
   }
@@ -81,39 +86,64 @@ function markListenedToday(): LocalStreak {
 export function DailyStreakCard() {
   const { isPlaying } = useAudioPlayer();
   const { toggle } = useStreamPlayer();
+  const { user } = useAuth();
 
   const [streak, setStreak] = useState<{ days: number; lastDay: string | null }>(() => {
     const local = loadLocalStreak();
     return { days: local.count, lastDay: local.lastDay };
   });
 
-  // When user starts listening today, optimistically advance the local streak.
+  // When the user is listening, optimistically advance the LOCAL streak.
+  // The mutation + setState run after an awaited microtask boundary (never
+  // synchronously in the effect body) and are guarded by `active`.
   useEffect(() => {
     if (!isPlaying) return;
-    const next = markListenedToday();
-    setStreak({ days: next.count, lastDay: next.lastDay });
+    let active = true;
+    void Promise.resolve().then(() => {
+      if (!active) return;
+      const next = markListenedToday();
+      setStreak({ days: next.count, lastDay: next.lastDay });
+    });
+    return () => {
+      active = false;
+    };
   }, [isPlaying]);
 
-  // Best-effort server reconciliation.
+  // Best-effort server reconciliation of the "claimed today" signal.
+  //
+  // No streak count exists server-side, so we only read `last_bounty_date`
+  // (set on the first listen of the day) to confirm today's claim across
+  // devices. The streak number stays the local projection.
   useEffect(() => {
-    let cancelled = false;
-    apiClient<ServerStreak>("/points/streak")
-      .then((s) => {
-        if (cancelled) return;
-        // Prefer the server number when it's higher; preserve optimistic local
-        // if the server hasn't caught up yet (eventual consistency).
-        setStreak((prev) => ({
-          days: Math.max(prev.days, s.streakDays ?? 0),
-          lastDay: s.lastListenDay ?? prev.lastDay,
-        }));
-      })
-      .catch(() => {
-        // Unauthed or offline — local value already shown.
-      });
+    if (!user) return;
+    let active = true;
+
+    async function syncClaimed() {
+      const { data, error } = await supabase
+        .from("user_points")
+        .select("last_bounty_date, last_share_date")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+
+      if (!active || error || !data) return;
+
+      const today = todayET();
+      // last_bounty_date / last_share_date are DATE columns (YYYY-MM-DD).
+      const claimedDay = data.last_bounty_date ?? data.last_share_date ?? null;
+      if (claimedDay === today) {
+        setStreak((prev) =>
+          prev.lastDay === today
+            ? prev
+            : { days: Math.max(prev.days, 1), lastDay: today },
+        );
+      }
+    }
+
+    void syncClaimed();
     return () => {
-      cancelled = true;
+      active = false;
     };
-  }, []);
+  }, [user]);
 
   const today = todayET();
   const claimedToday = streak.lastDay === today;

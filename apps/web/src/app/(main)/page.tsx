@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Hero } from "@/components/home/hero";
-import { apiClient } from "@/lib/api-client";
 import { createClient } from "@/lib/supabase/client";
 import { track } from "@/lib/analytics";
 
@@ -115,9 +114,44 @@ function UpcomingEventsSection() {
   const [events, setEvents] = useState<EventItem[]>([]);
 
   useEffect(() => {
-    apiClient<EventItem[]>("/events?limit=3")
-      .then(setEvents)
-      .catch(() => setEvents([]));
+    let active = true;
+    (async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("events")
+        .select("id,title,description,venue,image_url,start_date,is_free")
+        .eq("status", "PUBLISHED")
+        .eq("visibility", "PUBLIC")
+        .gte("start_date", new Date().toISOString())
+        .order("start_date", { ascending: true })
+        .limit(3);
+      if (!active) return;
+      const rows = (data ?? []) as Array<{
+        id: string;
+        title: string;
+        description: string | null;
+        venue: string | null;
+        image_url: string | null;
+        start_date: string;
+        is_free: boolean | null;
+      }>;
+      setEvents(
+        rows.map((r) => ({
+          id: r.id,
+          title: r.title,
+          description: r.description ?? undefined,
+          startDate: r.start_date,
+          venue: r.venue ?? undefined,
+          imageUrl: r.image_url ?? undefined,
+          isFree: !!r.is_free,
+        })),
+      );
+    })().catch(() => {
+      if (active) setEvents([]);
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (

@@ -5,9 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { readPointsBalance } from "@/lib/points-storage";
 import { reconcileSessionPoints, usePointsSync } from "@/hooks/use-listening-points";
+
+const supabase = createClient();
 
 export function PointsBadge() {
   const { user } = useAuth();
@@ -24,17 +26,21 @@ export function PointsBadge() {
       // Reconcile first to catch up any missed points
       reconcileSessionPoints();
 
-      // Try API if logged in
+      // Server balance (own-read RLS). Default to 0 when no row exists yet —
+      // balance is awarded server-side, never written from the client.
       if (user) {
-        try {
-          const data = await apiClient<{ balance: number }>("/points/balance");
-          if (!cancelled) setBalance(data.balance);
+        const { data, error } = await supabase
+          .from("user_points")
+          .select("balance")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (!error) {
+          if (!cancelled) setBalance(data?.balance ?? 0);
           return;
-        } catch {
-          // Fall through to localStorage
         }
+        // On error, fall through to the local optimistic balance.
       }
-      // Fall back to localStorage
+      // Fall back to localStorage (signed-out, or server read failed)
       if (!cancelled) {
         setBalance(readPointsBalance(user?.email));
       }
