@@ -70,6 +70,16 @@ function WallLoading() {
   );
 }
 
+/**
+ * Display label for a program row. "Gospel" reads as "Latest Gospel" — one row
+ * of the newest videos across every gospel broadcast (The Encouraging Moment,
+ * Lewis Chapel, Mt. Pisgah, Family Fellowship, Grace Plus Nothing, etc.). The
+ * underlying program value stays "Gospel" for filtering/links.
+ */
+function displayProgram(program: string): string {
+  return program === "Gospel" ? "Latest Gospel" : program;
+}
+
 function VideosWall() {
   const searchParams = useSearchParams();
   const program = searchParams.get("program")?.trim() || null;
@@ -153,8 +163,12 @@ function VideosWall() {
           locked={locked}
           onToggle={toggleLock}
           eyebrow="Program"
-          title={program}
-          subtitle={`Every published video from ${program}.`}
+          title={displayProgram(program)}
+          subtitle={
+            program === "Gospel"
+              ? "The latest gospel videos from across all of our gospel programming."
+              : `Every published video from ${program}.`
+          }
           back={{ href: "/videos", label: "All videos" }}
         />
 
@@ -232,7 +246,7 @@ function VideosWall() {
           {programRows.map((pr) => (
             <Row
               key={pr.program}
-              title={pr.program}
+              title={displayProgram(pr.program)}
               icon={<Flame className="h-6 w-6" />}
               href={`/videos?program=${encodeURIComponent(pr.program)}`}
             >

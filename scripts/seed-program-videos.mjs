@@ -33,8 +33,13 @@ const PROGRAMS = [
   { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCc6aixt81vdBrFDV772Z1Gw" }, // The Encouraging Moment (Dr. Tony Haire)
   { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCRqRVNSRMdIQqZw60bAgN1w" }, // Grace Plus Nothing Ministries
   { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCxTzK_2da5bZag5WTAbiVzQ" }, // Family Fellowship Worship Center
-  { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCavo4QHyzuMM2FED2W6PwEg" }, // Mt. Pisgah Missionary Baptist Church
-  { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCOe1fQxFPHNf3N7Rb55ySTA" }, // Lewis Chapel Baptist Church
+  { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCavo4QHyzuMM2FED2W6PwEg" }, // Progressive MBC (this id was mislabeled "Mt. Pisgah")
+  { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCOe1fQxFPHNf3N7Rb55ySTA" }, // Lewis Chapel Missionary Baptist Church
+  // Mt. Pisgah Missionary Baptist Church — confirm the correct channel before
+  // seeding. Fayetteville "Mount Pisgah Baptist Church" (UCzIkbXguZbWkAfp88zubLYQ)
+  // posts only sporadic, timestamp-titled videos; a Raeford "Mount Pisgah
+  // Missionary Baptist Church" also exists. Add the confirmed one here:
+  // { program: "Gospel", category: "Gospel", rating: "G", channelId: "<MT_PISGAH_CHANNEL_ID>" }, // Mt. Pisgah Missionary Baptist Church
 ];
 
 function decode(s) {
