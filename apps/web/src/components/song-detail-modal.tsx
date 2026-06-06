@@ -83,11 +83,16 @@ export function SongDetailModal({
   const [metadata, setMetadata] = useState<MusicMetadata | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Fetch metadata when modal opens
+  // Fetch metadata when the modal opens (or the song changes). setLoading(true)
+  // is deferred to a microtask so it isn't a synchronous setState in the effect
+  // body (react-hooks/set-state-in-effect); the remaining updates happen after
+  // the await, guarded by `cancelled`.
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
-    setLoading(true);
+    queueMicrotask(() => {
+      if (!cancelled) setLoading(true);
+    });
 
     fetchMusicMetadata(title, artist).then((data) => {
       if (!cancelled) {

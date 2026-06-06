@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import type { Deal } from "@/data/deals";
@@ -10,6 +11,16 @@ interface DealRedemptionProps {
 }
 
 export function DealRedemption({ deal, onClose }: DealRedemptionProps) {
+  // Generate the decorative mock-barcode bars once on mount. Calling Math.random()
+  // directly in render is impure (react-hooks/purity); a lazy initializer runs
+  // once and keeps the bars stable across re-renders.
+  const [barcodeBars] = useState(() =>
+    Array.from({ length: 30 }, () => ({
+      width: Math.random() > 0.5 ? 3 : 2,
+      height: 40 + Math.random() * 20,
+    })),
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
       {/* Purple gradient header */}
@@ -43,13 +54,13 @@ export function DealRedemption({ deal, onClose }: DealRedemptionProps) {
           <div className="rounded-xl border-2 border-dashed border-border bg-muted/30 px-6 py-8 text-center">
             <div className="flex justify-center gap-[2px] mb-3">
               {/* Mock barcode lines */}
-              {Array.from({ length: 30 }).map((_, i) => (
+              {barcodeBars.map((bar, i) => (
                 <div
                   key={i}
                   className="bg-foreground/80 rounded-sm"
                   style={{
-                    width: `${Math.random() > 0.5 ? 3 : 2}px`,
-                    height: `${40 + Math.random() * 20}px`,
+                    width: `${bar.width}px`,
+                    height: `${bar.height}px`,
                   }}
                 />
               ))}

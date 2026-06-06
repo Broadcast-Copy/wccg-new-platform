@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   CreditCard,
   Plus,
@@ -102,9 +102,13 @@ const CAT_ICONS: Record<string, typeof DollarSign> = {
 // Component
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function ExpenseTrackingPage() {
-  const [mounted, setMounted] = useState(false);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
+  const [expenses, setExpenses] = useState<Expense[]>(() => loadOrSeed(STORAGE_KEY, SEED_EXPENSES));
   const [selected, setSelected] = useState<Expense | null>(null);
   const [tab, setTab] = useState("all");
   const [showAdd, setShowAdd] = useState(false);
@@ -116,11 +120,6 @@ export default function ExpenseTrackingPage() {
   const [newDesc, setNewDesc] = useState("");
   const [newAmount, setNewAmount] = useState("");
   const [newMethod, setNewMethod] = useState<Expense["paymentMethod"]>("Company Card");
-
-  useEffect(() => {
-    setMounted(true);
-    setExpenses(loadOrSeed(STORAGE_KEY, SEED_EXPENSES));
-  }, []);
 
   if (!mounted) {
     return <div className="p-6 space-y-6 animate-pulse"><div className="h-12 bg-muted rounded-xl w-1/3" /></div>;

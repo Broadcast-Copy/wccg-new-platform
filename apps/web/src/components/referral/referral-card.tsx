@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,17 +11,19 @@ interface ReferralCardProps {
 }
 
 export function ReferralCard({ email }: ReferralCardProps) {
-  const [code, setCode] = useState("");
-  const [stats, setStats] = useState({ referralCount: 0, totalPointsEarned: 0, referredBy: null as string | null });
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (!email) return;
-    const userCode = generateCode(email);
-    setCode(userCode);
+  // Derive code + stats once from synchronous sources. `email` is stable for
+  // the component's lifetime (rendered only when signed in), so lazy
+  // initializers match the old mount effect without tripping
+  // react-hooks/set-state-in-effect. generateCode/getStats guard SSR internally.
+  const [code, _setCode] = useState(() => (email ? generateCode(email) : ""));
+  const [stats, _setStats] = useState(() => {
+    if (!email) {
+      return { referralCount: 0, totalPointsEarned: 0, referredBy: null as string | null };
+    }
     const s = getStats(email);
-    setStats({ referralCount: s.referralCount, totalPointsEarned: s.totalPointsEarned, referredBy: s.referredBy });
-  }, [email]);
+    return { referralCount: s.referralCount, totalPointsEarned: s.totalPointsEarned, referredBy: s.referredBy };
+  });
+  const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
     const url = getReferralUrl(code);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { useAuth } from "@/hooks/use-auth";
 import { useFileUpload } from "@/hooks/use-file-upload";
@@ -78,40 +78,38 @@ export default function BlogManagerPage() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
   // -- Fetch blog posts from Supabase --------------------------------------
-  const fetchPosts = useCallback(async () => {
-    if (!supabase || !user) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("blog_posts")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Failed to fetch blog posts:", error);
-    } else if (data) {
-      setPosts(
-        data.map((row: Record<string, unknown>) => ({
-          id: (row.id as string) ?? "",
-          title: (row.title as string) ?? "",
-          excerpt: (row.excerpt as string) ?? "",
-          status: (row.status as PostStatus) ?? "Draft",
-          publishDate: (row.published_at as string)?.split("T")[0] ?? "",
-          views: (row.views as number) ?? 0,
-          category: (row.category as string) ?? "",
-          featuredImage: (row.featured_image_url as string) ?? "",
-        }))
-      );
-    }
-    setLoading(false);
-  }, [supabase, user]);
-
   useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
+    if (!supabase || !user) return;
+    let active = true;
+    void (async () => {
+      const { data, error } = await supabase
+        .from("blog_posts")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (!active) return;
+      if (error) {
+        console.error("Failed to fetch blog posts:", error);
+      } else if (data) {
+        setPosts(
+          data.map((row: Record<string, unknown>) => ({
+            id: (row.id as string) ?? "",
+            title: (row.title as string) ?? "",
+            excerpt: (row.excerpt as string) ?? "",
+            status: (row.status as PostStatus) ?? "Draft",
+            publishDate: (row.published_at as string)?.split("T")[0] ?? "",
+            views: (row.views as number) ?? 0,
+            category: (row.category as string) ?? "",
+            featuredImage: (row.featured_image_url as string) ?? "",
+          }))
+        );
+      }
+      setLoading(false);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [supabase, user]);
 
   const published = posts.filter((p) => p.status === "Published");
   const drafts = posts.filter((p) => p.status === "Draft");

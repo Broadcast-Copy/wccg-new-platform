@@ -135,28 +135,35 @@ export default function PlaylistsPage() {
     setHistoryLoading(false);
   }, [supabase, user]);
 
-  // --- fetch recent feed (all users) ---
-  const fetchFeed = useCallback(async () => {
-    setFeedLoading(true);
-    const { data } = await supabase
-      .from("song_history")
-      .select("id, title, artist, played_at")
-      .order("played_at", { ascending: false })
-      .limit(20);
-
-    setRecentFeed((data as SongHistoryEntry[]) ?? []);
-    setFeedLoading(false);
-  }, [supabase]);
-
   useEffect(() => {
-    if (user) {
-      fetchPlaylists();
-      fetchFeed();
-    } else {
+    if (!user) return;
+    let active = true;
+    void (async () => {
+      const { data, error } = await supabase
+        .from("user_playlists")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false });
+      if (!active) return;
+      if (!error && data) {
+        setPlaylists(data as UserPlaylist[]);
+      }
       setLoading(false);
+    })();
+    void (async () => {
+      const { data } = await supabase
+        .from("song_history")
+        .select("id, title, artist, played_at")
+        .order("played_at", { ascending: false })
+        .limit(20);
+      if (!active) return;
+      setRecentFeed((data as SongHistoryEntry[]) ?? []);
       setFeedLoading(false);
-    }
-  }, [user, fetchPlaylists, fetchFeed]);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [user, supabase]);
 
   // --- create playlist ---
   const handleCreate = async () => {
@@ -556,7 +563,7 @@ export default function PlaylistsPage() {
       )}
 
       {/* ---- Playlists Grid ---- */}
-      {loading ? (
+      {loading && !!user ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <div
@@ -765,7 +772,7 @@ export default function PlaylistsPage() {
           </h2>
         </div>
 
-        {feedLoading ? (
+        {feedLoading && !!user ? (
           <div className="space-y-2">
             {[1, 2, 3, 4].map((i) => (
               <div

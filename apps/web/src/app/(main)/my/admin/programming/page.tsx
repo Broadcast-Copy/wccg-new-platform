@@ -470,7 +470,7 @@ export default function ProgrammingPage() {
 
         {shows.length === 0 && (
           <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center">
-            <p className="text-muted-foreground">No shows configured. Click "Add Show" to get started.</p>
+            <p className="text-muted-foreground">No shows configured. Click &quot;Add Show&quot; to get started.</p>
           </div>
         )}
       </section>

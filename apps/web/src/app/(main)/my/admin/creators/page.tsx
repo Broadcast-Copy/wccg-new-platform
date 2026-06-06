@@ -105,6 +105,54 @@ const TABS: { id: TabId; label: string }[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Derive creators + pending submissions from production rows
+// ---------------------------------------------------------------------------
+
+function deriveCreatorData(rows: ProductionRow[]): { creators: Creator[]; submissions: Submission[] } {
+  // Group by user_id to build creator list
+  const creatorMap = new Map<
+    string,
+    { id: string; name: string; type: CreatorType; joinDate: string; contentCount: number; status: CreatorStatus }
+  >();
+
+  for (const row of rows) {
+    const existing = creatorMap.get(row.user_id);
+    if (existing) {
+      existing.contentCount += 1;
+    } else {
+      // Derive creator-level status from their productions
+      const creatorStatus: CreatorStatus =
+        row.status === "approved" ? "Active" : row.status === "rejected" ? "Suspended" : "Pending";
+      // Map production type to CreatorType
+      const creatorType: CreatorType =
+        row.type === "podcast" ? "Podcaster" : row.type === "music" ? "Musician" : "DJ";
+
+      creatorMap.set(row.user_id, {
+        id: row.user_id,
+        name: row.user_id.slice(0, 8), // Fallback display name from user_id
+        type: creatorType,
+        joinDate: row.created_at?.split("T")[0] ?? "",
+        contentCount: 1,
+        status: creatorStatus,
+      });
+    }
+  }
+
+  // Pending submissions = productions with status "pending"
+  const submissions: Submission[] = rows
+    .filter((r) => r.status === "pending")
+    .map((r) => ({
+      id: r.id,
+      title: r.title,
+      creatorName: r.user_id.slice(0, 8),
+      type: r.type,
+      submittedDate: r.created_at?.split("T")[0] ?? "",
+    }));
+
+  return { creators: Array.from(creatorMap.values()), submissions };
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -120,14 +168,15 @@ export default function CreatorManagerPage() {
   // ---------------------------------------------------------------------------
   // Fetch productions from Supabase and derive creators + pending submissions
   // ---------------------------------------------------------------------------
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (isActive: () => boolean = () => true) => {
     if (!supabase) return;
-    setLoading(true);
 
     const { data, error } = await supabase
       .from("productions")
       .select("*")
       .order("created_at", { ascending: false });
+
+    if (!isActive()) return;
 
     if (error) {
       console.error("Failed to fetch productions:", error.message);
@@ -135,57 +184,40 @@ export default function CreatorManagerPage() {
       return;
     }
 
-    const rows = (data ?? []) as ProductionRow[];
-
-    // Group by user_id to build creator list
-    const creatorMap = new Map<
-      string,
-      { id: string; name: string; type: CreatorType; joinDate: string; contentCount: number; status: CreatorStatus }
-    >();
-
-    for (const row of rows) {
-      const existing = creatorMap.get(row.user_id);
-      if (existing) {
-        existing.contentCount += 1;
-      } else {
-        // Derive creator-level status from their productions
-        const creatorStatus: CreatorStatus =
-          row.status === "approved" ? "Active" : row.status === "rejected" ? "Suspended" : "Pending";
-        // Map production type to CreatorType
-        const creatorType: CreatorType =
-          row.type === "podcast" ? "Podcaster" : row.type === "music" ? "Musician" : "DJ";
-
-        creatorMap.set(row.user_id, {
-          id: row.user_id,
-          name: row.user_id.slice(0, 8), // Fallback display name from user_id
-          type: creatorType,
-          joinDate: row.created_at?.split("T")[0] ?? "",
-          contentCount: 1,
-          status: creatorStatus,
-        });
-      }
-    }
-
-    setCreators(Array.from(creatorMap.values()));
-
-    // Pending submissions = productions with status "pending"
-    const pendingSubs: Submission[] = rows
-      .filter((r) => r.status === "pending")
-      .map((r) => ({
-        id: r.id,
-        title: r.title,
-        creatorName: r.user_id.slice(0, 8),
-        type: r.type,
-        submittedDate: r.created_at?.split("T")[0] ?? "",
-      }));
-
-    setSubmissions(pendingSubs);
+    const { creators: nextCreators, submissions: nextSubmissions } = deriveCreatorData(
+      (data ?? []) as ProductionRow[],
+    );
+    setCreators(nextCreators);
+    setSubmissions(nextSubmissions);
     setLoading(false);
   }, [supabase]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    let active = true;
+    if (supabase) {
+      void (async () => {
+        const { data, error } = await supabase
+          .from("productions")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (!active) return;
+        if (error) {
+          console.error("Failed to fetch productions:", error.message);
+          setLoading(false);
+          return;
+        }
+        const { creators: nextCreators, submissions: nextSubmissions } = deriveCreatorData(
+          (data ?? []) as ProductionRow[],
+        );
+        setCreators(nextCreators);
+        setSubmissions(nextSubmissions);
+        setLoading(false);
+      })();
+    }
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
 
   // ---------------------------------------------------------------------------
   // Auth guard
@@ -258,6 +290,7 @@ export default function CreatorManagerPage() {
     }
     setSubmissions((prev) => prev.filter((s) => s.id !== id));
     // Refresh creator stats
+    setLoading(true);
     fetchData();
   }
 
@@ -278,6 +311,7 @@ export default function CreatorManagerPage() {
       return;
     }
     setSubmissions((prev) => prev.filter((s) => s.id !== id));
+    setLoading(true);
     fetchData();
   }
 

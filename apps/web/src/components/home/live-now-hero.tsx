@@ -59,9 +59,6 @@ export function LiveNowHero() {
   usePointsSync(() => setPoints(getListeningPoints()));
 
   useEffect(() => {
-    setPoints(getListeningPoints());
-    setProgress(getListeningProgress());
-
     const tick = () => {
       const next = getListeningPoints();
       setPoints(next);
@@ -70,7 +67,11 @@ export function LiveNowHero() {
       // 90s × (1 - p/100) → seconds remaining to next award
       setSecondsToNextPoint(Math.max(0, Math.ceil(POINTS_INTERVAL_SECONDS * (1 - p / 100))));
     };
-    tick();
+    // Populate after mount (deferred to a microtask so the first paint matches
+    // SSR's zero state — avoids a hydration mismatch for users with stored
+    // points — and keeps setState out of the synchronous effect body:
+    // react-hooks/set-state-in-effect). The interval then ticks each second.
+    queueMicrotask(tick);
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
   }, []);

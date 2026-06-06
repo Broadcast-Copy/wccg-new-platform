@@ -132,10 +132,16 @@ function ShowFilterInner({ shows }: { shows: FilterableShow[] }) {
   const [activeStream, setActiveStream] = useState(initialStream);
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    const stream = searchParams.get("stream") || "all";
-    setActiveStream(stream);
-  }, [searchParams]);
+  // Keep activeStream in sync with the URL's ?stream param (e.g. back/forward
+  // navigation). "Adjust state during render" pattern keyed on the param value —
+  // replaces an effect that set state synchronously
+  // (react-hooks/set-state-in-effect).
+  const urlStream = searchParams.get("stream") || "all";
+  const [syncedUrlStream, setSyncedUrlStream] = useState(urlStream);
+  if (syncedUrlStream !== urlStream) {
+    setSyncedUrlStream(urlStream);
+    setActiveStream(urlStream);
+  }
 
   function handleStreamChange(streamKey: string) {
     setActiveStream(streamKey);

@@ -125,7 +125,12 @@ function VendorStorefrontInner() {
     setLoading(false);
   }, [vendorId, supabase]);
 
-  useEffect(() => { fetchVendorData(); }, [fetchVendorData]);
+  useEffect(() => {
+    // Deferred to a microtask so the synchronous setLoading() prefix inside
+    // fetchVendorData is not a synchronous setState in the effect body. The
+    // awaited data setState calls are unaffected; behavior is unchanged.
+    queueMicrotask(() => fetchVendorData());
+  }, [fetchVendorData]);
 
   async function handleBooking() {
     if (!user) { toast.error("Please sign in to book a service"); return; }

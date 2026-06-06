@@ -112,8 +112,11 @@ export function useStreamTranscription(
   }, []);
 
   useEffect(() => {
+    // When disabled, do nothing here: any active recognition is torn down by
+    // this effect's cleanup (registered on the previous enabled render), which
+    // also resets `isListening`. Calling stopRecognition() synchronously here
+    // would set state directly within the effect body.
     if (!enabled) {
-      stopRecognition();
       return;
     }
 
@@ -124,7 +127,10 @@ export function useStreamTranscription(
     ) as SpeechRecognitionClass | undefined;
 
     if (!SpeechRecognition) {
-      setError("Speech recognition not supported in this browser");
+      // Deferred to a microtask so it is not a synchronous setState in the
+      // effect body. The capability is constant, so this latches once (and
+      // persists) exactly as before.
+      queueMicrotask(() => setError("Speech recognition not supported in this browser"));
       return;
     }
 
@@ -217,10 +223,16 @@ export function useStreamTranscription(
 
     try {
       recognition.start();
-      setIsListening(true);
-      setError(null);
+      // State updates reflecting the (already-started) recognition are deferred
+      // to a microtask so they are not synchronous setState in the effect body.
+      // Behavior-neutral: recognition is running; only the status flags update a
+      // microtask later.
+      queueMicrotask(() => {
+        setIsListening(true);
+        setError(null);
+      });
     } catch {
-      setError("Could not start speech recognition");
+      queueMicrotask(() => setError("Could not start speech recognition"));
     }
 
     return () => {

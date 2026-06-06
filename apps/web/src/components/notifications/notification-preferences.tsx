@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -14,13 +14,14 @@ interface NotificationPreferencesProps {
 }
 
 export function NotificationPreferences({ email }: NotificationPreferencesProps) {
-  const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
+  // Load once from the synchronous localStorage source. `email` is stable for
+  // the component's lifetime (the page only mounts this when signed in), so a
+  // lazy initializer is equivalent to the old mount effect without tripping
+  // react-hooks/set-state-in-effect. loadPrefs() guards SSR internally.
+  const [prefs, setPrefs] = useState<NotificationPrefs | null>(() =>
+    email ? loadPrefs(email) : null,
+  );
   const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    if (!email) return;
-    setPrefs(loadPrefs(email));
-  }, [email]);
 
   if (!prefs) return null;
 

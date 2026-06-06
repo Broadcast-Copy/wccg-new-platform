@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import {
   Settings,
@@ -62,9 +62,14 @@ const SEED_ACTIVITY: ActivityItem[] = [
 // Component
 // ---------------------------------------------------------------------------
 
+// Hydration guard: `false` on the server / during the first client render,
+// `true` after hydration. Replaces a setState-in-effect mount flag.
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function OperationsDashboardPage() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
 
   if (!mounted) {
     return <div className="p-6 space-y-6 animate-pulse"><div className="h-12 bg-muted rounded-xl w-64" /></div>;

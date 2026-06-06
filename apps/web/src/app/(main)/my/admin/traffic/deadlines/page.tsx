@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   Clock,
   Calendar,
@@ -88,17 +88,16 @@ const CAT_ICONS: Record<string, typeof Clock> = {
 // Component
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function DeadlineCalendarPage() {
-  const [mounted, setMounted] = useState(false);
-  const [deadlines, setDeadlines] = useState<Deadline[]>([]);
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
+  const [deadlines, setDeadlines] = useState<Deadline[]>(() => loadOrSeed(STORAGE_KEY, SEED_DEADLINES));
   const [currentMonth, setCurrentMonth] = useState(() => new Date(2026, 2, 1)); // March 2026
   const [view, setView] = useState<"calendar" | "list">("calendar");
   const [filterCat, setFilterCat] = useState("all");
-
-  useEffect(() => {
-    setMounted(true);
-    setDeadlines(loadOrSeed(STORAGE_KEY, SEED_DEADLINES));
-  }, []);
 
   if (!mounted) {
     return <div className="p-6 space-y-6 animate-pulse"><div className="h-12 bg-muted rounded-xl w-1/3" /></div>;

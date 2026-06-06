@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   DollarSign,
   TrendingUp,
@@ -80,15 +80,9 @@ const SK_MON = "wccg:gm:revenue-monthly";
 
 export default function RevenuePage() {
   const [tab, setTab] = useState("overview");
-  const [sources, setSources] = useState<RevenueSource[]>([]);
-  const [clients, setClients] = useState<TopClient[]>([]);
-  const [monthly, setMonthly] = useState<MonthlyRevenue[]>([]);
-
-  useEffect(() => {
-    setSources(loadOrSeed(SK_SRC, SEED_SOURCES));
-    setClients(loadOrSeed(SK_CLI, SEED_CLIENTS));
-    setMonthly(loadOrSeed(SK_MON, SEED_MONTHLY));
-  }, []);
+  const [sources] = useState<RevenueSource[]>(() => loadOrSeed(SK_SRC, SEED_SOURCES));
+  const [clients] = useState<TopClient[]>(() => loadOrSeed(SK_CLI, SEED_CLIENTS));
+  const [monthly] = useState<MonthlyRevenue[]>(() => loadOrSeed(SK_MON, SEED_MONTHLY));
 
   const totalCurrent = sources.reduce((s, r) => s + r.current, 0);
   const totalPrevious = sources.reduce((s, r) => s + r.previous, 0);

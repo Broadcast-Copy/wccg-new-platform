@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   Megaphone,
   Plus,
@@ -71,9 +71,13 @@ const CAT_ICONS: Record<string, typeof Heart> = {
 // Component
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function PSARotationPage() {
-  const [mounted, setMounted] = useState(false);
-  const [psas, setPsas] = useState<PSA[]>([]);
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
+  const [psas, setPsas] = useState<PSA[]>(() => loadOrSeed(STORAGE_KEY, SEED_PSAS));
   const [selected, setSelected] = useState<PSA | null>(null);
   const [showAdd, setShowAdd] = useState(false);
 
@@ -88,11 +92,6 @@ export default function PSARotationPage() {
   const [newDesc, setNewDesc] = useState("");
   const [newContact, setNewContact] = useState("");
   const [newPhone, setNewPhone] = useState("");
-
-  useEffect(() => {
-    setMounted(true);
-    setPsas(loadOrSeed(STORAGE_KEY, SEED_PSAS));
-  }, []);
 
   if (!mounted) {
     return <div className="p-6 space-y-6 animate-pulse"><div className="h-12 bg-muted rounded-xl w-1/3" /></div>;

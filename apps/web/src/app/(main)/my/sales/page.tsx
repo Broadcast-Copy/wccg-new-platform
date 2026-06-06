@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import {
   DollarSign,
@@ -188,11 +188,15 @@ const CLIENT_STATUS_STYLES: Record<string, string> = {
 
 type SalesTab = "dashboard" | "clients";
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function SalesDashboardPage() {
-  const [campaigns, setCampaigns] = useState<SavedCampaign[]>([]);
-  const [clients, setClients] = useState<SalesClient[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const [campaigns] = useState<SavedCampaign[]>(() => loadOrSeed(CAMPAIGNS_KEY, SEED_CAMPAIGNS));
+  const [clients, setClients] = useState<SalesClient[]>(() => loadOrSeed(CLIENTS_KEY, SEED_CLIENTS));
+  const [invoices] = useState<Invoice[]>(() => loadOrSeed(INVOICES_KEY, SEED_INVOICES));
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
 
   // Client Manager state
   const [activeTab, setActiveTab] = useState<SalesTab>("dashboard");
@@ -200,13 +204,6 @@ export default function SalesDashboardPage() {
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
   const [editingClient, setEditingClient] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<SalesClient>>({});
-
-  useEffect(() => {
-    setMounted(true);
-    setCampaigns(loadOrSeed(CAMPAIGNS_KEY, SEED_CAMPAIGNS));
-    setClients(loadOrSeed(CLIENTS_KEY, SEED_CLIENTS));
-    setInvoices(loadOrSeed(INVOICES_KEY, SEED_INVOICES));
-  }, []);
 
   if (!mounted) return null;
 

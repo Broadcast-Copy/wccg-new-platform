@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   ClipboardCheck,
   CheckCircle2,
@@ -65,18 +65,17 @@ const SEED_POP: POPRecord[] = [
 // Page
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function ProofOfPerformancePage() {
-  const [records, setRecords] = useState<POPRecord[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const [records] = useState<POPRecord[]>(() => loadOrSeed(KEY, SEED_POP));
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
   const [activeTab, setActiveTab] = useState("all");
   const [filterClient, setFilterClient] = useState<string>("All");
   const [reportModal, setReportModal] = useState(false);
   const [reportClient, setReportClient] = useState("");
-
-  useEffect(() => {
-    setMounted(true);
-    setRecords(loadOrSeed(KEY, SEED_POP));
-  }, []);
 
   if (!mounted) return null;
 

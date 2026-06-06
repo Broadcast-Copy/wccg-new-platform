@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   AlertTriangle,
   Calendar,
@@ -59,16 +59,15 @@ const STORAGE_KEY = "wccg:traffic-makegoods";
 // Component
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function MakegoodTrackerPage() {
-  const [mounted, setMounted] = useState(false);
-  const [makegoods, setMakegoods] = useState<Makegood[]>([]);
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
+  const [makegoods, setMakegoods] = useState<Makegood[]>(() => loadOrSeed(STORAGE_KEY, SEED_MAKEGOODS));
   const [selected, setSelected] = useState<Makegood | null>(null);
   const [tab, setTab] = useState("all");
-
-  useEffect(() => {
-    setMounted(true);
-    setMakegoods(loadOrSeed(STORAGE_KEY, SEED_MAKEGOODS));
-  }, []);
 
   if (!mounted) {
     return <div className="p-6 space-y-6 animate-pulse"><div className="h-12 bg-muted rounded-xl w-1/3" /></div>;

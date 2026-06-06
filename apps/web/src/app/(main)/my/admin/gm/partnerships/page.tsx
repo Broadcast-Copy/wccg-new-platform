@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Handshake,
   Plus,
@@ -66,7 +66,7 @@ const STORAGE_KEY = "wccg:gm:partnerships";
 // ---------------------------------------------------------------------------
 
 export default function PartnershipsPage() {
-  const [partnerships, setPartnerships] = useState<Partnership[]>([]);
+  const [partnerships, setPartnerships] = useState<Partnership[]>(() => loadOrSeed(STORAGE_KEY, SEED_PARTNERSHIPS));
   const [stageFilter, setStageFilter] = useState("All");
   const [selected, setSelected] = useState<Partnership | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -81,10 +81,6 @@ export default function PartnershipsPage() {
   const [fNotes, setFNotes] = useState("");
   const [fNextDate, setFNextDate] = useState("");
   const [fNextAction, setFNextAction] = useState("");
-
-  useEffect(() => {
-    setPartnerships(loadOrSeed(STORAGE_KEY, SEED_PARTNERSHIPS));
-  }, []);
 
   function save(data: Partnership[]) {
     setPartnerships(data);

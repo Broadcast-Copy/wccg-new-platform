@@ -70,8 +70,10 @@ export function useInactivityLogout() {
   const { user, signOut: _signOut } = useAuth();
   const { isPlaying, pause: pausePlayback } = useAudioPlayer();
 
-  // Track the timestamp of the last user activity
-  const lastActivityRef = useRef<number>(Date.now());
+  // Track the timestamp of the last user activity.
+  // Initialized to 0 (impure Date.now() must not run during render) and seeded
+  // with the real timestamp when activity tracking starts in the effect below.
+  const lastActivityRef = useRef<number>(0);
   // Whether the warning prompt has been shown for the current inactivity period
   const warningShownRef = useRef(false);
   // Reference to the check interval
@@ -121,6 +123,9 @@ export function useInactivityLogout() {
   useEffect(() => {
     // Only track inactivity for authenticated users
     if (!user) return;
+
+    // Seed the activity timestamp now that tracking is beginning.
+    lastActivityRef.current = Date.now();
 
     const handleActivity = () => {
       resetActivity();

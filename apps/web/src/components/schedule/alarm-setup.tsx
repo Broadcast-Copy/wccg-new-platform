@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAlarm } from "@/hooks/use-alarm";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,12 +38,24 @@ export function AlarmSetup({
 }) {
   const { alarm, updateAlarm, clearAlarm } = useAlarm();
 
-  const [time, setTime] = useState("06:00");
-  const [selectedDays, setSelectedDays] = useState<string[]>(["daily"]);
-  const [isDaily, setIsDaily] = useState(true);
+  // Seed the form from the alarm (available synchronously on first render — the
+  // useAlarm hook lazy-loads it from localStorage).
+  const [time, setTime] = useState(() => alarm?.time ?? "06:00");
+  const [selectedDays, setSelectedDays] = useState<string[]>(() =>
+    alarm && !alarm.days.includes("daily") ? alarm.days : ["daily"],
+  );
+  const [isDaily, setIsDaily] = useState(() =>
+    alarm ? alarm.days.includes("daily") : true,
+  );
 
-  // Sync state from loaded alarm
-  useEffect(() => {
+  // Re-sync the form when the saved alarm changes identity (e.g. after save).
+  // This is the React "adjust state during render" pattern, replacing an update
+  // effect that set state synchronously (react-hooks/set-state-in-effect). The
+  // `if (alarm)` guard mirrors the original — a cleared alarm is reset by
+  // handleClear directly, not here.
+  const [syncedAlarm, setSyncedAlarm] = useState(alarm);
+  if (syncedAlarm !== alarm) {
+    setSyncedAlarm(alarm);
     if (alarm) {
       setTime(alarm.time);
       if (alarm.days.includes("daily")) {
@@ -54,7 +66,7 @@ export function AlarmSetup({
         setSelectedDays(alarm.days);
       }
     }
-  }, [alarm]);
+  }
 
   const toggleDay = (day: string) => {
     setSelectedDays((prev) =>

@@ -10,24 +10,21 @@ interface BirthdayCardProps {
 }
 
 export function BirthdayCard({ email }: BirthdayCardProps) {
-  const [isVisible, setIsVisible] = useState(false);
-  const [name, setName] = useState("");
+  // Visibility + name come from synchronous, read-only sources, so derive them
+  // once via lazy initializers instead of a mount effect (avoids
+  // react-hooks/set-state-in-effect). isBirthdayToday/loadBirthday guard SSR.
+  const [isVisible] = useState(() => Boolean(email) && isBirthdayToday(email));
+  const [name] = useState(() => (email ? loadBirthday(email)?.shoutoutName ?? "" : ""));
   const [pointsAwarded, setPointsAwarded] = useState(false);
 
+  // Awarding points is a real mount side effect (writes storage + a bounty), so
+  // it stays in an effect. The resulting setState is deferred to a microtask to
+  // keep it out of the synchronous effect body.
   useEffect(() => {
-    if (!email) return;
-
-    if (isBirthdayToday(email)) {
-      setIsVisible(true);
-      const data = loadBirthday(email);
-      if (data?.shoutoutName) {
-        setName(data.shoutoutName);
-      }
-      // Auto-award birthday points
-      const awarded = awardBirthdayPoints(email);
-      setPointsAwarded(awarded);
-    }
-  }, [email]);
+    if (!isVisible) return;
+    const awarded = awardBirthdayPoints(email);
+    queueMicrotask(() => setPointsAwarded(awarded));
+  }, [isVisible, email]);
 
   if (!isVisible) return null;
 

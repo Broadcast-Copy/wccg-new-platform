@@ -228,12 +228,20 @@ export function TeamProfile({ team, youtubeVideos }: { team: SportsTeam; youtube
   const espnLive = useESPNLive(team.espnSport ?? "mens-college-basketball");
   const live = espnLive.isLive || isTeamLive(team);
 
-  // Force client-side re-evaluation so isTeamLive() uses real client time
+  // Force client-side re-evaluation so isTeamLive() uses real client time.
+  // The initial bump is deferred to a microtask so the effect body doesn't call
+  // setState synchronously; the interval keeps it fresh thereafter.
   const [, setTick] = useState(0);
   useEffect(() => {
-    setTick(1);
+    let active = true;
+    queueMicrotask(() => {
+      if (active) setTick(1);
+    });
     const id = setInterval(() => setTick((t) => t + 1), 60_000);
-    return () => clearInterval(id);
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
   }, []);
 
   return (

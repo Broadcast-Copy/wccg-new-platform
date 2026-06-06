@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   ClipboardList,
   Mic,
@@ -60,9 +60,13 @@ const STORAGE_KEY = "wccg:traffic-production-orders";
 // Component
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function ProductionOrdersPage() {
-  const [mounted, setMounted] = useState(false);
-  const [orders, setOrders] = useState<ProductionOrder[]>([]);
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
+  const [orders, setOrders] = useState<ProductionOrder[]>(() => loadOrSeed(STORAGE_KEY, SEED_ORDERS));
   const [selected, setSelected] = useState<ProductionOrder | null>(null);
   const [tab, setTab] = useState("all");
   const [showAdd, setShowAdd] = useState(false);
@@ -75,11 +79,6 @@ export default function ProductionOrdersPage() {
   const [newDue, setNewDue] = useState("2026-04-01");
   const [newPriority, setNewPriority] = useState<"Normal">("Normal");
   const [newNotes, setNewNotes] = useState("");
-
-  useEffect(() => {
-    setMounted(true);
-    setOrders(loadOrSeed(STORAGE_KEY, SEED_ORDERS));
-  }, []);
 
   if (!mounted) {
     return <div className="p-6 space-y-6 animate-pulse"><div className="h-12 bg-muted rounded-xl w-1/3" /></div>;

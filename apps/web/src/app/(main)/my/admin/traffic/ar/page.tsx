@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   CreditCard,
   AlertTriangle,
@@ -67,17 +67,16 @@ const STORAGE_KEY = "wccg:traffic-ar";
 // Component
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function AccountsReceivablePage() {
-  const [mounted, setMounted] = useState(false);
-  const [accounts, setAccounts] = useState<ARAccount[]>([]);
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
+  const [accounts, setAccounts] = useState<ARAccount[]>(() => loadOrSeed(STORAGE_KEY, SEED_AR));
   const [selected, setSelected] = useState<ARAccount | null>(null);
   const [tab, setTab] = useState("all");
   const [newNote, setNewNote] = useState("");
-
-  useEffect(() => {
-    setMounted(true);
-    setAccounts(loadOrSeed(STORAGE_KEY, SEED_AR));
-  }, []);
 
   if (!mounted) {
     return <div className="p-6 space-y-6 animate-pulse"><div className="h-12 bg-muted rounded-xl w-1/3" /></div>;

@@ -9,7 +9,7 @@
  * returns null or stale data.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
@@ -40,8 +40,23 @@ export interface UseMcrOnAir {
   isPlaying: boolean;
 }
 
+/** Pure-at-call-site staleness check (reads the clock, so never call in render). */
+function computeFresh(d: McrOnAirState | null): boolean {
+  return (
+    !!d?.nowPlaying?.title &&
+    !!d.lastMetadataAt &&
+    Date.now() - new Date(d.lastMetadataAt).getTime() < STALE_THRESHOLD_MS
+  );
+}
+
 export function useMcrOnAir(enabled = true): UseMcrOnAir {
   const [data, setData] = useState<McrOnAirState | null>(null);
+  // `fresh` is derived from the clock, so it is recomputed on every poll tick
+  // (inside the effect) rather than during render, where Date.now() is impure.
+  const [fresh, setFresh] = useState(false);
+  // Mirror of the latest data so the poll callback can recompute staleness
+  // against current data even on fetch failures (no re-render needed).
+  const dataRef = useRef<McrOnAirState | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -51,11 +66,20 @@ export function useMcrOnAir(enabled = true): UseMcrOnAir {
         const r = await fetch(`${API_URL}/mcr/on-air`, {
           signal: AbortSignal.timeout(4000),
         });
-        if (!r.ok) return;
+        if (!r.ok) {
+          // No new data — re-evaluate staleness of the existing data.
+          if (!cancelled) setFresh(computeFresh(dataRef.current));
+          return;
+        }
         const j = (await r.json()) as McrOnAirState;
-        if (!cancelled) setData(j);
+        if (!cancelled) {
+          dataRef.current = j;
+          setData(j);
+          setFresh(computeFresh(j));
+        }
       } catch {
         /* silent — keeps fallback path working */
+        if (!cancelled) setFresh(computeFresh(dataRef.current));
       }
     };
     load();
@@ -65,11 +89,6 @@ export function useMcrOnAir(enabled = true): UseMcrOnAir {
       window.clearInterval(id);
     };
   }, [enabled]);
-
-  const fresh =
-    !!data?.nowPlaying?.title &&
-    !!data.lastMetadataAt &&
-    Date.now() - new Date(data.lastMetadataAt).getTime() < STALE_THRESHOLD_MS;
 
   return {
     data,

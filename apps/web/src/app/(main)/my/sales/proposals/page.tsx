@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   FileText,
   Plus,
@@ -120,9 +120,13 @@ const SEED_PROPOSALS: Proposal[] = [
 // Page
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function ProposalsPage() {
-  const [proposals, setProposals] = useState<Proposal[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const [proposals, setProposals] = useState<Proposal[]>(() => loadOrSeed(KEY, SEED_PROPOSALS));
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
   const [showBuilder, setShowBuilder] = useState(false);
   const [previewProposal, setPreviewProposal] = useState<Proposal | null>(null);
 
@@ -134,11 +138,6 @@ export default function ProposalsPage() {
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [addOns, setAddOns] = useState<AddOn[]>(DEFAULT_ADDONS.map((a) => ({ ...a })));
   const [notes, setNotes] = useState("");
-
-  useEffect(() => {
-    setMounted(true);
-    setProposals(loadOrSeed(KEY, SEED_PROPOSALS));
-  }, []);
 
   if (!mounted) return null;
 

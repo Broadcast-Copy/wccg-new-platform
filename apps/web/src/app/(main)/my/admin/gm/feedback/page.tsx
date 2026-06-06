@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   MessageSquare,
   ThumbsUp,
@@ -68,13 +68,9 @@ const CHANNEL_ICONS: Record<Channel, typeof Phone> = {
 // ---------------------------------------------------------------------------
 
 export default function FeedbackPage() {
-  const [feedback, setFeedback] = useState<Feedback[]>([]);
+  const [feedback] = useState<Feedback[]>(() => loadOrSeed(STORAGE_KEY, SEED_FEEDBACK));
   const [sentimentFilter, setSentimentFilter] = useState("All");
   const [selected, setSelected] = useState<Feedback | null>(null);
-
-  useEffect(() => {
-    setFeedback(loadOrSeed(STORAGE_KEY, SEED_FEEDBACK));
-  }, []);
 
   const filtered = sentimentFilter === "All" ? feedback : feedback.filter((f) => f.sentiment === sentimentFilter);
 

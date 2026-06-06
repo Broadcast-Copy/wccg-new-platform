@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -18,23 +18,21 @@ interface BirthdaySetupProps {
 }
 
 export function BirthdaySetup({ email, onSaved }: BirthdaySetupProps) {
-  const [month, setMonth] = useState(1);
-  const [day, setDay] = useState(1);
-  const [shoutoutRequested, setShoutoutRequested] = useState(false);
-  const [shoutoutName, setShoutoutName] = useState("");
+  // Seed the form once from the synchronous localStorage source via lazy
+  // initializers (replaces the old mount effect; avoids
+  // react-hooks/set-state-in-effect). `email` is stable for the component's
+  // lifetime, and the user edits the fields afterward through the setters.
+  // loadBirthday() guards SSR (returns null).
+  const [existing, setExisting] = useState<BirthdayData | null>(() =>
+    loadBirthday(email),
+  );
+  const [month, setMonth] = useState(() => existing?.month ?? 1);
+  const [day, setDay] = useState(() => existing?.day ?? 1);
+  const [shoutoutRequested, setShoutoutRequested] = useState(
+    () => existing?.shoutoutRequested ?? false,
+  );
+  const [shoutoutName, setShoutoutName] = useState(() => existing?.shoutoutName ?? "");
   const [saved, setSaved] = useState(false);
-  const [existing, setExisting] = useState<BirthdayData | null>(null);
-
-  useEffect(() => {
-    const data = loadBirthday(email);
-    if (data) {
-      setMonth(data.month);
-      setDay(data.day);
-      setShoutoutRequested(data.shoutoutRequested);
-      setShoutoutName(data.shoutoutName);
-      setExisting(data);
-    }
-  }, [email]);
 
   // Get max days for the selected month
   const maxDays = new Date(2024, month, 0).getDate(); // 2024 is a leap year for Feb

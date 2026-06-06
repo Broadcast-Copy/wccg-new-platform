@@ -146,6 +146,18 @@ const FILTER_OPTIONS: (JobStatus | "All")[] = ["All", ...STATUS_ORDER];
 // Component
 // ---------------------------------------------------------------------------
 
+function mapJobRows(data: Record<string, unknown>[]): ProductionJob[] {
+  return data.map((row) => ({
+    id: (row.id as string) ?? "",
+    client: (row.title as string) ?? "",
+    type: (row.type as string) ?? "",
+    due: (row.due_date as string) ?? "",
+    status: (row.status as JobStatus) ?? "Pending",
+    assignedTo: (row.assigned_to as string) ?? "Unassigned",
+    project: (row.description as string) ?? undefined,
+  }));
+}
+
 export default function ProductionPage() {
   const { supabase } = useSupabase();
   const { user } = useAuth();
@@ -181,24 +193,32 @@ export default function ProductionPage() {
       console.error("Failed to fetch productions:", error);
       toast.error("Failed to load production jobs");
     } else if (data) {
-      setJobs(
-        data.map((row: Record<string, unknown>) => ({
-          id: (row.id as string) ?? "",
-          client: (row.title as string) ?? "",
-          type: (row.type as string) ?? "",
-          due: (row.due_date as string) ?? "",
-          status: (row.status as JobStatus) ?? "Pending",
-          assignedTo: (row.assigned_to as string) ?? "Unassigned",
-          project: (row.description as string) ?? undefined,
-        }))
-      );
+      setJobs(mapJobRows(data as Record<string, unknown>[]));
     }
     setLoading(false);
   }, [supabase]);
 
   useEffect(() => {
-    fetchJobs();
-  }, [fetchJobs]);
+    if (!supabase) return;
+    let active = true;
+    void (async () => {
+      const { data, error } = await supabase
+        .from("productions")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (!active) return;
+      if (error) {
+        console.error("Failed to fetch productions:", error);
+        toast.error("Failed to load production jobs");
+      } else if (data) {
+        setJobs(mapJobRows(data as Record<string, unknown>[]));
+      }
+      setLoading(false);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
 
   // -- Helpers --------------------------------------------------------------
   const showToast = useCallback((msg: string) => {

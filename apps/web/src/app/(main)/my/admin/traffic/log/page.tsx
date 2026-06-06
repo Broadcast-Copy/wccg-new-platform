@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   Calendar,
   ChevronLeft,
@@ -238,8 +238,17 @@ const CONTENT_ICONS: Record<string, { icon: typeof Radio; color: string }> = {
 // Component
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
+function loadDayLog(dateStr: string): LogEntry[] {
+  const key = `wccg:traffic-log:${dateStr}`;
+  return loadOrSeed<LogEntry>(key, generateDayLog(dateStr));
+}
+
 export default function TrafficLogPage() {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
   const [selectedDate, setSelectedDate] = useState(() => {
     const d = new Date();
     return d.toISOString().slice(0, 10);
@@ -247,14 +256,12 @@ export default function TrafficLogPage() {
   const [filterHour, setFilterHour] = useState<number | null>(null);
   const [filterType, setFilterType] = useState<string>("all");
 
-  const [entries, setEntries] = useState<LogEntry[]>([]);
+  const [entries, setEntries] = useState<LogEntry[]>(() => loadDayLog(new Date().toISOString().slice(0, 10)));
 
-  useEffect(() => {
-    setMounted(true);
-    const key = `wccg:traffic-log:${selectedDate}`;
-    const data = loadOrSeed<LogEntry>(key, generateDayLog(selectedDate));
-    setEntries(data);
-  }, [selectedDate]);
+  const selectDate = (next: string) => {
+    setSelectedDate(next);
+    setEntries(loadDayLog(next));
+  };
 
   if (!mounted) {
     return <div className="p-6 space-y-6 animate-pulse"><div className="h-12 bg-muted rounded-xl w-1/3" /></div>;
@@ -263,7 +270,7 @@ export default function TrafficLogPage() {
   const changeDate = (dir: number) => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() + dir);
-    setSelectedDate(d.toISOString().slice(0, 10));
+    selectDate(d.toISOString().slice(0, 10));
   };
 
   // Filter
@@ -354,7 +361,7 @@ export default function TrafficLogPage() {
           <input
             type="date"
             value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
+            onChange={(e) => selectDate(e.target.value)}
             className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground"
           />
           <button onClick={() => changeDate(1)} className="h-8 w-8 flex items-center justify-center rounded-lg border border-border hover:bg-muted transition-colors">

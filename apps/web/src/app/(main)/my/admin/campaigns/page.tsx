@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, Fragment } from "react";
+import { useState, useEffect, useMemo, useCallback, useSyncExternalStore, Fragment } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -480,12 +480,16 @@ function emptyWizard(): WizardState {
 // Component
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function CampaignBuilderPage() {
   // ---- State ----
   const [activeTab, setActiveTab] = useState<TabId>("pipeline");
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [campaigns, setCampaigns] = useState<Campaign[]>(() => loadFromStorage("wccg_campaigns", seedCampaigns));
+  const [clients, setClients] = useState<Client[]>(() => loadFromStorage("wccg_ad_clients", seedClients));
+  const loaded = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
 
   // Pipeline
   const [pipelineSearch, setPipelineSearch] = useState("");
@@ -502,13 +506,6 @@ export default function CampaignBuilderPage() {
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
   const [showAddClient, setShowAddClient] = useState(false);
   const [newClient, setNewClient] = useState({ company: "", contactName: "", email: "", phone: "" });
-
-  // ---- Load from localStorage ----
-  useEffect(() => {
-    setCampaigns(loadFromStorage("wccg_campaigns", seedCampaigns));
-    setClients(loadFromStorage("wccg_ad_clients", seedClients));
-    setLoaded(true);
-  }, []);
 
   // ---- Persist on change ----
   useEffect(() => {

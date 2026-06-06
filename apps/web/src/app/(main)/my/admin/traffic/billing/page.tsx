@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   DollarSign,
   AlertTriangle,
@@ -58,16 +58,15 @@ const STORAGE_KEY = "wccg:traffic-billing";
 // Component
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function BillingDashboardPage() {
-  const [mounted, setMounted] = useState(false);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
+  const [invoices, setInvoices] = useState<Invoice[]>(() => loadOrSeed(STORAGE_KEY, SEED_INVOICES));
   const [selected, setSelected] = useState<Invoice | null>(null);
   const [tab, setTab] = useState("all");
-
-  useEffect(() => {
-    setMounted(true);
-    setInvoices(loadOrSeed(STORAGE_KEY, SEED_INVOICES));
-  }, []);
 
   if (!mounted) {
     return <div className="p-6 space-y-6 animate-pulse"><div className="h-12 bg-muted rounded-xl w-1/3" /></div>;

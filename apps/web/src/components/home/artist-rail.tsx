@@ -34,16 +34,22 @@ export function ArtistRail() {
   const [favError, setFavError] = useState<string | null>(null);
 
   // Hydrate favorite state from localStorage so the star sticks across reloads
-  // until A2's server sync hands us a real source of truth.
+  // until A2's server sync hands us a real source of truth. Runs whenever the
+  // on-air artist (slug) changes. The setState is deferred to a microtask so it
+  // doesn't run synchronously in the effect body (react-hooks/set-state-in-effect);
+  // a lazy initializer can't be used because slug arrives/changes asynchronously
+  // from now-playing.
   useEffect(() => {
     if (!slug) return;
+    let favorite = false;
     try {
       const raw = localStorage.getItem("wccg_artist_favorites");
       const set: string[] = raw ? JSON.parse(raw) : [];
-      setFavorited(set.includes(slug));
+      favorite = set.includes(slug);
     } catch {
       // ignore
     }
+    queueMicrotask(() => setFavorited(favorite));
   }, [slug]);
 
   const onFavorite = () => {
@@ -77,7 +83,7 @@ export function ArtistRail() {
   return (
     <section aria-label="More about the artist on air" className="space-y-3">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-xl font-bold text-foreground">Because you're listening to {artist}</h2>
+        <h2 className="text-xl font-bold text-foreground">Because you&apos;re listening to {artist}</h2>
         <Link href={wikiHref} className="text-xs font-semibold uppercase tracking-widest text-muted-foreground hover:text-[#74ddc7]">
           Open wiki →
         </Link>

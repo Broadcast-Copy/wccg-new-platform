@@ -241,7 +241,8 @@ function WaveformPattern({
       result.push({ x: i * (barWidth + gap), h: barH });
     }
     return result;
-  }, [width, height, color, type]);
+    // `color` is only used in the JSX fill below, not in this computation.
+  }, [width, height, type]);
 
   const barWidth = type === "music" ? 3 : 2;
 
@@ -654,6 +655,10 @@ export function StudioTimeline() {
   const totalWidth = TOTAL_DURATION * pixelsPerSecond;
 
   /* -- Playback loop -- */
+  // Holds the latest `animate` so the RAF loop can re-schedule itself without
+  // referencing the callback variable before it is declared.
+  const animateRef = useRef<(timestamp: number) => void>(() => {});
+
   const animate = useCallback(
     (timestamp: number) => {
       if (lastFrameTime.current === 0) lastFrameTime.current = timestamp;
@@ -672,10 +677,15 @@ export function StudioTimeline() {
         return next;
       });
 
-      animationRef.current = requestAnimationFrame(animate);
+      animationRef.current = requestAnimationFrame((t) => animateRef.current(t));
     },
     [playbackSpeed, loopEnabled, markIn, markOut]
   );
+
+  // Keep the ref pointing at the latest callback (assigned in an effect, not render).
+  useEffect(() => {
+    animateRef.current = animate;
+  }, [animate]);
 
   useEffect(() => {
     if (isPlaying) {

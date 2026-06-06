@@ -191,7 +191,7 @@ export default function DjPortalPage() {
       <div className="py-8 space-y-3">
         <p className="text-sm text-red-500">{error}</p>
         <p className="text-xs text-muted-foreground">
-          If you're a WCCG DJ and don't see your portal, ask an admin to claim your DJ slug to your account.
+          If you&apos;re a WCCG DJ and don&apos;t see your portal, ask an admin to claim your DJ slug to your account.
         </p>
       </div>
     );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -28,13 +28,17 @@ const STEPS = [
 // Page
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function SpotShopCheckoutPage() {
   const router = useRouter();
   const { items, clearCart } = useSpotCart();
 
   // ── State ──────────────────────────────────────────────────────────────
   const [step, setStep] = useState(1);
-  const [clients, setClients] = useState<SalesClient[]>([]);
+  const [clients, setClients] = useState<SalesClient[]>(() => loadOrSeed<SalesClient>(CLIENTS_KEY, SEED_CLIENTS));
   const [selectedClient, setSelectedClient] = useState<SalesClient | null>(null);
   const [clientSearch, setClientSearch] = useState("");
   const [showNewClient, setShowNewClient] = useState(false);
@@ -52,13 +56,7 @@ export default function SpotShopCheckoutPage() {
   const [taxRate, setTaxRate] = useState(7);
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState("");
-  const [mounted, setMounted] = useState(false);
-
-  // ── Init ───────────────────────────────────────────────────────────────
-  useEffect(() => {
-    setClients(loadOrSeed<SalesClient>(CLIENTS_KEY, SEED_CLIENTS));
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
 
   // ── Derived ────────────────────────────────────────────────────────────
   const filteredClients: SalesClient[] = useMemo(() => {

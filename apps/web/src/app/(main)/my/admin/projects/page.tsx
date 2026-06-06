@@ -182,7 +182,18 @@ function ProjectDetail({ project, clients, onClose, onMove, onChanged }: { proje
     const { data } = await supabase.from("project_tasks").select("id,project_id,title,done,position").eq("project_id", project.id).order("position");
     setTasks((data ?? []) as Task[]);
   }, [project.id]);
-  useEffect(() => { loadTasks(); }, [loadTasks]);
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const supabase = createClient();
+      const { data } = await supabase.from("project_tasks").select("id,project_id,title,done,position").eq("project_id", project.id).order("position");
+      if (!active) return;
+      setTasks((data ?? []) as Task[]);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [project.id]);
 
   const addTask = async () => {
     if (!newTask.trim()) return;

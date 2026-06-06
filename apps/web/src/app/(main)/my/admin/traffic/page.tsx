@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import {
   Radio,
@@ -90,9 +90,12 @@ const TODAY_HOURS: HourSummary[] = [
   { hour: "5 PM", scheduled: 10, aired: 10, missed: 0 },
 ];
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function TrafficDashboard() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
 
   const totalScheduled = TODAY_HOURS.reduce((s, h) => s + h.scheduled, 0);
   const totalAired = TODAY_HOURS.reduce((s, h) => s + h.aired, 0);

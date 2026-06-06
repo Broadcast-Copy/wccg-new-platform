@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   Target,
   DollarSign,
@@ -88,9 +88,13 @@ const SEED_DEALS: PipelineDeal[] = [
 // Page
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function SalesPipelinePage() {
-  const [deals, setDeals] = useState<PipelineDeal[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const [deals, setDeals] = useState<PipelineDeal[]>(() => loadOrSeed(KEY, SEED_DEALS));
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
   const [showAdd, setShowAdd] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<PipelineDeal | null>(null);
   const [newDeal, setNewDeal] = useState({
@@ -101,11 +105,6 @@ export default function SalesPipelinePage() {
     notes: "",
     stage: "Prospecting" as PipelineStage,
   });
-
-  useEffect(() => {
-    setMounted(true);
-    setDeals(loadOrSeed(KEY, SEED_DEALS));
-  }, []);
 
   if (!mounted) return null;
 

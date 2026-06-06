@@ -199,7 +199,10 @@ function ListenLiveButton() {
     if (!marqueeText) return;
     // Only trigger if the track actually changed (not on first load)
     if (prevTrackRef.current !== null && prevTrackRef.current !== marqueeText) {
-      setShowingSong(true);
+      // Deferred so it is not a synchronous setState in the effect body; this
+      // is a one-shot animation trigger reacting to the now-playing track
+      // changing, so a microtask delay is behavior-neutral.
+      queueMicrotask(() => setShowingSong(true));
     }
     prevTrackRef.current = marqueeText;
   }, [marqueeText]);

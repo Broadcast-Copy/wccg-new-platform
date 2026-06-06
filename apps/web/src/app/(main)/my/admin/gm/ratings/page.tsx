@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   BarChart3,
   TrendingUp,
@@ -68,13 +68,8 @@ const SK_CR = "wccg:gm:ratings-competitors";
 
 export default function RatingsPage() {
   const [tab, setTab] = useState("dayparts");
-  const [dayparts, setDayparts] = useState<DaypartRating[]>([]);
-  const [competitors, setCompetitors] = useState<CompetitorRating[]>([]);
-
-  useEffect(() => {
-    setDayparts(loadOrSeed(SK_DP, SEED_DAYPARTS));
-    setCompetitors(loadOrSeed(SK_CR, SEED_COMPETITORS));
-  }, []);
+  const [dayparts] = useState<DaypartRating[]>(() => loadOrSeed(SK_DP, SEED_DAYPARTS));
+  const [competitors] = useState<CompetitorRating[]>(() => loadOrSeed(SK_CR, SEED_COMPETITORS));
 
   const wccg = competitors.find((c) => c.station.includes("WCCG"));
   const avgShare = dayparts.length > 0 ? (dayparts.reduce((s, d) => s + d.share, 0) / dayparts.length).toFixed(1) : "0";

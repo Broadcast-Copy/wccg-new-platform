@@ -173,11 +173,19 @@ function PlayerSpotlight({
     return null;
   }, [lastPlayText, players]);
 
-  // Track when a new player image loads
+  // Optimistically mark the matched player's (preloaded) headshot as loaded so the
+  // swap is instant. Deferred to a microtask so the effect body doesn't call setState
+  // synchronously; the real <img> onLoad below also sets this as a fallback.
   useEffect(() => {
-    if (matchedPlayer?.imageUrl) {
-      setImageLoaded(matchedPlayer.imageUrl);
-    }
+    if (!matchedPlayer?.imageUrl) return;
+    const url = matchedPlayer.imageUrl;
+    let active = true;
+    queueMicrotask(() => {
+      if (active) setImageLoaded(url);
+    });
+    return () => {
+      active = false;
+    };
   }, [matchedPlayer]);
 
   // If opponent has the ball or no Duke player matched, show team logo
@@ -468,61 +476,76 @@ function PostGameSpotlight({
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Match mentioned person to player or coach
-  const matched = useMemo((): {
+  // Match mentioned person to player or coach.
+  // Computed during render (the React Compiler memoizes this automatically); a manual
+  // useMemo here could not be preserved by the compiler.
+  type MatchedPerson = {
     name: string;
     imageUrl: string;
     subtitle: string;
     role: string;
-  } | null => {
-    if (!currentEntry?.mentionedPerson) return null;
+  };
+  let matched: MatchedPerson | null = null;
+  if (currentEntry?.mentionedPerson) {
     const mentioned = currentEntry.mentionedPerson.toLowerCase();
 
     // Try full name match first (handles "Cameron Boozer" vs "Cayden Boozer")
     for (const p of players) {
-      if (p.name.toLowerCase() === mentioned)
-        return {
+      if (p.name.toLowerCase() === mentioned) {
+        matched = {
           name: p.name,
           imageUrl: p.imageUrl!,
           subtitle: `#${p.number} | ${p.position} | ${p.year}`,
           role: "player",
         };
+        break;
+      }
     }
-    for (const c of coaches) {
-      if (c.name.toLowerCase() === mentioned)
-        return {
-          name: c.name,
-          imageUrl: c.imageUrl!,
-          subtitle: c.title,
-          role: "coach",
-        };
+    if (!matched) {
+      for (const c of coaches) {
+        if (c.name.toLowerCase() === mentioned) {
+          matched = {
+            name: c.name,
+            imageUrl: c.imageUrl!,
+            subtitle: c.title,
+            role: "coach",
+          };
+          break;
+        }
+      }
     }
 
     // Fall back to last name
-    const lastNameMentioned = mentioned.split(" ").pop() || "";
-    for (const p of players) {
-      const lastName = p.name.split(" ").pop()?.toLowerCase() || "";
-      if (lastName === lastNameMentioned)
-        return {
-          name: p.name,
-          imageUrl: p.imageUrl!,
-          subtitle: `#${p.number} | ${p.position} | ${p.year}`,
-          role: "player",
-        };
+    if (!matched) {
+      const lastNameMentioned = mentioned.split(" ").pop() || "";
+      for (const p of players) {
+        const lastName = p.name.split(" ").pop()?.toLowerCase() || "";
+        if (lastName === lastNameMentioned) {
+          matched = {
+            name: p.name,
+            imageUrl: p.imageUrl!,
+            subtitle: `#${p.number} | ${p.position} | ${p.year}`,
+            role: "player",
+          };
+          break;
+        }
+      }
+      if (!matched) {
+        for (const c of coaches) {
+          const lastName = c.name.split(" ").pop()?.toLowerCase() || "";
+          if (lastName === lastNameMentioned) {
+            matched = {
+              name: c.name,
+              imageUrl: c.imageUrl!,
+              subtitle: c.title,
+              role: "coach",
+            };
+            break;
+          }
+        }
+      }
     }
-    for (const c of coaches) {
-      const lastName = c.name.split(" ").pop()?.toLowerCase() || "";
-      if (lastName === lastNameMentioned)
-        return {
-          name: c.name,
-          imageUrl: c.imageUrl!,
-          subtitle: c.title,
-          role: "coach",
-        };
-    }
-
-    return null;
-  }, [currentEntry, players, coaches]);
+  }
 
   const isSpeakerInterview =
     currentEntry &&
@@ -1341,6 +1364,9 @@ export function DukeGameTile() {
         // Keep hardcoded fallback
       }
     })();
+    // Mount-only one-shot schedule fetch; `espnNextGame?.espnEventId` is read only to
+    // avoid clobbering an already-set next game and must NOT retrigger the fetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const nextGame = espnNextGame;
@@ -1419,25 +1445,30 @@ export function DukeGameTile() {
   }, [playableHighlights.length]);
   const featuredVideo = playableHighlights[featuredVideoIndex] || null;
 
-  // Use ESPN scores when available, fall back to simulated
-  useEffect(() => {
-    if (espnData && (espnData.status === "in" || espnData.status === "post")) {
-      setLiveScore({
-        duke: espnData.dukeScore,
-        opponent: espnData.opponentScore,
-      });
-      // Update period/clock from ESPN
-      if (espnData.status === "in") {
-        if (espnData.period === 1) setHalf("1st Half");
-        else if (espnData.period === 2) setHalf("2nd Half");
-        else setHalf(`OT${espnData.period > 3 ? espnData.period - 2 : ""}`);
-        setGameClock(espnData.clock || "");
-      } else {
-        setHalf("Final");
-        setGameClock("");
-      }
+  // Prefer real ESPN scores when available, otherwise fall back to the simulated
+  // values held in state (written by the `tick` interval below). Derived during
+  // render so we don't mirror external data into state inside an effect.
+  const espnHasScores =
+    !!espnData && (espnData.status === "in" || espnData.status === "post");
+  const displayScore = espnHasScores
+    ? { duke: espnData.dukeScore, opponent: espnData.opponentScore }
+    : liveScore;
+  let displayHalf = half;
+  let displayClock = gameClock;
+  if (espnHasScores) {
+    if (espnData.status === "in") {
+      displayHalf =
+        espnData.period === 1
+          ? "1st Half"
+          : espnData.period === 2
+            ? "2nd Half"
+            : `OT${espnData.period > 3 ? espnData.period - 2 : ""}`;
+      displayClock = espnData.clock || "";
+    } else {
+      displayHalf = "Final";
+      displayClock = "";
     }
-  }, [espnData]);
+  }
 
   useEffect(() => {
     if (!gameDate) return;
@@ -1586,7 +1617,7 @@ export function DukeGameTile() {
                 <img src={DUKE_BASKETBALL.logoUrl} alt="Duke" className="h-12 w-12 sm:h-14 sm:w-14 object-contain" />
                 <div className="text-center">
                   <span className="block text-xs font-bold text-white/70">DUKE</span>
-                  <span className="text-3xl sm:text-4xl font-black text-white tabular-nums">{liveScore.duke}</span>
+                  <span className="text-3xl sm:text-4xl font-black text-white tabular-nums">{displayScore.duke}</span>
                 </div>
               </div>
               <div className="flex flex-col items-center">
@@ -1598,12 +1629,12 @@ export function DukeGameTile() {
                   </div>
                 )}
                 {!espnData?.possession && <span className="text-lg font-black text-white/30">—</span>}
-                <span className="text-[11px] text-white/50 mt-0.5">{half}{gameClock && ` | ${gameClock}`}</span>
+                <span className="text-[11px] text-white/50 mt-0.5">{displayHalf}{displayClock && ` | ${displayClock}`}</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-center">
                   <span className="block text-xs font-bold text-white/70">{opponentShort.toUpperCase()}</span>
-                  <span className="text-3xl sm:text-4xl font-black text-white/80 tabular-nums">{liveScore.opponent}</span>
+                  <span className="text-3xl sm:text-4xl font-black text-white/80 tabular-nums">{displayScore.opponent}</span>
                 </div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 {nextGame.opponentLogo && <img src={nextGame.opponentLogo} alt={nextGame.opponent} className="h-12 w-12 sm:h-14 sm:w-14 object-contain" />}

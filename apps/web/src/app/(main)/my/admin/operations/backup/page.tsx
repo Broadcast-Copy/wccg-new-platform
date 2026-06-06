@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   HardDrive,
   CheckCircle2,
@@ -97,18 +97,15 @@ const SEED_CHECKLIST: DRChecklistItem[] = [
 // Component
 // ---------------------------------------------------------------------------
 
-export default function BackupPage() {
-  const [mounted, setMounted] = useState(false);
-  const [status, setStatus] = useState<BackupStatus>(SEED_STATUS);
-  const [schedule, setSchedule] = useState<BackupScheduleEntry[]>([]);
-  const [checklist, setChecklist] = useState<DRChecklistItem[]>([]);
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
 
-  useEffect(() => {
-    setStatus(loadSingle("ops_backup_status", SEED_STATUS));
-    setSchedule(loadOrSeed("ops_backup_schedule", SEED_SCHEDULE));
-    setChecklist(loadOrSeed("ops_dr_checklist", SEED_CHECKLIST));
-    setMounted(true);
-  }, []);
+export default function BackupPage() {
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
+  const [status] = useState<BackupStatus>(() => loadSingle("ops_backup_status", SEED_STATUS));
+  const [schedule] = useState<BackupScheduleEntry[]>(() => loadOrSeed("ops_backup_schedule", SEED_SCHEDULE));
+  const [checklist, setChecklist] = useState<DRChecklistItem[]>(() => loadOrSeed("ops_dr_checklist", SEED_CHECKLIST));
 
   const toggleCheck = (id: string) => {
     const updated = checklist.map((item) =>

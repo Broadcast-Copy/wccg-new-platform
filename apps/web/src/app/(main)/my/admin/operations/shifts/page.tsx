@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   Calendar,
   Clock,
@@ -133,18 +133,17 @@ function buildSeedShifts(): Shift[] {
 // Component
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function ShiftSchedulingPage() {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
   const [weekOffset, setWeekOffset] = useState(0);
-  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [shifts] = useState<Shift[]>(() => loadOrSeed("ops_shifts", buildSeedShifts()));
   const [filterType, setFilterType] = useState("all");
 
   const weekStart = getMonday(weekOffset);
-
-  useEffect(() => {
-    setShifts(loadOrSeed("ops_shifts", buildSeedShifts()));
-    setMounted(true);
-  }, []);
 
   if (!mounted) {
     return <div className="p-6 space-y-6 animate-pulse"><div className="h-12 bg-muted rounded-xl w-64" /></div>;

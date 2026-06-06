@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
 import {
   Megaphone,
@@ -224,9 +224,13 @@ function SectionHeader({ number, title, icon: Icon }: { number: number; title: s
 // Page
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function CampaignBuilderPage() {
-  const [mounted, setMounted] = useState(false);
-  const [clients, setClients] = useState<SalesClient[]>([]);
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
+  const [clients, setClients] = useState<SalesClient[]>(() => loadOrSeed(CLIENTS_KEY, SEED_CLIENTS));
 
   // Section 1 — Client
   const [clientSearch, setClientSearch] = useState("");
@@ -274,15 +278,6 @@ export default function CampaignBuilderPage() {
   const [taxRate, setTaxRate] = useState(7);
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState("");
-
-  // ---------------------------------------------------------------------------
-  // Init
-  // ---------------------------------------------------------------------------
-
-  useEffect(() => {
-    setMounted(true);
-    setClients(loadOrSeed(CLIENTS_KEY, SEED_CLIENTS));
-  }, []);
 
   // ---------------------------------------------------------------------------
   // Derived

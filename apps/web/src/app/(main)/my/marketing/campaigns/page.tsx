@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   MARKETING_CAMPAIGNS_KEY,
@@ -53,17 +53,17 @@ function StatusBadge({ status }: { status: MarketingCampaign["status"] }) {
 // Page
 // ---------------------------------------------------------------------------
 export default function MarketingCampaignsPage() {
-  const [campaigns, setCampaigns] = useState<MarketingCampaign[]>([]);
-  const [search, setSearch] = useState("");
-
-  useEffect(() => {
+  const [campaigns, setCampaigns] = useState<MarketingCampaign[]>(() => {
+    if (typeof window === "undefined") return [];
     try {
       const raw = localStorage.getItem(MARKETING_CAMPAIGNS_KEY);
-      if (raw) setCampaigns(JSON.parse(raw));
+      if (raw) return JSON.parse(raw) as MarketingCampaign[];
     } catch {
       /* ignore */
     }
-  }, []);
+    return [];
+  });
+  const [search, setSearch] = useState("");
 
   const filtered = campaigns.filter(
     (c) =>

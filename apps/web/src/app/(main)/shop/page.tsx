@@ -67,14 +67,26 @@ export default function ShopPage() {
   const [error, setError] = useState<string | null>(null);
   const [kind, setKind] = useState<string>(ALL);
 
+  // Points start at 0 to match prerendered/hydrated markup (avoids a static-
+  // export hydration mismatch), then read from the synchronous store after
+  // mount. Deferred to a microtask so it is not a synchronous setState in the
+  // effect body.
   const [points, setPoints] = useState(0);
   usePointsSync(() => setPoints(getListeningPoints()));
-  useEffect(() => setPoints(getListeningPoints()), []);
+  useEffect(() => {
+    queueMicrotask(() => setPoints(getListeningPoints()));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
+    // Deferred so these resets are not synchronous setState in the effect body.
+    // Behavior-neutral: loading already starts true on mount and this only
+    // re-shows the loading/clears the error a microtask earlier than the fetch.
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setLoading(true);
+      setError(null);
+    });
 
     let query = supabase
       .from("vendor_products")

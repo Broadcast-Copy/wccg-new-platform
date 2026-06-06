@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, Navigation, Info, Star } from "lucide-react";
@@ -12,27 +12,46 @@ import { CheckInCard } from "@/components/check-in/check-in-card";
 import { CheckInSuccess } from "@/components/check-in/check-in-success";
 import Link from "next/link";
 
+/** Build the set of already-checked-in location ids for a user (sync localStorage). */
+function loadCheckedInIds(email: string | null | undefined): Set<string> {
+  const ids = new Set<string>();
+  if (!email) return ids;
+  for (const loc of CHECK_IN_LOCATIONS) {
+    if (hasCheckedIn(email, loc.id)) {
+      ids.add(loc.id);
+    }
+  }
+  return ids;
+}
+
 export default function CheckInPage() {
   const { user } = useAuth();
+  const email = user?.email;
   const { latitude, longitude, error, loading, refresh } = useGeolocation();
-  const [checkedInIds, setCheckedInIds] = useState<Set<string>>(new Set());
+  // Initialize once from the synchronous localStorage source (empty until the
+  // user's email is known). Stays settable: check-ins below mutate this set.
+  const [checkedInIds, setCheckedInIds] = useState<Set<string>>(() =>
+    loadCheckedInIds(email),
+  );
+  const loadedEmailRef = useRef(email ?? null);
   const [successInfo, setSuccessInfo] = useState<{
     name: string;
     points: number;
   } | null>(null);
   const [locationRequested, setLocationRequested] = useState(false);
 
-  // Load check-in state from localStorage
+  // Reload check-in state when the user's email becomes available / changes.
+  // Mirrors the original: only (re)loads when an email is present; logging out
+  // leaves the existing set untouched.
   useEffect(() => {
-    if (!user?.email) return;
-    const ids = new Set<string>();
-    for (const loc of CHECK_IN_LOCATIONS) {
-      if (hasCheckedIn(user.email, loc.id)) {
-        ids.add(loc.id);
-      }
-    }
-    setCheckedInIds(ids);
-  }, [user?.email]);
+    const current = email ?? null;
+    if (!current) return;
+    if (loadedEmailRef.current === current) return;
+    loadedEmailRef.current = current;
+    // Deferred to a microtask: source is synchronous but the state must remain
+    // settable (check-ins mutate it), so it cannot be derived during render.
+    queueMicrotask(() => setCheckedInIds(loadCheckedInIds(current)));
+  }, [email]);
 
   // Sort active locations by distance
   const sortedLocations = useMemo(() => {
@@ -55,22 +74,22 @@ export default function CheckInPage() {
 
   const handleCheckIn = useCallback(
     (location: CheckInLocation) => {
-      if (!user?.email) return;
-      recordCheckIn(user.email, location.id, location.points);
+      if (!email) return;
+      recordCheckIn(email, location.id, location.points);
       setCheckedInIds((prev) => new Set(prev).add(location.id));
       setSuccessInfo({ name: location.name, points: location.points });
     },
-    [user?.email],
+    [email],
   );
 
   const handleDemoCheckIn = useCallback(
     (location: CheckInLocation) => {
-      if (!user?.email) return;
-      recordCheckIn(user.email, location.id, location.points);
+      if (!email) return;
+      recordCheckIn(email, location.id, location.points);
       setCheckedInIds((prev) => new Set(prev).add(location.id));
       setSuccessInfo({ name: location.name, points: location.points });
     },
-    [user?.email],
+    [email],
   );
 
   const handleRequestLocation = useCallback(() => {
@@ -217,7 +236,7 @@ export default function CheckInPage() {
               <li>Visit WCCG events and check in to earn bonus points!</li>
               <li>You must be within 200 meters of an event to check in.</li>
               <li>Each event can only be checked into once.</li>
-              <li>Use the "Demo Check In" button to try it out from anywhere.</li>
+              <li>Use the &quot;Demo Check In&quot; button to try it out from anywhere.</li>
               <li>Points are added to your WCCG balance instantly.</li>
             </ul>
           </div>

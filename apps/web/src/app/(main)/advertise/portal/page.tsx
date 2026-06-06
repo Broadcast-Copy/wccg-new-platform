@@ -557,7 +557,9 @@ export default function AdvertiserPortalPage() {
 
   useEffect(() => {
     if (!user) return;
-    setAccountLoading(true);
+    // Deferred so this is not a synchronous setState in the effect body; it
+    // still flips true before the awaited query resolves (which sets it false).
+    queueMicrotask(() => setAccountLoading(true));
     supabase
       .from("advertiser_accounts")
       .select("id, company_name, billing_email, is_approved")

@@ -181,7 +181,7 @@ export function PushPrompt() {
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-bold text-foreground">Hear it first</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            We'll ping you when your favorite hosts go live, contests open, or your station drops something new.
+            We&apos;ll ping you when your favorite hosts go live, contests open, or your station drops something new.
           </p>
           <p className="mt-1.5 text-[11px] font-bold uppercase tracking-widest text-[#74ddc7]">
             +50 WP for opting in

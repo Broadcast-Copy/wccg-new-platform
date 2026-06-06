@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   FileText,
   Plus,
@@ -89,7 +89,7 @@ const STORAGE_KEY = "wccg:gm:board-reports";
 // ---------------------------------------------------------------------------
 
 export default function BoardReportsPage() {
-  const [reports, setReports] = useState<BoardReport[]>([]);
+  const [reports, setReports] = useState<BoardReport[]>(() => loadOrSeed(STORAGE_KEY, SEED_REPORTS));
   const [selected, setSelected] = useState<BoardReport | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -102,10 +102,6 @@ export default function BoardReportsPage() {
   const [fCommunity, setFCommunity] = useState("");
   const [fStrategic, setFStrategic] = useState("");
   const [fDecisions, setFDecisions] = useState("");
-
-  useEffect(() => {
-    setReports(loadOrSeed(STORAGE_KEY, SEED_REPORTS));
-  }, []);
 
   function save(data: BoardReport[]) {
     setReports(data);

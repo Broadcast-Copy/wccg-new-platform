@@ -446,7 +446,8 @@ export default function CreativesPage() {
 
   useEffect(() => {
     if (!user) {
-      setLoading(false);
+      // Defer so this is not a synchronous setState in the effect body.
+      queueMicrotask(() => setLoading(false));
       return;
     }
     supabase

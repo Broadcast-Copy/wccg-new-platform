@@ -137,7 +137,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const currentStreamRef = useRef<string | null>(null);
   const [currentStream, setCurrentStream] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolumeState] = useState(0.8);
+  // Initialize volume synchronously from localStorage (guarded for static export).
+  const [volume, setVolumeState] = useState(() => loadSavedVolume());
   const [metadata, setMetadata] = useState<StreamMetadata>({});
   const [isBuffering, setIsBuffering] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -145,13 +146,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
 
   // Initialize the Audio instance once on mount + restore saved stream
   useEffect(() => {
-    const savedVolume = loadSavedVolume();
-
     if (!audioRef.current) {
       audioRef.current = new Audio();
-      audioRef.current.volume = savedVolume;
+      // `volume` is initialized from the same localStorage value above.
+      audioRef.current.volume = volume;
     }
-    setVolumeState(savedVolume);
 
     const audio = audioRef.current;
 
@@ -219,6 +218,9 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       audio.removeEventListener("playing", handlePlaying);
       audio.removeEventListener("stalled", handleStalled);
     };
+    // Mount-only: initializes the Audio element and restores saved stream once.
+    // `volume` is read only for the initial element volume (same localStorage source).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const play = useCallback(

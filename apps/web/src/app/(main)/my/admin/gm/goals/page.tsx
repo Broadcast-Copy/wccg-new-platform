@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Target,
   Plus,
@@ -67,7 +67,7 @@ const CATEGORY_COLORS: Record<GoalCategory, string> = {
 // ---------------------------------------------------------------------------
 
 export default function GoalsPage() {
-  const [goals, setGoals] = useState<Goal[]>([]);
+  const [goals, setGoals] = useState<Goal[]>(() => loadOrSeed(STORAGE_KEY, SEED_GOALS));
   const [catFilter, setCatFilter] = useState("All");
   const [selected, setSelected] = useState<Goal | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -83,10 +83,6 @@ export default function GoalsPage() {
   const [fOwner, setFOwner] = useState("");
   const [fDeadline, setFDeadline] = useState("");
   const [fNotes, setFNotes] = useState("");
-
-  useEffect(() => {
-    setGoals(loadOrSeed(STORAGE_KEY, SEED_GOALS));
-  }, []);
 
   function save(data: Goal[]) {
     setGoals(data);

@@ -13,23 +13,24 @@ import { AlarmSetup } from "@/components/schedule/alarm-setup";
  * alarm time visible on hover. Clicking opens the AlarmSetup dialog.
  */
 export function AlarmIndicator() {
-  const [alarm, setAlarm] = useState<AlarmConfig | null>(null);
+  // Initial alarm comes from the synchronous localStorage source via a lazy
+  // initializer; the interval below keeps it fresh. (Avoids a mount effect that
+  // sets state synchronously — react-hooks/set-state-in-effect.)
+  const [alarm, setAlarm] = useState<AlarmConfig | null>(() => loadAlarm());
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Load alarm on mount and re-check periodically
+  // Re-check periodically. setAlarm runs in the timer callback, which is allowed.
   useEffect(() => {
-    const load = () => setAlarm(loadAlarm());
-    load();
-    const timer = setInterval(load, 10_000);
+    const timer = setInterval(() => setAlarm(loadAlarm()), 10_000);
     return () => clearInterval(timer);
   }, []);
 
-  // Re-load alarm when dialog closes
-  useEffect(() => {
-    if (!dialogOpen) {
-      setAlarm(loadAlarm());
-    }
-  }, [dialogOpen]);
+  // Re-load when the setup dialog closes (it may have changed the alarm). Doing
+  // this in the close handler keeps the setState out of an effect body.
+  const handleDialogOpenChange = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) setAlarm(loadAlarm());
+  };
 
   const formatAlarmTime = (time: string) => {
     const [h, m] = time.split(":").map(Number);
@@ -67,7 +68,7 @@ export function AlarmIndicator() {
         )}
       </div>
 
-      <AlarmSetup open={dialogOpen} onOpenChange={setDialogOpen} />
+      <AlarmSetup open={dialogOpen} onOpenChange={handleDialogOpenChange} />
     </>
   );
 }

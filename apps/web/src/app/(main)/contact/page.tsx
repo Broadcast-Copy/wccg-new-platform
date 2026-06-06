@@ -48,7 +48,10 @@ export default function ContactPage() {
     error: null,
   });
 
-  // Auto-select tab based on URL hash (e.g., /contact#advertise)
+  // Auto-select tab based on URL hash (e.g., /contact#advertise). Kept in an
+  // effect (not a lazy initializer) so the prerendered/hydrated markup matches
+  // ("general"), then updates on the client. Deferred to a microtask so it is
+  // not a synchronous setState in the effect body.
   useEffect(() => {
     const hashMap: Record<string, FormType> = {
       "#advertise": "advertiser",
@@ -56,7 +59,7 @@ export default function ContactPage() {
       "#creator-services": "creator",
     };
     const tab = hashMap[window.location.hash];
-    if (tab) setActiveForm(tab);
+    if (tab) queueMicrotask(() => setActiveForm(tab));
   }, []);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Podcast,
@@ -102,47 +102,59 @@ export function StudioProjects() {
   const [projects, setProjects] = useState<StudioProject[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchProjects = useCallback(async () => {
-    if (!user) {
-      // Fallback to localStorage for unauthenticated users
-      try {
-        const raw = localStorage.getItem("wccg_studio_projects");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          setProjects(parsed.map((p: Record<string, string>) => ({
-            id: p.id,
-            title: p.title || "Untitled",
-            type: (p.type || p.tool || "podcast") as ProjectType,
-            createdAt: p.createdAt,
-            updatedAt: p.updatedAt,
-          })));
-        }
-      } catch { /* ignore */ }
-      setLoading(false);
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("studio_projects")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("updated_at", { ascending: false });
-
-    if (!error && data) {
-      setProjects(data.map((row: Record<string, unknown>) => ({
-        id: row.id as string,
-        title: (row.title as string) || "Untitled",
-        type: (row.tool as ProjectType) || "podcast",
-        createdAt: row.created_at as string,
-        updatedAt: row.updated_at as string,
-      })));
-    }
-    setLoading(false);
-  }, [user, supabase]);
-
   useEffect(() => {
+    let active = true;
+
+    async function fetchProjects() {
+      if (!user) {
+        // Fallback to localStorage for unauthenticated users
+        let loaded: StudioProject[] | null = null;
+        try {
+          const raw = localStorage.getItem("wccg_studio_projects");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            loaded = parsed.map((p: Record<string, string>) => ({
+              id: p.id,
+              title: p.title || "Untitled",
+              type: (p.type || p.tool || "podcast") as ProjectType,
+              createdAt: p.createdAt,
+              updatedAt: p.updatedAt,
+            }));
+          }
+        } catch { /* ignore */ }
+        // Yield once so this synchronous path doesn't setState in the effect body.
+        await Promise.resolve();
+        if (!active) return;
+        if (loaded) setProjects(loaded);
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("studio_projects")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false });
+
+      if (!active) return;
+      if (!error && data) {
+        setProjects(data.map((row: Record<string, unknown>) => ({
+          id: row.id as string,
+          title: (row.title as string) || "Untitled",
+          type: (row.tool as ProjectType) || "podcast",
+          createdAt: row.created_at as string,
+          updatedAt: row.updated_at as string,
+        })));
+      }
+      setLoading(false);
+    }
+
     fetchProjects();
-  }, [fetchProjects]);
+
+    return () => {
+      active = false;
+    };
+  }, [user, supabase]);
 
   async function deleteProject(id: string) {
     if (!confirm("Delete this project?")) return;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Radio,
   Eye,
@@ -96,7 +96,7 @@ const STORAGE_KEY = "wccg:gm:competitors";
 // ---------------------------------------------------------------------------
 
 export default function CompetitorsPage() {
-  const [competitors, setCompetitors] = useState<Competitor[]>([]);
+  const [competitors, setCompetitors] = useState<Competitor[]>(() => loadOrSeed(STORAGE_KEY, SEED_COMPETITORS));
   const [selected, setSelected] = useState<Competitor | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -108,10 +108,6 @@ export default function CompetitorsPage() {
   const [formShare, setFormShare] = useState("");
   const [formShows, setFormShows] = useState("");
   const [formNotes, setFormNotes] = useState("");
-
-  useEffect(() => {
-    setCompetitors(loadOrSeed(STORAGE_KEY, SEED_COMPETITORS));
-  }, []);
 
   function save(data: Competitor[]) {
     setCompetitors(data);

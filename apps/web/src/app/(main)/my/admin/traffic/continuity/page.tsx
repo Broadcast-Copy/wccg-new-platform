@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   FileCheck,
   ChevronLeft,
@@ -95,17 +95,20 @@ const PAST_LOGS = [
 // Component
 // ---------------------------------------------------------------------------
 
-export default function ContinuityLogPage() {
-  const [mounted, setMounted] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [log, setLog] = useState<DailyLog | null>(null);
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
 
-  useEffect(() => {
-    setMounted(true);
-    const key = `wccg:traffic-continuity:${selectedDate}`;
-    const data = loadOrSeed<DailyLog>(key, [generateContinuityLog(selectedDate)]);
-    setLog(data[0] || null);
-  }, [selectedDate]);
+function loadContinuityLog(dateStr: string): DailyLog | null {
+  const key = `wccg:traffic-continuity:${dateStr}`;
+  const data = loadOrSeed<DailyLog>(key, [generateContinuityLog(dateStr)]);
+  return data[0] || null;
+}
+
+export default function ContinuityLogPage() {
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [log, setLog] = useState<DailyLog | null>(() => loadContinuityLog(new Date().toISOString().slice(0, 10)));
 
   if (!mounted || !log) {
     return <div className="p-6 space-y-6 animate-pulse"><div className="h-12 bg-muted rounded-xl w-1/3" /></div>;
@@ -114,7 +117,9 @@ export default function ContinuityLogPage() {
   const changeDate = (dir: number) => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() + dir);
-    setSelectedDate(d.toISOString().slice(0, 10));
+    const next = d.toISOString().slice(0, 10);
+    setSelectedDate(next);
+    setLog(loadContinuityLog(next));
   };
 
   const totalBreaks = log.entries.reduce((s, e) => s + e.commercialBreaks, 0);

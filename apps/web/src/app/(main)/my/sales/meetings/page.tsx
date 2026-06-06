@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   CalendarCheck,
   Users,
@@ -124,9 +124,13 @@ const SEED_MEETINGS: SalesMeeting[] = [
 // Page
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function SalesMeetingsPage() {
-  const [meetings, setMeetings] = useState<SalesMeeting[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const [meetings, setMeetings] = useState<SalesMeeting[]>(() => loadOrSeed(KEY, SEED_MEETINGS));
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
   const [expandedMeeting, setExpandedMeeting] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [newMeeting, setNewMeeting] = useState({
@@ -135,11 +139,6 @@ export default function SalesMeetingsPage() {
     attendees: [] as string[],
     agenda: "",
   });
-
-  useEffect(() => {
-    setMounted(true);
-    setMeetings(loadOrSeed(KEY, SEED_MEETINGS));
-  }, []);
 
   if (!mounted) return null;
 

@@ -551,6 +551,38 @@ function MasterChannel({
 }
 
 // ---------------------------------------------------------------------------
+// Toolbar toggle button
+// ---------------------------------------------------------------------------
+
+function ToolbarToggle({
+  active,
+  onClick,
+  icon: Icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all",
+        active
+          ? "bg-[#74ddc7]/20 text-[#74ddc7] shadow-[0_0_8px_rgba(116,221,199,0.15)]"
+          : "bg-white/5 text-muted-foreground hover:bg-white/10"
+      )}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      {label}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Audio Mixer Component
 // ---------------------------------------------------------------------------
 
@@ -709,38 +741,6 @@ export function AudioMixer() {
     },
     []
   );
-
-  // -------------------------------------------------------------------------
-  // Toolbar toggle button
-  // -------------------------------------------------------------------------
-
-  function ToolbarToggle({
-    active,
-    onClick,
-    icon: Icon,
-    label,
-  }: {
-    active: boolean;
-    onClick: () => void;
-    icon: React.ComponentType<{ className?: string }>;
-    label: string;
-  }) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className={cn(
-          "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all",
-          active
-            ? "bg-[#74ddc7]/20 text-[#74ddc7] shadow-[0_0_8px_rgba(116,221,199,0.15)]"
-            : "bg-white/5 text-muted-foreground hover:bg-white/10"
-        )}
-      >
-        <Icon className="h-3.5 w-3.5" />
-        {label}
-      </button>
-    );
-  }
 
   // -------------------------------------------------------------------------
   // Render

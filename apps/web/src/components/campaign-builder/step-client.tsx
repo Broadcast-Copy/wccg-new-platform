@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 import type { CampaignFormValues } from "./campaign-builder-types";
 import {
@@ -58,15 +58,15 @@ export function StepClient() {
   const { watch, setValue } = useFormContext<CampaignFormValues>();
   const selectedId = watch("clientId");
 
-  const [clients, setClients] = useState<SalesClient[]>([]);
+  // Load clients once from the synchronous localStorage source via a lazy
+  // initializer (replaces the old mount effect; avoids
+  // react-hooks/set-state-in-effect). loadOrSeed() guards SSR (returns []).
+  const [clients, setClients] = useState<SalesClient[]>(() =>
+    loadOrSeed<SalesClient>(CLIENTS_KEY, SEED_CLIENTS),
+  );
   const [search, setSearch] = useState("");
   const [showNewForm, setShowNewForm] = useState(false);
   const [newClient, setNewClient] = useState<NewClientForm>(EMPTY_CLIENT_FORM);
-
-  // Load clients from localStorage on mount
-  useEffect(() => {
-    setClients(loadOrSeed<SalesClient>(CLIENTS_KEY, SEED_CLIENTS));
-  }, []);
 
   // ------- derived -------
 

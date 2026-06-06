@@ -28,20 +28,29 @@ export function StillListeningModal() {
     return () => clearInterval(i);
   }, []);
 
-  // Start/reset inactivity timer
-  const resetTimer = useCallback(() => {
-    setShow(false);
+  // Start/reset inactivity timer. Splits the synchronous "hide" from scheduling so
+  // the timer can be (re)started from an effect without a synchronous setState there.
+  const scheduleTimer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (isPlaying) {
       timerRef.current = setTimeout(() => setShow(true), INACTIVITY_MS);
     }
   }, [isPlaying]);
 
-  // Reset on play state change
+  const resetTimer = useCallback(() => {
+    setShow(false);
+    scheduleTimer();
+  }, [scheduleTimer]);
+
+  // Reset on play state change. Hide synchronously via the cleanup of the previous
+  // run, and (re)schedule the inactivity timer here (timer callback setState is fine).
   useEffect(() => {
-    resetTimer();
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [isPlaying, resetTimer]);
+    scheduleTimer();
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      setShow(false);
+    };
+  }, [isPlaying, scheduleTimer]);
 
   // Reset on any user interaction
   useEffect(() => {

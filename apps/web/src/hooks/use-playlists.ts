@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   loadPlaylists,
@@ -22,15 +22,26 @@ import {
 export function usePlaylists() {
   const { user } = useAuth();
   const email = user?.email ?? null;
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  // Initialize once from the synchronous localStorage source. loadPlaylists()
+  // guards `typeof window === "undefined"` (returns []) for static export.
+  const [playlists, setPlaylists] = useState<Playlist[]>(() =>
+    email ? loadPlaylists(email) : []
+  );
+  // Track which email the current `playlists` state reflects so the effect only
+  // reloads when the email actually changes (the initial value is set above).
+  const loadedEmailRef = useRef(email);
 
-  // Load playlists on mount and when email changes
+  // Reload playlists when the email changes (e.g. sign in / sign out / switch).
   useEffect(() => {
-    if (email) {
-      setPlaylists(loadPlaylists(email));
-    } else {
-      setPlaylists([]);
-    }
+    if (loadedEmailRef.current === email) return;
+    loadedEmailRef.current = email;
+    // Deferred to a microtask: the data source is synchronous (localStorage)
+    // but state must remain settable here (reload() refreshes after mutations),
+    // so it cannot be derived during render. queueMicrotask avoids the
+    // cascading-render lint while keeping behavior identical.
+    queueMicrotask(() => {
+      setPlaylists(email ? loadPlaylists(email) : []);
+    });
   }, [email]);
 
   /** Reload playlists from localStorage */

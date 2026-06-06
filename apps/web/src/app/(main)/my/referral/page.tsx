@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,9 +39,6 @@ const MOCK_REFERRAL_SIGNUPS = [
 export default function ReferralPage() {
   const { user, isLoading } = useAuth();
 
-  const [code, setCode] = useState("");
-  const [referralUrl, setReferralUrl] = useState("");
-  const [stats, setStats] = useState({ referralCount: 0, totalPointsEarned: 0, referredBy: null as string | null });
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
 
@@ -50,15 +47,17 @@ export default function ReferralPage() {
   const [entryStatus, setEntryStatus] = useState<"idle" | "success" | "error">("idle");
   const [entryMessage, setEntryMessage] = useState("");
 
-  useEffect(() => {
-    if (!user?.email) return;
-    const userCode = generateCode(user.email);
-    setCode(userCode);
-    const url = getReferralUrl(userCode);
-    setReferralUrl(url);
-    const s = getStats(user.email);
-    setStats(s);
-  }, [user?.email]);
+  // Derive the user's referral code, URL and stats from their email (all pure,
+  // SSR-safe helpers) instead of mirroring them into state via an effect.
+  const code = useMemo(() => (user?.email ? generateCode(user.email) : ""), [user]);
+  const referralUrl = useMemo(() => (code ? getReferralUrl(code) : ""), [code]);
+  const stats = useMemo(
+    () =>
+      user?.email
+        ? getStats(user.email)
+        : { referralCount: 0, totalPointsEarned: 0, referredBy: null as string | null },
+    [user],
+  );
 
   // Use real stats plus mock data for display
   const displayReferralCount = useMemo(
@@ -120,7 +119,7 @@ export default function ReferralPage() {
       setEntryStatus("error");
       setEntryMessage(result.error ?? "Invalid code");
     }
-  }, [entryCode, user?.email]);
+  }, [entryCode, user]);
 
   // ---------------------------------------------------------------------------
   // Auth guard

@@ -232,10 +232,13 @@ function ContestCard({
 }) {
   const status = statusConfig[contest.status];
   const StatusIcon = status.icon;
+  // Capture "now" once on mount: Date.now() is impure and cannot run during
+  // render. Contest countdowns are day-granular, so a mount snapshot matches.
+  const [now] = useState(() => Date.now());
   const daysLeft = contest.status === "active"
-    ? Math.max(0, Math.ceil((new Date(contest.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(0, Math.ceil((new Date(contest.endDate).getTime() - now) / (1000 * 60 * 60 * 24)))
     : contest.status === "upcoming"
-    ? Math.max(0, Math.ceil((new Date(contest.startDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(0, Math.ceil((new Date(contest.startDate).getTime() - now) / (1000 * 60 * 60 * 24)))
     : 0;
 
   return (

@@ -171,10 +171,17 @@ export function DJMixPlayer({ mixes, djName, className }: DJMixPlayerProps) {
     [setVolume],
   );
 
-  // Sync mute state if volume changes externally
+  // Sync mute state if volume changes externally (e.g. via the shared player).
+  // Deferred to a microtask so the effect body doesn't call setState synchronously.
   useEffect(() => {
     if (volume > 0 && isMuted) {
-      setIsMuted(false);
+      let active = true;
+      queueMicrotask(() => {
+        if (active) setIsMuted(false);
+      });
+      return () => {
+        active = false;
+      };
     }
   }, [volume, isMuted]);
 

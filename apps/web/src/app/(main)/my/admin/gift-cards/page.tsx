@@ -98,8 +98,25 @@ export default function BulkGiftCardsPage() {
   }, [supabase]);
 
   useEffect(() => {
-    if (user) fetchCards();
-  }, [user, fetchCards]);
+    if (!user) return;
+    let active = true;
+    void (async () => {
+      const { data, error } = await supabase
+        .from("gift_cards")
+        .select("id, code, amount, balance, status, created_at")
+        .order("created_at", { ascending: false });
+      if (!active) return;
+      if (error) {
+        console.error("Failed to load gift cards:", error.message);
+      } else {
+        setCards((data as GiftCard[]) ?? []);
+      }
+      setLoading(false);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [user, supabase]);
 
   // ---- Generate bulk gift cards ----
   const handleGenerate = async () => {

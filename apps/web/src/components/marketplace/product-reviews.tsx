@@ -101,6 +101,8 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
   const [comment, setComment] = useState("");
 
   // ---- Fetch reviews ----
+  // Used by handleSubmit (an event handler), so the synchronous setLoading(true)
+  // here is fine — only synchronous setState inside an *effect* body is flagged.
   const fetchReviews = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -117,9 +119,30 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
     setLoading(false);
   }, [supabase, productId]);
 
+  // Initial load. `loading` already starts true, so we don't call setLoading(true)
+  // synchronously here (that's what trips react-hooks/set-state-in-effect); all
+  // setState happens after the await, guarded by `active` to avoid updating an
+  // unmounted component.
   useEffect(() => {
-    fetchReviews();
-  }, [fetchReviews]);
+    let active = true;
+    (async () => {
+      const { data, error } = await supabase
+        .from("product_reviews")
+        .select("*, profiles:user_id(display_name)")
+        .eq("product_id", productId)
+        .order("created_at", { ascending: false });
+      if (!active) return;
+      if (error) {
+        console.error("Failed to load reviews:", error.message);
+      } else {
+        setReviews((data as Review[]) ?? []);
+      }
+      setLoading(false);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [supabase, productId]);
 
   // ---- Submit review ----
   const handleSubmit = async () => {

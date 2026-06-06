@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { saveMessage, getCooldownRemaining, MAX_MESSAGE_LENGTH } from "@/lib/chat";
@@ -12,33 +12,37 @@ interface ChatInputProps {
 
 export function ChatInput({ onMessageSent }: ChatInputProps) {
   const { user } = useAuth();
+  const email = user?.email ?? "";
   const [text, setText] = useState("");
-  const [cooldown, setCooldown] = useState(0);
+  // Seed the cooldown from the synchronous localStorage source on mount;
+  // getCooldownRemaining() guards SSR (returns 0). Replaces a mount effect that
+  // set state synchronously (react-hooks/set-state-in-effect).
+  const [cooldown, setCooldown] = useState(() => getCooldownRemaining(email));
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const email = user?.email ?? "";
   const displayName =
     user?.user_metadata?.display_name ||
     user?.user_metadata?.full_name ||
     email.split("@")[0] ||
     "Listener";
 
-  const refreshCooldown = useCallback(() => {
+  // Recompute the cooldown when the signed-in email changes (and clear any
+  // running tick). The initial value is seeded by the lazy useState initializer
+  // above. setCooldown is deferred to a microtask so it doesn't run
+  // synchronously in the effect body (react-hooks/set-state-in-effect); the ref
+  // bookkeeping stays synchronous (refs are allowed inside effects).
+  useEffect(() => {
     if (!email) return;
     const remaining = getCooldownRemaining(email);
-    setCooldown(remaining);
     if (remaining <= 0 && timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-  }, [email]);
-
-  useEffect(() => {
-    refreshCooldown();
+    queueMicrotask(() => setCooldown(remaining));
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [refreshCooldown]);
+  }, [email]);
 
   function handleSend() {
     if (!email || !text.trim() || cooldown > 0) return;

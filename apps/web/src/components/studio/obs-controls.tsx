@@ -141,6 +141,9 @@ export function useOBSState(opts: UseOBSStateOptions = {}) {
   const [qualityPreset, setQualityPreset] = useState("1080p60");
   const [stats, setStats] = useState({ cpu: 12, droppedFrames: 0, bitrate: 6000 });
   const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
+  // Timestamp captured when a recording finishes — used for the download filename so
+  // we don't call the impure Date.now() during render.
+  const [recordedAt, setRecordedAt] = useState<number | null>(null);
   const [recordingError, setRecordingError] = useState<string | null>(null);
 
   // Real recording refs
@@ -217,6 +220,7 @@ export function useOBSState(opts: UseOBSStateOptions = {}) {
           URL.revokeObjectURL(recordedUrlRef.current);
           recordedUrlRef.current = null;
           setRecordedUrl(null);
+          setRecordedAt(null);
         }
 
         if (!navigator.mediaDevices?.getUserMedia) {
@@ -250,6 +254,7 @@ export function useOBSState(opts: UseOBSStateOptions = {}) {
           const url = URL.createObjectURL(blob);
           recordedUrlRef.current = url;
           setRecordedUrl(url);
+          setRecordedAt(Date.now());
           console.log("[PodcastStudio] Recording saved, size:", blob.size);
         };
 
@@ -364,6 +369,7 @@ export function useOBSState(opts: UseOBSStateOptions = {}) {
     addScene,
     addSource,
     recordedUrl,
+    recordedAt,
     recordingError,
   };
 }
@@ -589,6 +595,7 @@ export function RecordingControls({
     toggleRecording,
     toggleStreaming,
     recordedUrl,
+    recordedAt,
     recordingError,
   } = state;
 
@@ -673,7 +680,7 @@ export function RecordingControls({
           <audio src={recordedUrl} controls className="w-full" style={{ height: 32 }} />
           <a
             href={recordedUrl}
-            download={`podcast-recording-${Date.now()}.webm`}
+            download={`podcast-recording-${recordedAt ?? ""}.webm`}
             className="flex items-center justify-center gap-1.5 rounded-lg bg-[#74ddc7]/10 text-[#74ddc7] border border-[#74ddc7]/30 px-3 py-2 text-xs font-semibold hover:bg-[#74ddc7]/20 transition-colors"
           >
             <Download className="h-3.5 w-3.5" />

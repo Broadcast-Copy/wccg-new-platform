@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   LayoutGrid,
   DollarSign,
@@ -105,20 +105,18 @@ const SEED_MULTIPLIERS: SeasonalMultiplier[] = [
 // Page
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function RateCardsPage() {
-  const [rates, setRates] = useState<RateCard[]>([]);
-  const [multipliers, setMultipliers] = useState<SeasonalMultiplier[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const [rates, setRates] = useState<RateCard[]>(() => loadOrSeed(KEY_RATES, buildSeedRates()));
+  const [multipliers] = useState<SeasonalMultiplier[]>(() => loadOrSeed(KEY_MULTIPLIERS, SEED_MULTIPLIERS));
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
   const [activeTab, setActiveTab] = useState("grid");
   const [selectedSpotType, setSelectedSpotType] = useState<SpotType>(":30 Spot");
   const [editingRate, setEditingRate] = useState<RateCard | null>(null);
   const [editValue, setEditValue] = useState("");
-
-  useEffect(() => {
-    setMounted(true);
-    setRates(loadOrSeed(KEY_RATES, buildSeedRates()));
-    setMultipliers(loadOrSeed(KEY_MULTIPLIERS, SEED_MULTIPLIERS));
-  }, []);
 
   if (!mounted) return null;
 

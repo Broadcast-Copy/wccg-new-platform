@@ -462,6 +462,9 @@ function PodcastStudioContent() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
+  // Timestamp the recording was finalized — used for the download filename so
+  // Date.now() is not called during render (impure).
+  const [recordedAt, setRecordedAt] = useState<number>(0);
   const [recordingBytes, setRecordingBytes] = useState(0);
   const recordedBlobRef = useRef<Blob | null>(null);
 
@@ -791,6 +794,7 @@ function PodcastStudioContent() {
           });
           const url = URL.createObjectURL(blob);
           setRecordedUrl(url);
+          setRecordedAt(Date.now());
           recordedBlobRef.current = blob;
           setRecordingBytes(blob.size);
         };
@@ -813,6 +817,10 @@ function PodcastStudioContent() {
         console.error("[PodcastStudio] Recording failed:", err);
       }
     }
+    // Deps intentionally limited to isRecording: state writes here use functional
+    // updaters, and widening deps would change this callback's identity/closure
+    // snapshot (cameraEnabled/recordVideoEnabled/timeline*), altering behavior.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRecording]);
 
   const toggleFullscreen = () => {
@@ -1530,7 +1538,7 @@ function PodcastStudioContent() {
                     <div className="flex flex-col gap-2">
                       <a
                         href={recordedUrl}
-                        download={`${episodeName.replace(/\s+/g, "-")}-${Date.now()}.webm`}
+                        download={`${episodeName.replace(/\s+/g, "-")}-${recordedAt}.webm`}
                         className="flex items-center justify-center gap-2 bg-[#74ddc7]/10 text-[#74ddc7] border border-[#74ddc7]/30 rounded-xl px-3 py-2.5 text-xs font-semibold hover:bg-[#74ddc7]/20 transition-colors"
                       >
                         <Download className="h-3.5 w-3.5" />

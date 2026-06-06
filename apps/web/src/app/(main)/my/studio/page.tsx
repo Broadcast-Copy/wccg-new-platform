@@ -250,9 +250,13 @@ function RealQRCode({ value, size = 180 }: { value: string; size?: number }) {
 
 function InviteGuestDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [copied, setCopied] = useState(false);
-  const inviteLink = typeof window !== "undefined"
-    ? `${window.location.origin}/studio/booking?invite=${Date.now().toString(36)}`
-    : "https://app.wccg1045fm.com/studio/booking";
+  // Generate the invite link once on mount. Date.now()/window are impure, so they
+  // must not run during render — a lazy initializer keeps render pure and the link stable.
+  const [inviteLink] = useState(() =>
+    typeof window !== "undefined"
+      ? `${window.location.origin}/studio/booking?invite=${Date.now().toString(36)}`
+      : "https://app.wccg1045fm.com/studio/booking",
+  );
 
   function handleCopy() {
     navigator.clipboard.writeText(inviteLink).then(() => {

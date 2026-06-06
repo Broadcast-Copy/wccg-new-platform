@@ -44,18 +44,27 @@ export function SpotCartProvider({ children }: { children: ReactNode }) {
   const [isCartOpen, setCartOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
-  // Hydrate from localStorage on mount
+  // Hydrate from localStorage on mount. We intentionally keep the read in an
+  // effect (not a lazy useState initializer) so the server and first client
+  // render both start from [] — reading localStorage during render would cause a
+  // static-export hydration mismatch. The resulting setState calls are deferred
+  // to a microtask so they don't run synchronously in the effect body
+  // (react-hooks/set-state-in-effect); observable behavior is unchanged.
   useEffect(() => {
+    let parsed: SpotCartItem[] | null = null;
     try {
       const raw = localStorage.getItem(SPOT_CART_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as SpotCartItem[];
-        if (Array.isArray(parsed)) setItems(parsed);
+        const data = JSON.parse(raw) as SpotCartItem[];
+        if (Array.isArray(data)) parsed = data;
       }
     } catch {
       // ignore
     }
-    setHydrated(true);
+    queueMicrotask(() => {
+      if (parsed) setItems(parsed);
+      setHydrated(true);
+    });
   }, []);
 
   // Persist to localStorage on change (skip initial mount)

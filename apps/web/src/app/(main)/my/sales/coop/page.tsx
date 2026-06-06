@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   Handshake,
   DollarSign,
@@ -59,9 +59,13 @@ const SEED_COOP: CoOpRecord[] = [
 // Page
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function CoOpTrackerPage() {
-  const [records, setRecords] = useState<CoOpRecord[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const [records, setRecords] = useState<CoOpRecord[]>(() => loadOrSeed(KEY, SEED_COOP));
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
   const [showAdd, setShowAdd] = useState(false);
   const [newRecord, setNewRecord] = useState({
     manufacturer: "",
@@ -72,11 +76,6 @@ export default function CoOpTrackerPage() {
     expirationDate: "",
     notes: "",
   });
-
-  useEffect(() => {
-    setMounted(true);
-    setRecords(loadOrSeed(KEY, SEED_COOP));
-  }, []);
 
   if (!mounted) return null;
 

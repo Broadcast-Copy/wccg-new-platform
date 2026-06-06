@@ -25,12 +25,9 @@ const WCCG_STREAM_URL =
  */
 export function useAlarm() {
   const { resume, play, isPlaying } = useAudioPlayer();
-  const [alarm, setAlarm] = useState<AlarmConfig | null>(null);
-
-  // Load alarm on mount
-  useEffect(() => {
-    setAlarm(loadAlarm());
-  }, []);
+  // Load the saved alarm once on mount from the synchronous localStorage source.
+  // loadAlarm() guards `typeof window === "undefined"` (returns null) for static export.
+  const [alarm, setAlarm] = useState<AlarmConfig | null>(() => loadAlarm());
 
   // Check alarm every 30 seconds
   useEffect(() => {

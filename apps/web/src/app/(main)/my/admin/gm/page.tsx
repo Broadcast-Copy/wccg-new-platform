@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import {
   LayoutDashboard,
@@ -80,14 +80,17 @@ const STORAGE_KEY = "wccg:gm:dashboard";
 // Component
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function GMDashboardPage() {
-  const [data, setData] = useState<GMDashboardData | null>(null);
+  // Hydration guard: render nothing on the server / first client render, matching
+  // the prior null-until-mounted behavior, then render after hydration.
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
+  const [data] = useState<GMDashboardData | null>(() => loadSingle(STORAGE_KEY, SEED_DATA));
 
-  useEffect(() => {
-    setData(loadSingle(STORAGE_KEY, SEED_DATA));
-  }, []);
-
-  if (!data) return null;
+  if (!mounted || !data) return null;
 
   const revenuePercent = Math.round((data.monthlyRevenue / data.revenueTarget) * 100);
   const listenerTrend = ((data.listenerReach - data.listenerReachPrev) / data.listenerReachPrev * 100).toFixed(1);

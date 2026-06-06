@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { MapPin, Heart } from "lucide-react";
 import Link from "next/link";
 
@@ -15,27 +15,25 @@ interface SavedPlace {
 const PLACES_STORAGE_KEY = "wccg_favorites";
 
 export default function MyPlacesPage() {
-  const [places, setPlaces] = useState<SavedPlace[]>([]);
-
-  useEffect(() => {
+  const [places] = useState<SavedPlace[]>(() => {
+    if (typeof window === "undefined") return [];
     try {
       const raw = localStorage.getItem(PLACES_STORAGE_KEY);
       if (raw) {
         const favorites = JSON.parse(raw);
         const placeIds: string[] = favorites["place"] || [];
-        setPlaces(
-          placeIds.map((id) => ({
-            id,
-            name: id.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-            category: "Local Business",
-            savedAt: new Date().toISOString(),
-          })),
-        );
+        return placeIds.map((id) => ({
+          id,
+          name: id.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+          category: "Local Business",
+          savedAt: new Date().toISOString(),
+        }));
       }
     } catch {
       // Ignore parse errors
     }
-  }, []);
+    return [];
+  });
 
   return (
     <div className="space-y-6">

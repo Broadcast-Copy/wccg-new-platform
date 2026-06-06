@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
 import {
   Receipt,
@@ -202,16 +202,15 @@ function persist<T>(key: string, data: T[]) {
 // Page
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function InvoicesPage() {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const [invoices, setInvoices] = useState<Invoice[]>(() => loadOrSeed(INVOICES_KEY, SEED_INVOICES));
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
   const [activeFilter, setActiveFilter] = useState<InvoiceStatus | "All">("All");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-    setInvoices(loadOrSeed(INVOICES_KEY, SEED_INVOICES));
-  }, []);
 
   // Stats
   const totalRevenue = useMemo(

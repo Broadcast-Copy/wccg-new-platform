@@ -15,14 +15,15 @@ export function ListenerCountBadge({ isPlaying }: { isPlaying: boolean }) {
   const [animate, setAnimate] = useState(false);
 
   useEffect(() => {
-    if (!isPlaying) {
-      setCount(null);
-      return;
-    }
+    if (!isPlaying) return;
 
-    // Generate an initial count
-    const initial = Math.floor(Math.random() * (2500 - 800) + 800);
-    setCount(initial);
+    // Seed the initial count once playback starts. Deferred to a microtask so the
+    // synchronous effect body doesn't call setState directly (avoids cascading
+    // renders); the badge renders nothing until a count exists, so this is invisible.
+    let active = true;
+    queueMicrotask(() => {
+      if (active) setCount(Math.floor(Math.random() * (2500 - 800) + 800));
+    });
 
     const interval = setInterval(() => {
       setCount((prev) => {
@@ -35,7 +36,12 @@ export function ListenerCountBadge({ isPlaying }: { isPlaying: boolean }) {
       setTimeout(() => setAnimate(false), 600);
     }, 60_000);
 
-    return () => clearInterval(interval);
+    return () => {
+      active = false;
+      clearInterval(interval);
+      // Reset when playback stops so the next session reseeds a fresh count.
+      setCount(null);
+    };
   }, [isPlaying]);
 
   if (!isPlaying || count === null) return null;

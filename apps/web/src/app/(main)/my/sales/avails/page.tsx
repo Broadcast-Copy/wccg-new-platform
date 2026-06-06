@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   CalendarDays,
   Radio,
@@ -84,16 +84,15 @@ function buildSeedAvails(): AvailSlot[] {
 // Page
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function AvailsPage() {
-  const [slots, setSlots] = useState<AvailSlot[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const [slots] = useState<AvailSlot[]>(() => loadOrSeed(KEY, buildSeedAvails()));
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
   const [filterDaypart, setFilterDaypart] = useState<DayPart | "All">("All");
   const [weekOffset, setWeekOffset] = useState(0);
-
-  useEffect(() => {
-    setMounted(true);
-    setSlots(loadOrSeed(KEY, buildSeedAvails()));
-  }, []);
 
   if (!mounted) return null;
 

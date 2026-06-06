@@ -144,8 +144,9 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
     }
   }, []);
 
-  // Keep the ref updated every render so it always closes over latest state
-  stopEverythingRef.current = () => {
+  // Stop & fully tear down recording. Only touches refs (always current), so this is
+  // a stable callback rather than a per-render ref reassignment.
+  const stopEverything = useCallback(() => {
     pauseTimer();
     cancelAnimationFrame(animFrameRef.current);
     animFrameRef.current = 0;
@@ -171,7 +172,12 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
       previewAudioRef.current.pause();
       previewAudioRef.current = null;
     }
-  };
+  }, [pauseTimer]);
+
+  // Keep the ref in sync (read by the unmount cleanup) without writing it during render.
+  useEffect(() => {
+    stopEverythingRef.current = stopEverything;
+  }, [stopEverything]);
 
   // ---- enumerate audio devices ----
   useEffect(() => {
@@ -229,6 +235,10 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
   }, [recordedUrl]);
 
   // ---- visualizer animation ----
+  // Holds the latest drawVisualizer so the RAF loop can re-schedule itself without
+  // referencing the callback variable before it is declared.
+  const drawVisualizerRef = useRef<() => void>(() => {});
+
   const drawVisualizer = useCallback(() => {
     const analyser = analyserRef.current;
     const canvas = canvasRef.current;
@@ -285,8 +295,14 @@ export function MixRecorder({ onSave, onClose }: MixRecorderProps) {
     }
     setLevels(newLevels);
 
-    animFrameRef.current = requestAnimationFrame(drawVisualizer);
+    animFrameRef.current = requestAnimationFrame(() => drawVisualizerRef.current());
   }, []);
+
+  // Keep the ref pointing at the latest callback for the self-scheduling RAF loop
+  // (assigned in an effect, not during render).
+  useEffect(() => {
+    drawVisualizerRef.current = drawVisualizer;
+  }, [drawVisualizer]);
 
   // ---- timer ----
   const startTimer = useCallback(() => {

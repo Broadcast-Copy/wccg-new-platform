@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   Radio,
   Volume2,
@@ -168,14 +168,13 @@ const SEED_LOG: SystemLogEntry[] = [
 // Component
 // ---------------------------------------------------------------------------
 
-export default function MasterControlPage() {
-  const [mounted, setMounted] = useState(false);
-  const [logEntries, setLogEntries] = useState<SystemLogEntry[]>([]);
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
 
-  useEffect(() => {
-    setLogEntries(loadOrSeed("ops_system_log", SEED_LOG));
-    setMounted(true);
-  }, []);
+export default function MasterControlPage() {
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
+  const [logEntries] = useState<SystemLogEntry[]>(() => loadOrSeed("ops_system_log", SEED_LOG));
 
   if (!mounted) {
     return <div className="p-6 space-y-6 animate-pulse"><div className="h-12 bg-muted rounded-xl w-64" /></div>;

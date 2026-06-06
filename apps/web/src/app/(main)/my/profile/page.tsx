@@ -35,10 +35,7 @@ export default function MyProfilePage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+    if (!user) return;
     let active = true;
     const supabase = createClient();
     async function load() {
@@ -59,7 +56,7 @@ export default function MyProfilePage() {
     return () => { active = false; };
   }, [user, authLoading]);
 
-  if (authLoading || loading) {
+  if (authLoading || (loading && !!user)) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

@@ -40,14 +40,17 @@ function PlaylistInner() {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (!playlistId) {
-      setLoading(false);
-      setNotFound(true);
-      return;
-    }
+    let active = true;
 
     async function fetchPlaylist() {
-      setLoading(true);
+      if (!playlistId) {
+        if (active) {
+          setNotFound(true);
+          setLoading(false);
+        }
+        return;
+      }
+
       const { data, error } = await supabase
         .from("user_playlists")
         .select("id, name, description, songs, share_count, created_at, updated_at")
@@ -55,6 +58,7 @@ function PlaylistInner() {
         .eq("is_public", true)
         .single();
 
+      if (!active) return;
       if (error || !data) {
         setNotFound(true);
       } else {
@@ -64,6 +68,9 @@ function PlaylistInner() {
     }
 
     fetchPlaylist();
+    return () => {
+      active = false;
+    };
   }, [supabase, playlistId]);
 
   const fmtDate = (d: string) =>

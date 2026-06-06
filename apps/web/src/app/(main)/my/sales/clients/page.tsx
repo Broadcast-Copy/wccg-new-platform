@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   Users,
   Building2,
@@ -178,9 +178,13 @@ const ACTIVITY_COLORS: Record<string, string> = {
 // Page
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function ClientManagerPage() {
-  const [clients, setClients] = useState<CRMClient[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const [clients, setClients] = useState<CRMClient[]>(() => loadOrSeed(KEY, SEED_CLIENTS));
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("All");
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
@@ -188,11 +192,6 @@ export default function ClientManagerPage() {
   const [newClient, setNewClient] = useState({
     businessName: "", contactName: "", email: "", phone: "", address: "", category: "", notes: "",
   });
-
-  useEffect(() => {
-    setMounted(true);
-    setClients(loadOrSeed(KEY, SEED_CLIENTS));
-  }, []);
 
   if (!mounted) return null;
 

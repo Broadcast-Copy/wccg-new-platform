@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ChevronUp, ChevronDown, Trash2, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,12 +30,24 @@ export function PlaylistBuilder({
   /** Called with the playlist name, description, and songs on save */
   onSave: (name: string, description: string, songs: Song[]) => void;
 }) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [name, setName] = useState(() => playlist?.name ?? "");
+  const [description, setDescription] = useState(() => playlist?.description ?? "");
+  const [songs, setSongs] = useState<Song[]>(() =>
+    playlist ? [...playlist.songs] : [],
+  );
 
-  // Sync state when editing an existing playlist
-  useEffect(() => {
+  // Re-sync the form whenever the dialog opens/closes or a different playlist is
+  // passed. This is the "adjust state during render" pattern from the React docs
+  // (https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
+  // — it replaces a mount/update effect that set state synchronously
+  // (react-hooks/set-state-in-effect). Initial values are seeded by the lazy
+  // initializers above, so this only fires on subsequent open/playlist changes.
+  const [lastSync, setLastSync] = useState<{ open: boolean; playlist: Playlist | undefined }>({
+    open,
+    playlist,
+  });
+  if (lastSync.open !== open || lastSync.playlist !== playlist) {
+    setLastSync({ open, playlist });
     if (playlist) {
       setName(playlist.name);
       setDescription(playlist.description);
@@ -45,7 +57,7 @@ export function PlaylistBuilder({
       setDescription("");
       setSongs([]);
     }
-  }, [playlist, open]);
+  }
 
   const moveSong = (index: number, direction: "up" | "down") => {
     const newSongs = [...songs];

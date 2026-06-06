@@ -67,16 +67,17 @@ export function StudioPreview({
     return () => clearInterval(interval);
   }, []);
 
-  // Recording timer
+  // Recording timer. Reset to 0 in cleanup (when recording stops/unmounts) so the
+  // effect body doesn't call setState synchronously; the interval tick is allowed.
   useEffect(() => {
-    if (!isRecording) {
-      setRecordingTime(0);
-      return;
-    }
+    if (!isRecording) return;
     const interval = setInterval(() => {
       setRecordingTime((prev) => prev + 1);
     }, 1000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      setRecordingTime(0);
+    };
   }, [isRecording]);
 
   const formatTime = useCallback((totalSeconds: number) => {

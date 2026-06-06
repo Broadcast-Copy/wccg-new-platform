@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   CalendarDays,
   Plus,
@@ -100,14 +100,10 @@ const STORAGE_KEY = "wccg:gm:meetings";
 // ---------------------------------------------------------------------------
 
 export default function MeetingsPage() {
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [meetings, setMeetings] = useState<Meeting[]>(() => loadOrSeed(STORAGE_KEY, SEED_MEETINGS));
   const [selected, setSelected] = useState<Meeting | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [catFilter, setCatFilter] = useState("All");
-
-  useEffect(() => {
-    setMeetings(loadOrSeed(STORAGE_KEY, SEED_MEETINGS));
-  }, []);
 
   function save(data: Meeting[]) {
     setMeetings(data);

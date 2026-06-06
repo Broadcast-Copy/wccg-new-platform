@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { Droplets, Wind, ChevronRight } from "lucide-react";
 
@@ -66,38 +66,46 @@ export function WeatherPill() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const fetchWeather = useCallback(async () => {
-    try {
-      const res = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m,apparent_temperature&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&temperature_unit=fahrenheit&wind_speed_unit=mph&forecast_days=7&timezone=America%2FNew_York`
-      );
-      const data = await res.json();
-      if (data.current) {
-        setCurrent({
-          temp: Math.round(data.current.temperature_2m),
-          code: data.current.weather_code,
-          humidity: data.current.relative_humidity_2m,
-          windSpeed: Math.round(data.current.wind_speed_10m),
-          feelsLike: Math.round(data.current.apparent_temperature),
-        });
-      }
-      if (data.daily) {
-        setForecast(data.daily.time.map((d: string, i: number) => ({
-          date: d,
-          high: Math.round(data.daily.temperature_2m_max[i]),
-          low: Math.round(data.daily.temperature_2m_min[i]),
-          code: data.daily.weather_code[i],
-          precip: data.daily.precipitation_probability_max?.[i] ?? 0,
-        })));
-      }
-    } catch { /* silent */ }
-  }, []);
-
+  // Fetch on mount and every 30 min. The fetch lives inside the effect so all
+  // setState happens after the await (guarded by `active`), instead of calling a
+  // setState-bearing callback synchronously in the effect body
+  // (react-hooks/set-state-in-effect).
   useEffect(() => {
+    let active = true;
+    const fetchWeather = async () => {
+      try {
+        const res = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m,apparent_temperature&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&temperature_unit=fahrenheit&wind_speed_unit=mph&forecast_days=7&timezone=America%2FNew_York`
+        );
+        const data = await res.json();
+        if (!active) return;
+        if (data.current) {
+          setCurrent({
+            temp: Math.round(data.current.temperature_2m),
+            code: data.current.weather_code,
+            humidity: data.current.relative_humidity_2m,
+            windSpeed: Math.round(data.current.wind_speed_10m),
+            feelsLike: Math.round(data.current.apparent_temperature),
+          });
+        }
+        if (data.daily) {
+          setForecast(data.daily.time.map((d: string, i: number) => ({
+            date: d,
+            high: Math.round(data.daily.temperature_2m_max[i]),
+            low: Math.round(data.daily.temperature_2m_min[i]),
+            code: data.daily.weather_code[i],
+            precip: data.daily.precipitation_probability_max?.[i] ?? 0,
+          })));
+        }
+      } catch { /* silent */ }
+    };
     fetchWeather();
     const i = setInterval(fetchWeather, 30 * 60 * 1000);
-    return () => clearInterval(i);
-  }, [fetchWeather]);
+    return () => {
+      active = false;
+      clearInterval(i);
+    };
+  }, []);
 
   // Close on outside click
   useEffect(() => {

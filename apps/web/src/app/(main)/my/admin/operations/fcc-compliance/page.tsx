@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   ShieldCheck,
   AlertTriangle,
@@ -74,18 +74,16 @@ const SEED_EAS: EASTestEntry[] = [
 // Component
 // ---------------------------------------------------------------------------
 
-export default function FCCCompliancePage() {
-  const [mounted, setMounted] = useState(false);
-  const [tab, setTab] = useState("filings");
-  const [items, setItems] = useState<ComplianceItem[]>([]);
-  const [easLog, setEasLog] = useState<EASTestEntry[]>([]);
-  const [selected, setSelected] = useState<ComplianceItem | null>(null);
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
 
-  useEffect(() => {
-    setItems(loadOrSeed("ops_fcc_compliance", SEED_COMPLIANCE));
-    setEasLog(loadOrSeed("ops_eas_log", SEED_EAS));
-    setMounted(true);
-  }, []);
+export default function FCCCompliancePage() {
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
+  const [tab, setTab] = useState("filings");
+  const [items] = useState<ComplianceItem[]>(() => loadOrSeed("ops_fcc_compliance", SEED_COMPLIANCE));
+  const [easLog] = useState<EASTestEntry[]>(() => loadOrSeed("ops_eas_log", SEED_EAS));
+  const [selected, setSelected] = useState<ComplianceItem | null>(null);
 
   if (!mounted) {
     return <div className="p-6 space-y-6 animate-pulse"><div className="h-12 bg-muted rounded-xl w-64" /></div>;

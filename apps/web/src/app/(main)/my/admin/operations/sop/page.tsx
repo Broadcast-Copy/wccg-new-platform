@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   BookOpen,
   FileText,
@@ -157,16 +157,15 @@ const SEED_SOPS: SOPDocument[] = [
 // Component
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function SOPLibraryPage() {
-  const [mounted, setMounted] = useState(false);
-  const [sops, setSOPs] = useState<SOPDocument[]>([]);
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
+  const [sops] = useState<SOPDocument[]>(() => loadOrSeed("ops_sops", SEED_SOPS));
   const [selected, setSelected] = useState<SOPDocument | null>(null);
   const [filterCategory, setFilterCategory] = useState("all");
-
-  useEffect(() => {
-    setSOPs(loadOrSeed("ops_sops", SEED_SOPS));
-    setMounted(true);
-  }, []);
 
   if (!mounted) {
     return <div className="p-6 space-y-6 animate-pulse"><div className="h-12 bg-muted rounded-xl w-64" /></div>;

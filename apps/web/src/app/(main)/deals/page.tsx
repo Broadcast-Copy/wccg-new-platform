@@ -202,8 +202,8 @@ export default function DealsPage() {
             <p className="text-sm font-semibold mb-1">About Local Deals</p>
             <ul className="text-[12px] text-muted-foreground space-y-1 list-disc list-inside">
               <li>Show these offers at participating businesses near you!</li>
-              <li>Deals marked "Nearby!" are within walking distance.</li>
-              <li>Tap "Show Offer" to display the coupon to the cashier.</li>
+              <li>Deals marked &quot;Nearby!&quot; are within walking distance.</li>
+              <li>Tap &quot;Show Offer&quot; to display the coupon to the cashier.</li>
               <li>All offers are courtesy of WCCG 104.5 FM and our local partners.</li>
               <li>Offers subject to change. Check back for new deals regularly.</li>
             </ul>

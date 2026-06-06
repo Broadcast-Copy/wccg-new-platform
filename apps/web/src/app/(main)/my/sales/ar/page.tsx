@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   Receipt,
   DollarSign,
@@ -66,15 +66,14 @@ const SEED_AR: ARRecord[] = [
 // Page
 // ---------------------------------------------------------------------------
 
-export default function AccountsReceivablePage() {
-  const [records, setRecords] = useState<ARRecord[]>([]);
-  const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState("all");
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
 
-  useEffect(() => {
-    setMounted(true);
-    setRecords(loadOrSeed(KEY, SEED_AR));
-  }, []);
+export default function AccountsReceivablePage() {
+  const [records] = useState<ARRecord[]>(() => loadOrSeed(KEY, SEED_AR));
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
+  const [activeTab, setActiveTab] = useState("all");
 
   if (!mounted) return null;
 

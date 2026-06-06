@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChatMessage as ChatMessageComponent } from "@/components/chat/chat-message";
@@ -20,30 +20,36 @@ interface DisplayMessage {
   isOwn?: boolean;
 }
 
+// Build the combined (mock + user) message list for an email. Pulled out of the
+// component so it can seed lazy state and run on email changes without a
+// mount/update effect that sets state synchronously.
+function buildMessages(email: string | undefined): DisplayMessage[] {
+  const mock = getMockMessages();
+  const userMsgs: DisplayMessage[] = email
+    ? loadUserMessages(email).map((m) => ({ ...m, isOwn: true }))
+    : [];
+  return [...mock, ...userMsgs].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+  );
+}
+
 export function LiveChat() {
   const { user } = useAuth();
-  const [messages, setMessages] = useState<DisplayMessage[]>([]);
+  const [messages, setMessages] = useState<DisplayMessage[]>(() =>
+    buildMessages(user?.email),
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const nowPlaying = resolveNowPlaying();
 
-  const loadMessages = useCallback(() => {
-    const mock = getMockMessages();
-    const email = user?.email;
-    const userMsgs: DisplayMessage[] = email
-      ? loadUserMessages(email).map((m) => ({ ...m, isOwn: true }))
-      : [];
-
-    // Combine and sort by timestamp
-    const all: DisplayMessage[] = [...mock, ...userMsgs].sort(
-      (a, b) =>
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-    );
-    setMessages(all);
-  }, [user?.email]);
-
-  useEffect(() => {
-    loadMessages();
-  }, [loadMessages]);
+  // Reload the list when the signed-in email changes. "Adjust state during
+  // render" pattern (React docs) — replaces an effect that set state
+  // synchronously (react-hooks/set-state-in-effect). Initial value is seeded by
+  // the lazy initializer above.
+  const [syncedEmail, setSyncedEmail] = useState(user?.email);
+  if (syncedEmail !== user?.email) {
+    setSyncedEmail(user?.email);
+    setMessages(buildMessages(user?.email));
+  }
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {

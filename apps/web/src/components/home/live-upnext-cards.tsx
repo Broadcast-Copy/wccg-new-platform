@@ -11,29 +11,35 @@ function formatTime(t: string) {
   return m === 0 ? `${hr} ${ampm}` : `${hr}:${m.toString().padStart(2, "0")} ${ampm}`;
 }
 
+function computeRemaining(targetTime: string): string {
+  const now = new Date();
+  const et = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+  const [th, tm] = targetTime.split(":").map(Number);
+  const target = new Date(et);
+  target.setHours(th, tm, 0, 0);
+  // If target already passed today, it's tomorrow
+  if (target <= et) target.setDate(target.getDate() + 1);
+  const diff = target.getTime() - et.getTime();
+  if (diff <= 0) return "Starting now";
+  const hrs = Math.floor(diff / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  const secs = Math.floor((diff % 60000) / 1000);
+  if (hrs > 0) return `${hrs}h ${mins}m`;
+  if (mins > 0) return `${mins}m ${secs}s`;
+  return `${secs}s`;
+}
+
 function useCountdown(targetTime: string) {
-  const [remaining, setRemaining] = useState("");
+  // Seed from a lazy initializer; the interval keeps it ticking (setState in the
+  // interval callback is allowed). Avoids a synchronous setState in the effect
+  // body (react-hooks/set-state-in-effect).
+  const [remaining, setRemaining] = useState(() => computeRemaining(targetTime));
 
   useEffect(() => {
-    function calc() {
-      const now = new Date();
-      const et = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
-      const [th, tm] = targetTime.split(":").map(Number);
-      const target = new Date(et);
-      target.setHours(th, tm, 0, 0);
-      // If target already passed today, it's tomorrow
-      if (target <= et) target.setDate(target.getDate() + 1);
-      const diff = target.getTime() - et.getTime();
-      if (diff <= 0) return "Starting now";
-      const hrs = Math.floor(diff / 3600000);
-      const mins = Math.floor((diff % 3600000) / 60000);
-      const secs = Math.floor((diff % 60000) / 1000);
-      if (hrs > 0) return `${hrs}h ${mins}m`;
-      if (mins > 0) return `${mins}m ${secs}s`;
-      return `${secs}s`;
-    }
-    setRemaining(calc());
-    const id = setInterval(() => setRemaining(calc()), 1000);
+    // Recompute immediately when targetTime changes (deferred to a microtask so
+    // it isn't a synchronous setState in the effect body), then tick each second.
+    queueMicrotask(() => setRemaining(computeRemaining(targetTime)));
+    const id = setInterval(() => setRemaining(computeRemaining(targetTime)), 1000);
     return () => clearInterval(id);
   }, [targetTime]);
 

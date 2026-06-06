@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles } from "@/hooks/use-user-roles";
 import { createClient } from "@/lib/supabase/client";
@@ -1521,6 +1521,10 @@ function MoveManyToFolderModal({
 // Page
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function MediaManagerPage() {
   const { user, isLoading: authLoading } = useAuth();
   const { isManagement, isProduction, isAdmin, isSuperAdmin } = useUserRoles();
@@ -1590,7 +1594,7 @@ export default function MediaManagerPage() {
     return () => { active = false; };
   }, []);
 
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
   const [state, setState] = useState<MediaManagerState>(seedState());
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
@@ -1631,14 +1635,6 @@ export default function MediaManagerPage() {
     setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 2600);
-  }, []);
-
-  // ---------------------------------------------------------------------------
-  // Init
-  // ---------------------------------------------------------------------------
-
-  useEffect(() => {
-    setMounted(true);
   }, []);
 
   // Load the user's library — DB-backed + per-user, so it survives cache clears

@@ -390,13 +390,17 @@ export function StationAIChat() {
     };
   }, [open, nudgeDismissed]);
 
-  // Dismiss nudge when chat opens
-  useEffect(() => {
-    if (open) {
+  // Dismiss the nudge when the chat opens. Handled in the toggle callback below
+  // (pattern: react to the user event, not a synchronous effect) so it doesn't
+  // trip react-hooks/set-state-in-effect.
+  const handleToggleOpen = () => {
+    const next = !open;
+    setOpen(next);
+    if (next) {
       setNudgeVisible(false);
       setNudgeDismissed(true);
     }
-  }, [open]);
+  };
 
   // Close on outside click
   useEffect(() => {
@@ -516,7 +520,7 @@ export function StationAIChat() {
 
       {/* Floating button — expands with welcome text then collapses */}
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleToggleOpen}
         className={`flex items-center gap-2 rounded-full bg-[#74ddc7] text-[#0a0a0f] shadow-lg shadow-[#74ddc7]/30 hover:bg-[#74ddc7]/80 transition-all hover:scale-105 ${
           nudgeVisible && !open
             ? "pl-5 pr-4 h-14 animate-[nudgeIn_0.5s_ease-out]"

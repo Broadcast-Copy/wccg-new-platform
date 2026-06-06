@@ -40,27 +40,28 @@ export function GameRibbon() {
   const isGameActive = mode === "live" || mode === "post";
   const { data: espnData } = useESPNScores(isGameActive);
 
-  // Apply ESPN scores when available
-  useEffect(() => {
-    if (espnData && (espnData.status === "in" || espnData.status === "post")) {
-      setLiveScore({
-        duke: espnData.dukeScore,
-        opponent: espnData.opponentScore,
-      });
-      if (espnData.status === "in") {
-        if (espnData.period === 1) setHalf("1st");
-        else if (espnData.period === 2) setHalf("2nd");
-        else setHalf(`OT`);
-        setGameClock(espnData.clock || "");
-      } else {
-        setHalf("FINAL");
-        setGameClock("");
-      }
-      if (espnData.lastPlay) {
-        setLatestPlay(espnData.lastPlay);
-      }
+  // Prefer real ESPN scores when available, otherwise fall back to the simulated
+  // values held in state (written by the `tick` interval). Derived during render so
+  // we don't mirror external data into state inside an effect (cascading renders).
+  const espnHasScores =
+    !!espnData && (espnData.status === "in" || espnData.status === "post");
+  const displayScore = espnHasScores
+    ? { duke: espnData.dukeScore, opponent: espnData.opponentScore }
+    : liveScore;
+  let displayHalf = half;
+  let displayClock = gameClock;
+  if (espnHasScores) {
+    if (espnData.status === "in") {
+      displayHalf =
+        espnData.period === 1 ? "1st" : espnData.period === 2 ? "2nd" : "OT";
+      displayClock = espnData.clock || "";
+    } else {
+      displayHalf = "FINAL";
+      displayClock = "";
     }
-  }, [espnData]);
+  }
+  const displayLatestPlay =
+    (espnHasScores && espnData.lastPlay) || latestPlay;
 
   useEffect(() => {
     if (!gameDate) return;
@@ -222,10 +223,10 @@ export function GameRibbon() {
                 className="h-4 w-4 object-contain"
               />
               <span className="font-bold tabular-nums">
-                {liveScore.duke}
+                {displayScore.duke}
               </span>
               <span className="text-white/40">-</span>
-              <span className="tabular-nums">{liveScore.opponent}</span>
+              <span className="tabular-nums">{displayScore.opponent}</span>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={nextGame.opponentLogo || ""}
@@ -234,17 +235,17 @@ export function GameRibbon() {
               />
               <span className="text-white/40">|</span>
               <span className="text-white/60 tabular-nums font-mono text-[10px]">
-                {half} {gameClock}
+                {displayHalf} {displayClock}
               </span>
             </div>
 
             {/* Latest play — scrolling ticker */}
-            {latestPlay && (
+            {displayLatestPlay && (
               <>
                 <span className="text-white/30 mx-2 hidden sm:inline">|</span>
                 <div className="hidden sm:block flex-1 min-w-0 overflow-hidden">
                   <div className="animate-marquee whitespace-nowrap">
-                    <span className="text-white/70">{latestPlay}</span>
+                    <span className="text-white/70">{displayLatestPlay}</span>
                   </div>
                 </div>
               </>
@@ -260,11 +261,11 @@ export function GameRibbon() {
               className="h-4 w-4 object-contain"
             />
             <span className="font-bold">
-              Duke {liveScore.duke}
+              Duke {displayScore.duke}
             </span>
             <span className="text-white/40">-</span>
             <span>
-              {opponentShort} {liveScore.opponent}
+              {opponentShort} {displayScore.opponent}
             </span>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img

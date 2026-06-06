@@ -407,7 +407,12 @@ export function useListeningPoints(
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastTickRef = useRef<number>(0);
   const onBonusRef = useRef(onBonusAwarded);
-  onBonusRef.current = onBonusAwarded;
+  // Keep the latest callback in the ref. Done in an effect (runs after commit,
+  // before any async interval tick) rather than during render, which is not
+  // allowed for refs. Behavior is identical for the async award callbacks.
+  useEffect(() => {
+    onBonusRef.current = onBonusAwarded;
+  });
 
   useEffect(() => {
     if (isPlaying) {
@@ -764,7 +769,11 @@ export function awardVideoWatchPoints(videoId: string): boolean {
  */
 export function usePointsSync(onUpdate?: () => void) {
   const cbRef = useRef(onUpdate);
-  cbRef.current = onUpdate;
+  // Keep the latest callback in the ref via an effect (runs after commit,
+  // before the async "storage" event can fire) instead of during render.
+  useEffect(() => {
+    cbRef.current = onUpdate;
+  });
 
   useEffect(() => {
     function handleStorage(e: StorageEvent) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   HardDrive,
   Wrench,
@@ -62,16 +62,15 @@ const SEED_EQUIPMENT: EquipmentItem[] = [
 // Component
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function EquipmentPage() {
-  const [mounted, setMounted] = useState(false);
-  const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
+  const [equipment] = useState<EquipmentItem[]>(() => loadOrSeed("ops_equipment", SEED_EQUIPMENT));
   const [selected, setSelected] = useState<EquipmentItem | null>(null);
   const [filterCategory, setFilterCategory] = useState("all");
-
-  useEffect(() => {
-    setEquipment(loadOrSeed("ops_equipment", SEED_EQUIPMENT));
-    setMounted(true);
-  }, []);
 
   if (!mounted) {
     return <div className="p-6 space-y-6 animate-pulse"><div className="h-12 bg-muted rounded-xl w-64" /></div>;

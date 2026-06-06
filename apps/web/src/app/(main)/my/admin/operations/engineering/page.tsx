@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   Wrench,
   Plus,
@@ -54,9 +54,13 @@ const SEED_REQUESTS: EngineeringRequest[] = [
 // Component
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function EngineeringRequestsPage() {
-  const [mounted, setMounted] = useState(false);
-  const [requests, setRequests] = useState<EngineeringRequest[]>([]);
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
+  const [requests, setRequests] = useState<EngineeringRequest[]>(() => loadOrSeed("ops_engineering", SEED_REQUESTS));
   const [selected, setSelected] = useState<EngineeringRequest | null>(null);
   const [tab, setTab] = useState("all");
   const [showForm, setShowForm] = useState(false);
@@ -66,11 +70,6 @@ export default function EngineeringRequestsPage() {
   const [formDesc, setFormDesc] = useState("");
   const [formPriority, setFormPriority] = useState<EngineeringRequest["priority"]>("Medium");
   const [formLocation, setFormLocation] = useState("");
-
-  useEffect(() => {
-    setRequests(loadOrSeed("ops_engineering", SEED_REQUESTS));
-    setMounted(true);
-  }, []);
 
   if (!mounted) {
     return <div className="p-6 space-y-6 animate-pulse"><div className="h-12 bg-muted rounded-xl w-64" /></div>;

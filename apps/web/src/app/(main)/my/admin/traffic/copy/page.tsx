@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   FileText,
   CheckCircle,
@@ -59,15 +59,14 @@ const STORAGE_KEY = "wccg:traffic-copy";
 // Component
 // ---------------------------------------------------------------------------
 
-export default function CopyManagementPage() {
-  const [mounted, setMounted] = useState(false);
-  const [copies, setCopies] = useState<AdCopy[]>([]);
-  const [selected, setSelected] = useState<AdCopy | null>(null);
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
 
-  useEffect(() => {
-    setMounted(true);
-    setCopies(loadOrSeed(STORAGE_KEY, SEED_COPY));
-  }, []);
+export default function CopyManagementPage() {
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
+  const [copies, setCopies] = useState<AdCopy[]>(() => loadOrSeed(STORAGE_KEY, SEED_COPY));
+  const [selected, setSelected] = useState<AdCopy | null>(null);
 
   if (!mounted) {
     return <div className="p-6 space-y-6 animate-pulse"><div className="h-12 bg-muted rounded-xl w-1/3" /></div>;

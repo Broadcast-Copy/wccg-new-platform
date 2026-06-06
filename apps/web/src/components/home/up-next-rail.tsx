@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ShowCard } from "@/components/shows/show-card";
 import { createClient } from "@/lib/supabase/client";
@@ -173,9 +174,9 @@ export function UpNextRail() {
             <div className="flex h-32 w-full items-center justify-center rounded-lg border bg-muted/50">
               <p className="text-sm text-muted-foreground">
                 Check the{" "}
-                <a href="/shows" className="underline hover:text-foreground">
+                <Link href="/shows" className="underline hover:text-foreground">
                   full schedule
-                </a>{" "}
+                </Link>{" "}
                 for upcoming shows.
               </p>
             </div>

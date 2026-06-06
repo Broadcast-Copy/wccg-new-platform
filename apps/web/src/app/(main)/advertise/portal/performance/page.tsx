@@ -71,6 +71,10 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function PerformanceDashboardPage() {
   const [dateRange, setDateRange] = useState<DateRange>("30");
+  // Capture "now" once on mount for campaign-progress math. Date.now() is
+  // impure and cannot be called during render; campaign windows span days so a
+  // single mount-time snapshot is equivalent for the progress bars.
+  const [now] = useState(() => Date.now());
 
   const filteredDailyData = useMemo(() => {
     const days = parseInt(dateRange);
@@ -273,7 +277,6 @@ export default function PerformanceDashboardPage() {
             // Compute progress for active campaigns
             const start = new Date(campaign.startDate).getTime();
             const end = new Date(campaign.endDate).getTime();
-            const now = Date.now();
             const progress =
               campaign.status === "completed"
                 ? 100

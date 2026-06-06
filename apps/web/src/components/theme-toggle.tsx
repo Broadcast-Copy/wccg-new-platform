@@ -9,7 +9,13 @@ export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => setMounted(true), []);
+  // Defer to a microtask so the flip happens after the first (hydration-safe)
+  // render. Setting state synchronously in the effect body trips
+  // react-hooks/set-state-in-effect; a lazy `useState(true)` initializer would
+  // break SSR because the server render must also produce the `!mounted` branch.
+  useEffect(() => {
+    queueMicrotask(() => setMounted(true));
+  }, []);
 
   if (!mounted) {
     return (

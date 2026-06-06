@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   Wallet,
   DollarSign,
@@ -83,16 +83,15 @@ function buildSeedCommissions(): CommissionRecord[] {
 // Page
 // ---------------------------------------------------------------------------
 
+const emptySubscribe = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function CommissionsPage() {
-  const [records, setRecords] = useState<CommissionRecord[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const [records] = useState<CommissionRecord[]>(() => loadOrSeed(KEY, buildSeedCommissions()));
+  const mounted = useSyncExternalStore(emptySubscribe, getHydratedSnapshot, getServerSnapshot);
   const [activeTab, setActiveTab] = useState("current");
   const [selectedMonth, setSelectedMonth] = useState("2026-03");
-
-  useEffect(() => {
-    setMounted(true);
-    setRecords(loadOrSeed(KEY, buildSeedCommissions()));
-  }, []);
 
   if (!mounted) return null;
 

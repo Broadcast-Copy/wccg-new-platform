@@ -93,13 +93,20 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Hydrate from localStorage
+  // Hydrate from localStorage. Read synchronously, but apply the state in a
+  // microtask so it is not a synchronous setState in the effect body. Kept in
+  // an effect (not a lazy initializer) to avoid an SSR/hydration mismatch; the
+  // `mounted` flag still gates rendering until this has applied. Role and
+  // mounted are set together to preserve ordering (no role-less flash).
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as RoleId | null;
-    if (stored && stored in ROLE_CONFIGS) {
-      setRoleState(stored);
-    }
-    setMounted(true);
+    const valid = stored && stored in ROLE_CONFIGS ? stored : null;
+    queueMicrotask(() => {
+      if (valid) {
+        setRoleState(valid);
+      }
+      setMounted(true);
+    });
   }, []);
 
   function setRole(r: RoleId | null) {

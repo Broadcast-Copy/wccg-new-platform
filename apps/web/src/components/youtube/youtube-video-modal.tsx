@@ -23,11 +23,19 @@ export function YouTubeVideoModal({
   const [pointsAwarded, setPointsAwarded] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Reset the "+points" badge when the modal closes (videoId becomes null).
+  // "Adjust state during render" pattern keyed on videoId — replaces the
+  // synchronous setState that used to live in the effect below
+  // (react-hooks/set-state-in-effect). Matches the original: switching directly
+  // between two videos does not reset.
+  const [lastVideoId, setLastVideoId] = useState(videoId);
+  if (lastVideoId !== videoId) {
+    setLastVideoId(videoId);
+    if (!videoId) setPointsAwarded(false);
+  }
+
   useEffect(() => {
-    if (!videoId) {
-      setPointsAwarded(false);
-      return;
-    }
+    if (!videoId) return;
 
     // Award points after 15 seconds of watching
     timerRef.current = setTimeout(() => {
