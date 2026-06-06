@@ -11,6 +11,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ThemeLogo } from "@/components/theme-logo";
 import { AppImage as Image } from "@/components/ui/app-image";
 import { SpotCartProvider } from "@/components/providers/spot-cart-provider";
+import { PresenceProvider } from "@/components/providers/presence-provider";
 import { SpotCartDrawer } from "@/components/sales/spot-cart-drawer";
 import { SyncInitializer } from "@/components/providers/sync-initializer";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
@@ -290,6 +291,7 @@ export default function MainLayout({
 
   return (
     <SpotCartProvider>
+    <PresenceProvider>
     <div className="flex min-h-screen flex-col bg-background">
       <SpotCartDrawer />
       <SyncInitializer />
@@ -531,6 +533,7 @@ export default function MainLayout({
       {/* Bottom App Dock — customizable, minimizable, dark (hidden on studio editor pages) */}
       <AppDock liveShows={tabBadges.shows} newProducts={tabBadges.shop} />
     </div>
+    </PresenceProvider>
     </SpotCartProvider>
   );
 }

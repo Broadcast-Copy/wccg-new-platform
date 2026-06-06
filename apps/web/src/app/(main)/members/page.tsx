@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { MessageButton } from "@/components/messaging/message-button";
+import { OnlineDot } from "@/components/social/online-dot";
 
 // ---------------------------------------------------------------------------
 // Row shape (strict — no `any`). Columns mirror the `select` below and the
@@ -217,21 +218,24 @@ function MemberCard({ member }: { member: PublicMember }) {
     <div className="flex flex-col rounded-2xl border border-border bg-card p-5 transition-colors hover:border-[#74ddc7]/40">
       {/* Identity row */}
       <div className="flex items-start gap-3">
-        {/* Avatar (fallback to initials) */}
-        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-border bg-muted">
-          {member.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={member.avatar_url}
-              alt=""
-              className="h-full w-full object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#7401df]/40 to-[#74ddc7]/30 text-sm font-black text-foreground">
-              {initials(name)}
-            </div>
-          )}
+        {/* Avatar (fallback to initials) + live presence dot */}
+        <div className="relative h-12 w-12 shrink-0">
+          <div className="h-12 w-12 overflow-hidden rounded-full border border-border bg-muted">
+            {member.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={member.avatar_url}
+                alt=""
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#7401df]/40 to-[#74ddc7]/30 text-sm font-black text-foreground">
+                {initials(name)}
+              </div>
+            )}
+          </div>
+          <OnlineDot userId={member.id} className="absolute bottom-0 right-0 h-3 w-3" />
         </div>
 
         {/* Name + handle */}

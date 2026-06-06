@@ -46,6 +46,9 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^djs/[^/]+/?$ /djs/_placeholder.html [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^groups/[^/]+/?$ /groups/_placeholder.html [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^hosts/[^/]+/?$ /hosts/_placeholder.html [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

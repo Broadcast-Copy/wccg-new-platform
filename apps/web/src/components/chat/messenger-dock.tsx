@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { OnlineDot } from "@/components/social/online-dot";
 
 const TEAL = "#74ddc7";
 const PURPLE = "#7401df";
@@ -704,6 +705,7 @@ export function MessengerDock() {
                               avatar={c.avatar}
                               size={40}
                               accent={c.isInternal ? PURPLE : TEAL}
+                              userId={c.otherId}
                             />
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-2">
@@ -764,6 +766,7 @@ export function MessengerDock() {
                             avatar={f.avatar}
                             size={40}
                             accent={f.isInternal ? PURPLE : TEAL}
+                            userId={f.id}
                           />
                           <div className="flex min-w-0 flex-1 items-center gap-1.5">
                             <span className="truncate text-sm font-semibold text-foreground">
@@ -819,29 +822,29 @@ function Avatar({
   avatar,
   size,
   accent,
+  userId,
 }: {
   name: string;
   avatar: string | null;
   size: number;
   accent: string;
+  userId?: string | null;
 }) {
   return (
-    <div
-      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-border text-[11px] font-semibold"
-      style={{
-        height: size,
-        width: size,
-        backgroundColor: `${accent}1a`,
-        color: accent,
-      }}
-      title={name}
-    >
-      {avatar ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={avatar} alt={name} className="h-full w-full object-cover" />
-      ) : (
-        initials(name)
-      )}
+    <div className="relative shrink-0" style={{ height: size, width: size }}>
+      <div
+        className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-border text-[11px] font-semibold"
+        style={{ backgroundColor: `${accent}1a`, color: accent }}
+        title={name}
+      >
+        {avatar ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={avatar} alt={name} className="h-full w-full object-cover" />
+        ) : (
+          initials(name)
+        )}
+      </div>
+      <OnlineDot userId={userId} className="absolute bottom-0 right-0 h-2.5 w-2.5" />
     </div>
   );
 }

@@ -44,6 +44,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/card";
 import { MessageButton } from "@/components/messaging/message-button";
+import { OnlineDot } from "@/components/social/online-dot";
 
 // ---------------------------------------------------------------------------
 // Row shapes (small, strict — no `any`). Columns mirror the queries below.
@@ -457,16 +458,19 @@ export default function ProfileClient() {
         {/* Identity block */}
         <div className="px-5 pb-5 md:px-7">
           <div className="-mt-12 flex flex-wrap items-end justify-between gap-4">
-            {/* Avatar overlapping the banner */}
-            <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full border-4 border-card bg-muted shadow-md">
-              {profile.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#7401df]/40 to-[#74ddc7]/30 text-2xl font-black text-foreground">
-                  {initials(name)}
-                </div>
-              )}
+            {/* Avatar overlapping the banner + live presence dot */}
+            <div className="relative h-24 w-24 shrink-0">
+              <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-card bg-muted shadow-md">
+                {profile.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#7401df]/40 to-[#74ddc7]/30 text-2xl font-black text-foreground">
+                    {initials(name)}
+                  </div>
+                )}
+              </div>
+              <OnlineDot userId={profile.id} className="absolute bottom-1 right-1 h-4 w-4" />
             </div>
 
             {/* Header actions: Follow + Message + (for DJs) a link to the DJ page. */}

@@ -15,6 +15,8 @@ import {
   Lock,
   Globe,
   Loader2,
+  MessageSquare,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -307,25 +309,33 @@ export function GroupsCard({ hubType, accentColor, supabase }: RailProps) {
             return (
               <li key={g.id} className="rounded-lg border border-transparent hover:border-border">
                 <div className="flex items-center gap-2 p-2">
-                  <button
-                    type="button"
-                    onClick={() => setOpenId((cur) => (cur === g.id ? null : g.id))}
-                    className="min-w-0 flex-1 text-left"
-                    aria-expanded={isOpen}
-                  >
-                    <div className="flex items-center gap-1.5">
+                  <div className="min-w-0 flex-1">
+                    {/* Name links to the group's detail + chat page. */}
+                    <Link
+                      href={`/groups/${g.id}`}
+                      className="flex items-center gap-1.5 hover:underline"
+                    >
                       <span className="truncate text-xs font-semibold text-foreground">
                         {g.name}
                       </span>
                       {!g.is_public && (
                         <Lock className="h-3 w-3 shrink-0 text-muted-foreground" />
                       )}
-                    </div>
-                    <span className="text-[11px] text-muted-foreground">
+                    </Link>
+                    {/* Member count doubles as the inline members-preview toggle. */}
+                    <button
+                      type="button"
+                      onClick={() => setOpenId((cur) => (cur === g.id ? null : g.id))}
+                      className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+                      aria-expanded={isOpen}
+                    >
                       {(counts[g.id] ?? 0).toLocaleString()}{" "}
                       {(counts[g.id] ?? 0) === 1 ? "member" : "members"}
-                    </span>
-                  </button>
+                      <ChevronDown
+                        className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                  </div>
                   {user && (
                     <button
                       type="button"
@@ -360,6 +370,13 @@ export function GroupsCard({ hubType, accentColor, supabase }: RailProps) {
                       </p>
                     )}
                     <GroupMembersStrip groupId={g.id} accentColor={accentColor} supabase={supabase} />
+                    <Link
+                      href={`/groups/${g.id}`}
+                      className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold transition-opacity hover:opacity-80"
+                      style={{ color: accentColor }}
+                    >
+                      <MessageSquare className="h-3 w-3" /> Open group chat
+                    </Link>
                   </div>
                 )}
               </li>
