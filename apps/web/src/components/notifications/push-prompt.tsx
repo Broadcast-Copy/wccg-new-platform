@@ -20,7 +20,7 @@
 
 import { useEffect, useState } from "react";
 import { Bell, X } from "lucide-react";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 
 const SHOW_AFTER_LISTENED_MS = 2 * 60 * 1000; // 2 minutes
@@ -140,13 +140,22 @@ export function PushPrompt() {
         // confuses lib.dom's stricter ArrayBufferView<ArrayBuffer> signature.
         applicationServerKey: urlBase64ToUint8Array(vapid) as unknown as BufferSource,
       });
-      await apiClient("/push/subscribe", {
-        method: "POST",
-        body: JSON.stringify({
-          subscription: sub.toJSON(),
-          userAgent: navigator.userAgent,
-        }),
-      });
+      // Store the subscription in Supabase (no API server). Sending pushes still
+      // needs a server-side web-push sender (VAPID private key) — a Wave-3 follow-up.
+      const json = sub.toJSON();
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user && json.endpoint) {
+        const { error: subErr } = await supabase.from("push_subscriptions").insert({
+          user_id: user.id,
+          endpoint: json.endpoint,
+          p256dh: json.keys?.p256dh ?? null,
+          auth_key: json.keys?.auth ?? null,
+        });
+        if (subErr && subErr.code !== "23505") throw new Error(subErr.message);
+      }
       const s = loadState();
       saveState({ ...s, decidedAt: new Date().toISOString(), decision: "accepted" });
       setOpen(false);
