@@ -1,8 +1,16 @@
 "use client";
 
+/**
+ * Header notification bell — Supabase-direct (no API server).
+ *
+ * Reads the current user's `notifications` (own-scoped by RLS), shows an unread
+ * badge (polled every 30s), loads the latest 10 on open, and marks one / all
+ * read. Notifications are produced by DB triggers (new DM, new follower).
+ */
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -10,7 +18,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "sonner";
 import {
   Bell,
   Heart,
@@ -26,42 +33,43 @@ import Link from "next/link";
 
 // ------------------------------------------------------------------ Types
 
-type NotificationType =
-  | "FOLLOW"
-  | "LIKE"
-  | "COMMENT"
-  | "SYSTEM"
-  | "EVENT"
-  | "POINTS";
-
 interface Notification {
   id: string;
-  type: NotificationType;
-  message: string;
+  type: string;
+  title: string;
+  body: string | null;
   isRead: boolean;
   createdAt: string;
-  link?: string;
+  link?: string | null;
 }
 
-interface UnreadCountResponse {
-  count: number;
+interface NotificationRow {
+  id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  link: string | null;
+  is_read: boolean;
+  created_at: string;
 }
 
 // ------------------------------------------------------------------ Helpers
 
-const NOTIFICATION_ICONS: Record<NotificationType, typeof Bell> = {
+const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
   FOLLOW: UserPlus,
   LIKE: Heart,
   COMMENT: MessageCircle,
+  MESSAGE: MessageCircle,
   SYSTEM: Info,
   EVENT: Calendar,
   POINTS: Star,
 };
 
-const NOTIFICATION_COLORS: Record<NotificationType, string> = {
+const NOTIFICATION_COLORS: Record<string, string> = {
   FOLLOW: "text-blue-400",
   LIKE: "text-pink-400",
   COMMENT: "text-amber-400",
+  MESSAGE: "text-[#74ddc7]",
   SYSTEM: "text-foreground/60",
   EVENT: "text-purple-400",
   POINTS: "text-[#74ddc7]",
@@ -70,12 +78,10 @@ const NOTIFICATION_COLORS: Record<NotificationType, string> = {
 function timeAgo(dateStr: string): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
-  const diffMs = now - then;
-  const diffSec = Math.floor(diffMs / 1000);
+  const diffSec = Math.floor((now - then) / 1000);
   const diffMin = Math.floor(diffSec / 60);
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
-
   if (diffSec < 60) return "just now";
   if (diffMin < 60) return `${diffMin}m ago`;
   if (diffHour < 24) return `${diffHour}h ago`;
@@ -87,6 +93,7 @@ function timeAgo(dateStr: string): string {
 
 export function NotificationBell() {
   const { user, isLoading: authLoading } = useAuth();
+  const [supabase] = useState(() => createClient());
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -94,107 +101,97 @@ export function NotificationBell() {
   const [markingAllRead, setMarkingAllRead] = useState(false);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ---- Fetch unread count
+  // ---- Unread count (own-scoped by RLS).
   const fetchUnreadCount = useCallback(async () => {
     if (!user) return;
-    try {
-      const data = await apiClient<UnreadCountResponse>(
-        "/notifications/unread-count",
-      );
-      setUnreadCount(data.count);
-    } catch {
-      // Silently fail — polling shouldn't produce toast errors
-    }
-  }, [user]);
+    const { count } = await supabase
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("is_read", false);
+    setUnreadCount(count ?? 0);
+  }, [user, supabase]);
 
-  // ---- Fetch notifications (on popover open)
+  // ---- Latest notifications (on popover open).
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
     setIsLoadingNotifications(true);
     try {
-      const data = await apiClient<Notification[]>(
-        "/notifications?limit=10",
+      const { data } = await supabase
+        .from("notifications")
+        .select("id,type,title,body,link,is_read,created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      const rows = (data ?? []) as NotificationRow[];
+      setNotifications(
+        rows.map((r) => ({
+          id: r.id,
+          type: r.type,
+          title: r.title,
+          body: r.body,
+          isRead: r.is_read,
+          createdAt: r.created_at,
+          link: r.link,
+        })),
       );
-      setNotifications(data);
-    } catch {
-      toast.error("Failed to load notifications");
     } finally {
       setIsLoadingNotifications(false);
     }
-  }, [user]);
+  }, [user, supabase]);
 
-  // ---- Poll for unread count every 30s
+  // ---- Poll unread count every 30s.
   useEffect(() => {
     if (!user) return;
-
     fetchUnreadCount();
     pollIntervalRef.current = setInterval(fetchUnreadCount, 30_000);
-
     return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
   }, [user, fetchUnreadCount]);
 
-  // ---- Load notifications when popover opens
+  // ---- Load list when the popover opens.
   useEffect(() => {
-    if (isOpen) {
-      fetchNotifications();
-    }
+    if (isOpen) fetchNotifications();
   }, [isOpen, fetchNotifications]);
 
-  // ---- Mark single notification as read
-  const markAsRead = async (notification: Notification) => {
-    if (notification.isRead) return;
-
-    // Optimistic update
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n)),
-    );
-    setUnreadCount((prev) => Math.max(0, prev - 1));
-
-    try {
-      await apiClient(`/notifications/${notification.id}/read`, {
-        method: "PATCH",
-      });
-    } catch {
-      // Revert on failure
-      setNotifications((prev) =>
-        prev.map((n) =>
-          n.id === notification.id ? { ...n, isRead: false } : n,
-        ),
-      );
-      setUnreadCount((prev) => prev + 1);
+  // ---- Mark one read (optimistic).
+  const markAsRead = async (n: Notification) => {
+    if (n.isRead || !user) return;
+    setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
+    setUnreadCount((p) => Math.max(0, p - 1));
+    const { error } = await supabase
+      .from("notifications")
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq("id", n.id)
+      .eq("user_id", user.id);
+    if (error) {
+      setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, isRead: false } : x)));
+      setUnreadCount((p) => p + 1);
     }
   };
 
-  // ---- Mark all as read
+  // ---- Mark all read (optimistic).
   const markAllAsRead = async () => {
+    if (!user) return;
     setMarkingAllRead(true);
-
-    // Optimistic update
-    const prevNotifications = [...notifications];
+    const prevNotifications = notifications;
     const prevCount = unreadCount;
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     setUnreadCount(0);
-
-    try {
-      await apiClient("/notifications/read-all", { method: "PATCH" });
-    } catch {
-      // Revert on failure
+    const { error } = await supabase
+      .from("notifications")
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq("user_id", user.id)
+      .eq("is_read", false);
+    if (error) {
       setNotifications(prevNotifications);
       setUnreadCount(prevCount);
-      toast.error("Failed to mark all as read");
-    } finally {
-      setMarkingAllRead(false);
     }
+    setMarkingAllRead(false);
   };
 
-  // Don't render until auth is resolved, or if no user
-  if (authLoading || !user) {
-    return null;
-  }
+  if (authLoading || !user) return null;
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -252,10 +249,8 @@ export function NotificationBell() {
           ) : (
             <div className="divide-y divide-white/[0.04]">
               {notifications.map((notification) => {
-                const Icon =
-                  NOTIFICATION_ICONS[notification.type] || Info;
-                const iconColor =
-                  NOTIFICATION_COLORS[notification.type] || "text-foreground/60";
+                const Icon = NOTIFICATION_ICONS[notification.type] || Info;
+                const iconColor = NOTIFICATION_COLORS[notification.type] || "text-foreground/60";
 
                 const content = (
                   <div
@@ -277,8 +272,13 @@ export function NotificationBell() {
                             : "text-foreground/90 font-medium"
                         }`}
                       >
-                        {notification.message}
+                        {notification.title}
                       </p>
+                      {notification.body && (
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground/80">
+                          {notification.body}
+                        </p>
+                      )}
                       <p className="mt-0.5 text-xs text-muted-foreground/70">
                         {timeAgo(notification.createdAt)}
                       </p>
@@ -305,11 +305,7 @@ export function NotificationBell() {
                   );
                 }
 
-                return (
-                  <div key={notification.id}>
-                    {content}
-                  </div>
-                );
+                return <div key={notification.id}>{content}</div>;
               })}
             </div>
           )}

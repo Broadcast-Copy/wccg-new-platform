@@ -1,16 +1,16 @@
 "use client";
 
+/**
+ * Follower count for a host / show / user — Supabase-direct (no API server).
+ * Reads the public `entity_follows` count (visible to everyone, incl. signed
+ * out). Renders nothing if the count can't be read.
+ */
+
 import { useCallback, useEffect, useState } from "react";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { Users2 } from "lucide-react";
 
-// ------------------------------------------------------------------ Types
-
 type TargetType = "host" | "show" | "user";
-
-interface FollowerCountResponse {
-  count: number;
-}
 
 interface FollowerCountProps {
   targetType: TargetType;
@@ -18,8 +18,6 @@ interface FollowerCountProps {
   /** Optional class name for the container */
   className?: string;
 }
-
-// ------------------------------------------------------------------ Helpers
 
 function formatCount(count: number): string {
   if (count >= 1_000_000) {
@@ -31,30 +29,30 @@ function formatCount(count: number): string {
   return count.toString();
 }
 
-// ------------------------------------------------------------------ Component
-
 export function FollowerCount({
   targetType,
   targetId,
   className = "",
 }: FollowerCountProps) {
+  const [supabase] = useState(() => createClient());
   const [count, setCount] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchCount = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await apiClient<FollowerCountResponse>(
-        `/follows/count?targetType=${encodeURIComponent(targetType)}&targetId=${encodeURIComponent(targetId)}`,
-      );
-      setCount(data.count);
+      const { count: c, error } = await supabase
+        .from("entity_follows")
+        .select("*", { count: "exact", head: true })
+        .eq("target_type", targetType)
+        .eq("target_id", targetId);
+      setCount(error ? null : c ?? 0);
     } catch {
-      // If the endpoint doesn't exist yet, just show nothing
       setCount(null);
     } finally {
       setIsLoading(false);
     }
-  }, [targetType, targetId]);
+  }, [supabase, targetType, targetId]);
 
   useEffect(() => {
     fetchCount();
@@ -73,9 +71,7 @@ export function FollowerCount({
   }
 
   return (
-    <div
-      className={`flex items-center gap-1.5 text-sm text-muted-foreground ${className}`}
-    >
+    <div className={`flex items-center gap-1.5 text-sm text-muted-foreground ${className}`}>
       <Users2 className="h-3.5 w-3.5" />
       <span>
         <span className="font-medium text-foreground/60">{formatCount(count)}</span>{" "}

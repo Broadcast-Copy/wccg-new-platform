@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Hero } from "@/components/home/hero";
 import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { track } from "@/lib/analytics";
 
 import { EventCard } from "@/components/events/event-card";
@@ -187,10 +188,12 @@ export default function HomePage() {
     setSubscribing(true);
     setSubscribeError(null);
     try {
-      await apiClient("/marketing/newsletter", {
-        method: "POST",
-        body: JSON.stringify({ email, source: "home_hero_cta" }),
-      });
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("newsletter_subscribers")
+        .insert({ email, source: "home_hero_cta" });
+      // 23505 = email already on the list → treat as success (don't reveal it).
+      if (error && error.code !== "23505") throw new Error(error.message);
       setSubscribed(true);
       void track("newsletter_subscribed", { source: "home_hero_cta" });
       setTimeout(() => setSubscribed(false), 4000);

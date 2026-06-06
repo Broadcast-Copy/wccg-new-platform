@@ -1,24 +1,19 @@
 "use client";
 
+/**
+ * Follow/unfollow control for hosts / shows / users — Supabase-direct (no API
+ * server). Backed by the polymorphic `entity_follows` table (own insert/delete
+ * RLS). Renders nothing when signed out.
+ */
+
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Check, Loader2, UserMinus, UserPlus } from "lucide-react";
 
-// ------------------------------------------------------------------ Types
-
 type TargetType = "host" | "show" | "user";
-
-interface FollowCheckResponse {
-  isFollowing: boolean;
-  followId?: string;
-}
-
-interface FollowResponse {
-  id: string;
-}
 
 interface FollowButtonProps {
   targetType: TargetType;
@@ -28,8 +23,6 @@ interface FollowButtonProps {
   onToggle?: (isFollowing: boolean) => void;
 }
 
-// ------------------------------------------------------------------ Component
-
 export function FollowButton({
   targetType,
   targetId,
@@ -37,40 +30,43 @@ export function FollowButton({
   onToggle,
 }: FollowButtonProps) {
   const { user, isLoading: authLoading } = useAuth();
+  const [supabase] = useState(() => createClient());
   const [isFollowing, setIsFollowing] = useState(false);
   const [followId, setFollowId] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(true);
   const [isToggling, setIsToggling] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
-  // ---- Check follow status on mount
+  // ---- Check follow status on mount.
   const checkFollowStatus = useCallback(async () => {
     if (!user) return;
     setIsChecking(true);
     try {
-      const data = await apiClient<FollowCheckResponse>(
-        `/follows/check?targetType=${encodeURIComponent(targetType)}&targetId=${encodeURIComponent(targetId)}`,
-      );
-      setIsFollowing(data.isFollowing);
-      setFollowId(data.followId ?? null);
+      const { data } = await supabase
+        .from("entity_follows")
+        .select("id")
+        .eq("follower_id", user.id)
+        .eq("target_type", targetType)
+        .eq("target_id", targetId)
+        .maybeSingle();
+      setIsFollowing(!!data);
+      setFollowId((data as { id: string } | null)?.id ?? null);
     } catch {
       // Silently fail — the button will just show "Follow"
     } finally {
       setIsChecking(false);
     }
-  }, [user, targetType, targetId]);
+  }, [user, supabase, targetType, targetId]);
 
   useEffect(() => {
     checkFollowStatus();
   }, [checkFollowStatus]);
 
-  // ---- Toggle follow/unfollow
+  // ---- Toggle follow/unfollow (optimistic).
   const handleToggle = async () => {
     if (!user || isToggling) return;
-
     setIsToggling(true);
 
-    // Optimistic update
     const prevIsFollowing = isFollowing;
     const prevFollowId = followId;
 
@@ -78,32 +74,29 @@ export function FollowButton({
       // Unfollow
       setIsFollowing(false);
       setFollowId(null);
-
-      try {
-        await apiClient(`/follows/${followId}`, { method: "DELETE" });
-        onToggle?.(false);
-      } catch {
-        // Revert
+      const { error } = await supabase.from("entity_follows").delete().eq("id", followId);
+      if (error) {
         setIsFollowing(prevIsFollowing);
         setFollowId(prevFollowId);
         toast.error("Failed to unfollow");
+      } else {
+        onToggle?.(false);
       }
     } else {
       // Follow
       setIsFollowing(true);
-
-      try {
-        const data = await apiClient<FollowResponse>("/follows", {
-          method: "POST",
-          body: JSON.stringify({ targetType, targetId }),
-        });
-        setFollowId(data.id);
-        onToggle?.(true);
-      } catch {
-        // Revert
+      const { data, error } = await supabase
+        .from("entity_follows")
+        .insert({ follower_id: user.id, target_type: targetType, target_id: targetId })
+        .select("id")
+        .single();
+      if (error) {
         setIsFollowing(prevIsFollowing);
         setFollowId(prevFollowId);
         toast.error("Failed to follow");
+      } else {
+        setFollowId((data as { id: string }).id);
+        onToggle?.(true);
       }
     }
 
@@ -118,12 +111,7 @@ export function FollowButton({
   // Show skeleton while checking initial status
   if (isChecking) {
     return (
-      <Button
-        variant="outline"
-        size={size}
-        disabled
-        className="min-w-[90px] border-border"
-      >
+      <Button variant="outline" size={size} disabled className="min-w-[90px] border-border">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
       </Button>
     );
@@ -132,7 +120,6 @@ export function FollowButton({
   // ---- Following state (with hover-to-unfollow)
   if (isFollowing) {
     const showUnfollow = isHovered && !isToggling;
-
     return (
       <Button
         variant={showUnfollow ? "destructive" : "outline"}
