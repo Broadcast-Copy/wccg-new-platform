@@ -17,118 +17,12 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  BarChart3,
-  Briefcase,
-  CalendarDays,
-  Clapperboard,
-  Clock,
-  DollarSign,
-  Eye,
-  FolderOpen,
-  Gift,
   LogOut,
-  Megaphone,
-  Mic,
-  Palette,
-  Radio,
-  Receipt,
-  Settings,
   Shield,
-  Store,
   Lock,
-  Package,
-  Users,
-  Globe,
-  Mail,
 } from "lucide-react";
 import { toast } from "sonner";
-import { navForMode } from "@/lib/role-nav";
-
-// ---------------------------------------------------------------------------
-// Role-specific menu items
-// ---------------------------------------------------------------------------
-
-interface RoleSection {
-  label: string;
-  items: { href: string; label: string; icon: React.ReactNode }[];
-}
-
-function getRoleSection(flags: {
-  isSales: boolean;
-  isProduction: boolean;
-  isManagement: boolean;
-  isPromotions: boolean;
-  isCreator: boolean;
-  isHost: boolean;
-  isAdmin: boolean;
-  isSuperAdmin: boolean;
-}): RoleSection {
-  const {
-    isSales,
-    isProduction,
-    isManagement,
-    isPromotions,
-    isCreator,
-    isHost,
-    isAdmin,
-    isSuperAdmin,
-  } = flags;
-
-  if (isSuperAdmin || isAdmin) {
-    return {
-      label: "Administration",
-      items: [
-        { href: "/my/admin/campaigns", label: "Campaigns", icon: <Megaphone className="mr-2 h-4 w-4" /> },
-        { href: "/my/admin/reports", label: "Reports", icon: <BarChart3 className="mr-2 h-4 w-4" /> },
-        { href: "/my/admin/programming", label: "Programming", icon: <Radio className="mr-2 h-4 w-4" /> },
-        { href: "/my/events", label: "Events Manager", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
-        { href: "/my/studio", label: "Broadcast Studio", icon: <Clapperboard className="mr-2 h-4 w-4" /> },
-        { href: "/my/mixes", label: "Media Manager", icon: <FolderOpen className="mr-2 h-4 w-4" /> },
-      ],
-    };
-  }
-
-  if (isManagement || isProduction || isCreator || isHost) {
-    return {
-      label: "Creator",
-      items: [
-        { href: "/my/admin/programming", label: "Programming", icon: <Radio className="mr-2 h-4 w-4" /> },
-        { href: "/my/admin/production", label: "Production Queue", icon: <Clapperboard className="mr-2 h-4 w-4" /> },
-        { href: "/my/studio", label: "Broadcast Studio", icon: <Mic className="mr-2 h-4 w-4" /> },
-        { href: "/my/mixes", label: "Media Manager", icon: <FolderOpen className="mr-2 h-4 w-4" /> },
-        { href: "/my/events", label: "Events Manager", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
-        { href: "/creators", label: "Creator Hub", icon: <Palette className="mr-2 h-4 w-4" /> },
-      ],
-    };
-  }
-
-  if (isPromotions) {
-    return {
-      label: "Marketing",
-      items: [
-        { href: "/my/marketing/campaigns", label: "Campaigns", icon: <Megaphone className="mr-2 h-4 w-4" /> },
-        { href: "/my/marketing/campaign-builder", label: "Campaign Builder", icon: <Briefcase className="mr-2 h-4 w-4" /> },
-        { href: "/my/events", label: "Events Manager", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
-        { href: "/contests", label: "Contests", icon: <Gift className="mr-2 h-4 w-4" /> },
-      ],
-    };
-  }
-
-  if (isSales) {
-    return {
-      label: "Sales",
-      items: [
-        { href: "/my/sales", label: "Sales Dashboard", icon: <DollarSign className="mr-2 h-4 w-4" /> },
-        { href: "/my/admin/reports", label: "Reports", icon: <BarChart3 className="mr-2 h-4 w-4" /> },
-        { href: "/my/sales/invoices", label: "Invoices", icon: <Receipt className="mr-2 h-4 w-4" /> },
-        { href: "/my/events", label: "Events Manager", icon: <CalendarDays className="mr-2 h-4 w-4" /> },
-      ],
-    };
-  }
-
-  return { label: "", items: [] };
-}
-
+import { navForMode, adminNavForMode } from "@/lib/role-nav";
 
 // ---------------------------------------------------------------------------
 // Listener / Creator Toggle (inline for the dropdown)
@@ -182,15 +76,7 @@ export function UserMenu() {
   const { user, signOut, isLoading } = useAuth();
   const { supabase } = useSupabase();
   const {
-    isAdmin,
-    isSuperAdmin,
     isRealAdmin,
-    isHost,
-    isSales,
-    isManagement,
-    isProduction,
-    isPromotions,
-    isCreator,
     roleOverride,
     isOverrideActive,
     setRoleOverride,
@@ -306,17 +192,6 @@ export function UserMenu() {
     router.push("/login");
     router.refresh();
   };
-
-  const _roleSection = getRoleSection({
-    isSales,
-    isProduction,
-    isManagement,
-    isPromotions,
-    isCreator,
-    isHost,
-    isAdmin,
-    isSuperAdmin,
-  });
 
   const adminRoles = ["operations", "production", "sales"];
   const isAdminMode = isOverrideActive && roleOverride !== null && adminRoles.includes(roleOverride);
@@ -456,49 +331,15 @@ export function UserMenu() {
                   : "[&_[data-slot=dropdown-menu-item]:focus]:bg-[#74ddc7]/10 [&_[data-slot=dropdown-menu-item]:focus]:text-[#0a0a0f]"
           }
         >
-          {isAdminMode ? (
-            <>
-              {roleOverride === "operations" ? (
-                <>
-                  <DropdownMenuItem asChild><Link href="/my/admin"><Shield className="mr-2 h-4 w-4" />Admin Dashboard</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/admin/cms"><Globe className="mr-2 h-4 w-4" />Web Editor / CMS</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/directory"><Store className="mr-2 h-4 w-4" />Listings</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/admin/users"><Users className="mr-2 h-4 w-4" />User Management</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/admin/fees"><DollarSign className="mr-2 h-4 w-4" />Platform Fees</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/admin/moderation"><Eye className="mr-2 h-4 w-4" />Moderation</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/admin/push"><Megaphone className="mr-2 h-4 w-4" />Push Notifications</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/admin/email-campaigns"><Mail className="mr-2 h-4 w-4" />Email Campaigns</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/admin/audit-log"><Clock className="mr-2 h-4 w-4" />Audit Log</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/admin/operations"><Settings className="mr-2 h-4 w-4" />System Control</Link></DropdownMenuItem>
-                </>
-              ) : roleOverride === "sales" ? (
-                <>
-                  <DropdownMenuItem asChild><Link href="/my/sales"><BarChart3 className="mr-2 h-4 w-4" />Sales Dashboard</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/advertise/portal/campaign-builder"><Megaphone className="mr-2 h-4 w-4" />Campaign Builder</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/advertise/portal/dashboard"><BarChart3 className="mr-2 h-4 w-4" />Campaign Dashboard</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/admin/segments"><Users className="mr-2 h-4 w-4" />Audience Segments</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/admin/inventory"><Package className="mr-2 h-4 w-4" />Ad Inventory</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/admin/advertisers"><Briefcase className="mr-2 h-4 w-4" />Advertisers</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/admin/gm/revenue"><DollarSign className="mr-2 h-4 w-4" />Revenue</Link></DropdownMenuItem>
-                </>
-              ) : (
-                <>
-                  <DropdownMenuItem asChild><Link href="/my/admin/production"><Clapperboard className="mr-2 h-4 w-4" />Production Queue</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/admin/studios"><Mic className="mr-2 h-4 w-4" />Studio Manager</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/mixes"><FolderOpen className="mr-2 h-4 w-4" />Media Manager</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/my/admin/creators"><Palette className="mr-2 h-4 w-4" />Creator Manager</Link></DropdownMenuItem>
-                </>
-              )}
-            </>
-          ) : (
-            navForMode(currentActiveMode).map((item) => (
+          {(isAdminMode ? adminNavForMode(roleOverride) : navForMode(currentActiveMode)).map(
+            (item) => (
               <DropdownMenuItem key={item.href} asChild>
                 <Link href={item.href}>
                   <item.icon className="mr-2 h-4 w-4" />
                   {item.label}
                 </Link>
               </DropdownMenuItem>
-            ))
+            )
           )}
         </DropdownMenuGroup>
 

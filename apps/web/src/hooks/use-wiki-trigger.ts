@@ -1,21 +1,27 @@
 "use client";
 
 /**
- * useWikiTrigger — Phase C4.
+ * useWikiTrigger — Supabase-direct (no API server).
  *
  * Watches the now-playing artist and, when it changes to one we haven't seen
- * recently, fires a fire-and-forget call to /wiki/:slug/research to enqueue
- * an auto-research run. Server dedupes per (slug, trigger, hour) so this is
- * safe even on rapid track changes.
+ * recently, enqueues a wiki entry by inserting a `requested` row into
+ * `wiki_entities`. RLS allows any authenticated user to insert status
+ * 'requested'; a unique slug means duplicate inserts fail with 23505, which
+ * we ignore (already queued). This is strictly best-effort — it never blocks
+ * playback and never calls the research edge function (research is admin-
+ * triggered from the staff review queue).
  *
- * Mount this once near the player. Cheap to import — no UI.
+ * Mount this once near the player. Cheap to import — no UI. The localStorage
+ * dedupe keeps us from spamming inserts on rapid track changes.
  */
 
 import { useEffect, useRef } from "react";
 import { useNowPlaying } from "@/hooks/use-now-playing";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
-import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { slugify } from "@/lib/slug";
+
+const supabase = createClient();
 
 const SEEN_KEY = "wccg_wiki_triggered";
 const SEEN_TTL_HOURS = 24;
@@ -71,16 +77,34 @@ export function useWikiTrigger() {
       return;
     }
 
-    lastTriggeredRef.current = slug;
-    seen[slug] = new Date().toISOString();
-    saveSeen(seen);
+    let active = true;
 
-    // Fire-and-forget. 401 (unauthed) is fine — server dedupes.
-    apiClient(`/wiki/${slug}/research`, {
-      method: "POST",
-      body: JSON.stringify({ type: "artist", displayName: artist }),
-    }).catch(() => {
-      // No-op — this is best-effort.
-    });
+    void (async () => {
+      // Only signed-in listeners may enqueue (RLS requires auth for INSERT).
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!active || !user) return;
+
+      // Mark as seen only once we know we'll attempt the insert, so a logged-
+      // out listener can still trigger it later after signing in.
+      lastTriggeredRef.current = slug;
+      seen[slug] = new Date().toISOString();
+      saveSeen(seen);
+
+      // Best-effort enqueue. 23505 (duplicate slug) means it's already queued.
+      await supabase.from("wiki_entities").insert({
+        slug,
+        name: artist,
+        entity_type: "artist",
+        status: "requested",
+        created_by: user.id,
+      });
+      // Any error (incl. 23505) is intentionally ignored — fire-and-forget.
+    })();
+
+    return () => {
+      active = false;
+    };
   }, [data?.artist]);
 }

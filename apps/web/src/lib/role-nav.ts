@@ -38,6 +38,12 @@ import {
   Frame,
   BookOpen,
   MessageCircle,
+  Shield,
+  Globe,
+  Eye,
+  Briefcase,
+  Clapperboard,
+  Mail,
   type LucideIcon,
 } from "lucide-react";
 
@@ -103,4 +109,50 @@ export function navForMode(mode: "creator" | "vendor" | "listener"): RoleNavItem
   if (mode === "creator") return creatorNav;
   if (mode === "vendor") return vendorNav;
   return listenerNav;
+}
+
+// ---------------------------------------------------------------------------
+// Admin "view as" navigation (real admins only). These mirror the staff
+// consoles surfaced when an admin flips the Admin toggle into one of the
+// operations / production / sales modes. Kept here so the dropdown menu and
+// any future admin shell share ONE definition instead of inlining JSX.
+// ---------------------------------------------------------------------------
+
+export type AdminMode = "operations" | "production" | "sales";
+
+export const adminOperationsNav: RoleNavItem[] = [
+  { href: "/my/admin", label: "Admin Dashboard", icon: Shield },
+  { href: "/my/admin/cms", label: "Web Editor / CMS", icon: Globe },
+  { href: "/my/directory", label: "Listings", icon: Store },
+  { href: "/my/admin/users", label: "User Management", icon: Users },
+  { href: "/my/admin/fees", label: "Platform Fees", icon: DollarSign },
+  { href: "/my/admin/moderation", label: "Moderation", icon: Eye },
+  { href: "/my/admin/push", label: "Push Notifications", icon: Megaphone },
+  { href: "/my/admin/email-campaigns", label: "Email Campaigns", icon: Mail },
+  { href: "/my/admin/audit-log", label: "Audit Log", icon: Clock },
+  { href: "/my/admin/operations", label: "System Control", icon: Settings },
+];
+
+export const adminSalesNav: RoleNavItem[] = [
+  { href: "/my/sales", label: "Sales Dashboard", icon: BarChart3 },
+  { href: "/advertise/portal/campaign-builder", label: "Campaign Builder", icon: Megaphone },
+  { href: "/advertise/portal/dashboard", label: "Campaign Dashboard", icon: BarChart3 },
+  { href: "/my/admin/segments", label: "Audience Segments", icon: Users },
+  { href: "/my/admin/inventory", label: "Ad Inventory", icon: Package },
+  { href: "/my/admin/advertisers", label: "Advertisers", icon: Briefcase },
+  { href: "/my/admin/gm/revenue", label: "Revenue", icon: DollarSign },
+];
+
+export const adminProductionNav: RoleNavItem[] = [
+  { href: "/my/admin/production", label: "Production Queue", icon: Clapperboard },
+  { href: "/my/admin/studios", label: "Studio Manager", icon: Mic },
+  { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
+  { href: "/my/admin/creators", label: "Creator Manager", icon: Palette },
+];
+
+/** Pick the admin console nav for the active admin override (production default). */
+export function adminNavForMode(mode: string | null): RoleNavItem[] {
+  if (mode === "operations") return adminOperationsNav;
+  if (mode === "sales") return adminSalesNav;
+  return adminProductionNav;
 }
