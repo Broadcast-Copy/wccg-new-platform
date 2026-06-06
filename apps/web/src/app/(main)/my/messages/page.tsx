@@ -130,6 +130,9 @@ function InboxFallback() {
 function MessagesInbox() {
   const searchParams = useSearchParams();
   const toParam = searchParams.get("to");
+  // Optional pre-filled compose text (e.g. a "nudge this DJ to upload" prompt
+  // arriving from the admin drop-status view via MessageButton's `prefill`).
+  const textParam = searchParams.get("text");
 
   // Lazy initializer → one stable browser client for this component's lifetime
   // (without reading a ref during render, which the react-hooks rules forbid).
@@ -165,7 +168,10 @@ function MessagesInbox() {
   // Poll counter — bumped by the 15s safety interval to drive thread refetches.
   const [threadPollKey, setThreadPollKey] = useState(0);
 
-  const [draft, setDraft] = useState("");
+  // Seed the draft once from ?text= (a pre-written nudge). Lazy initializer so
+  // it's set on first render without a setState-in-effect; the operator can edit
+  // or clear it before sending.
+  const [draft, setDraft] = useState(() => textParam ?? "");
   const [sending, setSending] = useState(false);
 
   // Bump to force a conversation-list refetch (after send / realtime / poll).

@@ -14,7 +14,7 @@ import { SpotCartProvider } from "@/components/providers/spot-cart-provider";
 import { SpotCartDrawer } from "@/components/sales/spot-cart-drawer";
 import { SyncInitializer } from "@/components/providers/sync-initializer";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
-import { StationAIChat } from "@/components/chat/station-ai-chat";
+import { MessengerDock } from "@/components/chat/messenger-dock";
 import { StillListeningModal } from "@/components/player/still-listening-modal";
 import { WeatherPill } from "@/components/weather/weather-pill";
 import { useNowPlaying } from "@/hooks/use-now-playing";
@@ -36,6 +36,7 @@ import {
   ShoppingBag,
   MapPin,
   Store,
+  type LucideIcon,
 } from "lucide-react";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { useUserRoles } from "@/hooks/use-user-roles";
@@ -67,7 +68,17 @@ const mobileNavLinks = [
   { href: "/contact", label: "Connect", icon: Mail },
 ];
 
-function NavLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
+function NavLink({
+  href,
+  label,
+  pathname,
+  icon: Icon,
+}: {
+  href: string;
+  label: string;
+  pathname: string;
+  icon?: LucideIcon;
+}) {
   const isActive =
     href === "/"
       ? pathname === "/"
@@ -81,6 +92,7 @@ function NavLink({ href, label, pathname }: { href: string; label: string; pathn
           : "text-muted-foreground hover:text-foreground/80 hover:bg-foreground/[0.04]"
       }`}
     >
+      {Icon ? <Icon className="h-4 w-4" /> : null}
       {label}
     </Link>
   );
@@ -244,24 +256,15 @@ export default function MainLayout({
   const { supabase } = useSupabase();
   const [tabBadges, setTabBadges] = useState<{ shows: boolean; shop: number }>({ shows: false, shop: 0 });
 
-  // Staff brand toggle — internal (Carson Communications) logins can flip the
-  // header between the WCCG station brand and the Carson Communications brand.
-  const { isInternal } = useUserRoles();
-  const [brand, setBrand] = useState<"wccg" | "carson">("wccg");
-  useEffect(() => {
-    let active = true;
-    queueMicrotask(() => {
-      if (!active || typeof window === "undefined") return;
-      try {
-        if (localStorage.getItem("wccg_brand_mode") === "carson") setBrand("carson");
-      } catch { /* noop */ }
-    });
-    return () => { active = false; };
-  }, []);
-  const setBrandMode = (b: "wccg" | "carson") => {
-    setBrand(b);
-    try { localStorage.setItem("wccg_brand_mode", b); } catch { /* noop */ }
-  };
+  // Admin brand — when a real admin enters the "Admin" view from the user menu
+  // (role override set to an admin sub-role), the header switches to the Carson
+  // Communications brand. This is cosmetic only: route guards + RLS always use
+  // the real roles, so it never widens access.
+  const { roleOverride, isRealAdmin } = useUserRoles();
+  const adminMode =
+    isRealAdmin &&
+    roleOverride !== null &&
+    ["operations", "production", "sales"].includes(roleOverride);
 
   useEffect(() => {
     async function fetchBadges() {
@@ -302,9 +305,9 @@ export default function MainLayout({
       {/* Top Header */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-xl">
         <div className="container flex items-center pt-[10px] pb-[10px]">
-          {/* Left: Logo — flips to Carson Communications in staff brand mode */}
+          {/* Left: Logo — flips to Carson Communications while in Admin mode */}
           <Link href="/" className="flex items-center gap-2.5 group shrink-0">
-            {isInternal && brand === "carson" ? (
+            {adminMode ? (
               <>
                 {/* White wordmark on dark; inverted to dark on light (matches footer). */}
                 <span className="hidden dark:block">
@@ -318,27 +321,6 @@ export default function MainLayout({
               <ThemeLogo width={120} priority />
             )}
           </Link>
-          {/* Staff brand toggle — only for internal Carson Communications logins */}
-          {isInternal && (
-            <div className="ml-2 hidden items-center rounded-full border border-border bg-muted/50 p-0.5 sm:inline-flex">
-              <button
-                type="button"
-                onClick={() => setBrandMode("wccg")}
-                title="WCCG 104.5 FM — station brand"
-                className={`rounded-full px-2 py-0.5 text-[10px] font-bold transition-colors ${brand === "wccg" ? "bg-[#74ddc7] text-[#0a0a0f]" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                WCCG
-              </button>
-              <button
-                type="button"
-                onClick={() => setBrandMode("carson")}
-                title="Carson Communications — staff brand"
-                className={`rounded-full px-2 py-0.5 text-[10px] font-bold transition-colors ${brand === "carson" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                Carson
-              </button>
-            </div>
-          )}
 
           {/* Center: Nav links — Home, Discover, Streaming, Support */}
           <nav className="hidden lg:flex items-center justify-center gap-0.5 flex-1">
@@ -349,7 +331,7 @@ export default function MainLayout({
             {/* Streaming mega menu */}
             <StreamingMegaMenu />
             {/* Watch — public video wall */}
-            <NavLink href="/videos" label="Watch" pathname={pathname} />
+            <NavLink href="/videos" label="Watch" pathname={pathname} icon={Video} />
             {/* Support */}
             <NavLink href="/contact" label="Support" pathname={pathname} />
           </nav>
@@ -547,8 +529,8 @@ export default function MainLayout({
         </div>
       </footer>
 
-      {/* AI Station Assistant */}
-      <StationAIChat />
+      {/* Site-wide Messenger — DMs with your friends; tints purple for team/staff */}
+      <MessengerDock />
 
       {/* Still Listening? modal — after 1hr of playback inactivity */}
       <StillListeningModal />

@@ -1,52 +1,61 @@
 "use client";
 
 /**
- * Admin: DJ drop status — "who's missing this week".
+ * Admin: DJ slot upload status — the DJ admin oversight view.
  *
- * Single-pane operations view. Reads the weekly schedule (dj_slots + djs) and
- * this week's uploads (dj_drops) directly from Supabase, then groups the
- * MISSING file codes by day → start time → DJ. A drop counts as satisfied once
- * its status is uploaded/validated/published; anything else (or absent) is
- * "missing".
+ * For the selected week this lists every available (active/tentative) slot with:
+ *   - the slot's day + time and the DJ assigned to it
+ *   - each expected file (DJB code) the DJ owes, and whether it's uploaded
+ *   - the upload date/time and file type for files that have landed
+ *   - a "Nudge" action that DMs the DJ to remind them to upload their mix
+ *   - inline Publish for drops that are uploaded but not yet published
  *
- * Also surfaces drops that are uploaded but not yet published, each with an
- * in-app Publish button (status -> 'published') so staff no longer depend on
- * the PC-side Python watcher.
+ * Reads dj_slots (+ embedded djs incl. user_id, for messaging) and this week's
+ * dj_drops directly from Supabase. The production-tier RLS policy ("Production
+ * reads all drops", migration 024) lets admins/ops see every DJ's drops.
  */
 
-import { useCallback, useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { AlertTriangle, Calendar, Check, Loader2, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import {
+  AlertTriangle,
+  Calendar,
+  Check,
+  Download,
+  FileAudio,
+  FolderOpen,
+  Loader2,
+  Play,
+  RefreshCw,
+  Upload,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MessageButton } from "@/components/messaging/message-button";
+import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
 
+const TEAL = "#74ddc7";
+const AMBER = "#f59e0b";
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAYS_LONG = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 
-// A drop is considered "satisfied" (not missing) once it reaches one of these.
-const UPLOADED_STATUSES = new Set(["uploaded", "validated", "published"]);
-
-interface MissingRow {
-  slot_id: string;
-  dj_id: string | null;
-  dj_name: string;
-  dj_slug: string;
-  day_of_week: number;
-  start_time: string;
-  end_time: string;
-  slot_status: "active" | "tentative" | "inactive";
-  file_code: string;
-  week_of: string;
-  drop_status: string;
-}
-
-interface PublishableDrop {
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+interface DjLite {
   id: string;
-  file_code: string;
-  status: string;
-  day_of_week: number;
-  start_time: string;
-  dj_name: string;
+  slug: string;
+  display_name: string;
+  user_id: string | null;
 }
 
 interface SlotRow {
@@ -57,7 +66,7 @@ interface SlotRow {
   end_time: string;
   file_codes: string[];
   status: "active" | "tentative" | "inactive";
-  djs: { display_name: string; slug: string } | null;
+  djs: DjLite | null;
 }
 
 interface DropRow {
@@ -66,11 +75,48 @@ interface DropRow {
   dj_id: string | null;
   file_code: string;
   status: string;
+  source: string | null;
+  format: string | null;
+  storage_path: string | null;
+  size_bytes: number | null;
+  uploaded_at: string | null;
+  created_at: string;
 }
 
-// ISO Monday (UTC date string) of the week containing `ref`. Matches the
-// dj_drops_this_week view's date_trunc('week', ...) semantics closely enough
-// for slot ↔ drop matching by week_of.
+/** One expected file (DJB code) within a slot, plus its upload state. */
+interface FileCell {
+  code: string;
+  drop: DropRow | null;
+  uploaded: boolean;
+  status: string;
+  uploadedAt: string | null;
+  fileType: string | null;
+  source: string | null;
+}
+
+interface SlotView {
+  slotId: string;
+  day: number;
+  start: string;
+  end: string;
+  tentative: boolean;
+  dj: DjLite | null;
+  files: FileCell[];
+  total: number;
+  done: number;
+  missing: number;
+}
+
+type FilterMode = "all" | "missing" | "complete";
+
+// A drop is "satisfied" once it reaches one of these.
+const UPLOADED_STATUSES = new Set(["uploaded", "validated", "published"]);
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** ISO Monday (UTC date string) of the week containing `ref`. */
 function isoMonday(ref: Date): string {
   const d = new Date(Date.UTC(ref.getFullYear(), ref.getMonth(), ref.getDate()));
   const dow = d.getUTCDay(); // 0=Sun..6=Sat
@@ -79,104 +125,158 @@ function isoMonday(ref: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+function fmt12h(t: string): string {
+  const [h, m] = t.split(":").map(Number);
+  if (Number.isNaN(h)) return t;
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return m === 0 ? `${h12} ${ampm}` : `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
+function fmtDateTime(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/** File extension from a storage path, lowercased (fallback when format is null). */
+function extOf(path: string | null): string | null {
+  if (!path) return null;
+  const m = path.match(/\.([a-z0-9]+)$/i);
+  return m ? m[1].toLowerCase() : null;
+}
+
+/** Public URL for a drop in the (public-read) dj-drops bucket. */
+function publicUrl(path: string | null): string | null {
+  if (!path) return null;
+  const { data } = supabase.storage.from("dj-drops").getPublicUrl(path);
+  return data?.publicUrl ?? null;
+}
+
+function statusMeta(status: string): { label: string; cls: string } {
+  switch (status) {
+    case "published":
+      return { label: "Published", cls: "bg-[#74ddc7]/15 text-[#74ddc7]" };
+    case "validated":
+      return { label: "Validated", cls: "bg-sky-500/15 text-sky-400" };
+    case "uploaded":
+      return { label: "Uploaded", cls: "bg-blue-500/15 text-blue-400" };
+    case "rejected":
+      return { label: "Rejected", cls: "bg-red-500/15 text-red-400" };
+    default:
+      return { label: "Awaiting", cls: "bg-amber-500/15 text-amber-500" };
+  }
+}
+
+/** A friendly nudge message pre-filled into the DM compose box. */
+function nudgeText(sv: SlotView): string {
+  const missing = sv.files.filter((f) => !f.uploaded).map((f) => f.code);
+  const when = `${DAYS_LONG[sv.day]} ${fmt12h(sv.start)}–${fmt12h(sv.end)}`;
+  const need =
+    missing.length > 0 ? ` We're still missing: ${missing.join(", ")}.` : "";
+  return (
+    `Hi ${sv.dj?.display_name ?? "there"} — friendly reminder to upload your mix ` +
+    `for your ${when} slot.${need} You can drop it from your DJ portal under ` +
+    `My Mixshows. Thanks! 🎧`
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 export default function AdminDjDropsPage() {
-  const [rows, setRows] = useState<MissingRow[]>([]);
-  const [publishable, setPublishable] = useState<PublishableDrop[]>([]);
+  const [slots, setSlots] = useState<SlotView[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [publishing, setPublishing] = useState<string | null>(null);
   const [weekOf, setWeekOf] = useState<string>("");
+  const [filter, setFilter] = useState<FilterMode>("all");
 
   const load = useCallback(() => {
     setLoading(true);
-    const week = weekOf ? isoMonday(new Date(`${weekOf}T00:00:00`)) : isoMonday(new Date());
+    const week = weekOf
+      ? isoMonday(new Date(`${weekOf}T00:00:00`))
+      : isoMonday(new Date());
 
     (async () => {
-      // Scheduled slots (active/tentative) + this week's drops, in parallel.
       const [slotsRes, dropsRes] = await Promise.all([
         supabase
           .from("dj_slots")
-          .select("id,dj_id,day_of_week,start_time,end_time,file_codes,status,djs(display_name,slug)")
+          .select(
+            "id,dj_id,day_of_week,start_time,end_time,file_codes,status,djs(id,slug,display_name,user_id)",
+          )
           .in("status", ["active", "tentative"])
           .order("day_of_week", { ascending: true })
           .order("start_time", { ascending: true }),
         supabase
           .from("dj_drops")
-          .select("id,slot_id,dj_id,file_code,status")
+          .select(
+            "id,slot_id,dj_id,file_code,status,source,format,storage_path,size_bytes,uploaded_at,created_at",
+          )
           .eq("week_of", week),
       ]);
 
       if (slotsRes.error) {
         setError(slotsRes.error.message);
-        setRows([]);
-        setPublishable([]);
+        setSlots([]);
         setLoading(false);
         return;
       }
       if (dropsRes.error) {
         setError(dropsRes.error.message);
-        setRows([]);
-        setPublishable([]);
+        setSlots([]);
         setLoading(false);
         return;
       }
 
-      const slots = (slotsRes.data ?? []) as unknown as SlotRow[];
+      const slotRows = (slotsRes.data ?? []) as unknown as SlotRow[];
       const drops = (dropsRes.data ?? []) as unknown as DropRow[];
 
-      // Index drops by (slot_id|file_code) for this week.
+      // Index this week's drops by (slot_id|file_code).
       const dropByKey = new Map<string, DropRow>();
       for (const d of drops) dropByKey.set(`${d.slot_id}|${d.file_code}`, d);
 
-      // Expand each slot's expected file codes and keep the ones not yet uploaded.
-      const missing: MissingRow[] = [];
-      for (const s of slots) {
-        const djName = s.djs?.display_name ?? "Unassigned";
-        const djSlug = s.djs?.slug ?? "";
-        for (const code of s.file_codes ?? []) {
-          const d = dropByKey.get(`${s.id}|${code}`);
-          if (d && UPLOADED_STATUSES.has(d.status)) continue; // satisfied
-          missing.push({
-            slot_id: s.id,
-            dj_id: s.dj_id,
-            dj_name: djName,
-            dj_slug: djSlug,
-            day_of_week: s.day_of_week,
-            start_time: s.start_time,
-            end_time: s.end_time,
-            slot_status: s.status,
-            file_code: code,
-            week_of: week,
-            drop_status: d?.status ?? "pending",
-          });
-        }
-      }
-
-      // Drops that are uploaded/validated (not yet published) — ready to publish.
-      const slotById = new Map(slots.map((s) => [s.id, s]));
-      const ready: PublishableDrop[] = drops
-        .filter((d) => d.status === "uploaded" || d.status === "validated")
-        .map((d) => {
-          const s = slotById.get(d.slot_id);
+      const views: SlotView[] = slotRows.map((s) => {
+        const files: FileCell[] = (s.file_codes ?? []).map((code) => {
+          const drop = dropByKey.get(`${s.id}|${code}`) ?? null;
+          const uploaded = !!drop && UPLOADED_STATUSES.has(drop.status);
           return {
-            id: d.id,
-            file_code: d.file_code,
-            status: d.status,
-            day_of_week: s?.day_of_week ?? -1,
-            start_time: s?.start_time ?? "",
-            dj_name: s?.djs?.display_name ?? "Unassigned",
+            code,
+            drop,
+            uploaded,
+            status: drop?.status ?? "pending",
+            uploadedAt: drop ? drop.uploaded_at ?? drop.created_at : null,
+            fileType: drop ? drop.format ?? extOf(drop.storage_path) : null,
+            source: drop?.source ?? null,
           };
-        })
-        .sort((a, b) => a.day_of_week - b.day_of_week || a.start_time.localeCompare(b.start_time));
+        });
+        const done = files.filter((f) => f.uploaded).length;
+        return {
+          slotId: s.id,
+          day: s.day_of_week,
+          start: s.start_time,
+          end: s.end_time,
+          tentative: s.status === "tentative",
+          dj: s.djs ?? null,
+          files,
+          total: files.length,
+          done,
+          missing: files.length - done,
+        };
+      });
 
-      setRows(missing);
-      setPublishable(ready);
+      setSlots(views);
       setError(null);
       setLoading(false);
     })().catch((e) => {
       setError((e as Error).message);
-      setRows([]);
-      setPublishable([]);
+      setSlots([]);
       setLoading(false);
     });
   }, [weekOf]);
@@ -202,23 +302,22 @@ export default function AdminDjDropsPage() {
     }
   };
 
-  // Group by (day, start_time, dj)
-  const groups = new Map<string, { day: number; time: string; dj: string; codes: string[]; tentative: boolean }>();
-  for (const r of rows) {
-    const key = `${r.day_of_week}|${r.start_time}|${r.dj_slug}`;
-    const g = groups.get(key) ?? {
-      day: r.day_of_week,
-      time: r.start_time,
-      dj: r.dj_name,
-      codes: [],
-      tentative: r.slot_status === "tentative",
-    };
-    g.codes.push(r.file_code);
-    groups.set(key, g);
-  }
-  const grouped = Array.from(groups.values()).sort(
-    (a, b) => a.day - b.day || a.time.localeCompare(b.time),
-  );
+  // Summary tallies across all slots (independent of the active filter).
+  const summary = useMemo(() => {
+    const totalSlots = slots.length;
+    const complete = slots.filter((s) => s.total > 0 && s.missing === 0).length;
+    const needsUpload = slots.filter((s) => s.missing > 0).length;
+    const missingFiles = slots.reduce((n, s) => n + s.missing, 0);
+    const unassigned = slots.filter((s) => !s.dj).length;
+    return { totalSlots, complete, needsUpload, missingFiles, unassigned };
+  }, [slots]);
+
+  const visible = useMemo(() => {
+    if (filter === "missing") return slots.filter((s) => s.missing > 0);
+    if (filter === "complete")
+      return slots.filter((s) => s.total > 0 && s.missing === 0);
+    return slots;
+  }, [slots, filter]);
 
   return (
     <div className="space-y-6 py-6">
@@ -228,10 +327,21 @@ export default function AdminDjDropsPage() {
             Operations
           </p>
           <h1 className="text-3xl font-black tracking-tight text-foreground md:text-4xl">
-            DJ drops — missing this week
+            DJ drops — weekly status
           </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Every available slot, who&apos;s assigned, what they&apos;ve uploaded — and a
+            nudge if a mix is missing.
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/my/admin/dj-slots"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <Calendar className="h-3.5 w-3.5" />
+            Assign DJs
+          </Link>
           <input
             type="date"
             value={weekOf}
@@ -251,95 +361,302 @@ export default function AdminDjDropsPage() {
         </div>
       )}
 
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : error ? null : grouped.length === 0 ? (
-        <div className="rounded-2xl border border-[#74ddc7]/40 bg-[#74ddc7]/10 p-6 text-center">
-          <p className="font-bold text-foreground">All slots accounted for. </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Every active slot for this week has at least one uploaded drop.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {grouped.map((g) => (
-            <article
-              key={`${g.day}-${g.time}-${g.dj}`}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-5 py-3"
-            >
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  <Calendar className="h-3 w-3" />
-                  <span>
-                    {DAYS[g.day]} {fmtTime(g.time)}
-                  </span>
-                  {g.tentative && (
-                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-amber-500">
-                      Tentative
-                    </span>
-                  )}
-                </div>
-                <p className="truncate font-bold text-foreground">{g.dj}</p>
-                <p className="mt-0.5 font-mono text-xs text-muted-foreground">
-                  Missing: {g.codes.join(", ")}
-                </p>
-              </div>
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-amber-500">
-                <AlertTriangle className="h-3 w-3" />
-                {g.codes.length} missing
-              </span>
-            </article>
-          ))}
+      {/* Summary + filter pills */}
+      {!loading && !error && slots.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <Stat label="slots" value={summary.totalSlots} />
+            <Stat label="complete" value={summary.complete} tone="teal" />
+            <Stat label="need upload" value={summary.needsUpload} tone="amber" />
+            <Stat label="files missing" value={summary.missingFiles} tone="amber" />
+            {summary.unassigned > 0 && (
+              <Stat label="unassigned" value={summary.unassigned} />
+            )}
+          </div>
+          <div className="flex items-center gap-1 rounded-full border border-border bg-card p-0.5">
+            {(
+              [
+                ["all", "All"],
+                ["missing", "Needs upload"],
+                ["complete", "Complete"],
+              ] as [FilterMode, string][]
+            ).map(([mode, lbl]) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setFilter(mode)}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                  filter === mode
+                    ? "bg-[#74ddc7] text-[#0a0a0f]"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {lbl}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {!loading && !error && publishable.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-            Ready to publish
-          </h2>
-          {publishable.map((d) => (
-            <article
-              key={d.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-5 py-3"
-            >
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  <Calendar className="h-3 w-3" />
-                  <span>
-                    {d.day_of_week >= 0 ? `${DAYS[d.day_of_week]} ${fmtTime(d.start_time)}` : "Unscheduled"}
-                  </span>
-                  <span className="rounded-full bg-[#74ddc7]/15 px-2 py-0.5 text-[#74ddc7]">
-                    {d.status}
-                  </span>
-                </div>
-                <p className="truncate font-bold text-foreground">{d.dj_name}</p>
-                <p className="mt-0.5 font-mono text-xs text-muted-foreground">{d.file_code}</p>
-              </div>
-              <Button
-                onClick={() => publish(d.id)}
-                disabled={publishing === d.id}
-                size="sm"
-                className="rounded-full"
-              >
-                {publishing === d.id ? (
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Check className="mr-1.5 h-3.5 w-3.5" />
-                )}
-                Publish
-              </Button>
-            </article>
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : error ? null : slots.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border p-10 text-center">
+          <p className="font-bold text-foreground">No scheduled slots</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Add active slots in{" "}
+            <Link href="/my/admin/dj-slots" className="text-[#74ddc7] hover:underline">
+              DJ slot assignments
+            </Link>
+            .
+          </p>
+        </div>
+      ) : visible.length === 0 ? (
+        <div className="rounded-2xl border border-[#74ddc7]/40 bg-[#74ddc7]/10 p-6 text-center">
+          <p className="font-bold text-foreground">Nothing to show in this view.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {filter === "missing"
+              ? "Every slot this week has its mixes uploaded. 🎉"
+              : "No slots match this filter."}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {visible.map((sv) => (
+            <SlotCard
+              key={sv.slotId}
+              sv={sv}
+              publishing={publishing}
+              onPublish={publish}
+            />
           ))}
-        </section>
+        </div>
       )}
     </div>
   );
 }
 
-function fmtTime(t: string): string {
-  const [h, m] = t.split(":").map(Number);
-  const am = h < 12;
-  const h12 = ((h + 11) % 12) + 1;
-  return `${h12}${m === 0 ? "" : `:${String(m).padStart(2, "0")}`}${am ? "a" : "p"}`;
+// ---------------------------------------------------------------------------
+// Slot card
+// ---------------------------------------------------------------------------
+function SlotCard({
+  sv,
+  publishing,
+  onPublish,
+}: {
+  sv: SlotView;
+  publishing: string | null;
+  onPublish: (dropId: string) => void;
+}) {
+  const complete = sv.total > 0 && sv.missing === 0;
+  const mediaHref = sv.dj
+    ? `/my/mixes?view=mixshows&dj=${sv.dj.id}`
+    : `/my/mixes?view=mixshows&slot=${sv.slotId}`;
+
+  return (
+    <article className="overflow-hidden rounded-2xl border border-border bg-card">
+      {/* Slot header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-card/60 px-5 py-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <Calendar className="h-3 w-3" />
+            <span>
+              {DAYS[sv.day]} {fmt12h(sv.start)} – {fmt12h(sv.end)}
+            </span>
+            {sv.tentative && (
+              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-amber-500">
+                Tentative
+              </span>
+            )}
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            {sv.dj ? (
+              <Link
+                href={`/djs/${sv.dj.slug}`}
+                className="truncate font-bold text-foreground hover:text-[#74ddc7]"
+              >
+                {sv.dj.display_name}
+              </Link>
+            ) : (
+              <span className="font-bold text-muted-foreground">Unassigned</span>
+            )}
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${
+                complete
+                  ? "bg-[#74ddc7]/15 text-[#74ddc7]"
+                  : "bg-amber-500/15 text-amber-500"
+              }`}
+            >
+              {complete ? (
+                <Check className="h-3 w-3" />
+              ) : (
+                <AlertTriangle className="h-3 w-3" />
+              )}
+              {sv.done}/{sv.total} uploaded
+            </span>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          {sv.dj?.user_id && (
+            <MessageButton
+              variant="button"
+              recipientId={sv.dj.user_id}
+              recipientName={sv.dj.display_name}
+              prefill={nudgeText(sv)}
+              label={sv.missing > 0 ? "Nudge to upload" : "Message"}
+              accentColor={sv.missing > 0 ? AMBER : TEAL}
+            />
+          )}
+          <Link
+            href={mediaHref}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-[#7401df]/50 hover:text-[#7401df]"
+          >
+            <FolderOpen className="h-3.5 w-3.5" />
+            Media
+          </Link>
+        </div>
+      </div>
+
+      {/* Files table */}
+      {sv.total === 0 ? (
+        <p className="px-5 py-3 text-xs text-muted-foreground">
+          No file codes configured for this slot.
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] text-sm">
+            <thead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              <tr className="border-b border-border/60">
+                <th className="px-5 py-2 text-left">File</th>
+                <th className="px-3 py-2 text-left">Status</th>
+                <th className="px-3 py-2 text-left">Uploaded</th>
+                <th className="px-3 py-2 text-left">Type</th>
+                <th className="px-3 py-2 text-left">Source</th>
+                <th className="px-5 py-2 text-right">Open / Publish</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sv.files.map((f) => {
+                const meta = statusMeta(f.status);
+                const drop = f.drop;
+                const url = drop?.storage_path ? publicUrl(drop.storage_path) : null;
+                return (
+                  <tr key={f.code} className="border-b border-border/40 last:border-0">
+                    <td className="px-5 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <FileAudio
+                          className={`h-3.5 w-3.5 ${
+                            f.uploaded ? "text-[#74ddc7]" : "text-muted-foreground"
+                          }`}
+                        />
+                        <span className="font-mono text-xs">{f.code}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${meta.cls}`}
+                      >
+                        {meta.label}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                      {fmtDateTime(f.uploadedAt)}
+                    </td>
+                    <td className="px-3 py-2.5 text-xs">
+                      {f.fileType ? (
+                        <span className="font-mono uppercase">{f.fileType}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5 text-xs">
+                      {f.source ? (
+                        <span className="uppercase text-muted-foreground">{f.source}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-2.5">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {url && (
+                          <>
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={`Play ${f.code}`}
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-[#74ddc7]/60 hover:text-[#74ddc7]"
+                            >
+                              <Play className="h-3.5 w-3.5" />
+                            </a>
+                            <a
+                              href={url}
+                              download
+                              title={`Download ${f.code}`}
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-[#7401df]/60 hover:text-[#7401df]"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                            </a>
+                          </>
+                        )}
+                        {drop &&
+                        (drop.status === "uploaded" || drop.status === "validated") ? (
+                          <Button
+                            onClick={() => onPublish(drop.id)}
+                            disabled={publishing === drop.id}
+                            size="sm"
+                            className="rounded-full"
+                          >
+                            {publishing === drop.id ? (
+                              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Upload className="mr-1.5 h-3.5 w-3.5" />
+                            )}
+                            Publish
+                          </Button>
+                        ) : f.status === "published" ? (
+                          <span title="Published" className="text-[#74ddc7]">
+                            <Check className="h-4 w-4" />
+                          </span>
+                        ) : !url ? (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </article>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Small summary stat chip
+// ---------------------------------------------------------------------------
+function Stat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone?: "teal" | "amber";
+}) {
+  const toneCls =
+    tone === "teal"
+      ? "text-[#74ddc7]"
+      : tone === "amber"
+        ? "text-amber-500"
+        : "text-foreground";
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1">
+      <span className={`font-bold ${toneCls}`}>{value}</span>
+      <span className="text-muted-foreground">{label}</span>
+    </span>
+  );
 }

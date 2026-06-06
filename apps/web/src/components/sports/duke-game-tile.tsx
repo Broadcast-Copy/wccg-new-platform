@@ -1014,48 +1014,39 @@ function DukeVideoThumb({
   const video = useLatestYouTubeVideo(team.youtube.channelId);
   const href = video ? `https://www.youtube.com/watch?v=${video.id}` : team.youtube.channelUrl;
   const thumb = video ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : null;
-  const chip =
-    accent === "basketball" ? "bg-[#74ddc7]/90 text-[#001a4d]" : "bg-[#f59e0b]/90 text-[#1a1200]";
+  const captionColor =
+    accent === "basketball"
+      ? "text-[#0d9488] dark:text-[#74ddc7]"
+      : "text-[#b45309] dark:text-[#f59e0b]";
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="group relative block aspect-video overflow-hidden rounded-xl border border-white/15 bg-[#0a0e1a] shadow-sm"
+      className="group block"
       aria-label={`Latest Duke ${label} video`}
     >
-      {thumb ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={thumb}
-          alt={video?.title || `Duke ${label}`}
-          className="h-full w-full object-cover opacity-90 transition-all duration-300 group-hover:scale-[1.04] group-hover:opacity-100"
-          loading="lazy"
-        />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#003087] to-[#0a0a1a]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={team.logoUrl} alt={`Duke ${label}`} className="h-10 w-10 object-contain opacity-70" />
-        </div>
-      )}
-      {/* Play overlay */}
-      <span className="absolute inset-0 flex items-center justify-center">
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 ring-1 ring-white/30 backdrop-blur-sm transition-transform group-hover:scale-110">
-          <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4 translate-x-[1px] text-white">
-            <path d="M8 5v14l11-7z" />
-          </svg>
-        </span>
-      </span>
-      {/* Sport chip */}
-      <span className={`absolute left-1.5 top-1.5 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${chip}`}>
+      {/* Just the thumbnail — larger, no play button or overlay on the video */}
+      <div className="relative aspect-video overflow-hidden rounded-xl border border-white/15 bg-[#0a0e1a] shadow-sm">
+        {thumb ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={thumb}
+            alt={video?.title || `Duke ${label}`}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            loading="lazy"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#003087] to-[#0a0a1a]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={team.logoUrl} alt={`Duke ${label}`} className="h-12 w-12 object-contain opacity-70" />
+          </div>
+        )}
+      </div>
+      {/* Caption sits BELOW the thumbnail (never overlaying the video) */}
+      <p className={`mt-1.5 truncate text-[11px] font-bold uppercase tracking-wider ${captionColor}`}>
         {label}
-      </span>
-      {/* Title */}
-      <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent px-2 pb-1.5 pt-4">
-        <span className="block truncate text-[10px] font-semibold text-white/90">
-          {video?.title || `Duke ${label} → YouTube`}
-        </span>
-      </span>
+      </p>
     </a>
   );
 }
@@ -1138,10 +1129,10 @@ function DukeOffseasonCard({
                   </span>
                 )}
               </div>
-              {/* Rotating message with fade */}
-              <div className="h-5 overflow-hidden">
+              {/* Rotating headline — fills the empty middle (up to two lines) */}
+              <div className="min-h-[2.5rem]">
                 <p
-                  className={`truncate text-xs text-[#003087]/70 transition-opacity duration-500 dark:text-white/55 sm:text-sm ${
+                  className={`line-clamp-2 text-xs text-[#003087]/75 transition-opacity duration-500 dark:text-white/60 sm:text-sm ${
                     fade ? "opacity-100" : "opacity-0"
                   }`}
                 >
@@ -1158,8 +1149,8 @@ function DukeOffseasonCard({
             </div>
           </div>
 
-          {/* Latest videos — basketball + football thumbnails */}
-          <div className="grid w-full shrink-0 grid-cols-2 gap-2.5 sm:w-[340px] sm:gap-3">
+          {/* Latest videos — larger basketball + football thumbnails */}
+          <div className="grid w-full shrink-0 grid-cols-2 gap-3 sm:w-[440px]">
             <DukeVideoThumb team={DUKE_BASKETBALL} label="Basketball" accent="basketball" />
             <DukeVideoThumb team={DUKE_FOOTBALL} label="Football" accent="football" />
           </div>

@@ -28,6 +28,14 @@ interface MessageButtonProps {
   /** Accent color for the icon/pill. Defaults to the app teal. */
   accentColor?: string;
   className?: string;
+  /**
+   * Optional text to pre-fill the compose box with when the thread opens
+   * (passed through as `?text=` and seeded into the draft). Handy for nudges
+   * like "please upload your mix for Friday 5pm".
+   */
+  prefill?: string;
+  /** Override the pill label (the "button" variant only). Defaults to "Message". */
+  label?: string;
 }
 
 const TEAL = "#74ddc7";
@@ -38,6 +46,8 @@ export function MessageButton({
   variant = "icon",
   accentColor = TEAL,
   className,
+  prefill,
+  label,
 }: MessageButtonProps) {
   // null = unknown yet, "" = signed out, otherwise the viewer's id.
   const [meId, setMeId] = useState<string | null>(null);
@@ -59,22 +69,24 @@ export function MessageButton({
   // current user, we drop it.
   if (meId && meId === recipientId) return null;
 
-  const href = `/my/messages?to=${encodeURIComponent(recipientId)}`;
-  const label = recipientName ? `Message ${recipientName}` : "Send a message";
+  const href = `/my/messages?to=${encodeURIComponent(recipientId)}${
+    prefill ? `&text=${encodeURIComponent(prefill)}` : ""
+  }`;
+  const aria = recipientName ? `Message ${recipientName}` : "Send a message";
 
   if (variant === "button") {
     return (
       <Link
         href={href}
-        aria-label={label}
-        title={label}
+        aria-label={aria}
+        title={aria}
         className={cn(
           "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold text-white transition-opacity hover:opacity-90",
           className,
         )}
         style={{ backgroundColor: accentColor }}
       >
-        <Send className="h-3 w-3" /> Message
+        <Send className="h-3 w-3" /> {label ?? "Message"}
       </Link>
     );
   }
@@ -83,8 +95,8 @@ export function MessageButton({
     return (
       <Link
         href={href}
-        aria-label={label}
-        title={label}
+        aria-label={aria}
+        title={aria}
         className={cn(
           "inline-flex items-center gap-1 text-xs font-medium transition-opacity hover:opacity-80",
           className,
@@ -100,8 +112,8 @@ export function MessageButton({
   return (
     <Link
       href={href}
-      aria-label={label}
-      title={label}
+      aria-label={aria}
+      title={aria}
       className={cn(
         "inline-flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:text-foreground",
         className,

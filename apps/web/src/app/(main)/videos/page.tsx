@@ -169,7 +169,7 @@ function VideosWall() {
         ) : (
           <>
             {cont.length > 0 && (
-              <Row title="Continue Watching" icon={<Play className="h-4 w-4" />}>
+              <Row title="Continue Watching" icon={<Play className="h-6 w-6" />}>
                 {cont.map((c) => (
                   <ContinueCard key={c.video.id} item={c} locked={locked} onUnlock={toggleLock} />
                 ))}
@@ -214,7 +214,7 @@ function VideosWall() {
       ) : (
         <div className="space-y-9">
           {cont.length > 0 && (
-            <Row title="Continue Watching" icon={<Play className="h-4 w-4" />}>
+            <Row title="Continue Watching" icon={<Play className="h-6 w-6" />}>
               {cont.map((c) => (
                 <ContinueCard key={c.video.id} item={c} locked={locked} onUnlock={toggleLock} />
               ))}
@@ -222,7 +222,7 @@ function VideosWall() {
           )}
 
           {top.length > 0 && (
-            <Row title="Most Watched" icon={<TrendingUp className="h-4 w-4" />}>
+            <Row title="Most Watched" icon={<TrendingUp className="h-6 w-6" />}>
               {top.map((v, i) => (
                 <RankCard key={v.id} v={v} rank={i + 1} locked={locked} onUnlock={toggleLock} />
               ))}
@@ -233,7 +233,7 @@ function VideosWall() {
             <Row
               key={pr.program}
               title={pr.program}
-              icon={<Flame className="h-4 w-4" />}
+              icon={<Flame className="h-6 w-6" />}
               href={`/videos?program=${encodeURIComponent(pr.program)}`}
             >
               {pr.videos.map((v) => (

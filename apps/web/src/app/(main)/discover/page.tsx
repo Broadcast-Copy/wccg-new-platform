@@ -223,13 +223,20 @@ export default function DiscoverPage() {
 
           {/* Card 6: Legacy Streaming */}
           <Link href="/channels" className="group rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-[#74ddc7]/30 hover:shadow-lg">
-            <div className="flex items-center gap-3">
-              <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#0d9488]">
-                <Radio className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
-              </div>
-              <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-[#ec4899]">
-                <Disc3 className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
-              </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              {[
+                { label: "WCCG 104.5 FM", badge: "/images/channels/wccg-badge.png" },
+                { label: "SOUL 104.5 FM", badge: "/images/channels/soul-badge.png" },
+                { label: "HOT 104.5 FM", badge: "/images/channels/hot-badge.png" },
+                { label: "104.5 THE VIBE", badge: "/images/channels/vibe-badge.png" },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  className="relative h-16 w-full overflow-hidden rounded-xl border border-border bg-muted sm:h-20"
+                >
+                  <AppImage src={s.badge} alt={s.label} fill className="object-cover" sizes="220px" />
+                </div>
+              ))}
             </div>
             <div className="space-y-1.5">
               <h3 className="text-lg sm:text-xl font-bold text-foreground group-hover:text-[#74ddc7] transition-colors">Legacy Streaming</h3>

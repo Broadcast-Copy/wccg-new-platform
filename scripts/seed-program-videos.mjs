@@ -26,8 +26,11 @@ const PROGRAMS = [
   { program: "Sports", category: "Sports", rating: "G", channelId: "UC-v9UWlnqtYeCQtPDO1lGVQ" }, // Duke Football
   { program: "Sports", category: "Sports", rating: "PG", channelId: "UC4DI4UXm2vIS5-6fhuCAh6g" }, // Pick'em Pros
 
-  // Gospel — every gospel broadcast combined into one "Gospel" row
-  { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCvxWyn4rfcI2H9APhfUIB1Q" }, // The Encouraging Moment (Dr. Tony Haire)
+  // Gospel — every gospel broadcast combined into one "Gospel" row.
+  // NOTE: the id UCvxWyn4rfcI2H9APhfUIB1Q that used to be labeled "Dr. Tony Haire"
+  // here is actually JOEL OSTEEN's channel — WCCG does NOT broadcast Joel Osteen.
+  // The correct "Encouraging Moment" channel is "Tony Haire, PhD" below.
+  { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCc6aixt81vdBrFDV772Z1Gw" }, // The Encouraging Moment (Dr. Tony Haire)
   { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCRqRVNSRMdIQqZw60bAgN1w" }, // Grace Plus Nothing Ministries
   { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCxTzK_2da5bZag5WTAbiVzQ" }, // Family Fellowship Worship Center
   { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCavo4QHyzuMM2FED2W6PwEg" }, // Mt. Pisgah Missionary Baptist Church
