@@ -281,16 +281,25 @@ export function GroupsCard({ hubType, accentColor, supabase }: RailProps) {
         <h3 className="flex items-center gap-2 text-sm font-bold">
           <UsersRound className="h-4 w-4" style={{ color: accentColor }} /> Groups
         </h3>
-        {user && (
-          <button
-            type="button"
-            onClick={() => setShowDialog(true)}
-            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-white transition-opacity hover:opacity-90"
-            style={{ backgroundColor: accentColor }}
+        <div className="flex items-center gap-2">
+          {/* Discover every public group across the hubs. */}
+          <Link
+            href="/groups"
+            className="text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
           >
-            <Plus className="h-3 w-3" /> New group
-          </button>
-        )}
+            Browse all
+          </Link>
+          {user && (
+            <button
+              type="button"
+              onClick={() => setShowDialog(true)}
+              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ backgroundColor: accentColor }}
+            >
+              <Plus className="h-3 w-3" /> New group
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (
