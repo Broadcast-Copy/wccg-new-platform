@@ -72,6 +72,9 @@ Options -Indexes
 # Cache static assets
 <IfModule mod_expires.c>
   ExpiresActive On
+  # HTML shells must always revalidate so a deploy is seen immediately (the
+  # build's JS/CSS are content-hashed, so they can stay cached below).
+  ExpiresByType text/html "access plus 0 seconds"
   ExpiresByType image/png "access plus 1 year"
   ExpiresByType image/jpg "access plus 1 year"
   ExpiresByType image/jpeg "access plus 1 year"
@@ -91,6 +94,12 @@ Options -Indexes
 
 # Security headers
 <IfModule mod_headers.c>
+  # HTML must always revalidate so deploys take effect immediately — without
+  # this, browsers heuristically cache the client shells and serve stale pages
+  # (the cause of fixes "not showing up" after a deploy).
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
   Header set X-Content-Type-Options "nosniff"
   Header set X-Frame-Options "SAMEORIGIN"
   Header set X-XSS-Protection "1; mode=block"
