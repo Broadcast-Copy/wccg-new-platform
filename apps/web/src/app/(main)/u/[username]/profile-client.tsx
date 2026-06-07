@@ -22,7 +22,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   BadgeCheck,
@@ -183,13 +183,22 @@ function videoThumb(v: ProfileVideo): string {
 // ---------------------------------------------------------------------------
 
 export default function ProfileClient() {
-  const params = useParams();
-  const handle =
-    typeof params?.username === "string"
-      ? params.username
-      : Array.isArray(params?.username)
-        ? params.username[0]
-        : "";
+  // Resolve the @handle from the REAL URL. Under `output: export`, /u/<name> can
+  // be served by the _placeholder shim, so useParams() returns "_placeholder" —
+  // but usePathname() reflects the actual browser path, so derive the handle from
+  // it (and it updates on client-side profile→profile navigation).
+  const pathname = usePathname();
+  const handle = useMemo(() => {
+    const segs = (pathname ?? "").split("/").filter(Boolean);
+    const i = segs.indexOf("u");
+    const seg = i >= 0 ? segs[i + 1] : undefined;
+    if (!seg || seg === "_placeholder") return "";
+    try {
+      return decodeURIComponent(seg);
+    } catch {
+      return seg;
+    }
+  }, [pathname]);
 
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [dj, setDj] = useState<DjLink | null>(null);
@@ -212,7 +221,7 @@ export default function ProfileClient() {
   // Load the profile + everything that hangs off it, in one effect, once the
   // handle is known. All setState happens post-await behind the `active` guard.
   useEffect(() => {
-    if (!handle || handle === "_placeholder") return;
+    if (!handle) return;
     let active = true;
 
     async function run(username: string) {
@@ -399,10 +408,9 @@ export default function ProfileClient() {
   }
 
   // ── Early states ──────────────────────────────────────────────────────────
-  if (!handle || handle === "_placeholder") {
-    return <div className="py-12 text-sm text-muted-foreground">No profile.</div>;
-  }
-  if (loading) {
+  // While the handle resolves from the URL (static-export hydration) or the
+  // profile loads, show the spinner — never a premature "No profile".
+  if (loading || !handle) {
     return (
       <div className="flex items-center gap-2 py-16 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" /> Loading profile…
