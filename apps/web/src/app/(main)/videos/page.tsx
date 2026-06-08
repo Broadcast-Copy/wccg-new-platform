@@ -410,10 +410,11 @@ function ParentalToggle({ locked, onToggle }: { locked: boolean; onToggle: () =>
 
 /**
  * Full-bleed auto-rotating hero. Features the most-recent WIDE (landscape) video
- * from each HERO_PROGRAMS show — phone/Shorts are excluded via isWideVideo. The
- * poster is shown with a slow Ken Burns zoom (reliable; muted iframe autoplay is
- * widely blocked). Rotates every 8s, pauses on hover. setSlides/setIdx only fire
- * in async callbacks, satisfying react-hooks/set-state-in-effect.
+ * from each HERO_PROGRAMS show — phone/Shorts/pillarboxed clips are excluded via
+ * isWideVideo. Each slide PLAYS its video (muted autoplay loop) sized to COVER
+ * the cinematic frame, with the maxres poster as the base/loading layer behind
+ * it. Rotates every 12s, pauses on hover. setSlides/setIdx only fire in async
+ * callbacks, satisfying react-hooks/set-state-in-effect.
  */
 function VideoHero({ candidates }: { candidates: VideoRecord[][] }) {
   const [slides, setSlides] = useState<VideoRecord[]>([]);
@@ -444,7 +445,7 @@ function VideoHero({ candidates }: { candidates: VideoRecord[][] }) {
     if (slides.length <= 1) return;
     const id = window.setInterval(() => {
       if (!paused.current) setIdx((i) => (i + 1) % slides.length);
-    }, 8000);
+    }, 12000);
     return () => window.clearInterval(id);
   }, [slides.length]);
 
@@ -461,25 +462,38 @@ function VideoHero({ candidates }: { candidates: VideoRecord[][] }) {
       aria-roledescription="carousel"
       aria-label="Featured shows"
     >
-      <div className="relative aspect-[16/10] w-full sm:aspect-[2/1] lg:aspect-[21/9]" style={{ maxHeight: "80vh" }}>
-        {/* High-res show poster with a slow Ken Burns zoom for cinematic motion.
-            (Reliable everywhere — muted iframe autoplay is widely blocked, which
-            left the hero a grey loading box.) Falls back hqdefault if a video has
-            no maxres thumbnail. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          key={`t-${v.id}`}
-          src={yt ? `https://i.ytimg.com/vi/${yt}/maxresdefault.jpg` : videoThumb(v)}
-          onError={(e) => {
-            const t = e.currentTarget;
-            if (!t.dataset.fb) {
-              t.dataset.fb = "1";
-              t.src = videoThumb(v);
-            }
-          }}
-          alt={v.title}
-          className="hero-kenburns absolute inset-0 h-full w-full object-cover"
-        />
+      <div className="relative aspect-[16/10] w-full overflow-hidden sm:aspect-[2/1] lg:aspect-[21/9]" style={{ maxHeight: "80vh" }}>
+        {/* Media layer — a size container so the playing video can COVER the
+            cinematic frame via container-query units (works 16:10 → 21:9). */}
+        <div className="absolute inset-0 overflow-hidden" style={{ containerType: "size" }}>
+          {/* High-res poster — base layer + graceful fallback if the video is slow
+              or can't embed. Slow Ken Burns zoom; the video fades in over it. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            key={`t-${v.id}`}
+            src={yt ? `https://i.ytimg.com/vi/${yt}/maxresdefault.jpg` : videoThumb(v)}
+            onError={(e) => {
+              const t = e.currentTarget;
+              if (!t.dataset.fb) {
+                t.dataset.fb = "1";
+                t.src = videoThumb(v);
+              }
+            }}
+            alt={v.title}
+            className="hero-kenburns absolute inset-0 h-full w-full object-cover"
+          />
+          {/* Auto-playing muted video for the active slide (loops), sized to cover. */}
+          {yt && (
+            <iframe
+              key={`v-${v.id}`}
+              src={`https://www.youtube.com/embed/${yt}?autoplay=1&mute=1&controls=0&loop=1&playlist=${yt}&playsinline=1&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1`}
+              title={v.title}
+              allow="autoplay; encrypted-media; picture-in-picture"
+              className="hero-video-in pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 border-0"
+              style={{ width: "max(100cqw, 177.78cqh)", height: "max(100cqh, 56.25cqw)" }}
+            />
+          )}
+        </div>
         {/* Cinematic gradients for legibility. */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/95 via-background/35 to-transparent" />

@@ -175,6 +175,17 @@
   .hero-kenburns { animation: none; }
 }
 
+/* Watch hero: fade the autoplaying video in over the poster once it starts,
+   so the brief YouTube grey-load frame is hidden behind the poster. */
+.hero-video-in { opacity: 0; animation: hero-video-in 1.7s ease-out forwards; }
+@keyframes hero-video-in {
+  0%, 35% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-video-in { animation: none; opacity: 1; }
+}
+
 /* Hero progress */
 @keyframes hero-progress {
   from { width: 0%; }
