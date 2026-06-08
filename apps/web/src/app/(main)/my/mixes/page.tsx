@@ -176,29 +176,19 @@ const CATEGORIES: MediaCategory[] = ["mix", "commercial", "promo", "voiceover", 
 
 const now = new Date().toISOString();
 
+// Station-asset folders only. On-air DJ mixes are NOT seeded here — they live
+// in the dedicated "DJ Mixshows" view (the live schedule, backed by dj_drops),
+// the single home for mixes. A look-alike "DJ Mixes" folder used to be seeded
+// here too, which spawned a confusing empty parallel tree; it was removed so
+// the library is unambiguously for commercials, promos, voiceovers, and beds.
 const SEED_FOLDERS: MediaFolder[] = [
-  { id: "mf1", name: "DJ Mixes", type: "folder", parentId: null, createdAt: "2026-02-01T10:00:00Z", updatedAt: now },
   { id: "mf2", name: "Commercials", type: "folder", parentId: null, createdAt: "2026-02-05T10:00:00Z", updatedAt: now },
   { id: "mf3", name: "Promos", type: "folder", parentId: null, createdAt: "2026-02-10T10:00:00Z", updatedAt: now },
   { id: "mf4", name: "Voiceovers", type: "folder", parentId: null, createdAt: "2026-02-15T10:00:00Z", updatedAt: now },
   { id: "mf5", name: "Music Beds", type: "folder", parentId: null, createdAt: "2026-02-20T10:00:00Z", updatedAt: now },
-  // DJ folders inside DJ Mixes
-  { id: "dj1", name: "DJ Mike G", type: "folder", parentId: "mf1", createdAt: "2026-02-02T10:00:00Z", updatedAt: now },
-  { id: "dj2", name: "DJ IzzyNice", type: "folder", parentId: "mf1", createdAt: "2026-02-02T11:00:00Z", updatedAt: now },
-  { id: "dj3", name: "DJ Ike GDA", type: "folder", parentId: "mf1", createdAt: "2026-02-02T12:00:00Z", updatedAt: now },
-  { id: "dj4", name: "DJ Sam I Am", type: "folder", parentId: "mf1", createdAt: "2026-02-02T13:00:00Z", updatedAt: now },
-  { id: "dj5", name: "Bootleg Kev", type: "folder", parentId: "mf1", createdAt: "2026-02-02T14:00:00Z", updatedAt: now },
-  { id: "dj6", name: "Yung Joc", type: "folder", parentId: "mf1", createdAt: "2026-02-02T15:00:00Z", updatedAt: now },
-  { id: "dj7", name: "Mz Shyneka", type: "folder", parentId: "mf1", createdAt: "2026-02-02T16:00:00Z", updatedAt: now },
-  { id: "dj8", name: "Shawty Shawty", type: "folder", parentId: "mf1", createdAt: "2026-02-02T17:00:00Z", updatedAt: now },
-  { id: "dj9", name: "Angela Yee", type: "folder", parentId: "mf1", createdAt: "2026-02-02T18:00:00Z", updatedAt: now },
-  { id: "dj10", name: "Riich Villianz", type: "folder", parentId: "mf1", createdAt: "2026-02-02T19:00:00Z", updatedAt: now },
-  { id: "dj11", name: "Big Gleem", type: "folder", parentId: "mf1", createdAt: "2026-02-02T20:00:00Z", updatedAt: now },
 ];
 
 const SEED_FILES: MediaFile[] = [
-  { id: "fl1", name: "Friday Night Vibes Vol 3.mp3", type: "file", category: "mix", format: "mp3", duration: 3720, size: 89_400_000, folderId: "dj1", createdAt: "2026-02-28T20:00:00Z", updatedAt: now },
-  { id: "fl2", name: "Sunday Soul Brunch.mp3", type: "file", category: "mix", format: "mp3", duration: 5400, size: 129_600_000, folderId: "dj2", createdAt: "2026-02-20T12:00:00Z", updatedAt: now },
   { id: "fl3", name: "Spring Auto Sale 30s.wav", type: "file", category: "commercial", format: "wav", duration: 30, size: 4_800_000, folderId: "mf2", createdAt: "2026-03-01T10:00:00Z", updatedAt: now },
   { id: "fl4", name: "Health Fair Spot 15s.wav", type: "file", category: "commercial", format: "wav", duration: 15, size: 2_400_000, folderId: "mf2", createdAt: "2026-03-03T14:00:00Z", updatedAt: now },
   { id: "fl5", name: "Weekend Events Promo.mp3", type: "file", category: "promo", format: "mp3", duration: 22, size: 3_600_000, folderId: "mf3", createdAt: "2026-03-02T09:00:00Z", updatedAt: now },
@@ -1571,9 +1561,11 @@ export default function MediaManagerPage() {
       if (!active) return;
       const djId = (data?.id as string | undefined) ?? null;
       setViewerDjId(djId);
-      // Land a DJ-only viewer in their mixshow folder by default — unless a
-      // deep-link or a manual toggle already chose a mode.
-      if (djId && !canSeeProduction && !modeSeededRef.current) {
+      // Land staff (production/admin) AND DJ viewers in the DJ Mixshows view by
+      // default — it's the single home for on-air mixes, so nobody goes hunting
+      // for them in the asset library. A deep-link or a manual toggle (either of
+      // which sets modeSeededRef) still wins.
+      if ((canSeeProduction || djId) && !modeSeededRef.current) {
         modeSeededRef.current = true;
         setManagerMode("mixshows");
       }
@@ -2179,7 +2171,7 @@ export default function MediaManagerPage() {
             Media Manager
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Organize audio files, mixes, commercials, and production assets.
+            Station assets — commercials, promos, jingles, voiceovers, and music beds.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -2193,6 +2185,26 @@ export default function MediaManagerPage() {
           </Link>
         </div>
       </div>
+
+      {/* Bridge: on-air DJ mixes live in the DJ Mixshows view, never the asset
+          library. Shown to staff / DJ viewers (who have the mixshows view) so
+          nobody hunts for mixes here or rebuilds empty schedule folders. */}
+      {(canSeeProduction || isDjViewer) && (
+        <button
+          type="button"
+          onClick={() => { modeSeededRef.current = true; setManagerMode("mixshows"); }}
+          className="flex w-full items-center gap-2.5 rounded-xl border border-[#7401df]/30 bg-[#7401df]/[0.06] px-4 py-2.5 text-left text-sm transition-colors hover:border-[#7401df]/50 hover:bg-[#7401df]/10"
+        >
+          <FolderOpen className="h-4 w-4 shrink-0 text-[#7401df]" />
+          <span className="text-muted-foreground">
+            On-air DJ mixes aren&apos;t stored here — they live in the{" "}
+            <span className="font-semibold text-foreground">DJ Mixshows</span> view (Day › Time › DJ › files).
+          </span>
+          <span className="ml-auto inline-flex shrink-0 items-center gap-1 font-bold text-[#7401df]">
+            Open <ChevronRight className="h-3.5 w-3.5" />
+          </span>
+        </button>
+      )}
 
       {/* Stats Bar */}
       <div className="flex flex-wrap items-center gap-3 rounded-xl bg-card border border-border px-4 py-3">
