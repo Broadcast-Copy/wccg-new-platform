@@ -170,17 +170,15 @@ function VideosWall() {
     return [...rows].sort((a, b) => rank(a.program) - rank(b.program));
   }, [program, videos]);
 
-  // The latest video from each featured show, for the rotating hero (skip mature).
-  const featured = useMemo<VideoRecord[]>(() => {
+  // Candidate videos per featured show (latest first), skipping mature. The hero
+  // resolves the first WIDE/landscape one per show (no phone/Shorts in the hero).
+  const heroCandidates = useMemo<VideoRecord[][]>(() => {
     if (program) return [];
-    const out: VideoRecord[] = [];
-    for (const name of HERO_PROGRAMS) {
-      const v = videos.find(
-        (x) => (programOf(x) === name || x.creator_name === name) && !isMatureRating(x.rating),
-      );
-      if (v) out.push(v);
-    }
-    return out;
+    return HERO_PROGRAMS.map((name) =>
+      videos
+        .filter((x) => (programOf(x) === name || x.creator_name === name) && !isMatureRating(x.rating))
+        .slice(0, 8),
+    ).filter((list) => list.length > 0);
   }, [program, videos]);
 
   const lockedMatureCount = useMemo(
@@ -244,14 +242,12 @@ function VideosWall() {
 
   return (
     <div className="space-y-8 py-6">
-      {!loading && featured.length > 0 && <VideoHero slides={featured} />}
-      <ParentalHeader
-        locked={locked}
-        onToggle={toggleLock}
-        eyebrow="WCCG 104.5 FM"
-        title="Watch"
-        subtitle="Studio sessions, shows, community spotlights, and more."
-      />
+      {!loading && heroCandidates.length > 0 && <VideoHero candidates={heroCandidates} />}
+      {/* The big "Watch" header is intentionally omitted now that the hero leads
+          the page — keep only a compact parental toggle. */}
+      <div className="flex justify-end">
+        <ParentalToggle locked={locked} onToggle={toggleLock} />
+      </div>
 
       {locked && lockedMatureCount > 0 && <MatureNotice count={lockedMatureCount} onUnlock={toggleLock} />}
 
@@ -303,16 +299,79 @@ function VideosWall() {
 
 // ─── Rotating video hero (Netflix/Prime-style) ───────────────────────────────
 
+/** True only for clearly WIDE (16:9-ish) videos. Probes the maxres poster's
+ * aspect, so phone/Shorts (vertical, or with no maxres thumbnail) are excluded
+ * from the hero — they look terrible letterboxed into a cinematic banner. */
+function isWideVideo(v: VideoRecord): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") {
+      resolve(false);
+      return;
+    }
+    const src = v.youtube_id ? `https://i.ytimg.com/vi/${v.youtube_id}/maxresdefault.jpg` : v.thumbnail_url;
+    if (!src) {
+      resolve(false);
+      return;
+    }
+    const img = new window.Image();
+    img.onload = () => resolve(img.naturalWidth >= 600 && img.naturalWidth >= img.naturalHeight * 1.35);
+    img.onerror = () => resolve(false);
+    img.src = src;
+  });
+}
+
+/** Compact parental on/off control, used where the full header is omitted. */
+function ParentalToggle({ locked, onToggle }: { locked: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={locked}
+      title={locked ? "Parental controls on — mature content locked" : "Parental controls off — mature content visible"}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
+        locked
+          ? "border-[#74ddc7]/40 bg-[#74ddc7]/15 text-[#74ddc7] hover:bg-[#74ddc7]/25"
+          : "border-amber-400/50 bg-amber-400/15 text-amber-300 hover:bg-amber-400/25"
+      }`}
+    >
+      {locked ? <ShieldCheck className="h-4 w-4" /> : <ShieldAlert className="h-4 w-4" />}
+      <span className="hidden sm:inline">{locked ? "Parental controls on" : "Parental controls off"}</span>
+      <span className="sm:hidden">{locked ? "Locked" : "Off"}</span>
+    </button>
+  );
+}
+
 /**
- * Full-bleed auto-rotating hero featuring the latest clip from each HERO_PROGRAMS
- * show. The active slide plays a muted, looping YouTube embed cropped to cover
- * (the show's thumbnail sits behind it as the instant + fallback image). Rotates
- * every 8s, pauses on hover. setIdx only fires inside the interval callback, so
- * the react-hooks/set-state-in-effect rule is satisfied.
+ * Full-bleed auto-rotating hero. Features the most-recent WIDE (landscape) video
+ * from each HERO_PROGRAMS show — phone/Shorts are excluded via isWideVideo. The
+ * poster is shown with a slow Ken Burns zoom (reliable; muted iframe autoplay is
+ * widely blocked). Rotates every 8s, pauses on hover. setSlides/setIdx only fire
+ * in async callbacks, satisfying react-hooks/set-state-in-effect.
  */
-function VideoHero({ slides }: { slides: VideoRecord[] }) {
+function VideoHero({ candidates }: { candidates: VideoRecord[][] }) {
+  const [slides, setSlides] = useState<VideoRecord[]>([]);
   const [idx, setIdx] = useState(0);
   const paused = useRef(false);
+
+  // Resolve the first wide video per show (skips phone/Shorts).
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const out: VideoRecord[] = [];
+      for (const list of candidates) {
+        for (const v of list) {
+          if (await isWideVideo(v)) {
+            out.push(v);
+            break;
+          }
+        }
+      }
+      if (active) setSlides(out);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [candidates]);
 
   useEffect(() => {
     if (slides.length <= 1) return;
@@ -336,25 +395,24 @@ function VideoHero({ slides }: { slides: VideoRecord[] }) {
       aria-label="Featured shows"
     >
       <div className="relative aspect-[16/10] w-full sm:aspect-[2/1] lg:aspect-[21/9]" style={{ maxHeight: "80vh" }}>
-        {/* Instant + fallback poster, covering. */}
+        {/* High-res show poster with a slow Ken Burns zoom for cinematic motion.
+            (Reliable everywhere — muted iframe autoplay is widely blocked, which
+            left the hero a grey loading box.) Falls back hqdefault if a video has
+            no maxres thumbnail. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           key={`t-${v.id}`}
-          src={videoThumb(v)}
+          src={yt ? `https://i.ytimg.com/vi/${yt}/maxresdefault.jpg` : videoThumb(v)}
+          onError={(e) => {
+            const t = e.currentTarget;
+            if (!t.dataset.fb) {
+              t.dataset.fb = "1";
+              t.src = videoThumb(v);
+            }
+          }}
           alt={v.title}
-          className="absolute inset-0 h-full w-full object-cover"
+          className="hero-kenburns absolute inset-0 h-full w-full object-cover"
         />
-        {/* Muted, looping clip on the active slide, cropped to cover (full-bleed). */}
-        {yt && (
-          <iframe
-            key={`v-${yt}`}
-            title={v.title}
-            className="pointer-events-none absolute left-1/2 top-1/2 h-[56.25vw] w-screen -translate-x-1/2 -translate-y-1/2"
-            src={`https://www.youtube.com/embed/${yt}?autoplay=1&mute=1&controls=0&loop=1&playlist=${yt}&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3&fs=0&disablekb=1`}
-            allow="autoplay; encrypted-media"
-            frameBorder={0}
-          />
-        )}
         {/* Cinematic gradients for legibility. */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/95 via-background/35 to-transparent" />
