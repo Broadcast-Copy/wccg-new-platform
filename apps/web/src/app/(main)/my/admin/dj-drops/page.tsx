@@ -510,8 +510,6 @@ function SlotCard({
           )}
           <Link
             href={mediaHref}
-            target="_blank"
-            rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-[#7401df]/50 hover:text-[#7401df]"
           >
             <FolderOpen className="h-3.5 w-3.5" />
@@ -548,8 +546,6 @@ function SlotCard({
                     <td className="px-5 py-2.5">
                       <Link
                         href={mediaHref}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         title={`Open ${sv.dj?.display_name ?? "this DJ"}'s media folder`}
                         className="group inline-flex items-center gap-2 transition-colors hover:text-[#7401df]"
                       >

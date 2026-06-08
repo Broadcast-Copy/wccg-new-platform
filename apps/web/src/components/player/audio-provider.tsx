@@ -196,12 +196,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         const separator = saved.url.includes("?") ? "&" : "?";
         const srcWithSession = `${saved.url}${separator}playSessionID=${sessionId}`;
 
+        // Restore the last stream into the player UI but DO NOT auto-play on
+        // mount. (Previously this called load() + play(), which started the live
+        // stream the instant any page loaded — users asked for autoplay off.)
+        // The src is set so the bar shows what was playing; the user taps play.
         audio.src = srcWithSession;
-        audio.load();
-        audio.play().catch(() => {
-          // Autoplay may be blocked by browser — player shows in paused state
-          // User can tap play to resume
-        });
         currentStreamRef.current = saved.url;
         setCurrentStream(saved.url);
         setMetadata(saved.metadata);
