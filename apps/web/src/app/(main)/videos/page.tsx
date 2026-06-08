@@ -80,6 +80,17 @@ function displayProgram(program: string): string {
   return program === "Gospel" ? "Latest Gospel" : program;
 }
 
+/** Shows featured in the auto-rotating hero at the top of the wall, in order. */
+const HERO_PROGRAMS = [
+  "Way Up with Angela Yee",
+  "The Bootleg Kev Show",
+  "Posted on The Corner",
+  "Pick'em Pros",
+];
+
+/** Program rows pinned to the top of the wall, in order. */
+const HERO_TOP_ROWS = ["Sports", "Way Up with Angela Yee"];
+
 function VideosWall() {
   const searchParams = useSearchParams();
   const program = searchParams.get("program")?.trim() || null;
@@ -148,7 +159,29 @@ function VideosWall() {
     };
   }, [program]);
 
-  const programRows: ProgramRow[] = useMemo(() => (program ? [] : groupByProgram(videos)), [program, videos]);
+  const programRows: ProgramRow[] = useMemo(() => {
+    if (program) return [];
+    const rows = groupByProgram(videos);
+    // Pin Sports + Angela Yee to the top; the rest keep their natural order.
+    const rank = (p: string) => {
+      const i = HERO_TOP_ROWS.indexOf(p);
+      return i === -1 ? HERO_TOP_ROWS.length + 1 : i;
+    };
+    return [...rows].sort((a, b) => rank(a.program) - rank(b.program));
+  }, [program, videos]);
+
+  // The latest video from each featured show, for the rotating hero (skip mature).
+  const featured = useMemo<VideoRecord[]>(() => {
+    if (program) return [];
+    const out: VideoRecord[] = [];
+    for (const name of HERO_PROGRAMS) {
+      const v = videos.find(
+        (x) => (programOf(x) === name || x.creator_name === name) && !isMatureRating(x.rating),
+      );
+      if (v) out.push(v);
+    }
+    return out;
+  }, [program, videos]);
 
   const lockedMatureCount = useMemo(
     () => (locked ? videos.filter((v) => isMatureRating(v.rating)).length : 0),
@@ -211,6 +244,7 @@ function VideosWall() {
 
   return (
     <div className="space-y-8 py-6">
+      {!loading && featured.length > 0 && <VideoHero slides={featured} />}
       <ParentalHeader
         locked={locked}
         onToggle={toggleLock}
@@ -264,6 +298,112 @@ function VideosWall() {
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Rotating video hero (Netflix/Prime-style) ───────────────────────────────
+
+/**
+ * Full-bleed auto-rotating hero featuring the latest clip from each HERO_PROGRAMS
+ * show. The active slide plays a muted, looping YouTube embed cropped to cover
+ * (the show's thumbnail sits behind it as the instant + fallback image). Rotates
+ * every 8s, pauses on hover. setIdx only fires inside the interval callback, so
+ * the react-hooks/set-state-in-effect rule is satisfied.
+ */
+function VideoHero({ slides }: { slides: VideoRecord[] }) {
+  const [idx, setIdx] = useState(0);
+  const paused = useRef(false);
+
+  useEffect(() => {
+    if (slides.length <= 1) return;
+    const id = window.setInterval(() => {
+      if (!paused.current) setIdx((i) => (i + 1) % slides.length);
+    }, 8000);
+    return () => window.clearInterval(id);
+  }, [slides.length]);
+
+  if (slides.length === 0) return null;
+  const safeIdx = idx % slides.length;
+  const v = slides[safeIdx];
+  const yt = v.youtube_id;
+
+  return (
+    <section
+      className="relative -mx-4 -mt-8 mb-3 overflow-hidden bg-black sm:-mx-6 lg:-mx-8 2xl:-mx-12"
+      onMouseEnter={() => { paused.current = true; }}
+      onMouseLeave={() => { paused.current = false; }}
+      aria-roledescription="carousel"
+      aria-label="Featured shows"
+    >
+      <div className="relative aspect-[16/10] w-full sm:aspect-[2/1] lg:aspect-[21/9]" style={{ maxHeight: "80vh" }}>
+        {/* Instant + fallback poster, covering. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          key={`t-${v.id}`}
+          src={videoThumb(v)}
+          alt={v.title}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        {/* Muted, looping clip on the active slide, cropped to cover (full-bleed). */}
+        {yt && (
+          <iframe
+            key={`v-${yt}`}
+            title={v.title}
+            className="pointer-events-none absolute left-1/2 top-1/2 h-[56.25vw] w-screen -translate-x-1/2 -translate-y-1/2"
+            src={`https://www.youtube.com/embed/${yt}?autoplay=1&mute=1&controls=0&loop=1&playlist=${yt}&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3&fs=0&disablekb=1`}
+            allow="autoplay; encrypted-media"
+            frameBorder={0}
+          />
+        )}
+        {/* Cinematic gradients for legibility. */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/95 via-background/35 to-transparent" />
+
+        {/* Copy + CTAs. */}
+        <div className="absolute inset-0 z-10 flex flex-col justify-end px-5 pb-8 sm:px-8 sm:pb-10 lg:px-12 lg:pb-14">
+          <div className="max-w-2xl space-y-3">
+            <p className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.25em] text-[#74ddc7]">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#dc2626]" /> Featured on WCCG
+            </p>
+            <h2 className="text-2xl font-black leading-[1.05] tracking-tight text-foreground drop-shadow-xl sm:text-4xl lg:text-5xl">
+              {programOf(v)}
+            </h2>
+            <p className="line-clamp-2 max-w-xl text-sm text-foreground/85 drop-shadow sm:text-base">
+              {v.title}
+            </p>
+            <div className="flex flex-wrap items-center gap-2.5 pt-1.5">
+              <Link
+                href={`/videos/${v.id}`}
+                className="inline-flex items-center gap-2 rounded-full bg-[#74ddc7] px-6 py-2.5 text-sm font-black text-[#0a0a0f] shadow-lg transition hover:opacity-90"
+              >
+                <Play className="h-4 w-4" fill="currentColor" /> Watch now
+              </Link>
+              <Link
+                href={`/videos?program=${encodeURIComponent(programOf(v))}`}
+                className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/40 px-6 py-2.5 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-black/60"
+              >
+                More episodes
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Slide dots. */}
+        <div className="absolute bottom-4 right-5 z-10 flex items-center gap-2 sm:bottom-6 sm:right-8">
+          {slides.map((s, i) => (
+            <button
+              key={s.id}
+              type="button"
+              aria-label={`Show ${programOf(s)}`}
+              onClick={() => setIdx(i)}
+              className={`h-1.5 rounded-full transition-all ${
+                i === safeIdx ? "w-7 bg-[#74ddc7]" : "w-3 bg-white/40 hover:bg-white/70"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -505,7 +645,7 @@ function PosterCard({
   );
 
   const cls = `group block shrink-0 snap-start ${
-    big ? "w-[19.5rem] sm:w-[20.5rem]" : "w-[15rem] sm:w-[16rem]"
+    big ? "w-[21rem] sm:w-[23rem]" : "w-[18rem] sm:w-[20rem]"
   }`;
   if (gated) return <div className={cls}>{body}</div>;
   return (
@@ -616,7 +756,7 @@ function ContinueCard({ item, locked, onUnlock }: { item: ContinueItem; locked: 
 
   // While gated, Thumb hides its children, so the progress bar stays behind the
   // lock overlay (you can't see how far you got into a video you can't watch).
-  const cls = "group block w-[15rem] shrink-0 snap-start sm:w-[16rem]";
+  const cls = "group block w-[17rem] shrink-0 snap-start sm:w-[19rem]";
   if (gated) return <div className={cls}>{body}</div>;
   return (
     <Link href={`/videos/${v.id}`} className={cls}>
