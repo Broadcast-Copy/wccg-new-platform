@@ -515,7 +515,7 @@ function SlotCard({
             className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-[#7401df]/50 hover:text-[#7401df]"
           >
             <FolderOpen className="h-3.5 w-3.5" />
-            Media
+            Folder
           </Link>
         </div>
       </div>

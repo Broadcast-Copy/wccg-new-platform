@@ -110,6 +110,8 @@ interface Drop {
   id: string;
   slot_id: string;
   file_code: string;
+  /** ISO Monday (YYYY-MM-DD) of the broadcast week this drop belongs to. */
+  week_of: string;
   status: string;
   storage_path: string | null;
   format: string | null;
@@ -149,6 +151,23 @@ function fmtDate(d: Date): string {
 }
 function fmtDateLong(d: Date): string {
   return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+}
+/**
+ * Disk week-folder name for a week_of (an ISO Monday `YYYY-MM-DD`). Mirrors the
+ * broadcast file structure `<dj>/a-on-air/<MMDDYYYY>-onair/`, e.g. week_of
+ * `2026-01-19` → `01192026-onair`. Falls back to the raw value if malformed.
+ */
+function weekFolderName(weekOf: string): string {
+  const m = weekOf.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return `${weekOf}-onair`;
+  const [, yyyy, mm, dd] = m;
+  return `${mm}${dd}${yyyy}-onair`;
+}
+/** Human label for a week_of crumb/header, e.g. "Mon Jan 19, 2026". */
+function weekOfLabel(weekOf: string): string {
+  const d = new Date(weekOf + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return weekOf;
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 }
 
 /**
@@ -450,7 +469,12 @@ export function ProductionMixshows({
 }) {
   const [weekOf, setWeekOf] = useState(isoMondayOfNow());
   const [slots, setSlots] = useState<Slot[]>([]);
+  // `drops` is scoped to the active `weekOf` and drives the By-Day view, the
+  // week picker, and the active-week file rows. `allDrops` holds EVERY week so
+  // the By-DJ view can mirror disk: one dated `<MMDDYYYY>-onair` folder per week
+  // a DJ has uploaded for.
   const [drops, setDrops] = useState<Drop[]>([]);
+  const [allDrops, setAllDrops] = useState<Drop[]>([]);
   const [mixes, setMixes] = useState<MixItem[]>([]);
   const [djs, setDjs] = useState<DjRef[]>([]);
   const [loading, setLoading] = useState(true);
@@ -469,7 +493,9 @@ export function ProductionMixshows({
   const [groupBy, setGroupBy] = useState<"day" | "dj">("dj");
   // Navigation path. Meaning depends on groupBy:
   //   day-mode: [] = days, [day] = slots in day, [day, slotId] = files
-  //   dj-mode:  [] = DJ folders, [djKey] = that DJ's on-air mixes
+  //   dj-mode:  [] = DJ folders, [djKey] = that DJ's dated week folders,
+  //             [djKey, weekOf] = that DJ+week's on-air files (mirrors disk:
+  //             <dj>/a-on-air/<MMDDYYYY>-onair/)
   const [path, setPath] = useState<Array<number | string>>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [busyUrl, setBusyUrl] = useState<string | null>(null);
@@ -488,7 +514,12 @@ export function ProductionMixshows({
     setLoading(true);
     try {
       const supabase = createClient();
-      const [{ data: s, error: sErr }, { data: d }, { data: dj }, { data: mx }] = await Promise.all([
+      // Drops are fetched twice from the same table/columns: `ad` (all weeks)
+      // backs the By-DJ dated-week-folder view; `d` (active week only) keeps the
+      // By-Day view + week picker lean. `d` is a subset of `ad`, but querying it
+      // explicitly avoids re-deriving it and keeps the active-week paths cheap.
+      const dropCols = "id,slot_id,file_code,week_of,status,storage_path,format,size_bytes,uploaded_at";
+      const [{ data: s, error: sErr }, { data: d }, { data: ad }, { data: dj }, { data: mx }] = await Promise.all([
         supabase
           .from("dj_slots")
           .select("id,dj_id,day_of_week,start_time,end_time,file_codes,status,notes,djs(slug,display_name)")
@@ -496,8 +527,12 @@ export function ProductionMixshows({
           .order("start_time"),
         supabase
           .from("dj_drops")
-          .select("id,slot_id,file_code,status,storage_path,format,size_bytes,uploaded_at")
+          .select(dropCols)
           .eq("week_of", weekOf),
+        supabase
+          .from("dj_drops")
+          .select(dropCols)
+          .order("week_of", { ascending: false }),
         supabase.from("djs").select("id,slug,display_name").eq("is_active", true).order("display_name"),
         // Off-Air / Digital catalog. RLS governs visibility (published, staff, or
         // owning DJ); the dj-mixes bucket is public so audio_url plays directly.
@@ -509,6 +544,7 @@ export function ProductionMixshows({
       if (sErr) throw new Error(sErr.message);
       setSlots((s ?? []) as unknown as Slot[]);
       setDrops((d ?? []) as Drop[]);
+      setAllDrops((ad ?? []) as Drop[]);
       setDjs((dj ?? []) as DjRef[]);
       setMixes((mx ?? []) as MixItem[]);
       setError(null);
@@ -524,8 +560,8 @@ export function ProductionMixshows({
   // Deep-link (one-shot): jump straight to a slot or a DJ folder once the
   // schedule has loaded. A self-scoped DJ viewer (selfDjId) wins over all deep
   // links and lands directly in their own By-DJ folder. Otherwise ?dj=<id>
-  // wins over ?slot=<id>; ?dj opens the By-DJ grouping at that DJ's on-air
-  // folder, ?slot opens the By-Day file view.
+  // wins over ?slot=<id>; ?dj opens the By-DJ grouping at that DJ's dated
+  // week-folder list (path=[djId]), ?slot opens the By-Day file view.
   // All deep links / self-scope resolve INTO the On-Air section, through the
   // {year} folder, to the right By-DJ / By-Day target. setState is kept out of
   // the synchronous effect body (react-hooks/set-state-in-effect): a queued
@@ -534,19 +570,21 @@ export function ProductionMixshows({
   useEffect(() => {
     if (focusedRef.current) return;
     if (selfDjId) {
-      // A DJ viewing their own folder: land them there once, even before slots
-      // load (their folder is the only place they go). Done on mount, not
-      // gated on slots, so a DJ with no slots yet still lands correctly.
+      // A DJ viewing their own folder: land them on their week-folder list once,
+      // even before slots load (their folder is the only place they go). Done on
+      // mount, not gated on slots, so a DJ with no slots yet still lands at
+      // path=[selfDjId] (their dated `<MMDDYYYY>-onair` folders).
       focusedRef.current = true;
       queueMicrotask(() => { setSection("onair"); setInYear(true); setGroupBy("dj"); setPath([selfDjId]); });
       return;
     }
     if (focusDjId) {
       // The By-DJ folder is seeded for every active DJ (see `djFolders`), so land
-      // straight in it as soon as the roster OR schedule has loaded — even if this
-      // DJ has no slot this week. (Previously this required a slot, which stranded
-      // the admin at the root when they clicked "Media" for a DJ with nothing
-      // scheduled this week — the "I get lost" report.)
+      // straight in their week-folder list (path=[focusDjId]) as soon as the
+      // roster OR schedule has loaded — even if this DJ has no slot this week.
+      // (Previously this required a slot, which stranded the admin at the root
+      // when they clicked "Media" for a DJ with nothing scheduled this week —
+      // the "I get lost" report.) From here they pick a dated week folder.
       if (djs.length === 0 && slots.length === 0) return; // wait for the first load
       focusedRef.current = true;
       queueMicrotask(() => { setSection("onair"); setInYear(true); setGroupBy("dj"); setPath([focusDjId]); });
@@ -561,12 +599,45 @@ export function ProductionMixshows({
     }
   }, [selfDjId, focusDjId, focusSlotId, slots, djs]);
 
-  // Drops keyed by slot+code for quick lookup
+  // Active-week drops keyed by slot+code for quick lookup (By-Day + week picker).
   const dropByKey = useMemo(() => {
     const m = new Map<string, Drop>();
     for (const d of drops) m.set(`${d.slot_id}|${d.file_code}`, d);
     return m;
   }, [drops]);
+
+  // ALL-weeks drops keyed by slot+code+week_of. Backs the By-DJ dated-week-folder
+  // view, where the same slot/code recurs every week.
+  const allDropByKey = useMemo(() => {
+    const m = new Map<string, Drop>();
+    for (const d of allDrops) m.set(`${d.slot_id}|${d.file_code}|${d.week_of}`, d);
+    return m;
+  }, [allDrops]);
+
+  // Slot lookup by id, so an all-weeks drop can be attributed to its DJ folder
+  // (a drop carries slot_id; the slot carries dj_id).
+  const slotById = useMemo(() => {
+    const m = new Map<string, Slot>();
+    for (const s of slots) m.set(s.id, s);
+    return m;
+  }, [slots]);
+
+  // Distinct weeks (newest first) each DJ folder has drops for, derived from the
+  // all-weeks drops. Keyed by DJ folder key (dj_id or the Unassigned sentinel).
+  // This is what the new `[djId]` level lists as `<MMDDYYYY>-onair` folders.
+  const weeksByDjKey = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    for (const d of allDrops) {
+      const slot = slotById.get(d.slot_id);
+      const key = slot?.dj_id ?? UNASSIGNED_DJ_KEY;
+      let set = m.get(key);
+      if (!set) { set = new Set<string>(); m.set(key, set); }
+      set.add(d.week_of);
+    }
+    const out = new Map<string, string[]>();
+    for (const [key, set] of m) out.set(key, Array.from(set).sort((a, b) => b.localeCompare(a)));
+    return out;
+  }, [allDrops, slotById]);
 
   // The On-Air {year} folder label. Mirrors local D:\WCCG\Mixshows\<YYYY>\;
   // derived from the active week (a Monday ISO date) so week-nav within a year
@@ -602,8 +673,10 @@ export function ProductionMixshows({
 
   // Group slots → DJ folders. Each folder is keyed by dj_id (or the Unassigned
   // sentinel), ordered with named DJs A→Z first and Unassigned last. Only DJs
-  // that actually have a slot get a folder. `fileCount` counts on-air files
-  // (uploaded/validated/published drops) across the DJ's slots this week.
+  // that actually have a slot get a folder. `fileCount` counts active-week
+  // on-air files (uploaded/validated/published drops) across the DJ's slots;
+  // `weekCount` counts the distinct dated `<MMDDYYYY>-onair` folders the DJ has
+  // across ALL weeks (the new middle nav level).
   const djFolders = useMemo(() => {
     const groups = new Map<string, { key: string; label: string; slots: Slot[] }>();
     // Seed a folder for every active DJ so admins see the full roster — even
@@ -626,14 +699,15 @@ export function ProductionMixshows({
             if (d && d.storage_path && PLAYABLE_STATUSES.includes(d.status)) fileCount++;
           }
         }
-        return { ...g, fileCount };
+        const weekCount = weeksByDjKey.get(g.key)?.length ?? 0;
+        return { ...g, fileCount, weekCount };
       })
       .sort((a, b) => {
         if (a.key === UNASSIGNED_DJ_KEY) return 1;
         if (b.key === UNASSIGNED_DJ_KEY) return -1;
         return a.label.localeCompare(b.label);
       });
-  }, [djs, slots, dropByKey, djNameById]);
+  }, [djs, slots, dropByKey, djNameById, weeksByDjKey]);
 
   // Resolve a fresh 1h signed URL for a drop's storage object (lazy, per-play).
   const resolveSignedUrl = useCallback(async (storagePath: string): Promise<string | null> => {
@@ -652,24 +726,28 @@ export function ProductionMixshows({
     [resolveSignedUrl],
   );
 
-  // Build the play queue from the active slot's uploaded files so prev/next work.
-  const buildSlotQueue = useCallback((slot: Slot): { tracks: PlayerTrack[]; byDropId: Map<string, number> } => {
+  // Build the play queue from a slot's uploaded files for a given week so
+  // prev/next walk that week's carts. Looks up the all-weeks map so it works
+  // for any dated folder, not just the active week.
+  const buildSlotQueue = useCallback((slot: Slot, week: string): { tracks: PlayerTrack[]; byDropId: Map<string, number> } => {
     const tracks: PlayerTrack[] = [];
     const byDropId = new Map<string, number>();
     for (const code of slot.file_codes) {
-      const drop = dropByKey.get(`${slot.id}|${code}`);
-      if (drop && drop.storage_path && ["uploaded", "validated", "published"].includes(drop.status)) {
+      const drop = allDropByKey.get(`${slot.id}|${code}|${week}`);
+      if (drop && drop.storage_path && PLAYABLE_STATUSES.includes(drop.status)) {
         byDropId.set(drop.id, tracks.length);
         tracks.push(trackForDrop(code, drop));
       }
     }
     return { tracks, byDropId };
-  }, [dropByKey, trackForDrop]);
+  }, [allDropByKey, trackForDrop]);
 
-  // Play a single drop inside the bottom bar; queue = its whole slot.
+  // Play a single drop inside the bottom bar; queue = its whole slot for the
+  // drop's own week (so the By-DJ dated-folder view queues that week's carts,
+  // and the By-Day view queues the active week's).
   const playDrop = useCallback((slot: Slot, drop: Drop) => {
     if (!drop.storage_path) return;
-    const { tracks, byDropId } = buildSlotQueue(slot);
+    const { tracks, byDropId } = buildSlotQueue(slot, drop.week_of);
     const start = byDropId.get(drop.id) ?? 0;
     setBusyUrl(drop.id);
     setQueue(tracks);
@@ -685,13 +763,17 @@ export function ProductionMixshows({
     setPlayerIndex(0);
   }, []);
 
-  // Upload (or replace) a single file_code for a slot. Mirrors the DJ portal's
-  // upload (browser → Supabase Storage → dj_drops upsert). RLS scopes writes:
-  // a DJ may only write their own drops; staff may write any. The slot must
-  // route to a DJ (dj_id + slug) so the storage path + drop row are valid.
-  const handleUpload = useCallback(async (slot: Slot, code: string, file: File) => {
+  // Upload (or replace) a single file_code for a slot, into a specific week
+  // (defaults to the active `weekOf`). The By-DJ dated-folder view passes the
+  // open week so an upload lands in the `<MMDDYYYY>-onair` folder you're in;
+  // the By-Day view uses the active week. Mirrors the DJ portal's upload
+  // (browser → Supabase Storage → dj_drops upsert). RLS scopes writes: a DJ may
+  // only write their own drops; staff may write any. The slot must route to a
+  // DJ (dj_id + slug) so the storage path + drop row are valid.
+  const handleUpload = useCallback(async (slot: Slot, code: string, file: File, targetWeek?: string) => {
     const slug = slot.djs?.slug;
     if (!slot.dj_id || !slug) return;
+    const uploadWeek = targetWeek ?? weekOf;
     const key = `${slot.id}|${code}`;
     setError(null);
 
@@ -710,7 +792,7 @@ export function ProductionMixshows({
     try {
       const supabase = createClient();
       const ext = (file.name.match(/\.(mp3|wav|flac|m4a|ogg)$/i)?.[1] ?? "mp3").toLowerCase();
-      const storagePath = `${slug}/${weekOf}/${code}.${ext}`;
+      const storagePath = `${slug}/${uploadWeek}/${code}.${ext}`;
 
       const { error: upErr } = await supabase.storage
         .from("dj-drops")
@@ -722,7 +804,7 @@ export function ProductionMixshows({
           dj_id: slot.dj_id,
           slot_id: slot.id,
           file_code: code,
-          week_of: weekOf,
+          week_of: uploadWeek,
           status: "uploaded",
           source: "web",
           storage_path: storagePath,
@@ -743,17 +825,6 @@ export function ProductionMixshows({
     }
   }, [weekOf, load]);
 
-  // Open one or more signed URLs (used by bulk Download in the file view).
-  const downloadDrops = useCallback(async (slot: Slot, codes: string[]) => {
-    for (const code of codes) {
-      const drop = dropByKey.get(`${slot.id}|${code}`);
-      if (drop?.storage_path) {
-        const url = await resolveSignedUrl(drop.storage_path);
-        if (url) window.open(url, "_blank");
-      }
-    }
-  }, [dropByKey, resolveSignedUrl]);
-
   // Next free DJB codes (max across all slots + 1)
   const nextCodes = useMemo(() => {
     let max = 76050;
@@ -764,35 +835,66 @@ export function ProductionMixshows({
     return [`DJB_${max + 1}`, `DJB_${max + 2}`];
   }, [slots]);
 
-  // In day-mode: 0 days, 1 day, 2 slot.  In dj-mode: 0 DJ folders, 1 DJ's mixes.
+  // In day-mode: 0 days, 1 day, 2 slot.
+  // In dj-mode: 0 DJ folders, 1 that DJ's dated week folders, 2 that week's files.
   const level = path.length;
   const currentDay = groupBy === "day" && level >= 1 ? (path[0] as number) : null;
   const currentSlot = groupBy === "day" && level >= 2 ? slots.find((s) => s.id === path[1]) : null;
 
-  // The DJ folder currently open (dj-mode, level 1).
+  // The DJ folder currently open (dj-mode, level ≥ 1).
   const currentDjKey = groupBy === "dj" && level >= 1 ? (path[0] as string) : null;
   const currentDjFolder = useMemo(
     () => (currentDjKey ? djFolders.find((f) => f.key === currentDjKey) ?? null : null),
     [currentDjKey, djFolders],
   );
+  // The dated week folder open inside a DJ (dj-mode, level ≥ 2): an ISO Monday.
+  const currentDjWeek = groupBy === "dj" && level >= 2 ? (path[1] as string) : null;
 
-  // Flat on-air mix list for the open DJ folder: every file_code across that
-  // DJ's slots (sorted by day then start time), each tied to its owning slot.
-  const djMixes = useMemo<DjMix[]>(() => {
+  // By-DJ dated-folder upload: binds the open week so FileRow's
+  // `(slot, code, file)` callback routes the drop to the folder you're viewing,
+  // not the globally-selected `weekOf`.
+  const handleUploadForWeek = useCallback(
+    (slot: Slot, code: string, file: File) => handleUpload(slot, code, file, currentDjWeek ?? weekOf),
+    [handleUpload, currentDjWeek, weekOf],
+  );
+
+  // The open DJ's dated week folders (the new middle level). One entry per
+  // distinct week_of the DJ has drops for (newest first), each carrying the
+  // count of uploaded on-air files that week. Mirrors disk's
+  // `<dj>/a-on-air/<MMDDYYYY>-onair/`.
+  const djWeekFolders = useMemo<{ weekOf: string; fileCount: number }[]>(() => {
     if (!currentDjFolder) return [];
+    const weeks = weeksByDjKey.get(currentDjFolder.key) ?? [];
+    return weeks.map((wk) => {
+      let fileCount = 0;
+      for (const slot of currentDjFolder.slots) {
+        for (const code of slot.file_codes) {
+          const d = allDropByKey.get(`${slot.id}|${code}|${wk}`);
+          if (d && d.storage_path && PLAYABLE_STATUSES.includes(d.status)) fileCount++;
+        }
+      }
+      return { weekOf: wk, fileCount };
+    });
+  }, [currentDjFolder, weeksByDjKey, allDropByKey]);
+
+  // Flat on-air file list for the open DJ + week: every file_code across that
+  // DJ's slots (sorted by day then start time), each tied to its owning slot,
+  // with the drop looked up for the SELECTED week (not the global one).
+  const djMixes = useMemo<DjMix[]>(() => {
+    if (!currentDjFolder || !currentDjWeek) return [];
     const ordered = [...currentDjFolder.slots].sort(
       (a, b) => DAY_ORDER.indexOf(a.day_of_week) - DAY_ORDER.indexOf(b.day_of_week) || a.start_time.localeCompare(b.start_time),
     );
     const out: DjMix[] = [];
     for (const slot of ordered) {
       for (const code of slot.file_codes) {
-        const drop = dropByKey.get(`${slot.id}|${code}`);
+        const drop = allDropByKey.get(`${slot.id}|${code}|${currentDjWeek}`);
         const present = !!drop && !!drop.storage_path && PLAYABLE_STATUSES.includes(drop.status);
         out.push({ slot, code, drop, present });
       }
     }
     return out;
-  }, [currentDjFolder, dropByKey]);
+  }, [currentDjFolder, currentDjWeek, allDropByKey]);
 
   // ── Multi-select over the active view's UPLOADED files ────────────────────
   // Unified selection model: one entry per selectable (on-air) file in the
@@ -800,16 +902,16 @@ export function ProductionMixshows({
   // both the By-Day file view and the By-DJ folder. Only on-air files are
   // selectable (you can't act on a missing file).
   const selectableItems = useMemo<{ slot: Slot; code: string; drop: Drop }[]>(() => {
-    const src = currentSlot
-      ? currentSlot.file_codes.map((code) => ({ slot: currentSlot, code }))
-      : currentDjFolder
-        ? djMixes.map(({ slot, code }) => ({ slot, code }))
+    // By-Day file view: active-week drops via dropByKey. By-DJ week view: reuse
+    // djMixes, whose drops are already resolved for the selected week_of.
+    const resolved = currentSlot
+      ? currentSlot.file_codes.map((code) => ({ slot: currentSlot, code, drop: dropByKey.get(`${currentSlot.id}|${code}`) }))
+      : currentDjWeek
+        ? djMixes.map(({ slot, code, drop }) => ({ slot, code, drop }))
         : [];
-    return src
-      .map(({ slot, code }) => ({ slot, code, drop: dropByKey.get(`${slot.id}|${code}`) }))
-      .filter((x): x is { slot: Slot; code: string; drop: Drop } =>
-        !!x.drop && !!x.drop.storage_path && PLAYABLE_STATUSES.includes(x.drop.status));
-  }, [currentSlot, currentDjFolder, djMixes, dropByKey]);
+    return resolved.filter((x): x is { slot: Slot; code: string; drop: Drop } =>
+      !!x.drop && !!x.drop.storage_path && PLAYABLE_STATUSES.includes(x.drop.status));
+  }, [currentSlot, currentDjWeek, djMixes, dropByKey]);
 
   // The currently-selected entries, in view order.
   const selectedDrops = useMemo(
@@ -819,11 +921,12 @@ export function ProductionMixshows({
 
   const allSelected = selectableItems.length > 0 && selectedDrops.length === selectableItems.length;
 
-  // Clear selection whenever we leave the file/DJ view or switch slot/DJ/week.
+  // Clear selection whenever we leave the file/DJ view or switch
+  // slot / DJ / dated-week-folder / active week.
   useEffect(() => {
     setSelected(new Set());
     setAnchorCode(null);
-  }, [currentSlot?.id, currentDjKey, weekOf]);
+  }, [currentSlot?.id, currentDjKey, currentDjWeek, weekOf]);
 
   // Toggle a row, honouring shift (range from anchor) + ctrl/cmd (toggle).
   // `key` identifies the row within the current view (slot|code), so the same
@@ -859,13 +962,18 @@ export function ProductionMixshows({
     playQueue(tracks);
   }, [selectedDrops, trackForDrop, playQueue]);
 
-  // Bulk: open signed URLs for every selected file. Selected files may span
-  // multiple slots (By-DJ view), so resolve each via its own owning slot.
+  // Bulk: open signed URLs for every selected file. Each selected entry already
+  // carries its own week-scoped drop (storage_path), so resolve straight from it
+  // — correct across slots AND weeks in the By-DJ dated-folder view.
   const downloadSelected = useCallback(() => {
     void (async () => {
-      for (const { slot, code } of selectedDrops) await downloadDrops(slot, [code]);
+      for (const { drop } of selectedDrops) {
+        if (!drop.storage_path) continue;
+        const url = await resolveSignedUrl(drop.storage_path);
+        if (url) window.open(url, "_blank");
+      }
     })();
-  }, [downloadDrops, selectedDrops]);
+  }, [selectedDrops, resolveSignedUrl]);
 
   // Switch the top-level grouping; reset navigation to that grouping's root.
   const setGrouping = useCallback((g: "day" | "dj") => {
@@ -988,10 +1096,25 @@ export function ProductionMixshows({
               <span className="font-bold text-[#74ddc7]">{fmt12h(currentSlot.start_time)}</span>
             </>
           )}
+          {/* By-DJ: <DJ name> crumb. Clickable (back to the DJ's week folders)
+              while a dated week folder is open; the highlighted leaf otherwise. */}
           {section === "onair" && inYear && groupBy === "dj" && currentDjFolder && (
             <>
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="font-bold text-[#74ddc7]">{currentDjFolder.label}</span>
+              {currentDjWeek ? (
+                <button onClick={() => setPath([currentDjFolder.key])} className="font-bold text-foreground transition-colors hover:text-[#74ddc7]">
+                  {currentDjFolder.label}
+                </button>
+              ) : (
+                <span className="font-bold text-[#74ddc7]">{currentDjFolder.label}</span>
+              )}
+            </>
+          )}
+          {/* By-DJ: <MMDDYYYY-onair> dated week crumb (leaf). */}
+          {section === "onair" && inYear && groupBy === "dj" && currentDjFolder && currentDjWeek && (
+            <>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="font-mono font-bold text-[#74ddc7]">{weekFolderName(currentDjWeek)}</span>
             </>
           )}
 
@@ -1178,13 +1301,15 @@ export function ProductionMixshows({
       ) : loading && slots.length === 0 ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading schedule…</div>
       ) : groupBy === "dj" ? (
-        currentDjFolder ? (
-          /* ── One DJ's on-air mixes (flat, every airing this week) ── */
+        currentDjFolder && currentDjWeek ? (
+          /* ── One DJ's on-air files for a single dated week folder ──
+             Mirrors disk: <dj>/a-on-air/<MMDDYYYY>-onair/. Reuses the on-air
+             file rows / player / upload, scoped to the selected week_of. */
           <div className={`space-y-2 ${playerIndex !== null ? "pb-24" : ""}`}>
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card/50 px-4 py-2 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
                 <UserCircle2 className="h-3.5 w-3.5" />
-                {currentDjFolder.label} · on-air mixes · week of {weekOf}
+                {currentDjFolder.label} · <span className="font-mono">{weekFolderName(currentDjWeek)}</span> · week of {weekOfLabel(currentDjWeek)}
               </span>
               {selectableItems.length > 0 && (
                 <button
@@ -1221,10 +1346,31 @@ export function ProductionMixshows({
                   uploading={uploadingKey === rowKey}
                   onToggleSelect={toggleSelect}
                   onPlay={playDrop}
-                  onUpload={handleUpload}
+                  onUpload={handleUploadForWeek}
                 />
               );
             })}
+          </div>
+        ) : currentDjFolder ? (
+          /* ── One DJ's dated week folders (mirrors <dj>/a-on-air/) ── */
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {djWeekFolders.map(({ weekOf: wk, fileCount }) => (
+              <button key={wk} onClick={() => setPath([currentDjFolder.key, wk])} className="group flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5 transition-all hover:border-[#74ddc7]/40">
+                <div className="relative">
+                  <Folder className="h-9 w-9 text-[#74ddc7]" />
+                  <Calendar className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-card text-[#7401df]" />
+                </div>
+                <p className="text-center font-mono text-sm font-bold text-foreground group-hover:text-[#74ddc7]">
+                  {weekFolderName(wk)}
+                </p>
+                <p className="text-[11px] text-muted-foreground">{fileCount} on-air file{fileCount === 1 ? "" : "s"}</p>
+              </button>
+            ))}
+            {djWeekFolders.length === 0 && (
+              <p className="col-span-full rounded-xl border border-dashed border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
+                No on-air weeks yet for this DJ. Files appear here once they upload a mixshow.
+              </p>
+            )}
           </div>
         ) : (
           /* ── DJ folders ── */
@@ -1238,7 +1384,7 @@ export function ProductionMixshows({
                 <p className="text-center font-bold text-foreground group-hover:text-[#74ddc7]">
                   {folder.key === UNASSIGNED_DJ_KEY ? <span className="italic text-amber-500">Unassigned</span> : folder.label}
                 </p>
-                <p className="text-[11px] text-muted-foreground">{folder.fileCount} on-air file{folder.fileCount === 1 ? "" : "s"}</p>
+                <p className="text-[11px] text-muted-foreground">{folder.weekCount} on-air week{folder.weekCount === 1 ? "" : "s"}</p>
               </button>
             ))}
             {visibleDjFolders.length === 0 && (
