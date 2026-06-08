@@ -1561,11 +1561,12 @@ export default function MediaManagerPage() {
       if (!active) return;
       const djId = (data?.id as string | undefined) ?? null;
       setViewerDjId(djId);
-      // Land staff (production/admin) AND DJ viewers in the DJ Mixshows view by
-      // default — it's the single home for on-air mixes, so nobody goes hunting
-      // for them in the asset library. A deep-link or a manual toggle (either of
-      // which sets modeSeededRef) still wins.
-      if ((canSeeProduction || djId) && !modeSeededRef.current) {
+      // Staff/admin land in the Media Manager FILES (the asset library) — its
+      // home is the files, and DJ Mixshows is a folder there (see the On-Air
+      // card), NOT the default view. Only a DJ-only viewer (a DJ who isn't
+      // staff) defaults into their own mixshow folder. A deep-link or a manual
+      // toggle (which set modeSeededRef) still wins.
+      if (djId && !canSeeProduction && !modeSeededRef.current) {
         modeSeededRef.current = true;
         setManagerMode("mixshows");
       }
@@ -2186,26 +2187,6 @@ export default function MediaManagerPage() {
         </div>
       </div>
 
-      {/* Bridge: on-air DJ mixes live in the DJ Mixshows view, never the asset
-          library. Shown to staff / DJ viewers (who have the mixshows view) so
-          nobody hunts for mixes here or rebuilds empty schedule folders. */}
-      {(canSeeProduction || isDjViewer) && (
-        <button
-          type="button"
-          onClick={() => { modeSeededRef.current = true; setManagerMode("mixshows"); }}
-          className="flex w-full items-center gap-2.5 rounded-xl border border-[#7401df]/30 bg-[#7401df]/[0.06] px-4 py-2.5 text-left text-sm transition-colors hover:border-[#7401df]/50 hover:bg-[#7401df]/10"
-        >
-          <FolderOpen className="h-4 w-4 shrink-0 text-[#7401df]" />
-          <span className="text-muted-foreground">
-            On-air DJ mixes aren&apos;t stored here — they live in the{" "}
-            <span className="font-semibold text-foreground">DJ Mixshows</span> view (Day › Time › DJ › files).
-          </span>
-          <span className="ml-auto inline-flex shrink-0 items-center gap-1 font-bold text-[#7401df]">
-            Open <ChevronRight className="h-3.5 w-3.5" />
-          </span>
-        </button>
-      )}
-
       {/* Stats Bar */}
       <div className="flex flex-wrap items-center gap-3 rounded-xl bg-card border border-border px-4 py-3">
         <HardDrive className="h-4 w-4 text-muted-foreground/70 shrink-0" />
@@ -2412,6 +2393,28 @@ export default function MediaManagerPage() {
 
       {/* Content */}
       <div className={`space-y-3 ${playerIndex !== null ? "pb-24" : visibleSelectedIds.length > 0 ? "pb-20" : ""}`}>
+        {/* DJ Mixshows as a folder — opens the on-air by-DJ view. The Media
+            Manager's home is the file library; mixes are one click in here. */}
+        {currentFolderId === null && (canSeeProduction || isDjViewer) && (
+          <div>
+            <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-2">On-Air</p>
+            <button
+              type="button"
+              onClick={() => { modeSeededRef.current = true; setManagerMode("mixshows"); }}
+              className="group flex w-full items-center gap-3 rounded-xl border border-[#7401df]/30 bg-[#7401df]/[0.06] p-4 text-left transition-all hover:border-[#7401df]/50 hover:bg-[#7401df]/10"
+            >
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#7401df]/30 bg-[#7401df]/15">
+                <FolderOpen className="h-6 w-6 text-[#7401df]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-bold text-foreground group-hover:text-[#7401df]">DJ Mixshows</p>
+                <p className="text-xs text-muted-foreground">On-air scheduled mixes — by DJ</p>
+              </div>
+              <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+            </button>
+          </div>
+        )}
+
         {/* Folders */}
         {filteredFolders.length > 0 && (
           <div>
