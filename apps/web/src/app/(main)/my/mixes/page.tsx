@@ -1564,15 +1564,18 @@ export default function MediaManagerPage() {
       // Staff/admin land in the Media Manager FILES (the asset library) — its
       // home is the files, and DJ Mixshows is a folder there (see the On-Air
       // card), NOT the default view. Only a DJ-only viewer (a DJ who isn't
-      // staff) defaults into their own mixshow folder. A deep-link or a manual
-      // toggle (which set modeSeededRef) still wins.
-      if (djId && !canSeeProduction && !modeSeededRef.current) {
+      // staff) defaults into their own mixshow folder. The !rolesLoading guard
+      // is critical: canSeeProduction is transiently false while roles load, so
+      // without it this fires for STAFF too and locks them into mixshows (the
+      // exact race that kept opening DJ Mixshows for the admin). A deep-link or
+      // manual toggle (which set modeSeededRef) still wins.
+      if (djId && !canSeeProduction && !rolesLoading && !modeSeededRef.current) {
         modeSeededRef.current = true;
         setManagerMode("mixshows");
       }
     })();
     return () => { active = false; };
-  }, [authLoading, user, canSeeProduction]);
+  }, [authLoading, user, canSeeProduction, rolesLoading]);
 
   // Deep-link from the DJ-slots admin:
   //   ?view=mixshows&slot=<id> opens the production view on that slot's files.
