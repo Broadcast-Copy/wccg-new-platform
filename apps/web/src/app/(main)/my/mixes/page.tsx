@@ -1527,7 +1527,7 @@ const getServerSnapshot = () => false;
 
 export default function MediaManagerPage() {
   const { user, isLoading: authLoading } = useAuth();
-  const { isManagement, isProduction, isAdmin, isSuperAdmin } = useUserRoles();
+  const { isManagement, isProduction, isAdmin, isSuperAdmin, isLoading: rolesLoading } = useUserRoles();
   // Production-tier users can switch the manager to the live DJ-mixshow
   // schedule view (Day > Time > files), backed by dj_slots / dj_drops.
   const canSeeProduction = isProduction || isManagement || isAdmin || isSuperAdmin;
@@ -1539,7 +1539,14 @@ export default function MediaManagerPage() {
   // who isn't production/admin gets a self-scoped mixshow folder: they land in
   // their own folder and can drop files, but never see other DJs.
   const [viewerDjId, setViewerDjId] = useState<string | null>(null);
-  const isDjViewer = !!viewerDjId && !canSeeProduction;
+  // Only self-scope a DJ to their own folder once roles have RESOLVED. While
+  // useUserRoles is still loading, canSeeProduction is transiently false, which
+  // would briefly flip an admin/production user into "DJ viewer" and pass their
+  // own DJ id as selfDjId — ProductionMixshows' one-shot focus then locks onto
+  // that folder and the ?dj=<id> deep-link is ignored (admin clicking "Folder"
+  // for another DJ landed on their OWN folder). Gating on !rolesLoading keeps
+  // selfDjId undefined for staff so the deep-link wins.
+  const isDjViewer = !!viewerDjId && !canSeeProduction && !rolesLoading;
   // Tracks whether managerMode has been seeded yet (by a deep-link or the
   // DJ-viewer default) so async DJ resolution can't stomp a manual choice.
   const modeSeededRef = useRef(false);
