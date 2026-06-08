@@ -862,9 +862,19 @@ export function ProductionMixshows({
   // distinct week_of the DJ has drops for (newest first), each carrying the
   // count of uploaded on-air files that week. Mirrors disk's
   // `<dj>/a-on-air/<MMDDYYYY>-onair/`.
-  const djWeekFolders = useMemo<{ weekOf: string; fileCount: number }[]>(() => {
+  const djWeekFolders = useMemo<{ weekOf: string; fileCount: number; isCurrent: boolean }[]>(() => {
     if (!currentDjFolder) return [];
-    const weeks = weeksByDjKey.get(currentDjFolder.key) ?? [];
+    // Weeks that already have uploads, PLUS the live broadcast week and whatever
+    // week the nav is parked on — so there's always a dated folder to drop THIS
+    // week's show into, even before the first file exists. Without seeding the
+    // current week a brand-new week was a dead-end ("Files appear here once they
+    // upload" with nowhere to upload): folders only ever came from weeks that
+    // already had drops — the chicken-and-egg that blocked the very first upload.
+    const thisWeek = isoMondayOfNow();
+    const weekSet = new Set<string>(weeksByDjKey.get(currentDjFolder.key) ?? []);
+    weekSet.add(thisWeek);
+    weekSet.add(weekOf);
+    const weeks = Array.from(weekSet).sort((a, b) => b.localeCompare(a));
     return weeks.map((wk) => {
       let fileCount = 0;
       for (const slot of currentDjFolder.slots) {
@@ -873,9 +883,9 @@ export function ProductionMixshows({
           if (d && d.storage_path && PLAYABLE_STATUSES.includes(d.status)) fileCount++;
         }
       }
-      return { weekOf: wk, fileCount };
+      return { weekOf: wk, fileCount, isCurrent: wk === thisWeek };
     });
-  }, [currentDjFolder, weeksByDjKey, allDropByKey]);
+  }, [currentDjFolder, weeksByDjKey, allDropByKey, weekOf]);
 
   // Flat on-air file list for the open DJ + week: every file_code across that
   // DJ's slots (sorted by day then start time), each tied to its owning slot,
@@ -1354,8 +1364,11 @@ export function ProductionMixshows({
         ) : currentDjFolder ? (
           /* ── One DJ's dated week folders (mirrors <dj>/a-on-air/) ── */
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {djWeekFolders.map(({ weekOf: wk, fileCount }) => (
-              <button key={wk} onClick={() => setPath([currentDjFolder.key, wk])} className="group flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5 transition-all hover:border-[#74ddc7]/40">
+            {djWeekFolders.map(({ weekOf: wk, fileCount, isCurrent }) => (
+              <button key={wk} onClick={() => setPath([currentDjFolder.key, wk])} className={`group relative flex flex-col items-center gap-2 rounded-2xl border bg-card p-5 transition-all hover:border-[#74ddc7]/40 ${isCurrent ? "border-[#74ddc7]/50" : "border-border"}`}>
+                {isCurrent && (
+                  <span className="absolute right-2 top-2 rounded-full bg-[#74ddc7]/15 px-2 py-0.5 text-[10px] font-bold text-[#74ddc7]">This week</span>
+                )}
                 <div className="relative">
                   <Folder className="h-9 w-9 text-[#74ddc7]" />
                   <Calendar className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-card text-[#7401df]" />
@@ -1363,14 +1376,11 @@ export function ProductionMixshows({
                 <p className="text-center font-mono text-sm font-bold text-foreground group-hover:text-[#74ddc7]">
                   {weekFolderName(wk)}
                 </p>
-                <p className="text-[11px] text-muted-foreground">{fileCount} on-air file{fileCount === 1 ? "" : "s"}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {fileCount > 0 ? `${fileCount} on-air file${fileCount === 1 ? "" : "s"}` : "Empty · upload here"}
+                </p>
               </button>
             ))}
-            {djWeekFolders.length === 0 && (
-              <p className="col-span-full rounded-xl border border-dashed border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
-                No on-air weeks yet for this DJ. Files appear here once they upload a mixshow.
-              </p>
-            )}
           </div>
         ) : (
           /* ── DJ folders ── */
