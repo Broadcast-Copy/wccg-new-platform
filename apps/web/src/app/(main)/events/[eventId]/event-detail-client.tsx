@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -205,8 +205,22 @@ function QrCodeDisplay({ code, size = 160 }: { code: string; size?: number }) {
 }
 
 export default function EventDetailPage() {
-  const params = useParams<{ eventId: string }>();
-  const eventId = params.eventId;
+  // Resolve the eventId from the REAL URL. Under `output: export`, /events/<id>
+  // can be served by the _placeholder shim, so useParams() returns "_placeholder"
+  // — but usePathname() reflects the actual browser path, so derive the id from
+  // it (and it updates on client-side event→event navigation).
+  const pathname = usePathname();
+  const eventId = useMemo(() => {
+    const segs = (pathname ?? "").split("/").filter(Boolean);
+    const i = segs.indexOf("events");
+    const seg = i >= 0 ? segs[i + 1] : undefined;
+    if (!seg || seg === "_placeholder") return "";
+    try {
+      return decodeURIComponent(seg);
+    } catch {
+      return seg;
+    }
+  }, [pathname]);
   const { user } = useAuth();
 
   const [event, setEvent] = useState<EventDetail | null>(null);
@@ -220,7 +234,7 @@ export default function EventDetailPage() {
   const [registerError, setRegisterError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!eventId || eventId === "_placeholder") return;
+    if (!eventId) return;
 
     let cancelled = false;
     async function fetchEvent() {
@@ -436,8 +450,10 @@ export default function EventDetailPage() {
   }
 
   // ─── Loading state ─────────────────────────────────────────────────────
+  // While the eventId resolves from the URL (static-export hydration) or the
+  // event loads, show the spinner — never a premature "Event not found".
 
-  if (loading) {
+  if (loading || !eventId) {
     return (
       <div className="space-y-6">
         <Link

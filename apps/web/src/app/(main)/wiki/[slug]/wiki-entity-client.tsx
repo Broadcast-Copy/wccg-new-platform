@@ -18,9 +18,9 @@
  * lists, bold/italic/code inline, and paragraphs with preserved line breaks.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { ArrowLeft, BookOpen, ExternalLink, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -76,18 +76,29 @@ function normalizeSources(raw: unknown): WikiSource[] {
 }
 
 export default function WikiEntityClient() {
-  const params = useParams();
-  const slug =
-    (Array.isArray(params?.slug) ? params.slug[0] : (params?.slug as string)) ?? "";
-  // The static-export shim prerenders a "_placeholder" slug — there's nothing
-  // to fetch for it (or an empty slug), so skip the network entirely.
-  const isFetchable = !!slug && slug !== "_placeholder";
+  // Resolve the slug from the REAL URL. Under `output: export`, /wiki/<slug> can
+  // be served by the _placeholder shim, so useParams() returns "_placeholder" —
+  // but usePathname() reflects the actual browser path, so derive the slug from
+  // it (and it updates on client-side wiki→wiki navigation). The shim's empty /
+  // "_placeholder" slug maps to "" so we skip the network entirely.
+  const pathname = usePathname();
+  const slug = useMemo(() => {
+    const segs = (pathname ?? "").split("/").filter(Boolean);
+    const i = segs.indexOf("wiki");
+    const seg = i >= 0 ? segs[i + 1] : undefined;
+    if (!seg || seg === "_placeholder") return "";
+    try {
+      return decodeURIComponent(seg);
+    } catch {
+      return seg;
+    }
+  }, [pathname]);
   const { user } = useAuth();
 
   const [entity, setEntity] = useState<WikiEntity | null>(null);
   // Lazy init: only start in the loading state when there's something to load,
   // so we never have to synchronously setState inside the effect body.
-  const [loading, setLoading] = useState(() => isFetchable);
+  const [loading, setLoading] = useState(() => !!slug);
   const [loadError, setLoadError] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [requested, setRequested] = useState(false);
@@ -96,7 +107,7 @@ export default function WikiEntityClient() {
 
   // Load the entity by slug.
   useEffect(() => {
-    if (!isFetchable) return;
+    if (!slug) return;
 
     let active = true;
 
@@ -127,7 +138,7 @@ export default function WikiEntityClient() {
     return () => {
       active = false;
     };
-  }, [slug, isFetchable]);
+  }, [slug]);
 
   // Award a small "dwell" bounty when a published article is read for >30s.
   useEffect(() => {

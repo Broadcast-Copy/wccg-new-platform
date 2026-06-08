@@ -17,8 +17,8 @@
  * behind an unlock prompt before the player is reachable.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Eye, Loader2, Lock, Play, ShieldAlert, ThumbsUp, Youtube } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -42,8 +42,22 @@ import {
 } from "@/lib/videos";
 
 export default function WatchClient() {
-  const params = useParams();
-  const id = typeof params?.id === "string" ? params.id : Array.isArray(params?.id) ? params.id[0] : "";
+  // Resolve the video id from the REAL URL. Under `output: export`, /videos/<id>
+  // can be served by the _placeholder shim, so useParams() returns "_placeholder"
+  // — but usePathname() reflects the actual browser path, so derive the id from
+  // it (and it updates on client-side video→video navigation).
+  const pathname = usePathname();
+  const id = useMemo(() => {
+    const segs = (pathname ?? "").split("/").filter(Boolean);
+    const i = segs.indexOf("videos");
+    const seg = i >= 0 ? segs[i + 1] : undefined;
+    if (!seg || seg === "_placeholder") return "";
+    try {
+      return decodeURIComponent(seg);
+    } catch {
+      return seg;
+    }
+  }, [pathname]);
   const [video, setVideo] = useState<VideoRecord | null>(null);
   const [related, setRelated] = useState<VideoRecord[]>([]);
   const [programVideos, setProgramVideos] = useState<VideoRecord[]>([]);
@@ -79,7 +93,7 @@ export default function WatchClient() {
 
   // Load the video + related + this program's other videos + the viewer's resume point.
   useEffect(() => {
-    if (!id || id === "_placeholder") return;
+    if (!id) return;
     let active = true;
     void (async () => {
       setLoading(true);
@@ -182,10 +196,9 @@ export default function WatchClient() {
     };
   }, [video, gated, userId, resumeAt]);
 
-  if (!id || id === "_placeholder") {
-    return <div className="py-12 text-sm text-muted-foreground">No video.</div>;
-  }
-  if (loading) {
+  // While the id resolves from the URL (static-export hydration) or the video
+  // loads, show the spinner — never a premature "not found".
+  if (loading || !id) {
     return (
       <div className="flex items-center gap-2 py-12 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" /> Loading…

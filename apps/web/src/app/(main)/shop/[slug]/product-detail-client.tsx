@@ -16,9 +16,9 @@
  * button prompts sign-in when there is no session.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { ArrowLeft, ShoppingBag, Sparkles, Ticket, Star } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -85,8 +85,23 @@ function mapProduct(row: VendorProductRow): Product {
 }
 
 export default function ProductDetailClient() {
-  const params = useParams();
-  const slug = (Array.isArray(params?.slug) ? params.slug[0] : (params?.slug as string)) ?? "";
+  // Resolve the product id from the REAL URL. The `[slug]` segment carries the
+  // product id (vendor_products has no slug column). Under `output: export`,
+  // /shop/<id> can be served by the _placeholder shim, so useParams() returns
+  // "_placeholder" — but usePathname() reflects the actual browser path, so
+  // derive it from there (and it updates on client-side product→product nav).
+  const pathname = usePathname();
+  const slug = useMemo(() => {
+    const segs = (pathname ?? "").split("/").filter(Boolean);
+    const i = segs.indexOf("shop");
+    const seg = i >= 0 ? segs[i + 1] : undefined;
+    if (!seg || seg === "_placeholder") return "";
+    try {
+      return decodeURIComponent(seg);
+    } catch {
+      return seg;
+    }
+  }, [pathname]);
   const [product, setProduct] = useState<Product | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [variantId, setVariantId] = useState<string | undefined>();

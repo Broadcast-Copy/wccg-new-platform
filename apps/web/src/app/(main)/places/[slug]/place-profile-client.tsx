@@ -21,7 +21,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   ArrowLeft,
   MapPin,
@@ -160,8 +160,22 @@ function relativeTime(iso: string): string {
 }
 
 export default function PlaceProfileClient() {
-  const params = useParams();
-  const slug = (Array.isArray(params?.slug) ? params.slug[0] : (params?.slug as string)) ?? "";
+  // Resolve the slug from the REAL URL. Under `output: export`, /places/<slug>
+  // can be served by the _placeholder shim, so useParams() returns "_placeholder"
+  // — but usePathname() reflects the actual browser path, so derive the slug from
+  // it (and it updates on client-side place→place navigation).
+  const pathname = usePathname();
+  const slug = useMemo(() => {
+    const segs = (pathname ?? "").split("/").filter(Boolean);
+    const i = segs.indexOf("places");
+    const seg = i >= 0 ? segs[i + 1] : undefined;
+    if (!seg || seg === "_placeholder") return "";
+    try {
+      return decodeURIComponent(seg);
+    } catch {
+      return seg;
+    }
+  }, [pathname]);
   const [place, setPlace] = useState<Place | null>(null);
   // Lazy init: start in the loading state only when there is a slug to fetch.
   const [loading, setLoading] = useState(() => slug !== "");
@@ -430,7 +444,9 @@ export default function PlaceProfileClient() {
     }
   }
 
-  if (loading) {
+  // While the slug resolves from the URL (static-export hydration) or the listing
+  // loads, show the spinner — never a premature "Place not found".
+  if (loading || !slug) {
     return <div className="py-8 text-sm text-muted-foreground">Loading…</div>;
   }
 
