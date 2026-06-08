@@ -1062,10 +1062,10 @@ function DukeVideoSlider() {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="group block w-[275px] shrink-0 snap-start sm:w-[325px]"
+              className="group block w-[200px] shrink-0 snap-start sm:w-[240px]"
               aria-label={v.title}
             >
-              {/* Just the thumbnail — larger, no play button / overlay */}
+              {/* Just the thumbnail — compact, no play button / overlay */}
               <div className="relative aspect-video overflow-hidden rounded-xl border border-white/15 bg-[#0a0e1a] shadow-sm">
                 {thumb ? (
                   // eslint-disable-next-line @next/next/no-img-element
