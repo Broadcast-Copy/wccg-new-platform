@@ -37,8 +37,6 @@ import {
   VolumeX,
   X,
   UserCircle2,
-  Users,
-  CalendarDays,
   UploadCloud,
   Radio,
   Disc3,
@@ -126,11 +124,6 @@ function isoMondayOfNow(): string {
   mon.setDate(now.getDate() - offset);
   return mon.toISOString().slice(0, 10);
 }
-function addWeeks(iso: string, n: number): string {
-  const d = new Date(iso + "T00:00:00Z");
-  d.setUTCDate(d.getUTCDate() + n * 7);
-  return d.toISOString().slice(0, 10);
-}
 function fmt12h(hhmm: string): string {
   const [h, m] = hhmm.split(":").map(Number);
   if (Number.isNaN(h)) return hhmm;
@@ -151,23 +144,6 @@ function fmtDate(d: Date): string {
 }
 function fmtDateLong(d: Date): string {
   return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
-}
-/**
- * Disk week-folder name for a week_of (an ISO Monday `YYYY-MM-DD`). Mirrors the
- * broadcast file structure `<dj>/a-on-air/<MMDDYYYY>-onair/`, e.g. week_of
- * `2026-01-19` → `01192026-onair`. Falls back to the raw value if malformed.
- */
-function weekFolderName(weekOf: string): string {
-  const m = weekOf.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return `${weekOf}-onair`;
-  const [, yyyy, mm, dd] = m;
-  return `${mm}${dd}${yyyy}-onair`;
-}
-/** Human label for a week_of crumb/header, e.g. "Mon Jan 19, 2026". */
-function weekOfLabel(weekOf: string): string {
-  const d = new Date(weekOf + "T00:00:00");
-  if (Number.isNaN(d.getTime())) return weekOf;
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 }
 
 /**
@@ -467,12 +443,14 @@ export function ProductionMixshows({
    */
   selfDjId?: string | null;
 }) {
-  const [weekOf, setWeekOf] = useState(isoMondayOfNow());
+  // `weekOf` is the live broadcast week (a Monday ISO date). The week nav was
+  // removed when the By-DJ view went flat, so it stays pinned to the current
+  // week; the setter is intentionally unused (underscore-prefixed for lint).
+  const [weekOf, _setWeekOf] = useState(isoMondayOfNow());
   const [slots, setSlots] = useState<Slot[]>([]);
-  // `drops` is scoped to the active `weekOf` and drives the By-Day view, the
-  // week picker, and the active-week file rows. `allDrops` holds EVERY week so
-  // the By-DJ view can mirror disk: one dated `<MMDDYYYY>-onair` folder per week
-  // a DJ has uploaded for.
+  // `drops` is scoped to the active `weekOf` and drives the By-Day view + the
+  // active-week file rows. `allDrops` holds EVERY week so the flat By-DJ view
+  // can list a DJ's uploaded mixshows across all weeks in one flat list.
   const [drops, setDrops] = useState<Drop[]>([]);
   const [allDrops, setAllDrops] = useState<Drop[]>([]);
   const [mixes, setMixes] = useState<MixItem[]>([]);
@@ -480,22 +458,19 @@ export function ProductionMixshows({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Top-level category. null = the "My Mixshows" root (two folder cards);
-  //   "onair"   → scheduled broadcast drops (the original schedule view, now
-  //               nested under a {year} folder)
+  //   "onair"   → scheduled broadcast drops (lands directly on the By-DJ grid)
   //   "digital" → the on-demand dj_mixes catalog (DJ folder → that DJ's mixes)
   const [section, setSection] = useState<"onair" | "digital" | null>(null);
-  // On-Air only: have we stepped through the {year} folder into the schedule?
-  // (false → show the single year folder card; true → the existing Day/DJ view)
-  const [inYear, setInYear] = useState(false);
   // How the folder tree is grouped at the top level.
   //   "day" → Day › Time › files (the original schedule view)
   //   "dj"  → DJ › that DJ's on-air mixes for the week (mirrors D:\WCCG\b-mixshows\<dj>\on-air)
   const [groupBy, setGroupBy] = useState<"day" | "dj">("dj");
   // Navigation path. Meaning depends on groupBy:
   //   day-mode: [] = days, [day] = slots in day, [day, slotId] = files
-  //   dj-mode:  [] = DJ folders, [djKey] = that DJ's dated week folders,
-  //             [djKey, weekOf] = that DJ+week's on-air files (mirrors disk:
-  //             <dj>/a-on-air/<MMDDYYYY>-onair/)
+  //             (only reachable via the ?slot= deep link now)
+  //   dj-mode:  [] = DJ grid (DJs with ≥1 uploaded mixshow),
+  //             [djKey] = that DJ's FLAT mixshow list (all weeks + this week's
+  //             expected codes as upload targets)
   const [path, setPath] = useState<Array<number | string>>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [busyUrl, setBusyUrl] = useState<string | null>(null);
@@ -559,35 +534,37 @@ export function ProductionMixshows({
 
   // Deep-link (one-shot): jump straight to a slot or a DJ folder once the
   // schedule has loaded. A self-scoped DJ viewer (selfDjId) wins over all deep
-  // links and lands directly in their own By-DJ folder. Otherwise ?dj=<id>
-  // wins over ?slot=<id>; ?dj opens the By-DJ grouping at that DJ's dated
-  // week-folder list (path=[djId]), ?slot opens the By-Day file view.
-  // All deep links / self-scope resolve INTO the On-Air section, through the
-  // {year} folder, to the right By-DJ / By-Day target. setState is kept out of
-  // the synchronous effect body (react-hooks/set-state-in-effect): a queued
-  // microtask applies everything once, behind the focusedRef guard.
+  // links and lands directly in their own flat By-DJ file list. Otherwise
+  // ?dj=<id> wins over ?slot=<id>; ?dj opens the By-DJ grouping at that DJ's
+  // flat file list (path=[djId]), ?slot opens the By-Day file view.
+  // All deep links / self-scope resolve INTO the On-Air section (which now
+  // lands directly on the DJ grid — no {year} step), to the right target.
+  // setState is kept out of the synchronous effect body
+  // (react-hooks/set-state-in-effect): a queued microtask applies everything
+  // once, behind the focusedRef guard.
   const focusedRef = useRef(false);
   useEffect(() => {
     if (focusedRef.current) return;
     if (selfDjId) {
-      // A DJ viewing their own folder: land them on their week-folder list once,
+      // A DJ viewing their own folder: land them on their flat file list once,
       // even before slots load (their folder is the only place they go). Done on
       // mount, not gated on slots, so a DJ with no slots yet still lands at
-      // path=[selfDjId] (their dated `<MMDDYYYY>-onair` folders).
+      // path=[selfDjId].
       focusedRef.current = true;
-      queueMicrotask(() => { setSection("onair"); setInYear(true); setGroupBy("dj"); setPath([selfDjId]); });
+      queueMicrotask(() => { setSection("onair"); setGroupBy("dj"); setPath([selfDjId]); });
       return;
     }
     if (focusDjId) {
       // The By-DJ folder is seeded for every active DJ (see `djFolders`), so land
-      // straight in their week-folder list (path=[focusDjId]) as soon as the
+      // straight in their flat file list (path=[focusDjId]) as soon as the
       // roster OR schedule has loaded — even if this DJ has no slot this week.
       // (Previously this required a slot, which stranded the admin at the root
       // when they clicked "Media" for a DJ with nothing scheduled this week —
-      // the "I get lost" report.) From here they pick a dated week folder.
+      // the "I get lost" report.) The flat view shows this week's expected codes
+      // as upload targets even with zero uploads, so uploading still works.
       if (djs.length === 0 && slots.length === 0) return; // wait for the first load
       focusedRef.current = true;
-      queueMicrotask(() => { setSection("onair"); setInYear(true); setGroupBy("dj"); setPath([focusDjId]); });
+      queueMicrotask(() => { setSection("onair"); setGroupBy("dj"); setPath([focusDjId]); });
       return;
     }
     if (slots.length === 0) return;
@@ -595,7 +572,7 @@ export function ProductionMixshows({
       const slot = slots.find((s) => s.id === focusSlotId);
       if (!slot) return;
       focusedRef.current = true;
-      queueMicrotask(() => { setSection("onair"); setInYear(true); setGroupBy("day"); setPath([slot.day_of_week, slot.id]); });
+      queueMicrotask(() => { setSection("onair"); setGroupBy("day"); setPath([slot.day_of_week, slot.id]); });
     }
   }, [selfDjId, focusDjId, focusSlotId, slots, djs]);
 
@@ -622,28 +599,6 @@ export function ProductionMixshows({
     return m;
   }, [slots]);
 
-  // Distinct weeks (newest first) each DJ folder has drops for, derived from the
-  // all-weeks drops. Keyed by DJ folder key (dj_id or the Unassigned sentinel).
-  // This is what the new `[djId]` level lists as `<MMDDYYYY>-onair` folders.
-  const weeksByDjKey = useMemo(() => {
-    const m = new Map<string, Set<string>>();
-    for (const d of allDrops) {
-      const slot = slotById.get(d.slot_id);
-      const key = slot?.dj_id ?? UNASSIGNED_DJ_KEY;
-      let set = m.get(key);
-      if (!set) { set = new Set<string>(); m.set(key, set); }
-      set.add(d.week_of);
-    }
-    const out = new Map<string, string[]>();
-    for (const [key, set] of m) out.set(key, Array.from(set).sort((a, b) => b.localeCompare(a)));
-    return out;
-  }, [allDrops, slotById]);
-
-  // The On-Air {year} folder label. Mirrors local D:\WCCG\Mixshows\<YYYY>\;
-  // derived from the active week (a Monday ISO date) so week-nav within a year
-  // stays under the same folder.
-  const year = weekOf.slice(0, 4);
-
   // Resolve a dj_id to a display name from the loaded DJs / scheduled slots,
   // falling back to the id so a folder always has a label.
   const djNameById = useCallback(
@@ -665,49 +620,50 @@ export function ProductionMixshows({
   const slotsForDay = (day: number) =>
     slots.filter((s) => s.day_of_week === day).sort((a, b) => a.start_time.localeCompare(b.start_time));
 
-  // ── By-DJ grouping ───────────────────────────────────────────────────────
+  // ── By-DJ grouping (flat: DJ → files) ────────────────────────────────────
   // A flat on-air mix the player/file-row can render: one file_code from a
-  // specific slot. We carry the owning slot so play/download act on it exactly
-  // as the By-Day view does.
-  interface DjMix { slot: Slot; code: string; drop: Drop | undefined; present: boolean }
+  // specific slot, scoped to a specific broadcast `week`. We carry the owning
+  // slot so play/download/upload act on it exactly as the By-Day view does, and
+  // the air date so the flat list can sort newest-first and label each row.
+  interface FlatMix { slot: Slot; code: string; week: string; drop: Drop | undefined; present: boolean; airDate: Date }
 
   // Group slots → DJ folders. Each folder is keyed by dj_id (or the Unassigned
   // sentinel), ordered with named DJs A→Z first and Unassigned last. Only DJs
-  // that actually have a slot get a folder. `fileCount` counts active-week
-  // on-air files (uploaded/validated/published drops) across the DJ's slots;
-  // `weekCount` counts the distinct dated `<MMDDYYYY>-onair` folders the DJ has
-  // across ALL weeks (the new middle nav level).
+  // that actually have a slot get a folder. The grid is later filtered to DJs
+  // with ≥1 uploaded mixshow via `filesByDjKey`; a deep-linked DJ folder still
+  // resolves here even with zero uploads (so their flat upload view opens).
   const djFolders = useMemo(() => {
     const groups = new Map<string, { key: string; label: string; slots: Slot[] }>();
-    // Seed a folder for every active DJ so admins see the full roster — even
-    // DJs with no slots or uploads yet.
-    for (const d of djs) {
-      groups.set(d.id, { key: d.id, label: d.display_name, slots: [] });
-    }
+    // On-Air mixshows are ONLY for DJs actually scheduled on air — i.e. DJs with
+    // at least one dj_slot. DJs with no slot are off-air / digital-only and live
+    // in the Off-Air / Digital catalog, not here. So we do NOT seed the full
+    // roster; folders come solely from the scheduled slots below.
     for (const s of slots) {
       const key = s.dj_id ?? UNASSIGNED_DJ_KEY;
       const existing = groups.get(key);
       if (existing) existing.slots.push(s);
       else groups.set(key, { key, label: key === UNASSIGNED_DJ_KEY ? "Unassigned" : (s.djs?.display_name ?? djNameById(key)), slots: [s] });
     }
-    return Array.from(groups.values())
-      .map((g) => {
-        let fileCount = 0;
-        for (const s of g.slots) {
-          for (const code of s.file_codes) {
-            const d = dropByKey.get(`${s.id}|${code}`);
-            if (d && d.storage_path && PLAYABLE_STATUSES.includes(d.status)) fileCount++;
-          }
-        }
-        const weekCount = weeksByDjKey.get(g.key)?.length ?? 0;
-        return { ...g, fileCount, weekCount };
-      })
-      .sort((a, b) => {
-        if (a.key === UNASSIGNED_DJ_KEY) return 1;
-        if (b.key === UNASSIGNED_DJ_KEY) return -1;
-        return a.label.localeCompare(b.label);
-      });
-  }, [djs, slots, dropByKey, djNameById, weeksByDjKey]);
+    return Array.from(groups.values()).sort((a, b) => {
+      if (a.key === UNASSIGNED_DJ_KEY) return 1;
+      if (b.key === UNASSIGNED_DJ_KEY) return -1;
+      return a.label.localeCompare(b.label);
+    });
+  }, [slots, djNameById]);
+
+  // Count of uploaded/playable mixshows per DJ folder key, across ALL weeks.
+  // Drives both the DJ grid filter (only DJs with ≥1 mixshow appear) and the
+  // per-card "{n} mixshows" count.
+  const filesByDjKey = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const d of allDrops) {
+      if (!d.storage_path || !PLAYABLE_STATUSES.includes(d.status)) continue;
+      const slot = slotById.get(d.slot_id);
+      const key = slot?.dj_id ?? UNASSIGNED_DJ_KEY;
+      m.set(key, (m.get(key) ?? 0) + 1);
+    }
+    return m;
+  }, [allDrops, slotById]);
 
   // Resolve a fresh 1h signed URL for a drop's storage object (lazy, per-play).
   const resolveSignedUrl = useCallback(async (storagePath: string): Promise<string | null> => {
@@ -835,8 +791,8 @@ export function ProductionMixshows({
     return [`DJB_${max + 1}`, `DJB_${max + 2}`];
   }, [slots]);
 
-  // In day-mode: 0 days, 1 day, 2 slot.
-  // In dj-mode: 0 DJ folders, 1 that DJ's dated week folders, 2 that week's files.
+  // In day-mode (only reachable via the ?slot= deep link): 0 days, 1 day, 2 slot.
+  // In dj-mode (the flat default): 0 = DJ grid, 1 = that DJ's flat file list.
   const level = path.length;
   const currentDay = groupBy === "day" && level >= 1 ? (path[0] as number) : null;
   const currentSlot = groupBy === "day" && level >= 2 ? slots.find((s) => s.id === path[1]) : null;
@@ -847,81 +803,59 @@ export function ProductionMixshows({
     () => (currentDjKey ? djFolders.find((f) => f.key === currentDjKey) ?? null : null),
     [currentDjKey, djFolders],
   );
-  // The dated week folder open inside a DJ (dj-mode, level ≥ 2): an ISO Monday.
-  const currentDjWeek = groupBy === "dj" && level >= 2 ? (path[1] as string) : null;
 
-  // By-DJ dated-folder upload: binds the open week so FileRow's
-  // `(slot, code, file)` callback routes the drop to the folder you're viewing,
-  // not the globally-selected `weekOf`.
-  const handleUploadForWeek = useCallback(
-    (slot: Slot, code: string, file: File) => handleUpload(slot, code, file, currentDjWeek ?? weekOf),
-    [handleUpload, currentDjWeek, weekOf],
-  );
-
-  // The open DJ's dated week folders (the new middle level). One entry per
-  // distinct week_of the DJ has drops for (newest first), each carrying the
-  // count of uploaded on-air files that week. Mirrors disk's
-  // `<dj>/a-on-air/<MMDDYYYY>-onair/`.
-  const djWeekFolders = useMemo<{ weekOf: string; fileCount: number; isCurrent: boolean }[]>(() => {
+  // FLAT file list for the open DJ: every uploaded mixshow across ALL weeks
+  // (newest air-date first), PLUS this week's expected file codes as not-yet-
+  // uploaded upload targets. Each row carries its own `week` so an upload lands
+  // in the right broadcast week (this week's targets → this week; a historical
+  // file → its own week, i.e. a Replace). A deep-linked DJ with zero uploads
+  // still gets this week's codes here, so their upload view always works.
+  const djFlatItems = useMemo<FlatMix[]>(() => {
     if (!currentDjFolder) return [];
-    // Weeks that already have uploads, PLUS the live broadcast week and whatever
-    // week the nav is parked on — so there's always a dated folder to drop THIS
-    // week's show into, even before the first file exists. Without seeding the
-    // current week a brand-new week was a dead-end ("Files appear here once they
-    // upload" with nowhere to upload): folders only ever came from weeks that
-    // already had drops — the chicken-and-egg that blocked the very first upload.
     const thisWeek = isoMondayOfNow();
-    const weekSet = new Set<string>(weeksByDjKey.get(currentDjFolder.key) ?? []);
-    weekSet.add(thisWeek);
-    weekSet.add(weekOf);
-    const weeks = Array.from(weekSet).sort((a, b) => b.localeCompare(a));
-    return weeks.map((wk) => {
-      let fileCount = 0;
-      for (const slot of currentDjFolder.slots) {
-        for (const code of slot.file_codes) {
-          const d = allDropByKey.get(`${slot.id}|${code}|${wk}`);
-          if (d && d.storage_path && PLAYABLE_STATUSES.includes(d.status)) fileCount++;
-        }
-      }
-      return { weekOf: wk, fileCount, isCurrent: wk === thisWeek };
-    });
-  }, [currentDjFolder, weeksByDjKey, allDropByKey, weekOf]);
-
-  // Flat on-air file list for the open DJ + week: every file_code across that
-  // DJ's slots (sorted by day then start time), each tied to its owning slot,
-  // with the drop looked up for the SELECTED week (not the global one).
-  const djMixes = useMemo<DjMix[]>(() => {
-    if (!currentDjFolder || !currentDjWeek) return [];
-    const ordered = [...currentDjFolder.slots].sort(
-      (a, b) => DAY_ORDER.indexOf(a.day_of_week) - DAY_ORDER.indexOf(b.day_of_week) || a.start_time.localeCompare(b.start_time),
-    );
-    const out: DjMix[] = [];
-    for (const slot of ordered) {
+    const out: FlatMix[] = [];
+    const seen = new Set<string>();
+    // 1) This week's expected codes (uploaded or not) — the live upload targets.
+    for (const slot of currentDjFolder.slots) {
       for (const code of slot.file_codes) {
-        const drop = allDropByKey.get(`${slot.id}|${code}|${currentDjWeek}`);
+        const key = `${slot.id}|${code}|${thisWeek}`;
+        const drop = allDropByKey.get(key);
         const present = !!drop && !!drop.storage_path && PLAYABLE_STATUSES.includes(drop.status);
-        out.push({ slot, code, drop, present });
+        out.push({ slot, code, week: thisWeek, drop, present, airDate: dateForDay(thisWeek, slot.day_of_week) });
+        seen.add(key);
       }
     }
+    // 2) Every other uploaded file this DJ has, across all past/future weeks.
+    for (const d of allDrops) {
+      const slot = slotById.get(d.slot_id);
+      if (!slot || (slot.dj_id ?? UNASSIGNED_DJ_KEY) !== currentDjFolder.key) continue;
+      const key = `${d.slot_id}|${d.file_code}|${d.week_of}`;
+      if (seen.has(key)) continue;
+      if (!d.storage_path || !PLAYABLE_STATUSES.includes(d.status)) continue;
+      out.push({ slot, code: d.file_code, week: d.week_of, drop: d, present: true, airDate: dateForDay(d.week_of, slot.day_of_week) });
+      seen.add(key);
+    }
+    out.sort((a, b) => b.airDate.getTime() - a.airDate.getTime() || a.slot.start_time.localeCompare(b.slot.start_time));
     return out;
-  }, [currentDjFolder, currentDjWeek, allDropByKey]);
+  }, [currentDjFolder, allDrops, allDropByKey, slotById]);
 
   // ── Multi-select over the active view's UPLOADED files ────────────────────
   // Unified selection model: one entry per selectable (on-air) file in the
   // current view, carrying its owning slot so play/download act correctly in
   // both the By-Day file view and the By-DJ folder. Only on-air files are
   // selectable (you can't act on a missing file).
-  const selectableItems = useMemo<{ slot: Slot; code: string; drop: Drop }[]>(() => {
-    // By-Day file view: active-week drops via dropByKey. By-DJ week view: reuse
-    // djMixes, whose drops are already resolved for the selected week_of.
-    const resolved = currentSlot
-      ? currentSlot.file_codes.map((code) => ({ slot: currentSlot, code, drop: dropByKey.get(`${currentSlot.id}|${code}`) }))
-      : currentDjWeek
-        ? djMixes.map(({ slot, code, drop }) => ({ slot, code, drop }))
+  const selectableItems = useMemo<{ slot: Slot; code: string; drop: Drop; rowKey: string }[]>(() => {
+    // By-Day file view: active-week drops via dropByKey (rowKey = slot|code).
+    // Flat By-DJ view: reuse djFlatItems (rowKey = slot|code|week, matching the
+    // FileRow keys so shift-range selection lines up across weeks).
+    const resolved: { slot: Slot; code: string; drop: Drop | undefined; rowKey: string }[] = currentSlot
+      ? currentSlot.file_codes.map((code) => ({ slot: currentSlot, code, drop: dropByKey.get(`${currentSlot.id}|${code}`), rowKey: `${currentSlot.id}|${code}` }))
+      : currentDjFolder
+        ? djFlatItems.map(({ slot, code, week, drop }) => ({ slot, code, drop, rowKey: `${slot.id}|${code}|${week}` }))
         : [];
-    return resolved.filter((x): x is { slot: Slot; code: string; drop: Drop } =>
+    return resolved.filter((x): x is { slot: Slot; code: string; drop: Drop; rowKey: string } =>
       !!x.drop && !!x.drop.storage_path && PLAYABLE_STATUSES.includes(x.drop.status));
-  }, [currentSlot, currentDjWeek, djMixes, dropByKey]);
+  }, [currentSlot, currentDjFolder, djFlatItems, dropByKey]);
 
   // The currently-selected entries, in view order.
   const selectedDrops = useMemo(
@@ -931,22 +865,22 @@ export function ProductionMixshows({
 
   const allSelected = selectableItems.length > 0 && selectedDrops.length === selectableItems.length;
 
-  // Clear selection whenever we leave the file/DJ view or switch
-  // slot / DJ / dated-week-folder / active week.
+  // Clear selection whenever we leave the file/DJ view or switch slot / DJ.
   useEffect(() => {
     setSelected(new Set());
     setAnchorCode(null);
-  }, [currentSlot?.id, currentDjKey, currentDjWeek, weekOf]);
+  }, [currentSlot?.id, currentDjKey]);
 
   // Toggle a row, honouring shift (range from anchor) + ctrl/cmd (toggle).
-  // `key` identifies the row within the current view (slot|code), so the same
-  // code under different slots stays distinct in the By-DJ view.
+  // `key` is the row's rowKey within the current view (slot|code in By-Day,
+  // slot|code|week in the flat By-DJ view), so the same code under different
+  // slots/weeks stays distinct.
   const toggleSelect = useCallback((dropId: string, key: string, e: React.MouseEvent) => {
     setSelected((prev) => {
       const next = new Set(prev);
       if (e.shiftKey && anchorCode) {
-        const a = selectableItems.findIndex((x) => `${x.slot.id}|${x.code}` === anchorCode);
-        const b = selectableItems.findIndex((x) => `${x.slot.id}|${x.code}` === key);
+        const a = selectableItems.findIndex((x) => x.rowKey === anchorCode);
+        const b = selectableItems.findIndex((x) => x.rowKey === key);
         if (a !== -1 && b !== -1) {
           const [lo, hi] = a < b ? [a, b] : [b, a];
           for (let i = lo; i <= hi; i++) next.add(selectableItems[i].drop.id);
@@ -984,12 +918,6 @@ export function ProductionMixshows({
       }
     })();
   }, [selectedDrops, resolveSignedUrl]);
-
-  // Switch the top-level grouping; reset navigation to that grouping's root.
-  const setGrouping = useCallback((g: "day" | "dj") => {
-    setGroupBy(g);
-    setPath([]);
-  }, []);
 
   // ── Self-scoping (a DJ viewing their own folder) ──────────────────────────
   // When selfDjId is set we hide the grouping toggle + create button and only
@@ -1061,20 +989,21 @@ export function ProductionMixshows({
         <div className="flex items-center gap-2 text-sm">
           {/* "My Mixshows" home → back to the two category cards. */}
           <button
-            onClick={() => { setSection(null); setInYear(false); setPath([]); }}
+            onClick={() => { setSection(null); setPath([]); }}
             className="inline-flex items-center gap-1 font-bold text-foreground hover:text-[#74ddc7]"
           >
             <Home className="h-3.5 w-3.5" /> My Mixshows
           </button>
 
-          {/* Category crumb. */}
+          {/* Category crumb. On-Air lands straight on the DJ grid (no {year}
+              level), so this crumb goes to path=[] and is the leaf there. */}
           {section !== null && (
             <>
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
               <button
-                onClick={() => { setInYear(false); setPath([]); }}
+                onClick={() => setPath([])}
                 className={`font-bold transition-colors ${
-                  section === "onair" && !inYear ? "text-[#74ddc7]" : section === "digital" && path.length === 0 ? "text-[#74ddc7]" : "text-foreground hover:text-[#74ddc7]"
+                  path.length === 0 ? "text-[#74ddc7]" : "text-foreground hover:text-[#74ddc7]"
                 }`}
               >
                 {section === "onair" ? "On-Air Mixshows" : "Off-Air / Digital Mixshows"}
@@ -1082,17 +1011,8 @@ export function ProductionMixshows({
             </>
           )}
 
-          {/* On-Air: {year} crumb (once inside the year). */}
-          {section === "onair" && inYear && (
-            <>
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-              <button onClick={() => setPath([])} className={`font-bold transition-colors ${level === 0 ? "text-[#74ddc7]" : "text-foreground hover:text-[#74ddc7]"}`}>
-                {year}
-              </button>
-            </>
-          )}
-
-          {section === "onair" && inYear && groupBy === "day" && currentDay !== null && (
+          {/* By-Day crumbs — only reachable via the ?slot= deep link. */}
+          {section === "onair" && groupBy === "day" && currentDay !== null && (
             <>
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
               <button onClick={() => setPath([currentDay])} className="font-bold text-foreground hover:text-[#74ddc7]">
@@ -1100,31 +1020,18 @@ export function ProductionMixshows({
               </button>
             </>
           )}
-          {section === "onair" && inYear && groupBy === "day" && currentSlot && (
+          {section === "onair" && groupBy === "day" && currentSlot && (
             <>
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="font-bold text-[#74ddc7]">{fmt12h(currentSlot.start_time)}</span>
             </>
           )}
-          {/* By-DJ: <DJ name> crumb. Clickable (back to the DJ's week folders)
-              while a dated week folder is open; the highlighted leaf otherwise. */}
-          {section === "onair" && inYear && groupBy === "dj" && currentDjFolder && (
+          {/* By-DJ: the DJ name is the leaf — the flat file list lives directly
+              under it (no dated week sub-folders). */}
+          {section === "onair" && groupBy === "dj" && currentDjFolder && (
             <>
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-              {currentDjWeek ? (
-                <button onClick={() => setPath([currentDjFolder.key])} className="font-bold text-foreground transition-colors hover:text-[#74ddc7]">
-                  {currentDjFolder.label}
-                </button>
-              ) : (
-                <span className="font-bold text-[#74ddc7]">{currentDjFolder.label}</span>
-              )}
-            </>
-          )}
-          {/* By-DJ: <MMDDYYYY-onair> dated week crumb (leaf). */}
-          {section === "onair" && inYear && groupBy === "dj" && currentDjFolder && currentDjWeek && (
-            <>
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="font-mono font-bold text-[#74ddc7]">{weekFolderName(currentDjWeek)}</span>
+              <span className="font-bold text-[#74ddc7]">{currentDjFolder.label}</span>
             </>
           )}
 
@@ -1137,41 +1044,13 @@ export function ProductionMixshows({
           )}
         </div>
         <div className="flex items-center gap-2">
-          {/* On-Air, inside the {year}: By Day (schedule) vs By DJ (per-DJ on-air
-              folder), the week nav, and the admin Create button. These only make
-              sense once you're inside the year's schedule. Hidden for a
-              self-scoped DJ — they only ever see their own folder. */}
-          {section === "onair" && inYear && (
-            <>
-              {!isSelfScoped && (
-                <div className="flex items-center gap-0.5 rounded-full border border-border bg-card p-0.5 text-xs">
-                  <button
-                    onClick={() => setGrouping("day")}
-                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold transition-colors ${groupBy === "day" ? "bg-[#74ddc7] text-[#0a0a0f]" : "text-muted-foreground hover:text-foreground"}`}
-                  >
-                    <CalendarDays className="h-3.5 w-3.5" /> By Day
-                  </button>
-                  <button
-                    onClick={() => setGrouping("dj")}
-                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold transition-colors ${groupBy === "dj" ? "bg-[#7401df] text-white" : "text-muted-foreground hover:text-foreground"}`}
-                  >
-                    <Users className="h-3.5 w-3.5" /> By DJ
-                  </button>
-                </div>
-              )}
-              {/* Week nav */}
-              <div className="flex items-center gap-1 rounded-full border border-border bg-card px-1 py-0.5 text-xs">
-                <button onClick={() => setWeekOf((w) => addWeeks(w, -1))} className="rounded-full px-2 py-1 hover:bg-foreground/[0.06]">‹</button>
-                <span className="inline-flex items-center gap-1 px-1 font-mono"><Calendar className="h-3 w-3" />{weekOf}</span>
-                <button onClick={() => setWeekOf((w) => addWeeks(w, 1))} className="rounded-full px-2 py-1 hover:bg-foreground/[0.06]">›</button>
-              </div>
-            </>
-          )}
+          {/* The By-Day/By-DJ toggle and week nav were removed: the flat By-DJ
+              view (DJ → files across all weeks) is the only on-air view now. */}
           <Button variant="ghost" size="sm" onClick={load} className="rounded-full text-xs">
             <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
           {/* Admin-only: a self-scoped DJ can't create slots, only drop files. */}
-          {section === "onair" && inYear && !isSelfScoped && (
+          {section === "onair" && !isSelfScoped && (
             <Button size="sm" onClick={() => setShowCreate(true)} className="rounded-full bg-[#7401df] text-white hover:bg-[#7401df]/90">
               <Plus className="mr-1.5 h-3.5 w-3.5" /> Create new mixshow
             </Button>
@@ -1185,7 +1064,7 @@ export function ProductionMixshows({
         /* ── Category root: the two top-level folders ── */
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <button
-            onClick={() => { setSection("onair"); setInYear(false); setPath([]); }}
+            onClick={() => { setSection("onair"); setPath([]); }}
             className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left transition-all hover:border-[#74ddc7]/40"
           >
             <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10 border border-border">
@@ -1199,7 +1078,7 @@ export function ProductionMixshows({
             <ChevronRight className="ml-auto h-5 w-5 shrink-0 text-muted-foreground" />
           </button>
           <button
-            onClick={() => { setSection("digital"); setInYear(false); setPath([]); }}
+            onClick={() => { setSection("digital"); setPath([]); }}
             className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left transition-all hover:border-[#74ddc7]/40"
           >
             <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10 border border-border">
@@ -1296,30 +1175,20 @@ export function ProductionMixshows({
             )}
           </div>
         )
-      ) : !inYear ? (
-        /* ── On-Air: the {year} folder (mirrors D:\WCCG\Mixshows\<YYYY>\) ── */
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          <button onClick={() => { setInYear(true); setPath([]); }} className="group flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5 transition-all hover:border-[#74ddc7]/40">
-            <div className="relative">
-              <Folder className="h-9 w-9 text-[#74ddc7]" />
-              <Calendar className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-card text-[#7401df]" />
-            </div>
-            <p className="font-bold text-foreground group-hover:text-[#74ddc7]">{year}</p>
-            <p className="text-[11px] text-muted-foreground">Broadcast schedule</p>
-          </button>
-        </div>
       ) : loading && slots.length === 0 ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading schedule…</div>
       ) : groupBy === "dj" ? (
-        currentDjFolder && currentDjWeek ? (
-          /* ── One DJ's on-air files for a single dated week folder ──
-             Mirrors disk: <dj>/a-on-air/<MMDDYYYY>-onair/. Reuses the on-air
-             file rows / player / upload, scoped to the selected week_of. */
+        currentDjFolder ? (
+          /* ── One DJ's FLAT mixshow list ──
+             Every uploaded file across all weeks (newest air-date first) PLUS
+             this week's expected codes as upload targets. No week sub-folders.
+             A deep-linked DJ with zero uploads still gets this week's codes here
+             so their upload view always works. */
           <div className={`space-y-2 ${playerIndex !== null ? "pb-24" : ""}`}>
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card/50 px-4 py-2 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
                 <UserCircle2 className="h-3.5 w-3.5" />
-                {currentDjFolder.label} · <span className="font-mono">{weekFolderName(currentDjWeek)}</span> · week of {weekOfLabel(currentDjWeek)}
+                {currentDjFolder.label} · {filesByDjKey.get(currentDjFolder.key) ?? 0} mixshow{(filesByDjKey.get(currentDjFolder.key) ?? 0) === 1 ? "" : "s"}
               </span>
               {selectableItems.length > 0 && (
                 <button
@@ -1331,13 +1200,13 @@ export function ProductionMixshows({
                 </button>
               )}
             </div>
-            {djMixes.length === 0 && (
+            {djFlatItems.length === 0 && (
               <p className="rounded-xl border border-dashed border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
-                No mixshow files for this DJ this week.
+                No mixshow files for this DJ yet.
               </p>
             )}
-            {djMixes.map(({ slot, code, drop, present }) => {
-              const rowKey = `${slot.id}|${code}`;
+            {djFlatItems.map(({ slot, code, week, drop, present, airDate }) => {
+              const rowKey = `${slot.id}|${code}|${week}`;
               const isSelected = !!drop && selected.has(drop.id);
               const isNowPlaying = playerIndex !== null && !!drop && queue[playerIndex]?.id === drop.id;
               return (
@@ -1351,57 +1220,39 @@ export function ProductionMixshows({
                   isNowPlaying={isNowPlaying}
                   busyUrl={busyUrl}
                   rowKey={rowKey}
-                  subtitle={`${DAY_NAMES[slot.day_of_week]} · ${fmt12h(slot.start_time)}–${fmt12h(slot.end_time)}`}
+                  subtitle={`${DAY_NAMES[slot.day_of_week]} · ${fmt12h(slot.start_time)} · aired ${fmtDate(airDate)}`}
                   canUpload={!!slot.dj_id && !!slot.djs?.slug}
                   uploading={uploadingKey === rowKey}
                   onToggleSelect={toggleSelect}
                   onPlay={playDrop}
-                  onUpload={handleUploadForWeek}
+                  onUpload={(s, c, f) => handleUpload(s, c, f, week)}
                 />
               );
             })}
           </div>
-        ) : currentDjFolder ? (
-          /* ── One DJ's dated week folders (mirrors <dj>/a-on-air/) ── */
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {djWeekFolders.map(({ weekOf: wk, fileCount, isCurrent }) => (
-              <button key={wk} onClick={() => setPath([currentDjFolder.key, wk])} className={`group relative flex flex-col items-center gap-2 rounded-2xl border bg-card p-5 transition-all hover:border-[#74ddc7]/40 ${isCurrent ? "border-[#74ddc7]/50" : "border-border"}`}>
-                {isCurrent && (
-                  <span className="absolute right-2 top-2 rounded-full bg-[#74ddc7]/15 px-2 py-0.5 text-[10px] font-bold text-[#74ddc7]">This week</span>
-                )}
-                <div className="relative">
-                  <Folder className="h-9 w-9 text-[#74ddc7]" />
-                  <Calendar className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-card text-[#7401df]" />
-                </div>
-                <p className="text-center font-mono text-sm font-bold text-foreground group-hover:text-[#74ddc7]">
-                  {weekFolderName(wk)}
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  {fileCount > 0 ? `${fileCount} on-air file${fileCount === 1 ? "" : "s"}` : "Empty · upload here"}
-                </p>
-              </button>
-            ))}
-          </div>
         ) : (
-          /* ── DJ folders ── */
+          /* ── DJ grid (only DJs with ≥1 uploaded mixshow) ── */
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {visibleDjFolders.map((folder) => (
-              <button key={folder.key} onClick={() => setPath([folder.key])} className="group flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5 transition-all hover:border-[#74ddc7]/40">
-                <div className="relative">
-                  <Folder className="h-9 w-9 text-[#74ddc7]" />
-                  <UserCircle2 className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-card text-[#7401df]" />
-                </div>
-                <p className="text-center font-bold text-foreground group-hover:text-[#74ddc7]">
-                  {folder.key === UNASSIGNED_DJ_KEY ? <span className="italic text-amber-500">Unassigned</span> : folder.label}
-                </p>
-                <p className="text-[11px] text-muted-foreground">{folder.weekCount} on-air week{folder.weekCount === 1 ? "" : "s"}</p>
-              </button>
-            ))}
-            {visibleDjFolders.length === 0 && (
+            {visibleDjFolders.filter((f) => (filesByDjKey.get(f.key) ?? 0) > 0).map((folder) => {
+              const count = filesByDjKey.get(folder.key) ?? 0;
+              return (
+                <button key={folder.key} onClick={() => setPath([folder.key])} className="group flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-5 transition-all hover:border-[#74ddc7]/40">
+                  <div className="relative">
+                    <Folder className="h-9 w-9 text-[#74ddc7]" />
+                    <UserCircle2 className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-card text-[#7401df]" />
+                  </div>
+                  <p className="text-center font-bold text-foreground group-hover:text-[#74ddc7]">
+                    {folder.key === UNASSIGNED_DJ_KEY ? <span className="italic text-amber-500">Unassigned</span> : folder.label}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">{count} mixshow{count === 1 ? "" : "s"}</p>
+                </button>
+              );
+            })}
+            {visibleDjFolders.filter((f) => (filesByDjKey.get(f.key) ?? 0) > 0).length === 0 && (
               <p className="col-span-full rounded-xl border border-dashed border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
                 {isSelfScoped
-                  ? "No mixshow slots assigned to you yet. Reach out to production to get scheduled."
-                  : "No DJs scheduled yet. Click “Create new mixshow”."}
+                  ? "No mixshows uploaded yet. Upload your scheduled files to see them here."
+                  : "No uploaded mixshows yet. DJs appear here once they upload."}
               </p>
             )}
           </div>
