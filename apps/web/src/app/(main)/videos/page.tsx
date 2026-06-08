@@ -299,9 +299,15 @@ function VideosWall() {
 
 // ─── Rotating video hero (Netflix/Prime-style) ───────────────────────────────
 
-/** True only for clearly WIDE (16:9-ish) videos. Probes the maxres poster's
- * aspect, so phone/Shorts (vertical, or with no maxres thumbnail) are excluded
- * from the hero — they look terrible letterboxed into a cinematic banner. */
+/** True only for clearly WIDE (16:9-ish) videos. The maxres thumbnail FILE is
+ * always 1280×720, so file dimensions alone can't tell a real widescreen video
+ * from a vertical/square clip that YouTube padded with solid side bars
+ * ("pillarbox") to fill the 16:9 frame — those read as terrible in a cinematic
+ * banner. So we load the poster and inspect its pixels: measure any uniform side
+ * bars, and exclude the video if the actual content is narrower than ~16:9
+ * (content aspect < 1.58), has symmetric bars on both sides, or one dominant
+ * bar. ytimg serves `Access-Control-Allow-Origin: *`, so the canvas isn't
+ * tainted; if pixels ever can't be read we fall back to the plain file aspect. */
 function isWideVideo(v: VideoRecord): Promise<boolean> {
   return new Promise((resolve) => {
     if (typeof window === "undefined") {
@@ -314,7 +320,68 @@ function isWideVideo(v: VideoRecord): Promise<boolean> {
       return;
     }
     const img = new window.Image();
-    img.onload = () => resolve(img.naturalWidth >= 600 && img.naturalWidth >= img.naturalHeight * 1.35);
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const nw = img.naturalWidth;
+      const nh = img.naturalHeight;
+      // Reject the 120×90 "no maxres" placeholder and any non-landscape file.
+      if (nw < 600 || nw < nh * 1.35) {
+        resolve(false);
+        return;
+      }
+      try {
+        const scale = nw > 640 ? 640 / nw : 1;
+        const W = Math.round(nw * scale);
+        const H = Math.round(nh * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = W;
+        canvas.height = H;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) {
+          resolve(true);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, W, H);
+        const { data } = ctx.getImageData(0, 0, W, H);
+        const at = (x: number, y: number): [number, number, number] => {
+          const i = (y * W + x) * 4;
+          return [data[i], data[i + 1], data[i + 2]];
+        };
+        const dist = (a: [number, number, number], b: [number, number, number]) =>
+          Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+        // Average colour of the outermost ~1.5% strip on a side = the bar colour.
+        const refColor = (side: "L" | "R"): [number, number, number] => {
+          const edge = Math.max(1, Math.floor(W * 0.015));
+          const x0 = side === "L" ? 0 : W - edge;
+          const x1 = side === "L" ? edge : W;
+          let r = 0, g = 0, b = 0, n = 0;
+          for (let x = x0; x < x1; x++) for (let y = 0; y < H; y += 2) { const p = at(x, y); r += p[0]; g += p[1]; b += p[2]; n++; }
+          return [r / n, g / n, b / n];
+        };
+        // Walk inward from a side while each column stays ~uniform bar colour.
+        const barWidth = (side: "L" | "R"): number => {
+          const ref = refColor(side);
+          const lim = Math.floor(W * 0.3);
+          let w = 0;
+          for (let k = 0; k < lim; k++) {
+            const x = side === "L" ? k : W - 1 - k;
+            let m = 0, t = 0;
+            for (let y = 0; y < H; y += 2) { if (dist(at(x, y), ref) < 30) m++; t++; }
+            if (m / t >= 0.85) w++; else break;
+          }
+          return w;
+        };
+        const bL = barWidth("L");
+        const bR = barWidth("R");
+        const contentAspect = (W - bL - bR) / H;
+        const pillarbox =
+          contentAspect < 1.58 || (bL >= W * 0.03 && bR >= W * 0.03) || Math.max(bL, bR) >= W * 0.12;
+        resolve(!pillarbox);
+      } catch {
+        // Pixels unreadable (canvas tainted / decode issue) — fall back to file aspect.
+        resolve(nw >= nh * 1.35);
+      }
+    };
     img.onerror = () => resolve(false);
     img.src = src;
   });
