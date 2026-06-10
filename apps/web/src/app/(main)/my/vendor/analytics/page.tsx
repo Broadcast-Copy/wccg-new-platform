@@ -120,6 +120,7 @@ export default function VendorAnalyticsPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -127,21 +128,33 @@ export default function VendorAnalyticsPage() {
     const load = async () => {
       setLoading(true);
 
-      // Fetch orders for this vendor
-      const { data: ordersData } = await supabase
+      // Fetch orders for this vendor. Live columns are `total` and
+      // `buyer_id`; alias them so the Order interface stays unchanged.
+      const { data: ordersData, error: ordersError } = await supabase
         .from("orders")
-        .select("id, total_amount, status, customer_id, created_at")
+        .select("id, total_amount:total, status, customer_id:buyer_id, created_at")
         .eq("vendor_id", user.id);
 
-      // Fetch order items
-      const { data: itemsData } = await supabase
+      if (ordersError) {
+        setLoadError("Failed to load orders. " + ordersError.message);
+        setOrders([]);
+        setOrderItems([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch order items. Live column is `name`, aliased to product_name.
+      const { data: itemsData, error: itemsError } = await supabase
         .from("order_items")
-        .select("id, order_id, product_id, quantity, product_name")
+        .select("id, order_id, product_id, quantity, product_name:name")
         .in(
           "order_id",
           (ordersData ?? []).map((o) => o.id),
         );
 
+      setLoadError(
+        itemsError ? "Failed to load order items. " + itemsError.message : null,
+      );
       setOrders((ordersData as Order[]) ?? []);
       setOrderItems((itemsData as OrderItem[]) ?? []);
       setLoading(false);
@@ -268,6 +281,13 @@ export default function VendorAnalyticsPage() {
           Performance overview for your storefront
         </p>
       </div>
+
+      {/* Load error */}
+      {loadError && (
+        <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">
+          {loadError}
+        </p>
+      )}
 
       {/* Stats grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

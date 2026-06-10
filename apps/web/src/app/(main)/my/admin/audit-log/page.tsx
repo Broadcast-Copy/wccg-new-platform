@@ -37,23 +37,6 @@ interface AuditEntry {
 }
 
 // ---------------------------------------------------------------------------
-// Seed data (shown if table is empty or query fails)
-// ---------------------------------------------------------------------------
-
-const SEED_ENTRIES: AuditEntry[] = [
-  { id: "seed-1", user_id: null, user_email: "admin@wccg1045fm.com", action: "user.login", target: "auth", details: "Admin signed in from Chrome/Windows", created_at: new Date(Date.now() - 5 * 60_000).toISOString() },
-  { id: "seed-2", user_id: null, user_email: "marcus@wccg1045fm.com", action: "profile.update", target: "profiles", details: "Updated display_name to 'Marcus T.'", created_at: new Date(Date.now() - 15 * 60_000).toISOString() },
-  { id: "seed-3", user_id: null, user_email: "keisha@wccg1045fm.com", action: "content.create", target: "hub_posts", details: "Created new community post", created_at: new Date(Date.now() - 32 * 60_000).toISOString() },
-  { id: "seed-4", user_id: null, user_email: "admin@wccg1045fm.com", action: "user.role_change", target: "profiles", details: "Changed user_type from 'listener' to 'vendor' for user abc123", created_at: new Date(Date.now() - 60 * 60_000).toISOString() },
-  { id: "seed-5", user_id: null, user_email: "system", action: "fee.update", target: "platform_fees", details: "Updated marketplace fee from 10% to 8%", created_at: new Date(Date.now() - 90 * 60_000).toISOString() },
-  { id: "seed-6", user_id: null, user_email: "devon@wccg1045fm.com", action: "content.approve", target: "productions", details: "Approved production PQ-1047", created_at: new Date(Date.now() - 120 * 60_000).toISOString() },
-  { id: "seed-7", user_id: null, user_email: "admin@wccg1045fm.com", action: "content.reject", target: "hub_posts", details: "Rejected post for policy violation", created_at: new Date(Date.now() - 180 * 60_000).toISOString() },
-  { id: "seed-8", user_id: null, user_email: "ladysoul@wccg1045fm.com", action: "content.create", target: "productions", details: "Submitted new production 'Evening Vibes Intro'", created_at: new Date(Date.now() - 240 * 60_000).toISOString() },
-  { id: "seed-9", user_id: null, user_email: "admin@wccg1045fm.com", action: "user.verify", target: "profiles", details: "Vendor verified: Soul Food Kitchen", created_at: new Date(Date.now() - 360 * 60_000).toISOString() },
-  { id: "seed-10", user_id: null, user_email: "system", action: "system.backup", target: "system", details: "Automated daily backup completed", created_at: new Date(Date.now() - 480 * 60_000).toISOString() },
-];
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -88,7 +71,7 @@ export default function AuditLogPage() {
 
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [usingSeed, setUsingSeed] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -103,13 +86,13 @@ export default function AuditLogPage() {
       .order("created_at", { ascending: false })
       .limit(100);
 
-    if (error || !data || data.length === 0) {
-      setEntries(SEED_ENTRIES);
-      setUsingSeed(true);
-      if (error) console.error("Audit log query failed, showing seed data:", error);
+    if (error) {
+      console.error("Audit log query failed:", error);
+      setEntries([]);
+      setLoadError(true);
     } else {
-      setEntries(data);
-      setUsingSeed(false);
+      setEntries(data ?? []);
+      setLoadError(false);
     }
     setLoading(false);
   };
@@ -204,11 +187,10 @@ export default function AuditLogPage() {
         </Button>
       </div>
 
-      {/* Seed data banner */}
-      {usingSeed && (
+      {/* Load error banner */}
+      {loadError && (
         <div className="rounded-xl border border-[#f59e0b]/30 bg-[#f59e0b]/5 px-4 py-3 text-sm text-[#f59e0b]">
-          Showing sample audit entries. Live data will appear once the audit_log
-          table is populated.
+          Couldn&apos;t load the audit log. Try refreshing.
         </div>
       )}
 
@@ -265,7 +247,10 @@ export default function AuditLogPage() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-12">
           <ScrollText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">No log entries found.</p>
+          <p className="text-sm text-muted-foreground">
+            No audit entries yet — events will appear here once the audit_log
+            table is populated.
+          </p>
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-card overflow-x-auto">
@@ -326,7 +311,6 @@ export default function AuditLogPage() {
       <div className="rounded-xl border border-border bg-card p-4 text-center">
         <p className="text-xs text-muted-foreground/60">
           Showing {filtered.length} of {entries.length} entries
-          {usingSeed ? " (sample data)" : ""}
         </p>
       </div>
     </div>

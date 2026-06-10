@@ -5,7 +5,13 @@ import { getCurrentMultiplier, type ActiveMultiplier } from "@/lib/multipliers";
 import { Zap } from "lucide-react";
 
 function formatCountdown(endsAt: Date): string {
-  const now = new Date();
+  // endsAt comes from lib/multipliers.ts nowET(), whose epoch is shifted so
+  // its local wall-clock fields read as Eastern Time. Compare against a "now"
+  // in the same shifted frame, or the countdown is off by the viewer's
+  // offset from ET.
+  const now = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "America/New_York" }),
+  );
   const diff = endsAt.getTime() - now.getTime();
   if (diff <= 0) return "0:00";
   const totalMinutes = Math.floor(diff / 60000);

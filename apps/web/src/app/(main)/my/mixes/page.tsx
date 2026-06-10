@@ -188,16 +188,11 @@ const SEED_FOLDERS: MediaFolder[] = [
   { id: "mf5", name: "Music Beds", type: "folder", parentId: null, createdAt: "2026-02-20T10:00:00Z", updatedAt: now },
 ];
 
-const SEED_FILES: MediaFile[] = [
-  { id: "fl3", name: "Spring Auto Sale 30s.wav", type: "file", category: "commercial", format: "wav", duration: 30, size: 4_800_000, folderId: "mf2", createdAt: "2026-03-01T10:00:00Z", updatedAt: now },
-  { id: "fl4", name: "Health Fair Spot 15s.wav", type: "file", category: "commercial", format: "wav", duration: 15, size: 2_400_000, folderId: "mf2", createdAt: "2026-03-03T14:00:00Z", updatedAt: now },
-  { id: "fl5", name: "Weekend Events Promo.mp3", type: "file", category: "promo", format: "mp3", duration: 22, size: 3_600_000, folderId: "mf3", createdAt: "2026-03-02T09:00:00Z", updatedAt: now },
-  // A couple of seed files carry a real public sample URL so the inline player
-  // is demonstrable; the rest are url-less (Play → "No audio source" toast).
-  { id: "fl6", name: "WCCG Station ID.wav", type: "file", category: "jingle", format: "wav", duration: 8, size: 1_200_000, folderId: null, url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", createdAt: "2026-01-15T10:00:00Z", updatedAt: now },
-  { id: "fl7", name: "Smooth Jazz Bed.wav", type: "file", category: "music_bed", format: "wav", duration: 60, size: 12_000_000, folderId: "mf5", createdAt: "2026-02-25T16:00:00Z", updatedAt: now },
-  { id: "fl8", name: "Morning Show Intro VO.mp3", type: "file", category: "voiceover", format: "mp3", duration: 12, size: 1_800_000, folderId: "mf4", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", createdAt: "2026-02-18T08:00:00Z", updatedAt: now },
-];
+// The library used to seed 6 fabricated demo files (two of which streamed
+// SoundHelix sample songs labeled as WCCG station audio). The library now
+// starts honestly empty; only the ids are kept so the fake files can be
+// purged from state already persisted in localStorage / media_manager_state.
+const SEED_FILE_IDS = new Set(["fl3", "fl4", "fl5", "fl6", "fl7", "fl8"]);
 
 const DEFAULT_DJB: DJBPattern = {
   prefix: "DJB",
@@ -208,8 +203,15 @@ const DEFAULT_DJB: DJBPattern = {
 };
 
 function seedState(): MediaManagerState {
-  return { files: SEED_FILES, folders: SEED_FOLDERS, djbPattern: DEFAULT_DJB };
+  return { files: [], folders: SEED_FOLDERS, djbPattern: DEFAULT_DJB };
 }
+
+/** Purge the legacy fabricated seed files from any loaded library state
+ *  (localStorage cache or the media_manager_state DB row). */
+const stripSeedFiles = (s: MediaManagerState): MediaManagerState => ({
+  ...s,
+  files: s.files.filter((f) => !SEED_FILE_IDS.has(f.id)),
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -365,7 +367,7 @@ function loadLocalState(userId: string | null): MediaManagerState | null {
     const raw =
       localStorage.getItem(userStorageKey(userId)) ||
       (userId ? localStorage.getItem(STORAGE_KEY) : null);
-    if (raw) return JSON.parse(raw) as MediaManagerState;
+    if (raw) return stripSeedFiles(JSON.parse(raw) as MediaManagerState);
 
     const legacy = localStorage.getItem(LEGACY_KEY);
     if (legacy) {
@@ -382,11 +384,11 @@ function loadLocalState(userId: string | null): MediaManagerState | null {
         createdAt: m.createdAt,
         updatedAt: new Date().toISOString(),
       }));
-      return {
-        files: [...migratedFiles, ...SEED_FILES.filter((sf) => !migratedFiles.find((mf) => mf.id === sf.id))],
+      return stripSeedFiles({
+        files: migratedFiles,
         folders: SEED_FOLDERS,
         djbPattern: DEFAULT_DJB,
-      };
+      });
     }
   } catch { /* ignore */ }
   return null;
@@ -404,7 +406,7 @@ function isPristineSeed(s: MediaManagerState): boolean {
   return (
     s.folders.length === SEED_FOLDERS.length &&
     s.folders.every((f) => seedIds.has(f.id)) &&
-    s.files.length === SEED_FILES.length
+    s.files.length === 0
   );
 }
 
@@ -429,7 +431,10 @@ async function loadStateForUser(userId: string | null): Promise<MediaManagerStat
     const local = loadLocalState(userId);
 
     if (data?.state) {
-      const dbState = data.state as MediaManagerState;
+      // Strip legacy fake seed files BEFORE the pristine checks, so an old
+      // 6-file seed row counts as pristine (= empty) and local-edit recovery
+      // still works; the next debounced persist writes the cleaned state back.
+      const dbState = stripSeedFiles(data.state as MediaManagerState);
       // Recover: the DB only has the seed but this device has real edits.
       if (local && isPristineSeed(dbState) && !isPristineSeed(local)) {
         await supabase.from("media_manager_state").upsert(
@@ -2000,7 +2005,9 @@ export default function MediaManagerPage() {
   // ─── Refresh: re-read persisted state + brief spinner ───────────────────
   const handleRefresh = () => {
     setRefreshing(true);
-    setState(seedState());
+    // Re-read the persisted library (DB-first, local fallback) — matching the
+    // initial load — instead of resetting to the seed, which blanked edits.
+    void loadStateForUser(user?.id ?? null).then((loaded) => setState(loaded));
     setTimeout(() => setRefreshing(false), 400);
   };
 

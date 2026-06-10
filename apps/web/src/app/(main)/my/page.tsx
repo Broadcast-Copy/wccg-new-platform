@@ -41,7 +41,6 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { createClient } from "@/lib/supabase/client";
 import { useUserRoles } from "@/hooks/use-user-roles";
-import { apiClient } from "@/lib/api-client";
 import {
   getHistoryEntries,
   getListeningStats,
@@ -393,75 +392,57 @@ export default function UserDashboardPage() {
       setLoading(false);
       return;
     }
+    const userId = user.id;
+    const userEmail = user.email;
+    let active = true;
 
     async function fetchStats() {
       try {
-        const [balanceRes, favoritesRes, ticketsRes, historyRes] =
-          await Promise.allSettled([
-            apiClient<{ balance: number }>("/points/balance"),
-            apiClient<Array<{ id: string }>>("/favorites"),
-            apiClient<Array<{ id: string }>>("/registrations/me"),
-            apiClient<{
-              data: Array<{
-                id: string;
-                amount: number;
-                reason: string;
-                createdAt: string;
-              }>;
-            }>("/points/history"),
-          ]);
-
-        // Get API values
-        let pointsBalance =
-          balanceRes.status === "fulfilled" ? balanceRes.value.balance : 0;
-        let recentPoints =
-          historyRes.status === "fulfilled"
-            ? Array.isArray(historyRes.value?.data)
-              ? historyRes.value.data.slice(0, 5)
-              : []
-            : [];
-
         // Reconcile session points before reading localStorage
-        // (catches up any points missed while browser was throttled)
+        // (catches up any points missed while browser was throttled).
+        // localStorage is the sole points source — there is no API server.
         reconcileSessionPoints();
+        const local = readAllPoints(userEmail);
+        const pointsBalance = local.balance;
+        const recentPoints = local.history.slice(0, 5);
 
-        // Fall back to localStorage if API returned 0 / empty
-        if (pointsBalance === 0 || recentPoints.length === 0) {
-          const local = readAllPoints(user?.email);
-          if (local.balance > pointsBalance) pointsBalance = local.balance;
-          if (recentPoints.length === 0 && local.history.length > 0)
-            recentPoints = local.history.slice(0, 5);
-        }
+        // Favorites + tickets counts come straight from Supabase (RLS:
+        // auth.uid() = user_id on both tables).
+        const supabase = createClient();
+        const [favoritesRes, ticketsRes] = await Promise.all([
+          supabase
+            .from("user_favorites")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", userId),
+          supabase
+            .from("event_registrations")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", userId)
+            .neq("status", "CANCELLED"),
+        ]);
 
+        if (!active) return;
         setStats({
           pointsBalance,
-          favoritesCount:
-            favoritesRes.status === "fulfilled"
-              ? Array.isArray(favoritesRes.value)
-                ? favoritesRes.value.length
-                : 0
-              : 0,
-          ticketsCount:
-            ticketsRes.status === "fulfilled"
-              ? Array.isArray(ticketsRes.value)
-                ? ticketsRes.value.length
-                : 0
-              : 0,
+          favoritesCount: favoritesRes.count ?? 0,
+          ticketsCount: ticketsRes.count ?? 0,
           recentPoints,
         });
       } catch {
         // Silently fail
       } finally {
-        // Load listening history from localStorage
-        try {
-          const entries = getHistoryEntries();
-          setListeningHistory(entries.slice(0, 8)); // Show up to 8 recent entries
-          const lStats = getListeningStats();
-          setListeningStats(lStats);
-        } catch {
-          // ignore
+        if (active) {
+          // Load listening history from localStorage
+          try {
+            const entries = getHistoryEntries();
+            setListeningHistory(entries.slice(0, 8)); // Show up to 8 recent entries
+            const lStats = getListeningStats();
+            setListeningStats(lStats);
+          } catch {
+            // ignore
+          }
+          setLoading(false);
         }
-        setLoading(false);
       }
     }
 
@@ -471,6 +452,7 @@ export default function UserDashboardPage() {
     async function fetchSongData() {
       try {
         const { groups, songs } = await fetchSongHistory("WCCG", 50);
+        if (!active) return;
         setSongGroups(groups);
 
         // Enrich first 12 songs with iTunes album art (async, non-blocking)
@@ -491,7 +473,7 @@ export default function UserDashboardPage() {
                 newArt[`${s.title}|${s.artist}`] = r.value.artworkUrl;
               }
             });
-            if (Object.keys(newArt).length > 0) {
+            if (active && Object.keys(newArt).length > 0) {
               setEnrichedArt((prev) => ({ ...prev, ...newArt }));
             }
           }
@@ -499,10 +481,14 @@ export default function UserDashboardPage() {
       } catch {
         // ignore — table may not exist yet
       } finally {
-        setSongHistoryLoading(false);
+        if (active) setSongHistoryLoading(false);
       }
     }
     fetchSongData();
+
+    return () => {
+      active = false;
+    };
   }, [user]);
 
   if (!user) {

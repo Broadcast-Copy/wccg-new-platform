@@ -16,6 +16,7 @@ import {
   Check,
   Sparkles,
 } from "lucide-react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 
 // ---------------------------------------------------------------------------
@@ -108,10 +109,10 @@ export default function WelcomePage() {
       } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Profile rows are trigger-created at signup, so this is an UPDATE
+      // (profiles has no INSERT policy and no `onboarded` column).
       const updates: Record<string, unknown> = {
-        id: user.id,
         user_type: userType,
-        onboarded: true,
       };
 
       if (userType === "creator") {
@@ -121,9 +122,22 @@ export default function WelcomePage() {
         updates.display_name = businessName;
       }
 
-      await supabase.from("profiles").upsert(updates);
+      // supabase-js never throws on PostgREST/RLS errors — check { error }.
+      const { error } = await supabase
+        .from("profiles")
+        .update(updates)
+        .eq("id", user.id);
+      if (error) {
+        toast.error(
+          "We couldn't save your preferences — you can update them later in Settings.",
+        );
+      }
     } catch {
-      // Silently continue -- profile save is best-effort during beta
+      // Unexpected failure (e.g. network) — still route to the dashboard,
+      // but tell the user their preferences didn't stick.
+      toast.error(
+        "We couldn't save your preferences — you can update them later in Settings.",
+      );
     } finally {
       setSaving(false);
       router.push("/my");

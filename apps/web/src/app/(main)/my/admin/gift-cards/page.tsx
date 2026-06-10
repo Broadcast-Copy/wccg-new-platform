@@ -74,6 +74,7 @@ export default function BulkGiftCardsPage() {
 
   const [cards, setCards] = useState<GiftCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [filter, setFilter] = useState<FilterStatus>("all");
 
@@ -82,16 +83,19 @@ export default function BulkGiftCardsPage() {
   const [amount, setAmount] = useState(25);
 
   // ---- Fetch gift cards ----
+  // Live column is `original_amount`; alias it to `amount` so the GiftCard
+  // interface and the card.amount render stay unchanged.
   const fetchCards = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("gift_cards")
-      .select("id, code, amount, balance, status, created_at")
+      .select("id, code, amount:original_amount, balance, status, created_at")
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Failed to load gift cards:", error.message);
+      setLoadError("Failed to load gift cards. " + error.message);
     } else {
+      setLoadError(null);
       setCards((data as GiftCard[]) ?? []);
     }
     setLoading(false);
@@ -103,12 +107,13 @@ export default function BulkGiftCardsPage() {
     void (async () => {
       const { data, error } = await supabase
         .from("gift_cards")
-        .select("id, code, amount, balance, status, created_at")
+        .select("id, code, amount:original_amount, balance, status, created_at")
         .order("created_at", { ascending: false });
       if (!active) return;
       if (error) {
-        console.error("Failed to load gift cards:", error.message);
+        setLoadError("Failed to load gift cards. " + error.message);
       } else {
+        setLoadError(null);
         setCards((data as GiftCard[]) ?? []);
       }
       setLoading(false);
@@ -133,9 +138,10 @@ export default function BulkGiftCardsPage() {
 
     setGenerating(true);
 
+    // Live column is `original_amount` (NOT NULL, no default).
     const newCards = Array.from({ length: quantity }, () => ({
       code: generateCode(),
-      amount,
+      original_amount: amount,
       balance: amount,
       status: "active",
       purchaser_id: user.id,
@@ -267,6 +273,8 @@ export default function BulkGiftCardsPage() {
         <div className="flex items-center justify-center py-12">
           <Loader2 size={24} className="animate-spin text-zinc-500" />
         </div>
+      ) : loadError ? (
+        <p className="text-center text-red-400 py-10 text-sm">{loadError}</p>
       ) : filteredCards.length === 0 ? (
         <p className="text-center text-zinc-500 py-10">
           No gift cards found.

@@ -20,7 +20,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -243,8 +243,23 @@ async function loadCollections(
 // ---------------------------------------------------------------------------
 
 export default function DjProfileClient() {
-  const params = useParams();
-  const slug = typeof params?.slug === "string" ? params.slug : Array.isArray(params?.slug) ? params.slug[0] : "";
+  // Resolve the slug from the REAL URL. Under `output: export`, /djs/<slug>
+  // can be served by the _placeholder shim (e.g. a DJ activated after the
+  // last build), so useParams() returns "_placeholder" — but usePathname()
+  // reflects the actual browser path, so derive the slug from it (and it
+  // updates on client-side DJ→DJ navigation).
+  const pathname = usePathname();
+  const slug = useMemo(() => {
+    const segs = (pathname ?? "").split("/").filter(Boolean);
+    const i = segs.indexOf("djs");
+    const seg = i >= 0 ? segs[i + 1] : undefined;
+    if (!seg || seg === "_placeholder") return "";
+    try {
+      return decodeURIComponent(seg);
+    } catch {
+      return seg;
+    }
+  }, [pathname]);
 
   const { hasRealRole, isLoading: rolesLoading } = useUserRoles();
 

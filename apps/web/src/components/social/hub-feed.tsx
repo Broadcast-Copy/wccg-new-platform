@@ -268,21 +268,29 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
       )
     );
 
-    if (post.liked) {
-      await supabase
-        .from("hub_post_likes")
-        .delete()
-        .eq("post_id", post.id)
-        .eq("user_id", user.id);
-      // Decrement likes_count on the post row
-      await supabase.from("hub_posts").update({ likes_count: Math.max(0, post.likes_count - 1) }).eq("id", post.id);
-    } else {
-      await supabase
-        .from("hub_post_likes")
-        .insert({ post_id: post.id, user_id: user.id });
-      // Increment likes_count on the post row
-      await supabase.from("hub_posts").update({ likes_count: post.likes_count + 1 }).eq("id", post.id);
+    // Toggle server-side via a SECURITY DEFINER RPC that flips the
+    // hub_post_likes row and recomputes likes_count atomically. A client-side
+    // read-modify-write of hub_posts.likes_count can't work here: RLS limits
+    // hub_posts UPDATE to the author's own rows, so cross-user likes silently
+    // matched 0 rows and the stored counter never moved.
+    const { data, error } = await supabase.rpc("hub_post_toggle_like", {
+      p_post_id: post.id,
+    });
+    if (error || typeof data !== "number") {
+      // Roll back the optimistic flip
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === post.id
+            ? { ...p, liked: post.liked, likes_count: post.likes_count }
+            : p
+        )
+      );
+      return;
     }
+    // Reconcile with the authoritative server count
+    setPosts((prev) =>
+      prev.map((p) => (p.id === post.id ? { ...p, likes_count: data } : p))
+    );
   };
 
   // ------- Post type label lookup -------

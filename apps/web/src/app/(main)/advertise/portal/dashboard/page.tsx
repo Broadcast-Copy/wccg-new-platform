@@ -37,7 +37,6 @@ import {
 } from "@/components/ui/select";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { useAuth } from "@/hooks/use-auth";
-import { toast } from "sonner";
 
 /* ================================================================
    TYPES
@@ -788,13 +787,9 @@ export default function DashboardPage() {
                     <div key={platform} className="rounded-xl border border-border bg-foreground/[0.02] p-4 flex flex-col items-center justify-center text-center min-h-[160px]">
                       <Link2 className="h-6 w-6 text-muted-foreground/30 mb-2" />
                       <p className="text-sm font-medium text-muted-foreground mb-1">{platform}</p>
-                      <button
-                        type="button"
-                        onClick={() => toast.info(`${platform} integration coming soon!`)}
-                        className="text-xs text-amber-400 hover:underline"
-                      >
-                        Connect Account
-                      </button>
+                      <Badge variant="secondary" className="text-xs">
+                        Coming Soon
+                      </Badge>
                     </div>
                   ))}
                 </div>

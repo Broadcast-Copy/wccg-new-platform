@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,63 @@ interface Review {
 
 interface ProductReviewsProps {
   productId: string;
+}
+
+// ---------------------------------------------------------------------------
+// Data loading
+// ---------------------------------------------------------------------------
+
+/**
+ * Loads reviews for a product, then joins reviewer display names in JS.
+ *
+ * product_reviews.user_id FKs auth.users (not public.profiles), so a
+ * PostgREST embed like `profiles:user_id(display_name)` has no relationship
+ * in the schema cache and the whole request fails (PGRST200). Reviewer
+ * identities therefore come from a second batch query against the public
+ * `profiles_public` view — the same pattern place_reviews uses.
+ */
+async function loadReviews(
+  supabase: SupabaseClient,
+  productId: string,
+): Promise<{ reviews: Review[]; error: string | null }> {
+  const { data, error } = await supabase
+    .from("product_reviews")
+    .select("*")
+    .eq("product_id", productId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return { reviews: [], error: error.message };
+  }
+
+  const rows = (data ?? []) as Omit<Review, "profiles">[];
+  const userIds = [...new Set(rows.map((r) => r.user_id))];
+
+  const nameById = new Map<string, string | null>();
+  if (userIds.length > 0) {
+    // Best-effort: a failure here should not hide the reviews themselves —
+    // affected reviewers just render as "Anonymous".
+    const { data: profileRows } = await supabase
+      .from("profiles_public")
+      .select("id, display_name")
+      .in("id", userIds);
+    for (const p of (profileRows ?? []) as {
+      id: string;
+      display_name: string | null;
+    }[]) {
+      nameById.set(p.id, p.display_name);
+    }
+  }
+
+  return {
+    reviews: rows.map((r) => ({
+      ...r,
+      profiles: nameById.has(r.user_id)
+        ? { display_name: nameById.get(r.user_id) ?? null }
+        : null,
+    })),
+    error: null,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -96,6 +154,7 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
@@ -105,16 +164,12 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
   // here is fine — only synchronous setState inside an *effect* body is flagged.
   const fetchReviews = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("product_reviews")
-      .select("*, profiles:user_id(display_name)")
-      .eq("product_id", productId)
-      .order("created_at", { ascending: false });
-
+    const { reviews: loaded, error } = await loadReviews(supabase, productId);
     if (error) {
-      console.error("Failed to load reviews:", error.message);
+      setLoadError(error);
     } else {
-      setReviews((data as Review[]) ?? []);
+      setLoadError(null);
+      setReviews(loaded);
     }
     setLoading(false);
   }, [supabase, productId]);
@@ -126,16 +181,13 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data, error } = await supabase
-        .from("product_reviews")
-        .select("*, profiles:user_id(display_name)")
-        .eq("product_id", productId)
-        .order("created_at", { ascending: false });
+      const { reviews: loaded, error } = await loadReviews(supabase, productId);
       if (!active) return;
       if (error) {
-        console.error("Failed to load reviews:", error.message);
+        setLoadError(error);
       } else {
-        setReviews((data as Review[]) ?? []);
+        setLoadError(null);
+        setReviews(loaded);
       }
       setLoading(false);
     })();
@@ -257,6 +309,10 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
         <div className="flex items-center justify-center py-8">
           <Loader2 size={24} className="animate-spin text-zinc-500" />
         </div>
+      ) : loadError ? (
+        <p className="text-center text-red-400 py-6 text-sm">
+          Could not load reviews. {loadError}
+        </p>
       ) : reviews.length === 0 ? (
         <p className="text-center text-zinc-500 py-6">
           No reviews yet. Be the first!

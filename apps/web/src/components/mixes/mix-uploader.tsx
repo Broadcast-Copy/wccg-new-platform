@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import Link from "next/link";
 import {
   CloudUpload,
   FileAudio,
@@ -277,7 +278,7 @@ export function MixUploader({ onSuccess, hostId }: MixUploaderProps) {
             asChild
             className="rounded-full bg-[#74ddc7] text-[#0a0a0f] hover:bg-[#74ddc7]/80"
           >
-            <a href="/mixes">View Mixes</a>
+            <Link href="/mixes">View Mixes</Link>
           </Button>
         </div>
       </div>

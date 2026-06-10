@@ -35,6 +35,13 @@ interface ShippingAddress {
   zip: string;
 }
 
+/** Per-vendor shipping settings from `vendor_shipping` (flat_rate is nullable —
+ * the vendor settings page saves null for blank inputs). */
+interface VendorShippingInfo {
+  rate: number;
+  freeThreshold: number | null;
+}
+
 const CART_KEY = "wccg_cart";
 const DEFAULT_PLATFORM_FEE_RATE = 0.08;
 const DEFAULT_SHIPPING = 5.99;
@@ -49,7 +56,9 @@ export default function CheckoutPage() {
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [platformFeeRate, setPlatformFeeRate] = useState(DEFAULT_PLATFORM_FEE_RATE);
-  const [vendorShipping, setVendorShipping] = useState<Record<string, number>>({});
+  const [vendorShipping, setVendorShipping] = useState<
+    Record<string, VendorShippingInfo>
+  >({});
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
     name: "",
     address: "",
@@ -84,13 +93,21 @@ export default function CheckoutPage() {
   /* ---- Fetch platform fee rate ---- */
   useEffect(() => {
     async function fetchFee() {
-      const { data } = await supabase
+      // platform_fees stores fee_percent as a percentage (e.g. 8.00) per
+      // category; the page math expects a fraction, so divide by 100.
+      const { data, error: feeError } = await supabase
         .from("platform_fees")
-        .select("rate")
-        .eq("fee_type", "marketplace")
-        .single();
-      if (data?.rate) {
-        setPlatformFeeRate(Number(data.rate));
+        .select("fee_percent, is_active")
+        .eq("category", "products")
+        .maybeSingle();
+      if (feeError) {
+        setError("Could not load the platform fee rate. " + feeError.message);
+        return;
+      }
+      // Guard on row presence (not value truthiness) so a legitimately
+      // configured 0% fee is honored instead of falling back to the default.
+      if (data) {
+        setPlatformFeeRate(data.is_active ? Number(data.fee_percent) / 100 : 0);
       }
     }
     fetchFee();
@@ -102,14 +119,29 @@ export default function CheckoutPage() {
     const vendorIds = [...new Set(cart.map((i) => i.vendorId))];
 
     async function fetchShipping() {
-      const { data } = await supabase
+      const { data, error: shippingError } = await supabase
         .from("vendor_shipping")
-        .select("vendor_id, shipping_cost")
+        .select("vendor_id, flat_rate, free_shipping_threshold")
         .in("vendor_id", vendorIds);
+      if (shippingError) {
+        setError(
+          "Could not load vendor shipping rates. " + shippingError.message,
+        );
+        return;
+      }
       if (data) {
-        const map: Record<string, number> = {};
+        const map: Record<string, VendorShippingInfo> = {};
         for (const row of data) {
-          map[row.vendor_id] = Number(row.shipping_cost);
+          map[row.vendor_id] = {
+            // flat_rate is null when the vendor left the input blank — fall
+            // back to the default rather than treating Number(null) as $0.
+            rate:
+              row.flat_rate == null ? DEFAULT_SHIPPING : Number(row.flat_rate),
+            freeThreshold:
+              row.free_shipping_threshold == null
+                ? null
+                : Number(row.free_shipping_threshold),
+          };
         }
         setVendorShipping(map);
       }
@@ -140,12 +172,30 @@ export default function CheckoutPage() {
     return acc;
   }, {});
 
+  /** Shipping for one vendor: free above their threshold, their flat rate
+   * otherwise, or the default when the vendor has no shipping row. */
+  function shippingForVendor(vendorId: string, vendorSubtotal: number): number {
+    const info = vendorShipping[vendorId];
+    if (!info) return DEFAULT_SHIPPING;
+    if (info.freeThreshold != null && vendorSubtotal >= info.freeThreshold) {
+      return 0;
+    }
+    return info.rate;
+  }
+
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const platformFee = subtotal * platformFeeRate;
 
-  const totalShipping = Object.keys(vendorGroups).reduce((sum, vendorId) => {
-    return sum + (vendorShipping[vendorId] ?? DEFAULT_SHIPPING);
-  }, 0);
+  const totalShipping = Object.entries(vendorGroups).reduce(
+    (sum, [vendorId, items]) => {
+      const vendorSubtotal = items.reduce(
+        (s, item) => s + item.price * item.quantity,
+        0,
+      );
+      return sum + shippingForVendor(vendorId, vendorSubtotal);
+    },
+    0,
+  );
 
   const total = subtotal + platformFee + totalShipping;
 
@@ -171,7 +221,7 @@ export default function CheckoutPage() {
           0
         );
         const vendorPlatformFee = vendorSubtotal * platformFeeRate;
-        const vendorShippingCost = vendorShipping[vendorId] ?? DEFAULT_SHIPPING;
+        const vendorShippingCost = shippingForVendor(vendorId, vendorSubtotal);
         const vendorTotal = vendorSubtotal + vendorPlatformFee + vendorShippingCost;
 
         const { data: order, error: orderError } = await supabase

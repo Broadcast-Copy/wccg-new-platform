@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -94,8 +94,22 @@ function getStatusColor(status: string): string {
 // ─── Component ─────────────────────────────────────────────────────────
 
 export default function ManageEventClient() {
-  const params = useParams<{ eventId: string }>();
-  const eventId = params.eventId;
+  // Resolve the eventId from the REAL URL. Under `output: export`,
+  // /my/events/<id> is served by the _placeholder shim, so useParams()
+  // returns "_placeholder" — but usePathname() reflects the actual browser
+  // path, so derive the id from it.
+  const pathname = usePathname();
+  const eventId = useMemo(() => {
+    const segs = (pathname ?? "").split("/").filter(Boolean);
+    const seg =
+      segs[0] === "my" && segs[1] === "events" ? segs[2] : undefined;
+    if (!seg || seg === "_placeholder") return "";
+    try {
+      return decodeURIComponent(seg);
+    } catch {
+      return seg;
+    }
+  }, [pathname]);
   const { user } = useAuth();
 
   const [event, setEvent] = useState<EventDetail | null>(null);
@@ -105,7 +119,11 @@ export default function ManageEventClient() {
   const [checkingIn, setCheckingIn] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!eventId || eventId === "_placeholder" || !user) {
+    // No id yet (e.g. the literal _placeholder shim path) — keep the loading
+    // spinner up instead of flashing "Event not found" for an event the
+    // organizer owns.
+    if (!eventId) return;
+    if (!user) {
       setLoading(false);
       return;
     }

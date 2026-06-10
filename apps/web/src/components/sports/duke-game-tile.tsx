@@ -1053,18 +1053,8 @@ function DukeVideoSlider() {
           const thumb =
             v.thumbnail_url ||
             (v.youtube_id ? `https://i.ytimg.com/vi/${v.youtube_id}/hqdefault.jpg` : null);
-          const href = v.youtube_id
-            ? `https://www.youtube.com/watch?v=${v.youtube_id}`
-            : `/videos/${v.id}`;
-          return (
-            <a
-              key={v.id}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group block w-[200px] shrink-0 snap-start sm:w-[240px]"
-              aria-label={v.title}
-            >
+          const card = (
+            <>
               {/* Just the thumbnail — compact, no play button / overlay */}
               <div className="relative aspect-video overflow-hidden rounded-xl border border-white/15 bg-[#0a0e1a] shadow-sm">
                 {thumb ? (
@@ -1080,7 +1070,31 @@ function DukeVideoSlider() {
               <p className="mt-1.5 line-clamp-1 text-[11px] font-semibold text-[#003087]/80 dark:text-white/70">
                 {v.title}
               </p>
+            </>
+          );
+          // YouTube videos open externally in a new tab; videos without a
+          // youtube_id live on the internal watch page — client-side <Link>,
+          // same tab.
+          return v.youtube_id ? (
+            <a
+              key={v.id}
+              href={`https://www.youtube.com/watch?v=${v.youtube_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group block w-[200px] shrink-0 snap-start sm:w-[240px]"
+              aria-label={v.title}
+            >
+              {card}
             </a>
+          ) : (
+            <Link
+              key={v.id}
+              href={`/videos/${v.id}`}
+              className="group block w-[200px] shrink-0 snap-start sm:w-[240px]"
+              aria-label={v.title}
+            >
+              {card}
+            </Link>
           );
         })}
       </div>

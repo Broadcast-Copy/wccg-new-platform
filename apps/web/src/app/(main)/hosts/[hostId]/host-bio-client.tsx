@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { apiClient } from "@/lib/api-client";
 import { getHostById, type HostData } from "@/data/hosts";
 import { getShowById } from "@/data/shows";
 import { getHostMixes } from "@/data/mixes";
@@ -26,7 +24,6 @@ import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { FollowerCount } from "@/components/social/follower-count";
 import {
   ArrowLeft,
-  Mic,
   Mail,
   Radio,
   Youtube,
@@ -164,96 +161,40 @@ export default function HostBioPage({
   const params = useParams<{ hostId: string }>();
   const hostId = params.hostId;
 
-  const [host, setHost] = useState<Host | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Get local data from constants
+  // Get local data from constants — there is no API server, so static data
+  // is the only source. The view model resolves synchronously.
   const hostData = hostId ? getHostById(hostId) : null;
 
-  useEffect(() => {
-    if (!hostId) return;
-
-    let cancelled = false;
-    async function fetchHost() {
-      try {
-        setLoading(true);
-        const data = await apiClient<Host>(`/hosts/${hostId}`);
-        if (!cancelled) {
-          setHost(data);
-          setError(null);
-        }
-      } catch (err: unknown) {
-        if (!cancelled) {
-          // Fall back to local data if API fails
-          if (hostData) {
-            setHost({
-              id: hostData.id,
-              name: hostData.name,
-              slug: hostData.id,
-              bio: hostData.bio,
-              avatarUrl: hostData.imageUrl ?? null,
-              email: null,
-              isActive: hostData.isActive,
-              shows: hostData.showIds.map((sid) => {
-                const show = getShowById(sid);
-                return {
-                  id: sid,
-                  name: show?.name ?? sid,
-                  slug: sid,
-                  imageUrl: show?.imageUrl ?? null,
-                  isPrimary: hostData.showIds[0] === sid,
-                };
-              }),
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            });
-            setError(null);
-          } else {
-            setError(
-              err instanceof Error ? err.message : "Failed to load host",
-            );
-          }
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+  const host: Host | null = hostData
+    ? {
+        id: hostData.id,
+        name: hostData.name,
+        slug: hostData.id,
+        bio: hostData.bio,
+        avatarUrl: hostData.imageUrl ?? null,
+        email: null,
+        isActive: hostData.isActive,
+        shows: hostData.showIds.map((sid) => {
+          const show = getShowById(sid);
+          return {
+            id: sid,
+            name: show?.name ?? sid,
+            slug: sid,
+            imageUrl: show?.imageUrl ?? null,
+            isPrimary: hostData.showIds[0] === sid,
+          };
+        }),
+        createdAt: "",
+        updatedAt: "",
       }
-    }
+    : null;
 
-    fetchHost();
-    return () => {
-      cancelled = true;
-    };
-  }, [hostId, hostData]);
-
-  // Get mixes from local mock data (API fallback)
+  // Get mixes from local data
   const hostMixes = hostId ? getHostMixes(hostId) : [];
 
-  // ─── Loading state ─────────────────────────────────────────────────────
+  // ─── Not-found state ───────────────────────────────────────────────────
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <Link
-          href="/hosts"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Hosts
-        </Link>
-        <div className="flex h-64 items-center justify-center">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Mic className="h-5 w-5 animate-pulse" />
-            <span>Loading host profile...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── Error state ───────────────────────────────────────────────────────
-
-  if (error || !host) {
+  if (!host) {
     return (
       <div className="space-y-6">
         <Link
@@ -264,15 +205,13 @@ export default function HostBioPage({
           Back to Hosts
         </Link>
         <div className="flex h-64 items-center justify-center rounded-lg border bg-muted/50">
-          <p className="text-sm text-muted-foreground">
-            {error ?? "Host not found."}
-          </p>
+          <p className="text-sm text-muted-foreground">Host not found.</p>
         </div>
       </div>
     );
   }
 
-  // Merge API host with local data for extra fields (bio, social, YouTube)
+  // Extra display fields from the static host data (bio, social, YouTube)
   const bio = host.bio || hostData?.bio;
   const avatarUrl = host.avatarUrl || hostData?.imageUrl;
   const role = hostData?.role;

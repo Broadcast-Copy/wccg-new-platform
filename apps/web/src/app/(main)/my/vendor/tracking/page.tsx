@@ -84,105 +84,6 @@ const STATUS_ICONS: Record<string, React.ElementType> = {
 
 type FilterStatus = "all" | "processing" | "shipped" | "delivered";
 
-/* ---------- Mock data ---------- */
-
-const MOCK_ORDERS: Order[] = [
-  {
-    id: "ORD-1001",
-    buyer_id: "buyer-1",
-    buyer_name: "Marcus Johnson",
-    buyer_email: "marcus@example.com",
-    status: "processing",
-    subtotal: 89.99,
-    total: 99.98,
-    shipping_address: {
-      street: "456 Oak St",
-      city: "Fayetteville",
-      state: "NC",
-      zip: "28301",
-    },
-    tracking_number: null,
-    carrier: null,
-    tracking_url: null,
-    shipped_at: null,
-    created_at: "2026-03-25T14:00:00Z",
-    items: [
-      { id: "item-1", product_id: "prod-1", product_name: "WCCG Logo Tee (XL)", quantity: 2, unit_price: 29.99 },
-      { id: "item-2", product_id: "prod-2", product_name: "WCCG Snapback Hat", quantity: 1, unit_price: 24.99 },
-    ],
-  },
-  {
-    id: "ORD-1002",
-    buyer_id: "buyer-2",
-    buyer_name: "Tanya Williams",
-    buyer_email: "tanya@example.com",
-    status: "shipped",
-    subtotal: 49.99,
-    total: 57.98,
-    shipping_address: {
-      street: "789 Pine Ave",
-      city: "Raeford",
-      state: "NC",
-      zip: "28376",
-    },
-    tracking_number: "9400111899223456789012",
-    carrier: "usps",
-    tracking_url: "https://tools.usps.com/go/TrackConfirmAction?tLabels=9400111899223456789012",
-    shipped_at: "2026-03-27T10:30:00Z",
-    created_at: "2026-03-22T09:15:00Z",
-    items: [
-      { id: "item-3", product_id: "prod-3", product_name: "WCCG Hoodie (M)", quantity: 1, unit_price: 49.99 },
-    ],
-  },
-  {
-    id: "ORD-1003",
-    buyer_id: "buyer-3",
-    buyer_name: "DeShawn Carter",
-    buyer_email: "deshawn@example.com",
-    status: "delivered",
-    subtotal: 34.99,
-    total: 42.98,
-    shipping_address: {
-      street: "123 Elm St",
-      city: "Hope Mills",
-      state: "NC",
-      zip: "28348",
-    },
-    tracking_number: "1Z999AA10123456784",
-    carrier: "ups",
-    tracking_url: "https://www.ups.com/track?tracknum=1Z999AA10123456784",
-    shipped_at: "2026-03-20T08:00:00Z",
-    created_at: "2026-03-18T16:45:00Z",
-    items: [
-      { id: "item-4", product_id: "prod-4", product_name: "WCCG Sticker Pack", quantity: 3, unit_price: 9.99 },
-    ],
-  },
-  {
-    id: "ORD-1004",
-    buyer_id: "buyer-4",
-    buyer_name: "Keisha Brown",
-    buyer_email: "keisha@example.com",
-    status: "processing",
-    subtotal: 64.99,
-    total: 72.98,
-    shipping_address: {
-      street: "555 Magnolia Dr",
-      city: "Spring Lake",
-      state: "NC",
-      zip: "28390",
-    },
-    tracking_number: null,
-    carrier: null,
-    tracking_url: null,
-    shipped_at: null,
-    created_at: "2026-03-28T11:20:00Z",
-    items: [
-      { id: "item-5", product_id: "prod-5", product_name: "WCCG Crewneck (L)", quantity: 1, unit_price: 39.99 },
-      { id: "item-6", product_id: "prod-1", product_name: "WCCG Logo Tee (M)", quantity: 1, unit_price: 29.99 },
-    ],
-  },
-];
-
 /* ---------- Helpers ---------- */
 
 function formatCurrency(amount: number): string {
@@ -527,7 +428,8 @@ export default function CarrierTrackingPage() {
           .order("created_at", { ascending: false });
 
         if (error || !data || data.length === 0) {
-          setOrders(MOCK_ORDERS);
+          if (error) console.error("Failed to load orders:", error);
+          setOrders([]);
         } else {
           const mapped: Order[] = data.map((o: Record<string, unknown>) => ({
             id: o.id as string,
@@ -556,7 +458,7 @@ export default function CarrierTrackingPage() {
           setOrders(mapped);
         }
       } catch {
-        setOrders(MOCK_ORDERS);
+        setOrders([]);
       } finally {
         setLoading(false);
       }

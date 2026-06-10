@@ -37,11 +37,15 @@ interface Shift {
 // ---------------------------------------------------------------------------
 
 function getMonday(offsetWeeks: number): string {
-  const d = new Date();
+  // Broadcast weeks are Eastern Time. Compute "today" in ET and format the
+  // date locally — toISOString() converts to UTC, which rolled the label to
+  // the next day for evening users.
+  const d = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "America/New_York" }),
+  );
   const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1) + offsetWeeks * 7;
-  const mon = new Date(d.setDate(diff));
-  return mon.toISOString().split("T")[0];
+  d.setDate(d.getDate() - day + (day === 0 ? -6 : 1) + offsetWeeks * 7);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -156,11 +160,12 @@ export default function ShiftSchedulingPage() {
 
   const filteredShifts = filterType === "all" ? shifts : shifts.filter((s) => s.type === filterType);
 
-  // Compute week date labels
+  // Compute week date labels. Parse weekStart as local date components —
+  // new Date("YYYY-MM-DD") parses as UTC midnight, which shifts the rendered
+  // dates back a day for US viewers.
   const weekDates = DAYS.map((_, i) => {
-    const d = new Date(weekStart);
-    d.setDate(d.getDate() + i);
-    return d;
+    const [y, m, dd] = weekStart.split("-").map(Number);
+    return new Date(y, m - 1, dd + i);
   });
 
   const weekLabel = (() => {

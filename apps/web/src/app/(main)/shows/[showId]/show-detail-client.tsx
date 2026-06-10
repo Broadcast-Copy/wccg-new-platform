@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { apiClient } from "@/lib/api-client";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { FollowButton } from "@/components/social/follow-button";
@@ -391,40 +390,38 @@ export default function ShowDetailPage({
 }: {
   youtubeVideos?: YouTubeVideo[];
 }) {
-  const params = useParams<{ showId: string }>();
-  const showId = params.showId;
-  const [show, setShow] = useState<Show | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Resolve the show id/slug from the REAL URL. Under `output: export`,
+  // /shows/<x> can be served by the _placeholder shim, so useParams() would
+  // return "_placeholder" — but usePathname() reflects the actual browser
+  // path, so derive the id from it.
+  const pathname = usePathname();
+  const showId = useMemo(() => {
+    const segs = (pathname ?? "").split("/").filter(Boolean);
+    const i = segs.indexOf("shows");
+    const seg = i >= 0 ? segs[i + 1] : undefined;
+    if (!seg || seg === "_placeholder") return "";
+    try {
+      return decodeURIComponent(seg);
+    } catch {
+      return seg;
+    }
+  }, [pathname]);
+
+  // The show resolves synchronously from static data (by id OR slug) — there
+  // is no API server, so local data is the only source.
+  const show = useMemo<Show | null>(
+    () => (showId ? localShowFallback(showId) : null),
+    [showId],
+  );
+
   const [rssEpisodes, setRssEpisodes] = useState<RssEpisode[]>([]);
   const [rssLoading, setRssLoading] = useState(false);
   const { play, pause, isPlaying, currentStream } = useAudioPlayer();
 
-  useEffect(() => {
-    if (!showId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        setLoading(true);
-        const data = await apiClient<Show>(`/shows/${showId}`);
-        if (!cancelled) { setShow(data); setError(null); }
-      } catch {
-        const local = localShowFallback(showId);
-        if (!cancelled) {
-          if (local) { setShow(local); setError(null); }
-          else setError("Show not found");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [showId]);
-
   // Fetch RSS episodes if show has podcastRss
   useEffect(() => {
     if (!showId) return;
-    const showData = getShowById(showId);
+    const showData = getShowById(showId) ?? getShowBySlug(showId);
     if (!showData?.podcastRss) return;
     let cancelled = false;
     (async () => {
@@ -449,30 +446,14 @@ export default function ShowDetailPage({
     else play(episode.audioUrl, { streamName: show?.name ?? "Episode", title: episode.title });
   }, [isPlaying, currentStream, pause, play, show?.name]);
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <Link href="/shows" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className="h-4 w-4" /> Back to Shows
-        </Link>
-        <div className="flex h-64 items-center justify-center">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Mic className="h-5 w-5 animate-pulse" />
-            <span>Loading show...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !show) {
+  if (!show) {
     return (
       <div className="space-y-6">
         <Link href="/shows" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" /> Back to Shows
         </Link>
         <div className="flex h-64 items-center justify-center rounded-xl border border-border bg-muted/30">
-          <p className="text-sm text-muted-foreground">{error ?? "Show not found."}</p>
+          <p className="text-sm text-muted-foreground">Show not found.</p>
         </div>
       </div>
     );

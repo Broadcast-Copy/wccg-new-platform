@@ -21,8 +21,11 @@ export function useAuth() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
+
     // Get the initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!active) return;
       setSession(session);
       setUser(session?.user ?? null);
       // Sync email to points & history storage
@@ -48,6 +51,7 @@ export function useAuth() {
     });
 
     return () => {
+      active = false;
       subscription.unsubscribe();
     };
   }, [supabase]);

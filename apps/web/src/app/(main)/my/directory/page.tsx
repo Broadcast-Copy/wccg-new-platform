@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   Building2,
@@ -160,8 +160,12 @@ export default function MyDirectoryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchCategory, setSearchCategory] = useState<string>("All");
   const [hasSearched, setHasSearched] = useState(false);
+  // Monotonic sequence guard: only the newest in-flight search may apply its
+  // results, so out-of-order responses can't overwrite the visible list.
+  const searchSeq = useRef(0);
 
   const searchListings = useCallback(async (query?: string, category?: string) => {
+    const seq = ++searchSeq.current;
     setLoading(true);
     setHasSearched(true);
     let q = supabase
@@ -182,6 +186,9 @@ export default function MyDirectoryPage() {
     }
 
     const { data, error } = await q;
+    // A newer search started while this one was in flight — discard this
+    // response entirely (the newest call owns both the list and `loading`).
+    if (seq !== searchSeq.current) return;
     if (!error && data) {
       setListings(data.map((row: Record<string, unknown>) => ({
         id: (row.id as string) ?? "",
@@ -274,10 +281,34 @@ export default function MyDirectoryPage() {
         website: formData.website || null,
         status: "ACTIVE",
       };
+      if (!user) return;
       if (editingId) {
-        await supabase.from("directory_listings").update(payload).eq("id", editingId);
+        // supabase-js never throws on PostgREST/RLS errors — check { error }
+        // and the affected-row count explicitly (RLS filters non-owned rows
+        // to a silent 0-row update).
+        const { data, error } = await supabase
+          .from("directory_listings")
+          .update(payload)
+          .eq("id", editingId)
+          .select("id");
+        if (error) throw new Error(error.message);
+        if (!data || data.length === 0) {
+          throw new Error("You can only edit listings you own.");
+        }
       } else {
-        await supabase.from("directory_listings").insert(payload);
+        // slug is NOT NULL with no default, and the INSERT policy requires
+        // owner_id = auth.uid() — both must be supplied or the insert fails.
+        const slug =
+          payload.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)/g, "") +
+          "-" +
+          crypto.randomUUID().slice(0, 8);
+        const { error } = await supabase
+          .from("directory_listings")
+          .insert({ ...payload, slug, owner_id: user.id });
+        if (error) throw new Error(error.message);
       }
       closeForm();
       await searchListings();
@@ -293,14 +324,23 @@ export default function MyDirectoryPage() {
   async function handleDelete(id: string) {
     if (!confirm("Are you sure you want to delete this listing?")) return;
     setDeleting(id);
-    try {
-      await supabase.from("directory_listings").delete().eq("id", id);
+    // supabase-js never throws on PostgREST/RLS errors; check { error } and
+    // the affected-row count (RLS silently filters rows you don't own).
+    const { data, error } = await supabase
+      .from("directory_listings")
+      .delete()
+      .eq("id", id)
+      .select("id");
+    if (!error && data && data.length > 0) {
       setListings((prev) => prev.filter((l) => l.id !== id));
-    } catch {
-      // Silently handle
-    } finally {
-      setDeleting(null);
+    } else {
+      alert(
+        error
+          ? `Failed to delete listing: ${error.message}`
+          : "You can only delete listings you own.",
+      );
     }
+    setDeleting(null);
   }
 
   function updateField(field: keyof ListingFormData, value: string) {

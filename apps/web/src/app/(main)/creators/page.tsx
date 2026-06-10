@@ -77,6 +77,7 @@ export default function CreatorsPage() {
   const [isMember, setIsMember] = useState(false);
   const [memberLoading, setMemberLoading] = useState(true);
   const [joining, setJoining] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const [stats, setStats] = useState({ creators: 0, projects: 0, thisWeek: 0 });
 
@@ -103,15 +104,26 @@ export default function CreatorsPage() {
   async function handleJoin() {
     if (!user) return;
     setJoining(true);
-    await supabase.from('hub_memberships').insert({ user_id: user.id, hub_type: 'creator' });
-    setIsMember(true);
+    setActionError(null);
+    const { error } = await supabase.from('hub_memberships').insert({ user_id: user.id, hub_type: 'creator' });
+    // 23505 = unique violation: the user is already a member, treat as success.
+    if (!error || error.code === '23505') {
+      setIsMember(true);
+    } else {
+      setActionError('Could not join the hub. Please try again.');
+    }
     setJoining(false);
   }
 
   async function handleLeave() {
     if (!user || !confirm("Leave the Creator Hub?")) return;
-    await supabase.from('hub_memberships').delete().eq('user_id', user.id).eq('hub_type', 'creator');
-    setIsMember(false);
+    setActionError(null);
+    const { error } = await supabase.from('hub_memberships').delete().eq('user_id', user.id).eq('hub_type', 'creator');
+    if (!error) {
+      setIsMember(false);
+    } else {
+      setActionError('Could not leave the hub. Please try again.');
+    }
   }
 
   useEffect(() => {
@@ -178,6 +190,11 @@ export default function CreatorsPage() {
               >
                 Leave Hub
               </button>
+              {actionError && (
+                <p className="w-full text-sm font-semibold text-red-200" role="alert">
+                  {actionError}
+                </p>
+              )}
             </div>
           </div>
 
@@ -250,6 +267,11 @@ export default function CreatorsPage() {
                 <button onClick={handleJoin} disabled={joining} className="mt-4 rounded-full bg-white text-gray-900 px-6 py-2 text-sm font-bold hover:bg-white/90 transition-colors disabled:opacity-50">
                   {joining ? "Joining..." : "Join the Hub"}
                 </button>
+              )}
+              {actionError && (
+                <p className="mt-2 text-sm font-semibold text-red-200" role="alert">
+                  {actionError}
+                </p>
               )}
             </div>
           </div>

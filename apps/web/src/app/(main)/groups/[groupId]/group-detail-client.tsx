@@ -4,10 +4,11 @@
  * Group detail + chat at /groups/[groupId].
  *
  * The hub-rail Groups card links each group row here. This client component
- * reads the id from useParams() (static-export safe — the route ships a
- * `_placeholder` shim and resolves real ids at runtime), then loads the group,
- * its member count, and the caller's membership from Supabase-direct (RLS
- * enforced). It renders:
+ * derives the id from usePathname() — under `output: export` the route ships
+ * only a `_placeholder` shim, so useParams() would return "_placeholder" on
+ * every hard load; the real id lives in the browser path. It then loads the
+ * group, its member count, and the caller's membership from Supabase-direct
+ * (RLS enforced). It renders:
  *   • a header (name / description / privacy + member count),
  *   • a Join / Leave control (insert/delete the caller's hub_group_members row),
  *   • the live <GroupChat> panel.
@@ -22,8 +23,8 @@
  * `active` guard), per react-hooks/set-state-in-effect.
  */
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -55,8 +56,21 @@ interface HubGroupRow {
 }
 
 export default function GroupDetailClient() {
-  const params = useParams<{ groupId: string }>();
-  const groupId = typeof params.groupId === "string" ? params.groupId : "";
+  // Resolve the groupId from the REAL URL. Under `output: export`, /groups/<id>
+  // is served by the _placeholder shim, so useParams() returns "_placeholder"
+  // — but usePathname() reflects the actual browser path.
+  const pathname = usePathname();
+  const groupId = useMemo(() => {
+    const segs = (pathname ?? "").split("/").filter(Boolean);
+    const i = segs.indexOf("groups");
+    const seg = i >= 0 ? segs[i + 1] : undefined;
+    if (!seg || seg === "_placeholder") return "";
+    try {
+      return decodeURIComponent(seg);
+    } catch {
+      return seg;
+    }
+  }, [pathname]);
 
   // One stable browser client for this component's lifetime.
   const [supabase] = useState(() => createClient());

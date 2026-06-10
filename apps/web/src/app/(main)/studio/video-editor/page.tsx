@@ -2906,7 +2906,7 @@ function PublishToWallDialog({ item, onClose }: { item: MediaItem; onClose: () =
             <p className="text-sm text-muted-foreground">Your recording is live at /videos.</p>
             <div className="flex justify-center gap-2 pt-1">
               <button onClick={onClose} className="rounded-full border border-border px-4 py-2 text-sm hover:bg-foreground/[0.06]">Close</button>
-              <a href={`/videos/${doneId}`} className="rounded-full bg-[#74ddc7] px-4 py-2 text-sm font-bold text-[#0a0a0f] hover:bg-[#74ddc7]/90">Watch it</a>
+              <Link href={`/videos/${doneId}`} className="rounded-full bg-[#74ddc7] px-4 py-2 text-sm font-bold text-[#0a0a0f] hover:bg-[#74ddc7]/90">Watch it</Link>
             </div>
           </div>
         ) : (
