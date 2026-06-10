@@ -24,7 +24,7 @@ export default function MyPointsPage() {
           className="inline-flex items-center gap-2 rounded-lg border border-[#f59e0b]/30 bg-[#f59e0b]/5 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[#f59e0b]/10"
         >
           <Gift className="h-4 w-4 text-[#f59e0b]" />
-          View Rewards Store
+          Visit the Rewards Arcade
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </Link>
       </div>

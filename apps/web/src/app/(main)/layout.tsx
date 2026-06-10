@@ -18,6 +18,7 @@ import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 import { MessengerDock } from "@/components/chat/messenger-dock";
 import { StillListeningModal } from "@/components/player/still-listening-modal";
 import { WeatherPill } from "@/components/weather/weather-pill";
+import { GlobalSearchButton } from "@/components/search/global-search";
 import { useNowPlaying } from "@/hooks/use-now-playing";
 import {
   Compass,
@@ -32,6 +33,7 @@ import {
   ShoppingCart,
   ShoppingBag,
   MapPin,
+  Disc3,
   type LucideIcon,
 } from "lucide-react";
 import { useSupabase } from "@/components/providers/supabase-provider";
@@ -50,6 +52,7 @@ const mobileNavLinks = [
   { href: "/events", label: "Events", icon: CalendarDays },
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/videos", label: "Watch", icon: Video },
+  { href: "/mixshows", label: "Mixshows", icon: Disc3 },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
   { href: "/community", label: "Directory", icon: MapPin },
   { href: "/members", label: "Members", icon: Users2 },
@@ -324,6 +327,8 @@ export default function MainLayout({
             <StreamingMegaMenu />
             {/* Watch — public video wall */}
             <NavLink href="/videos" label="Watch" pathname={pathname} icon={Video} />
+            {/* Mixshows — public weekly mix archive */}
+            <NavLink href="/mixshows" label="Mixshows" pathname={pathname} />
             {/* Members — people directory */}
             <NavLink href="/members" label="Members" pathname={pathname} />
             {/* Support */}
@@ -334,6 +339,7 @@ export default function MainLayout({
           <div className="flex items-center gap-2 ml-auto">
             <ListenLiveButton />
             <WeatherPill />
+            <GlobalSearchButton />
             <ThemeToggle />
             <NotificationBell />
             <Link

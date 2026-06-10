@@ -3,12 +3,19 @@
 /**
  * Header notification bell — Supabase-direct (no API server).
  *
- * Reads the current user's `notifications` (own-scoped by RLS), shows an unread
- * badge (polled every 30s), loads the latest 10 on open, and marks one / all
- * read. Notifications are produced by DB triggers (new DM, new follower).
+ * Reads the current user's `notifications` (own-scoped by RLS), shows an
+ * unread badge (polled every 60s + refetched on window focus + bumped live by
+ * a realtime INSERT subscription), loads the latest 8 on open, and marks one /
+ * all read (optimistic, rolled back on { error }). Notifications are produced
+ * by DB triggers: FOLLOW, MESSAGE, LIKE, NEW_VIDEO, MILESTONE, EVENT_REMINDER.
+ *
+ * Hooks discipline (react-hooks/set-state-in-effect): no synchronous setState
+ * in any effect body — state updates happen after an await (guarded) or in
+ * event/realtime callbacks.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useAuth } from "@/hooks/use-auth";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -28,6 +35,8 @@ import {
   Info,
   Check,
   Loader2,
+  Trophy,
+  Video,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -55,11 +64,16 @@ interface NotificationRow {
 
 // ------------------------------------------------------------------ Helpers
 
+// Types currently produced by DB triggers: FOLLOW, MESSAGE, LIKE, NEW_VIDEO,
+// MILESTONE, EVENT_REMINDER. The extras are defensive defaults.
 const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
   FOLLOW: UserPlus,
   LIKE: Heart,
   COMMENT: MessageCircle,
   MESSAGE: MessageCircle,
+  NEW_VIDEO: Video,
+  MILESTONE: Trophy,
+  EVENT_REMINDER: Calendar,
   SYSTEM: Info,
   EVENT: Calendar,
   POINTS: Star,
@@ -70,6 +84,9 @@ const NOTIFICATION_COLORS: Record<string, string> = {
   LIKE: "text-pink-400",
   COMMENT: "text-amber-400",
   MESSAGE: "text-[#74ddc7]",
+  NEW_VIDEO: "text-red-400",
+  MILESTONE: "text-amber-400",
+  EVENT_REMINDER: "text-purple-400",
   SYSTEM: "text-foreground/60",
   EVENT: "text-purple-400",
   POINTS: "text-[#74ddc7]",
@@ -100,6 +117,13 @@ export function NotificationBell() {
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
   const [markingAllRead, setMarkingAllRead] = useState(false);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Mirrors `isOpen` so the realtime callback can check panel state without
+  // resubscribing the channel on every open/close.
+  const isOpenRef = useRef(false);
+  const setOpen = (open: boolean) => {
+    isOpenRef.current = open;
+    setIsOpen(open);
+  };
 
   // ---- Unread count (own-scoped by RLS).
   const fetchUnreadCount = useCallback(async () => {
@@ -122,7 +146,7 @@ export function NotificationBell() {
         .select("id,type,title,body,link,is_read,created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(8);
       const rows = (data ?? []) as NotificationRow[];
       setNotifications(
         rows.map((r) => ({
@@ -140,15 +164,45 @@ export function NotificationBell() {
     }
   }, [user, supabase]);
 
-  // ---- Poll unread count every 30s.
+  // ---- Poll unread count every 60s + refetch when the window regains focus.
   useEffect(() => {
     if (!user) return;
     fetchUnreadCount();
-    pollIntervalRef.current = setInterval(fetchUnreadCount, 30_000);
+    pollIntervalRef.current = setInterval(fetchUnreadCount, 60_000);
+    const onFocus = () => fetchUnreadCount();
+    window.addEventListener("focus", onFocus);
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      window.removeEventListener("focus", onFocus);
     };
   }, [user, fetchUnreadCount]);
+
+  // ---- Realtime: new notifications addressed to me bump the badge instantly
+  // (and refresh the open panel). Polling above is the safety net if realtime
+  // is unavailable. Mirrors the messenger-dock postgres_changes pattern.
+  useEffect(() => {
+    if (!user) return;
+    let channel: RealtimeChannel | null = null;
+    channel = supabase
+      .channel(`notif-bell:${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          fetchUnreadCount();
+          if (isOpenRef.current) fetchNotifications();
+        },
+      )
+      .subscribe();
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [user, supabase, fetchUnreadCount, fetchNotifications]);
 
   // ---- Load list when the popover opens.
   useEffect(() => {
@@ -194,7 +248,7 @@ export function NotificationBell() {
   if (authLoading || !user) return null;
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover open={isOpen} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
@@ -296,7 +350,7 @@ export function NotificationBell() {
                       href={notification.link}
                       onClick={() => {
                         markAsRead(notification);
-                        setIsOpen(false);
+                        setOpen(false);
                       }}
                       className="block"
                     >
@@ -312,17 +366,15 @@ export function NotificationBell() {
         </ScrollArea>
 
         {/* Footer */}
-        {notifications.length > 0 && (
-          <div className="border-t border-border px-4 py-2.5">
-            <Link
-              href="/my/notifications"
-              onClick={() => setIsOpen(false)}
-              className="block text-center text-xs font-medium text-[#74ddc7] hover:text-[#74ddc7]/80 transition-colors"
-            >
-              View all notifications
-            </Link>
-          </div>
-        )}
+        <div className="border-t border-border px-4 py-2.5">
+          <Link
+            href="/my/notifications"
+            onClick={() => setOpen(false)}
+            className="block text-center text-xs font-medium text-[#74ddc7] hover:text-[#74ddc7]/80 transition-colors"
+          >
+            View all notifications
+          </Link>
+        </div>
       </PopoverContent>
     </Popover>
   );

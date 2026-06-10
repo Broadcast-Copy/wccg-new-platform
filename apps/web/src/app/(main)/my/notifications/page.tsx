@@ -1,10 +1,12 @@
 "use client";
 
 /**
- * /my/notifications — the full notifications list, Supabase-direct (no API
+ * /my/notifications — the full notifications inbox, Supabase-direct (no API
  * server). Reads the signed-in user's own `notifications` (RLS own-scoped),
- * marks one / all read, and live-updates via a realtime subscription.
- * Notifications are produced by DB triggers (new DM, new follower, post like).
+ * filters All/Unread, marks one / all read (optimistic with rollback on
+ * { error }), paginates 25 per page via "Load more", and live-updates via a
+ * realtime INSERT subscription. Producers are DB triggers: FOLLOW, MESSAGE,
+ * LIKE, NEW_VIDEO, MILESTONE, EVENT_REMINDER.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -23,7 +25,9 @@ import {
   Loader2,
   MessageCircle,
   Star,
+  Trophy,
   UserPlus,
+  Video,
 } from "lucide-react";
 
 interface NotificationRow {
@@ -38,11 +42,16 @@ interface NotificationRow {
 
 type FilterTab = "all" | "unread";
 
+// Types currently produced by DB triggers: FOLLOW, MESSAGE, LIKE, NEW_VIDEO,
+// MILESTONE, EVENT_REMINDER. The extras are defensive defaults.
 const ICONS: Record<string, typeof Bell> = {
   MESSAGE: MessageCircle,
   COMMENT: MessageCircle,
   FOLLOW: UserPlus,
   LIKE: Heart,
+  NEW_VIDEO: Video,
+  MILESTONE: Trophy,
+  EVENT_REMINDER: Calendar,
   EVENT: Calendar,
   POINTS: Star,
   SYSTEM: Info,
@@ -53,10 +62,15 @@ const COLORS: Record<string, string> = {
   COMMENT: "text-amber-400 bg-amber-400/10",
   FOLLOW: "text-blue-400 bg-blue-400/10",
   LIKE: "text-pink-400 bg-pink-400/10",
+  NEW_VIDEO: "text-red-400 bg-red-400/10",
+  MILESTONE: "text-amber-400 bg-amber-400/10",
+  EVENT_REMINDER: "text-[#7401df] bg-[#7401df]/10",
   EVENT: "text-[#7401df] bg-[#7401df]/10",
   POINTS: "text-[#74ddc7] bg-[#74ddc7]/10",
   SYSTEM: "text-muted-foreground bg-foreground/[0.06]",
 };
+
+const PAGE_SIZE = 25;
 
 function relTime(iso: string): string {
   const then = new Date(iso).getTime();
@@ -80,12 +94,18 @@ export default function NotificationsPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [supabase] = useState(() => createClient());
   const [items, setItems] = useState<NotificationRow[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [tab, setTab] = useState<FilterTab>("all");
+  const [page, setPage] = useState(1);
   const [listKey, setListKey] = useState(0);
 
-  // Load the user's notifications (newest first). All setState is post-await
-  // behind an `active` guard — nothing synchronous in the effect body.
+  // Load the user's notifications (newest first), 25 per page. "Load more"
+  // bumps `page` and we refetch rows 0..page*25-1 in one query — replacing the
+  // list wholesale keeps it consistent when realtime inserts arrive between
+  // pages (no duplicate/shifted rows). All setState is post-await behind an
+  // `active` guard — nothing synchronous in the effect body.
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -93,6 +113,7 @@ export default function NotificationsPage() {
       queueMicrotask(() => {
         if (!cancelled) {
           setItems([]);
+          setTotal(0);
           setLoading(false);
         }
       });
@@ -102,22 +123,29 @@ export default function NotificationsPage() {
     }
     let active = true;
     (async () => {
-      const { data } = await supabase
+      const { data, count, error } = await supabase
         .from("notifications")
-        .select("id,type,title,body,link,is_read,created_at")
+        .select("id,type,title,body,link,is_read,created_at", { count: "exact" })
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .range(0, page * PAGE_SIZE - 1);
       if (!active) return;
-      setItems((data ?? []) as NotificationRow[]);
+      if (!error) {
+        setItems((data ?? []) as NotificationRow[]);
+        setTotal(count ?? 0);
+      }
       setLoading(false);
+      setLoadingMore(false);
     })().catch(() => {
-      if (active) setLoading(false);
+      if (active) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     });
     return () => {
       active = false;
     };
-  }, [user, authLoading, supabase, listKey]);
+  }, [user, authLoading, supabase, page, listKey]);
 
   // Realtime: bump the list key on any new notification addressed to me.
   useEffect(() => {
@@ -142,25 +170,37 @@ export default function NotificationsPage() {
     [items, tab],
   );
 
+  // Optimistic mark-all-read; rolls back the previously-unread rows on { error }.
   const markAllRead = useCallback(async () => {
     if (!user) return;
+    const wasUnread = new Set(items.filter((n) => !n.is_read).map((n) => n.id));
+    if (wasUnread.size === 0) return;
     setItems((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    await supabase
+    const { error } = await supabase
       .from("notifications")
       .update({ is_read: true, read_at: new Date().toISOString() })
       .eq("user_id", user.id)
       .eq("is_read", false);
-  }, [user, supabase]);
+    if (error) {
+      setItems((prev) =>
+        prev.map((n) => (wasUnread.has(n.id) ? { ...n, is_read: false } : n)),
+      );
+    }
+  }, [user, supabase, items]);
 
+  // Optimistic single mark-read; rolls back on { error }.
   const markOne = useCallback(
     async (n: NotificationRow) => {
       if (n.is_read || !user) return;
       setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x)));
-      await supabase
+      const { error } = await supabase
         .from("notifications")
         .update({ is_read: true, read_at: new Date().toISOString() })
         .eq("id", n.id)
         .eq("user_id", user.id);
+      if (error) {
+        setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, is_read: false } : x)));
+      }
     },
     [user, supabase],
   );
@@ -235,10 +275,10 @@ export default function NotificationsPage() {
             <BellOff className="h-8 w-8 text-muted-foreground" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold">No notifications</h3>
+            <h3 className="text-lg font-semibold">You&apos;re all caught up</h3>
             <p className="mt-1 max-w-sm text-sm text-muted-foreground">
               {tab === "unread"
-                ? "You're all caught up! No unread notifications."
+                ? "No unread notifications."
                 : "Nothing here yet. Check back later for updates from WCCG 104.5 FM."}
             </p>
           </div>
@@ -290,9 +330,31 @@ export default function NotificationsPage() {
         </div>
       )}
 
+      {/* Pagination — 25/page; "Load more" extends the window. `total` is the
+          exact own-row count from the paged query. */}
+      {user && !loading && items.length < total && (
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            disabled={loadingMore}
+            onClick={() => {
+              setLoadingMore(true);
+              setPage((p) => p + 1);
+            }}
+          >
+            {loadingMore && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Load more
+          </Button>
+        </div>
+      )}
+
       {filtered.length > 0 && (
         <p className="text-center text-sm text-muted-foreground">
-          Showing {filtered.length} of {items.length} notifications
+          {tab === "unread"
+            ? `Showing ${filtered.length} unread`
+            : `Showing ${items.length} of ${total} notifications`}
         </p>
       )}
     </div>
