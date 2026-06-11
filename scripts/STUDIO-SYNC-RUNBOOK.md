@@ -1,75 +1,61 @@
-# Studio-Sync Watcher — Runbook
+# WCCG Studio-Sync — Runbook (updated 2026-06-11)
 
-**Runs on:** the production-room PC (the one with `D:\WCCG\b-mixshows` + `M:\JBMusic`)
-**What it does:** pulls newly-uploaded DJ drops from Supabase to the local
-studio folders so DJB Radio / Radio Spider can air them.
+The watcher closes the loop: **DJ uploads on the website → file lands on the
+studio PC where the broadcast chain reads it.**
 
-This replaces the old API-polling worker — the platform has no API server,
-so the watcher talks straight to Supabase (signed in as an admin account;
-RLS admin-read-all policies let it see + download every drop).
+## What it does
 
-## One-time setup
+Every 5 minutes (Windows scheduled task **"WCCG Studio Sync"**) it:
 
-1. Python 3.12+ installed (already done on the production PC).
-2. `pip install requests`
-3. Set two env vars (the admin login the watcher uses):
+1. Signs in to Supabase as the station admin (credential is DPAPI-encrypted
+   on this PC; never stored in the repo).
+2. Finds `dj_drops` rows with `status in (uploaded, validated)`.
+3. Downloads each file to BOTH places the chain reads:
+   - `D:\WCCG\b-mixshows\<local-dj-folder>\a-on-air\<MMDDYYYY>-onair\DJB_xxxxx.mp3`
+     — the **exact-air-date folder** RadioSpider's nightly 1:01 AM mixshow
+     events stage to playout (MMDDYYYY = the day the mix airs, from the
+     drop's slot day).
+   - `M:\JBMusic\DJB_xxxxx.mp3` — the flat playout library (same-day safety
+     net, no waiting for the nightly run).
+4. Marks the drop `published` — which is also what makes it publicly
+   playable on the website (public RLS reads published only).
 
-   ```cmd
-   setx WCCG_ADMIN_EMAIL   "biggleem@gmail.com"
-   setx WCCG_ADMIN_PASSWORD "********"
-   ```
+Idempotent: re-runs skip files already on disk at the right size and
+backfill whichever copy is missing without re-downloading.
 
-   Optionally override the defaults:
-   ```cmd
-   setx WCCG_STUDIO_ARCHIVE_ROOT "D:\WCCG\b-mixshows"
-   setx WCCG_STUDIO_ONAIR_ROOT   "M:\JBMusic"
-   setx WCCG_STUDIO_POLL_MS       "30000"
-   ```
+## One-time setup (after a reinstall / new PC / password change)
 
-## Run it
+Run in PowerShell **as the logged-in studio user** (you'll be prompted for
+the admin password; it is encrypted to this Windows account):
 
-```cmd
-:: one pass then exit (good for a scheduled task)
-python scripts\studio-sync-watcher.py
-
-:: poll forever, every 30s (leave running in the production room)
-python scripts\studio-sync-watcher.py --loop
-
-:: verbose single pass for debugging
-python scripts\studio-sync-watcher.py --once -v
+```powershell
+New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\WCCG" | Out-Null
+Get-Credential -UserName biggleem@gmail.com -Message "WCCG studio-sync" |
+  Export-CliXml "$env:LOCALAPPDATA\WCCG\studio-sync-cred.xml"
 ```
 
-## What lands where
+Recreate the task if missing:
 
-For each drop with status `uploaded`/`validated`:
-
-```
-D:\WCCG\b-mixshows\<dj-slug>\<CODE>.<ext>            archive
-D:\WCCG\b-mixshows\<dj-slug>\on-air\<CODE>.<ext>     per-DJ on-air mirror
-M:\JBMusic\<CODE>.<ext>                              flat folder DJB Radio reads
+```powershell
+schtasks /Create /F /TN "WCCG Studio Sync" /SC MINUTE /MO 5 /TR `
+  "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"C:\Users\wccg1\dev\wccg-new-platform\scripts\studio-sync-task.ps1\""
 ```
 
-Then the drop is marked `published` in Supabase (so the admin dashboard +
-the DJ's portal show it as shipped). Idempotent: if the flat copy already
-exists at the right size, it's skipped.
+## Checking on it
 
-## Run as a scheduled task (recommended for production)
+- Logs: `D:\WCCG\sync-logs\studio-sync-YYYYMMDD.log` (one file per day).
+- Manual pass: run `scripts\studio-sync-task.ps1` in PowerShell, or
+  `py -3 scripts\studio-sync-watcher.py --once -v` with
+  `WCCG_ADMIN_EMAIL` / `WCCG_ADMIN_PASSWORD` set.
+- Exit codes: 0 ok · 1 error (see log) · 2 credential file missing.
 
-```cmd
-schtasks /create /tn "WCCG Studio Sync" /sc minute /mo 1 ^
-  /tr "python C:\Users\wccg1\dev\wccg-new-platform\scripts\studio-sync-watcher.py" ^
-  /ru "%USERNAME%"
+## The full broadcast chain
+
 ```
-
-That runs a one-pass sync every minute. Or use `--loop` under NSSM / a
-startup shortcut to keep one long-running process.
-
-## DJ-slug → studio-folder mapping (IMPORTANT)
-
-The watcher writes to `D:\WCCG\b-mixshows\<dj-slug>\`, where `<dj-slug>` is
-the `djs.slug` column (e.g. `dj-ike-gda`). The EXISTING studio folders use a
-manual ordering prefix (`a-dj-ike-gda`, `bb-dj-drop`, `u-tommy-gee-mix`,
-etc.). If you want files to land in those exact existing folders instead of
-clean-slug folders, add a mapping — easiest is to set `djs.notes` or a new
-`djs.studio_folder` column and have the watcher read it. For now the watcher
-uses the slug; the test DJ landed in `D:\WCCG\b-mixshows\dj-admin\`.
+DJ uploads in the web portal (My -> Mixshows, or DJ portal drag-drop)
+  -> Supabase storage (dj-drops bucket) + dj_drops row (status=uploaded)
+    -> THIS WATCHER (<=5 min): air-date folder + M:\JBMusic, marks published
+      -> website: mix is now publicly playable (archive + DJ profile)
+      -> RadioSpider 1:01 AM: stages the air-date folder to playout
+        -> on air
+```
