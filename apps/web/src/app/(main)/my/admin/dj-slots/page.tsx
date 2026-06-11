@@ -18,7 +18,7 @@
  * folder in the media manager (same tab).
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -28,6 +28,7 @@ import {
   FolderOpen,
   Loader2,
   RefreshCw,
+  UploadCloud,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -147,6 +148,102 @@ function extOf(path: string | null): string | null {
   if (!path) return null;
   const m = path.match(/\.([a-z0-9]+)$/i);
   return m ? m[1].toLowerCase() : null;
+}
+
+/**
+ * Inline per-file upload, right in the slot row — staff drop a DJ's file
+ * without leaving the assignments page (RLS: staff-on-behalf, migration 050).
+ * Browser → Supabase Storage at <slug>/<week>/<code>.<ext>, then upsert the
+ * dj_drops row as 'uploaded' (the studio-sync watcher ships it to disk and
+ * flips it to 'published' within 5 minutes).
+ */
+function InlineUpload({
+  slot,
+  code,
+  present,
+  week,
+  busy,
+  onBusy,
+  onDone,
+}: {
+  slot: Slot;
+  code: string;
+  present: boolean;
+  week: string;
+  busy: boolean;
+  onBusy: (key: string | null) => void;
+  onDone: (ok: boolean, message?: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const key = `${slot.id}|${code}`;
+  if (!slot.dj_id || !slot.dj?.slug) return null;
+
+  const upload = async (file: File) => {
+    const isAudio = file.type.startsWith("audio/") || /\.(mp3|wav|flac|m4a|ogg)$/i.test(file.name);
+    if (!isAudio) { onDone(false, `"${file.name}" is not an audio file.`); return; }
+    if (file.size > 200 * 1024 * 1024) { onDone(false, `"${file.name}" is over the 200 MB limit.`); return; }
+    onBusy(key);
+    try {
+      const ext = (file.name.match(/\.(mp3|wav|flac|m4a|ogg)$/i)?.[1] ?? "mp3").toLowerCase();
+      const storagePath = `${slot.dj!.slug}/${week}/${code}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("dj-drops")
+        .upload(storagePath, file, { upsert: true, contentType: file.type || `audio/${ext}` });
+      if (upErr) throw new Error(`Storage upload failed: ${upErr.message}`);
+      const { error: rowErr } = await supabase.from("dj_drops").upsert(
+        {
+          dj_id: slot.dj_id,
+          slot_id: slot.id,
+          file_code: code,
+          week_of: week,
+          status: "uploaded",
+          source: "web",
+          storage_path: storagePath,
+          size_bytes: file.size,
+          format: ext,
+          uploaded_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "slot_id,file_code,week_of" },
+      );
+      if (rowErr) throw new Error(rowErr.message);
+      onDone(true);
+    } catch (e) {
+      onDone(false, (e as Error).message);
+    } finally {
+      onBusy(null);
+    }
+  };
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.currentTarget.files?.[0];
+          if (f) void upload(f);
+          e.currentTarget.value = "";
+        }}
+      />
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => inputRef.current?.click()}
+        title={present ? `Replace ${code} for this week` : `Upload ${code} for this week`}
+        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold transition-colors disabled:opacity-50 ${
+          present
+            ? "border-border text-muted-foreground hover:border-[#7401df]/50 hover:text-[#7401df]"
+            : "border-[#74ddc7]/50 bg-[#74ddc7]/10 text-[#0f9e88] hover:bg-[#74ddc7]/20 dark:text-[#74ddc7]"
+        }`}
+      >
+        {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <UploadCloud className="h-3 w-3" />}
+        {busy ? "Uploading…" : present ? "Replace" : "Upload"}
+      </button>
+    </>
+  );
 }
 
 function statusMeta(status: string): { label: string; cls: string } {
@@ -292,6 +389,10 @@ export default function AdminDjSlotsPage() {
   const [weekOf, setWeekOf] = useState<string>("");
   // Slot row briefly ring-highlighted after a week-glance chip jump.
   const [jumpSlot, setJumpSlot] = useState<string | null>(null);
+  // "slotId|code" of the inline upload currently in flight.
+  const [uploadKey, setUploadKey] = useState<string | null>(null);
+  // The ISO Monday the page is showing (same formula load() uses for drops).
+  const currentWeek = weekOf ? isoMonday(new Date(`${weekOf}T00:00:00`)) : isoMonday(new Date());
 
   const jumpToSlot = useCallback((slotId: string) => {
     setJumpSlot(slotId);
@@ -585,6 +686,23 @@ export default function AdminDjSlotsPage() {
                                 {ft && (
                                   <span className="font-mono uppercase text-muted-foreground">{ft}</span>
                                 )}
+                                <InlineUpload
+                                  slot={slot}
+                                  code={code}
+                                  present={uploaded}
+                                  week={currentWeek}
+                                  busy={uploadKey === `${slot.id}|${code}`}
+                                  onBusy={setUploadKey}
+                                  onDone={(ok, message) => {
+                                    if (ok) {
+                                      setFlash({ slot: slot.id, ok: true });
+                                      setTimeout(() => setFlash(null), 1500);
+                                      load();
+                                    } else {
+                                      setError(message ?? "Upload failed");
+                                    }
+                                  }}
+                                />
                               </div>
                             );
                           })}

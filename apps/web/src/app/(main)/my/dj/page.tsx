@@ -63,6 +63,10 @@ export default function DjPortalPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploadingCode, setUploadingCode] = useState<string | null>(null);
+  // A dropped file whose name didn't contain a DJB code AND couldn't be
+  // auto-matched (more than one open slot file) — the DJ picks a chip instead
+  // of being told to rename the file.
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   // Load DJ profile + slots + this-week's drops directly from Supabase.
   // No API server — the static site talks to Supabase via RLS-scoped queries.
@@ -132,11 +136,23 @@ export default function DjPortalPage() {
     let code = fileCode;
     if (!code) {
       const m = file.name.match(/DJB_\d{5}/i);
-      if (!m) {
-        setError(`Couldn't infer file code from "${file.name}". Rename to DJB_NNNNN.mp3 or upload from a slot.`);
+      if (m) {
+        code = m[0].toUpperCase();
+      } else if (me) {
+        // No code in the filename — match it for the DJ instead of erroring.
+        // Exactly one of their slot files still missing this week? Use it.
+        // Otherwise let them pick from chips (setPendingFile renders the picker).
+        const allFiles = me.slots.flatMap((s) => s.files);
+        const missing = allFiles.filter((f) => !f.drop);
+        if (missing.length === 1) {
+          code = missing[0].fileCode;
+        } else {
+          setPendingFile(file);
+          return;
+        }
+      } else {
         return;
       }
-      code = m[0].toUpperCase();
     }
     if (!me) return;
 
@@ -149,7 +165,7 @@ export default function DjPortalPage() {
 
     try {
       const supabase = createClient();
-      const ext = (file.name.match(/\.(mp3|wav|flac)$/i)?.[1] ?? "mp3").toLowerCase();
+      const ext = (file.name.match(/\.(mp3|wav|flac|m4a|ogg)$/i)?.[1] ?? "mp3").toLowerCase();
       const weekOf = me.weekOf;
       const storagePath = `${me.dj.slug}/${weekOf}/${code}.${ext}`;
 
@@ -240,6 +256,52 @@ export default function DjPortalPage() {
         </div>
       )}
 
+      {/* A file we couldn't auto-match — let the DJ tap which slot file it is. */}
+      {pendingFile && (
+        <div className="rounded-2xl border border-[#74ddc7]/40 bg-[#74ddc7]/[0.05] p-4">
+          <p className="text-sm font-bold text-foreground">
+            Which file is <span className="font-mono text-[#74ddc7]">{pendingFile.name}</span>?
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Tap the slot file to upload it as — no renaming needed.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {me.slots.flatMap((slot) =>
+              slot.files.map((f) => (
+                <button
+                  key={`${slot.slotId}|${f.fileCode}`}
+                  type="button"
+                  disabled={!!uploadingCode}
+                  onClick={() => {
+                    const file = pendingFile;
+                    setPendingFile(null);
+                    if (file) handleFile(file, f.fileCode);
+                  }}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
+                    f.drop
+                      ? "border-border text-muted-foreground hover:border-amber-400/60 hover:text-amber-500"
+                      : "border-[#74ddc7]/50 bg-[#74ddc7]/10 text-[#74ddc7] hover:bg-[#74ddc7]/20"
+                  }`}
+                  title={f.drop ? "Already uploaded — this will replace it" : "Not uploaded yet"}
+                >
+                  <span className="font-mono">{f.fileCode}</span>
+                  {" · "}
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][slot.dayOfWeek]}
+                  {f.drop ? " · replace" : ""}
+                </button>
+              )),
+            )}
+            <button
+              type="button"
+              onClick={() => setPendingFile(null)}
+              className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Slots */}
       <section className="space-y-3">
         <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
@@ -297,16 +359,16 @@ function BulkDropZone({
     >
       <UploadCloud className={`h-10 w-10 ${drag ? "text-[#74ddc7]" : "text-muted-foreground"}`} />
       <div>
-        <p className="font-bold text-foreground">Drop files anywhere here</p>
+        <p className="font-bold text-foreground">Drop your mix files here</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Names must include your code, e.g. <code className="rounded bg-muted px-1">DJB_76051.mp3</code>
+          Any name works — files are matched to your slot automatically.
         </p>
       </div>
       <input
         ref={inputRef}
         type="file"
         multiple
-        accept="audio/mpeg,audio/wav,audio/flac,.mp3,.wav,.flac"
+        accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg"
         className="hidden"
         onChange={(e) => {
           const files = Array.from(e.currentTarget.files ?? []);
@@ -408,7 +470,7 @@ function FileRow({
       <input
         ref={inputRef}
         type="file"
-        accept="audio/mpeg,audio/wav,audio/flac,.mp3,.wav,.flac"
+        accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg"
         className="hidden"
         onChange={(e) => {
           const f = e.currentTarget.files?.[0];

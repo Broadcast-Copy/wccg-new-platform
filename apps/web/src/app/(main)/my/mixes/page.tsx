@@ -8,6 +8,7 @@ import { ProductionMixshows } from "@/components/studio/production-mixshows";
 import Link from "next/link";
 import {
   FolderOpen,
+  UploadCloud,
   FolderPlus,
   CalendarPlus,
   Upload,
@@ -2157,12 +2158,25 @@ export default function MediaManagerPage() {
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               {isDjViewer
-                ? "Your weekly mixshow folder — drop each week's files into their slot. Uploads appear here instantly."
-                : "The live weekly schedule as folders — Day › Time › files. DJ uploads populate automatically."}
+                ? "Browse your on-air mixes. Uploading? Your DJ Portal is the one-stop drop zone."
+                : "Every DJ's on-air mixes — browse, play, upload on a DJ's behalf."}
             </p>
           </div>
           {modeToggle}
         </div>
+        {isDjViewer && (
+          <Link
+            href="/my/dj"
+            className="flex items-center gap-3 rounded-2xl border border-[#74ddc7]/40 bg-[#74ddc7]/[0.06] px-4 py-3 text-sm transition-colors hover:border-[#74ddc7]/70 hover:bg-[#74ddc7]/10"
+          >
+            <UploadCloud className="h-5 w-5 shrink-0 text-[#74ddc7]" />
+            <span className="min-w-0 flex-1 text-muted-foreground">
+              <span className="font-bold text-foreground">Drop this week&apos;s mix in your DJ Portal</span>
+              {" "}— one drop zone, files match your slot automatically.
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-[#74ddc7]" />
+          </Link>
+        )}
         <ProductionMixshows
           focusSlotId={focusSlotId}
           focusDjId={focusDjId}

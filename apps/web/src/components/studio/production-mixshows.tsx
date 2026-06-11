@@ -460,7 +460,10 @@ export function ProductionMixshows({
   // Top-level category. null = the "My Mixshows" root (two folder cards);
   //   "onair"   → scheduled broadcast drops (lands directly on the By-DJ grid)
   //   "digital" → the on-demand dj_mixes catalog (DJ folder → that DJ's mixes)
-  const [section, setSection] = useState<"onair" | "digital" | null>(null);
+  // Lands directly in On-Air (the 99% case) — Digital is a toolbar pill, not
+  // a separate folder hop. (The old two-card category screen made every visit
+  // start with an extra click.)
+  const [section, setSection] = useState<"onair" | "digital">("onair");
   // How the folder tree is grouped at the top level.
   //   "day" → Day › Time › files (the original schedule view)
   //   "dj"  → DJ › that DJ's on-air mixes for the week (mirrors D:\WCCG\b-mixshows\<dj>\on-air)
@@ -987,9 +990,9 @@ export function ProductionMixshows({
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm">
-          {/* "My Mixshows" home → back to the two category cards. */}
+          {/* "My Mixshows" home → the On-Air DJ grid. */}
           <button
-            onClick={() => { setSection(null); setPath([]); }}
+            onClick={() => { setSection("onair"); setPath([]); }}
             className="inline-flex items-center gap-1 font-bold text-foreground hover:text-[#74ddc7]"
           >
             <Home className="h-3.5 w-3.5" /> My Mixshows
@@ -997,19 +1000,15 @@ export function ProductionMixshows({
 
           {/* Category crumb. On-Air lands straight on the DJ grid (no {year}
               level), so this crumb goes to path=[] and is the leaf there. */}
-          {section !== null && (
-            <>
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-              <button
-                onClick={() => setPath([])}
-                className={`font-bold transition-colors ${
-                  path.length === 0 ? "text-[#74ddc7]" : "text-foreground hover:text-[#74ddc7]"
-                }`}
-              >
-                {section === "onair" ? "On-Air Mixshows" : "Off-Air / Digital Mixshows"}
-              </button>
-            </>
-          )}
+          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+          <button
+            onClick={() => setPath([])}
+            className={`font-bold transition-colors ${
+              path.length === 0 ? "text-[#74ddc7]" : "text-foreground hover:text-[#74ddc7]"
+            }`}
+          >
+            {section === "onair" ? "On-Air Mixshows" : "Off-Air / Digital Mixshows"}
+          </button>
 
           {/* By-Day crumbs — only reachable via the ?slot= deep link. */}
           {section === "onair" && groupBy === "day" && currentDay !== null && (
@@ -1044,6 +1043,21 @@ export function ProductionMixshows({
           )}
         </div>
         <div className="flex items-center gap-2">
+          {/* On-Air | Digital — one tap, no folder hop. */}
+          <div className="flex items-center gap-0.5 rounded-full border border-border bg-card p-0.5 text-xs">
+            <button
+              onClick={() => { setSection("onair"); setPath([]); }}
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold transition-colors ${section === "onair" ? "bg-[#74ddc7] text-[#0a0a0f]" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <Radio className="h-3.5 w-3.5" /> On-Air
+            </button>
+            <button
+              onClick={() => { setSection("digital"); setPath([]); }}
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold transition-colors ${section === "digital" ? "bg-[#7401df] text-white" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <Disc3 className="h-3.5 w-3.5" /> Digital
+            </button>
+          </div>
           {/* The By-Day/By-DJ toggle and week nav were removed: the flat By-DJ
               view (DJ → files across all weeks) is the only on-air view now. */}
           <Button variant="ghost" size="sm" onClick={load} className="rounded-full text-xs">
@@ -1060,39 +1074,7 @@ export function ProductionMixshows({
 
       {error && <div className="rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>}
 
-      {section === null ? (
-        /* ── Category root: the two top-level folders ── */
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <button
-            onClick={() => { setSection("onair"); setPath([]); }}
-            className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left transition-all hover:border-[#74ddc7]/40"
-          >
-            <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10 border border-border">
-              <Folder className="h-8 w-8 text-[#74ddc7]" />
-              <Radio className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-card p-0.5 text-[#7401df]" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-bold text-foreground group-hover:text-[#74ddc7]">On-Air Mixshows</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">Scheduled broadcast drops</p>
-            </div>
-            <ChevronRight className="ml-auto h-5 w-5 shrink-0 text-muted-foreground" />
-          </button>
-          <button
-            onClick={() => { setSection("digital"); setPath([]); }}
-            className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left transition-all hover:border-[#74ddc7]/40"
-          >
-            <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7401df]/20 to-[#74ddc7]/10 border border-border">
-              <Folder className="h-8 w-8 text-[#74ddc7]" />
-              <Disc3 className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-card p-0.5 text-[#7401df]" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-bold text-foreground group-hover:text-[#74ddc7]">Off-Air / Digital Mixshows</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">On-demand mixes &amp; podcasts</p>
-            </div>
-            <ChevronRight className="ml-auto h-5 w-5 shrink-0 text-muted-foreground" />
-          </button>
-        </div>
-      ) : section === "digital" ? (
+      {section === "digital" ? (
         /* ── Off-Air / Digital (dj_mixes) ── */
         loading && mixes.length === 0 ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading digital mixes…</div>
