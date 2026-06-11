@@ -2,27 +2,27 @@
 """
 WCCG Studio-Sync Watcher  —  runs ON the production-room PC.
 
-Polls Supabase for newly-uploaded DJ drops and downloads each mp3 to the
-local studio folders, so DJB Radio / Radio Spider can air them:
+Polls Supabase for newly-uploaded DJ drops and downloads each file to the
+exact locations the broadcast chain reads (settled 2026-06-11):
 
-    D:\\WCCG\\b-mixshows\\<dj-slug>\\<CODE>.<ext>            (per-DJ archive)
-    D:\\WCCG\\b-mixshows\\<dj-slug>\\on-air\\<CODE>.<ext>     (per-DJ on-air mirror)
-    M:\\JBMusic\\<CODE>.<ext>                                (flat folder DJB Radio reads)
+    D:\\WCCG\\b-mixshows\\<local-dj-folder>\\a-on-air\\<MMDDYYYY>-onair\\<CODE>.<ext>
+        ^ the AIR-DATE folder RadioSpider's mixshow events copy from
+          (MMDDYYYY = the exact day the mix airs, from the drop's slot day)
 
-    D:\\WCCG\\Mixshows\\<YYYY>\\<Weekday>\\<H-MM AM/PM>\\<MMDDYYYY>-onair\\<CODE>.<ext>
-                                                            (dated tree for Radio Spider)
+    M:\\JBMusic\\<CODE>.<ext>
+        ^ the flat playout library DJB Radio reads directly (same-day safety
+          net: even before RadioSpider's nightly 1:01 AM staging run, the
+          file is already in playout)
 
-  ^ POINT RADIO SPIDER AT  D:\\WCCG\\Mixshows  (set WCCG_STUDIO_PROGRAMMING_ROOT
-  to change). The dated sub-folders are created automatically from each drop's
-  slot (day + air time) and its week, e.g.
-
-      D:\\WCCG\\Mixshows\\2026\\Monday\\12-00 PM\\05252026-onair\\DJB_76051.mp3
-
-  (A colon isn't a legal Windows path char, so 12:00 pm is written "12-00 PM".)
+<local-dj-folder> is the station's prefixed folder name (e.g. dj-drop ->
+bb-dj-drop). Unknown slugs fall back to the raw slug.
 
 Architecture: the platform has no API server — this watcher talks straight
 to Supabase. It signs in as an ADMIN user (RLS admin-read-all policies let
-that account see + download every drop and mark it published).
+that account see + download every drop and mark it published). Drops upload
+from the web as status='uploaded'; the watcher marks them 'published' once
+they are safely on local disk — which is also what makes them publicly
+playable on the website (public RLS reads published only).
 
 No service-role key required: only the admin email + password + the public
 publishable key (which ships in the web bundle anyway).
@@ -33,6 +33,10 @@ Usage:
     python studio-sync-watcher.py            # one pass, then exit
     python studio-sync-watcher.py --loop     # poll every 30s forever
     python studio-sync-watcher.py --once -v  # verbose single pass
+
+Scheduled-task wrapper: scripts/studio-sync-task.ps1 (reads the DPAPI-
+encrypted credential at %LOCALAPPDATA%\\WCCG\\studio-sync-cred.xml and logs
+to D:\\WCCG\\sync-logs\\).
 """
 
 import os
@@ -51,11 +55,37 @@ ADMIN_PASSWORD = os.environ.get("WCCG_ADMIN_PASSWORD", "")
 
 ARCHIVE_ROOT = os.environ.get("WCCG_STUDIO_ARCHIVE_ROOT", r"D:\WCCG\b-mixshows")
 ONAIR_FLAT = os.environ.get("WCCG_STUDIO_ONAIR_ROOT", r"M:\JBMusic")
-# Dated tree Radio Spider crawls:  <root>\<YYYY>\<Weekday>\<H-MM AM/PM>\<MMDDYYYY>-onair\
-PROGRAMMING_ROOT = os.environ.get("WCCG_STUDIO_PROGRAMMING_ROOT", r"D:\WCCG\Mixshows")
 BUCKET = "dj-drops"
 
-DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+# Station folder names on disk (slug -> prefixed local folder).
+LOCAL_FOLDER = {
+    "dj-ike-gda": "a-dj-ike-gda",
+    "dj-vi": "aa-dj-vi",
+    "dj-killako": "b-dj-killa-ko",
+    "dj-drop": "bb-dj-drop",
+    "dj-tony-neal": "c-dj-tony-neal",
+    "dj-dane-dinero": "d-dj-dane-dinero",
+    "dj-chuck": "e-dj-chuck",
+    "dj-yodo": "g-dj-yodo",
+    "dj-itanist": "h-dj-itanist",
+    "dj-daffie": "i-dj-daffie",
+    "dj-yafeelme": "j-dj-yafeelme",
+    "dj-daddy-black": "k-dj-daddyblack",
+    "dj-tone-lo": "l-dj-tonelo",
+    "dj-chuck-t": "m-dj-chuck-t",
+    "dj-juice": "n-dj-juice",
+    "dj-wolf": "p-dj-wolf",
+    "dj-spin-wiz": "q-dj-spin-wiz",
+    "dj-official": "r-dj-official",
+    "dj-whosane": "s-dj-whosane",
+    "dj-rayn": "t-dj-rayn",
+    "dj-tommy-gee": "u-tommy-gee-mix",
+    "dj-t-money": "v-dj-t-money",
+    "dj-kvng": "w-dj-kvng",
+    "dj-corleone": "x-dj-corleone",
+    "dj-admin": "dj-admin",
+}
+
 POLL_SECONDS = int(os.environ.get("WCCG_STUDIO_POLL_MS", "30000")) // 1000
 
 
@@ -144,26 +174,19 @@ def air_date(week_of: str, day_of_week: int):
     return monday + timedelta(days=offset)
 
 
-def fmt_time_12h(hhmm: str) -> str:
-    """'12:00' -> '12-00 PM'  (filesystem-safe: no colon)."""
-    parts = (hhmm or "0:00").split(":")
-    h = int(parts[0]); m = int(parts[1]) if len(parts) > 1 else 0
-    ampm = "PM" if h >= 12 else "AM"
-    disp = 12 if h % 12 == 0 else h % 12
-    return f"{disp}-{m:02d} {ampm}"
-
-
-def programming_path(week_of: str, day_of_week: int, start_time: str, filename: str) -> str:
-    """<PROGRAMMING_ROOT>\\<YYYY>\\<Weekday>\\<H-MM AM/PM>\\<MMDDYYYY>-onair\\<file>."""
+def onair_path(slug: str, week_of: str, day_of_week, filename: str) -> str | None:
+    """<ARCHIVE_ROOT>\\<local-folder>\\a-on-air\\<MMDDYYYY airdate>-onair\\<file>."""
+    if day_of_week is None or not week_of:
+        return None
+    folder = LOCAL_FOLDER.get(slug, slug)
     d = air_date(week_of, day_of_week)
     return os.path.join(
-        PROGRAMMING_ROOT,
-        d.strftime("%Y"),
-        DAY_NAMES[day_of_week],
-        fmt_time_12h(start_time),
-        d.strftime("%m%d%Y") + "-onair",
-        filename,
+        ARCHIVE_ROOT, folder, "a-on-air", d.strftime("%m%d%Y") + "-onair", filename
     )
+
+
+def file_ok(path: str | None, size: int) -> bool:
+    return bool(path) and os.path.exists(path) and (size == 0 or os.path.getsize(path) == size)
 
 
 def process(token: str, verbose: bool) -> int:
@@ -175,46 +198,43 @@ def process(token: str, verbose: bool) -> int:
         dj = d.get("djs") or {}
         slug = dj.get("slug") or "_unassigned"
         filename = f"{code}.{ext}"
+        size = d.get("size_bytes") or 0
 
-        archive_path = os.path.join(ARCHIVE_ROOT, slug, filename)
-        onair_path = os.path.join(ARCHIVE_ROOT, slug, "on-air", filename)
+        slot = d.get("slot") or {}
+        dated_path = onair_path(slug, d.get("week_of"), slot.get("day_of_week"), filename)
         flat_path = os.path.join(ONAIR_FLAT, filename)
 
-        # Dated tree for Radio Spider — needs the slot's day + air time.
-        slot = d.get("slot") or {}
-        prog_path = None
-        if slot.get("day_of_week") is not None and slot.get("start_time") and d.get("week_of"):
-            prog_path = programming_path(d["week_of"], slot["day_of_week"], slot["start_time"], filename)
-
-        size = d.get("size_bytes") or 0
-        # Idempotent: if the flat (DJB Radio) copy already exists at the right
-        # size, consider it shipped — mark published + backfill any missing
-        # dated copy, then skip the download.
-        if os.path.exists(flat_path) and (size == 0 or os.path.getsize(flat_path) == size):
-            if prog_path and not os.path.exists(prog_path):
-                try:
-                    with open(flat_path, "rb") as fh:
-                        write_file(prog_path, fh.read())
-                except OSError:
-                    pass
+        # Idempotent: if both copies are already on disk at the right size,
+        # just mark published. Backfill whichever copy is missing without
+        # re-downloading when the other is intact.
+        have_dated = file_ok(dated_path, size)
+        have_flat = file_ok(flat_path, size)
+        if have_dated and have_flat:
             mark_published(token, d["id"])
             if verbose:
                 log(f"  = {filename} already on disk; marked published")
             continue
-
-        data = download_object(token, d["storage_path"])
+        if have_dated or have_flat:
+            src = dated_path if have_dated else flat_path
+            try:
+                with open(src, "rb") as fh:
+                    data = fh.read()
+            except OSError:
+                data = download_object(token, d["storage_path"])
+        else:
+            data = download_object(token, d["storage_path"])
         if data is None:
             continue
-        write_file(archive_path, data)
-        write_file(onair_path, data)
+
+        if dated_path:
+            write_file(dated_path, data)
         write_file(flat_path, data)
-        if prog_path:
-            write_file(prog_path, data)
         mark_published(token, d["id"])
         shipped += 1
-        dest = "archive + on-air + M:\\JBMusic"
-        if prog_path:
-            dest += f" + Mixshows\\{os.path.relpath(prog_path, PROGRAMMING_ROOT)}"
+        dest = f"M:\\JBMusic\\{filename}"
+        if dated_path:
+            rel = os.path.relpath(dated_path, ARCHIVE_ROOT)
+            dest = f"b-mixshows\\{rel} + " + dest
         log(f"  + {slug}/{filename}  ({len(data):,} bytes)  ->  {dest}")
     return shipped
 
@@ -226,7 +246,7 @@ def main():
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
 
-    log(f"studio-sync: archive={ARCHIVE_ROOT}  flat={ONAIR_FLAT}  programming={PROGRAMMING_ROOT}  bucket={BUCKET}")
+    log(f"studio-sync: archive={ARCHIVE_ROOT}  flat={ONAIR_FLAT}  bucket={BUCKET}")
     token = sign_in()
     log(f"signed in as {ADMIN_EMAIL}")
 
