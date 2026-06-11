@@ -12,8 +12,10 @@
  * roster, and this week's dj_drops directly from Supabase (production-tier RLS
  * lets admins read every DJ's drops). Assignment writes dj_slots.dj_id.
  *
- * The "Media" link opens the media manager in a NEW TAB so this admin page
- * stays put (you don't lose your place when managing a folder).
+ * A "This week at a glance" grid up top shows the whole broadcast week —
+ * Mon→Sun columns, one chip per slot with the DJ + upload-status dot; clicking
+ * a chip scrolls to that slot's row. The "Folder" link opens the DJ's mixshow
+ * folder in the media manager (same tab).
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -162,6 +164,124 @@ function statusMeta(status: string): { label: string; cls: string } {
   }
 }
 
+// Broadcast week order for the glance grid: Monday first, Sunday last.
+const GLANCE_DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
+/**
+ * Week-at-a-glance schedule: one column per day (Mon→Sun) for the selected
+ * week, each scheduled slot as a clickable chip — DJ name, air time, and a
+ * dot showing this week's upload status (teal = all files in, amber = some
+ * missing, hollow = nothing yet, gray italic = unassigned). Today's column is
+ * highlighted; clicking a chip scrolls to that slot's row in the table below.
+ */
+function WeekGlance({
+  slots,
+  dropByKey,
+  weekOf,
+  onJump,
+}: {
+  slots: Slot[];
+  dropByKey: Map<string, Drop>;
+  weekOf: string;
+  onJump: (slotId: string) => void;
+}) {
+  const weekIso = weekOf ? isoMonday(new Date(`${weekOf}T00:00:00`)) : isoMonday(new Date());
+  const monday = new Date(`${weekIso}T00:00:00`);
+  const todayKey = new Date().toDateString();
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const fmtCol = (d: Date) => d.toLocaleDateString("en-US", { month: "numeric", day: "numeric" });
+  const rangeLabel = `${monday.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${sunday.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+
+  return (
+    <section className="rounded-2xl border border-border bg-card/50 p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-foreground">
+          <Calendar className="h-4 w-4 text-[#74ddc7]" /> This week at a glance
+          <span className="font-medium normal-case tracking-normal text-muted-foreground">· {rangeLabel}</span>
+        </h2>
+        <div className="flex items-center gap-3 text-[10px] font-medium text-muted-foreground">
+          <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[#74ddc7]" /> All files in</span>
+          <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-400" /> Missing files</span>
+          <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full border border-muted-foreground/50" /> Nothing yet</span>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+        {GLANCE_DAY_ORDER.map((day, idx) => {
+          const date = new Date(monday);
+          date.setDate(monday.getDate() + idx);
+          const isToday = date.toDateString() === todayKey;
+          const daySlots = slots
+            .filter((s) => s.day_of_week === day && s.status !== "inactive")
+            .sort((a, b) => a.start_time.localeCompare(b.start_time));
+          return (
+            <div
+              key={day}
+              className={`rounded-xl border p-2 ${
+                isToday ? "border-[#74ddc7]/60 bg-[#74ddc7]/[0.05]" : "border-border bg-background/40"
+              }`}
+            >
+              <div className="mb-1.5 flex items-center justify-between px-1">
+                <span className={`text-[11px] font-black uppercase tracking-wider ${isToday ? "text-[#74ddc7]" : "text-foreground"}`}>
+                  {DAYS[day]}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {isToday ? "Today" : fmtCol(date)}
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {daySlots.length === 0 && (
+                  <p className="px-1 py-2 text-center text-[11px] text-muted-foreground/50">—</p>
+                )}
+                {daySlots.map((s) => {
+                  const total = s.file_codes.length;
+                  const done = s.file_codes.filter((c) => {
+                    const d = dropByKey.get(`${s.id}|${c}`);
+                    return d && UPLOADED_STATUSES.has(d.status);
+                  }).length;
+                  const dot =
+                    total > 0 && done === total
+                      ? "bg-[#74ddc7]"
+                      : done > 0
+                        ? "bg-amber-400"
+                        : "border border-muted-foreground/50";
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => onJump(s.id)}
+                      title={`${DAYS_LONG[s.day_of_week]} ${fmt12hFull(s.start_time)}–${fmt12hFull(s.end_time)} · ${
+                        s.dj?.display_name ?? "Unassigned"
+                      } · ${done}/${total} uploaded${s.status === "tentative" ? " · tentative" : ""}`}
+                      className={`w-full rounded-lg border border-border bg-card px-2 py-1.5 text-left transition-colors hover:border-[#74ddc7]/50 ${
+                        s.status === "tentative" ? "opacity-60" : ""
+                      }`}
+                    >
+                      <span className="flex items-center justify-between gap-1">
+                        <span className="font-mono text-[10px] text-muted-foreground">
+                          {fmt12h(s.start_time)}–{fmt12h(s.end_time)}
+                        </span>
+                        <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
+                      </span>
+                      <span
+                        className={`block truncate text-[11px] font-bold ${
+                          s.dj ? "text-foreground" : "italic text-amber-500"
+                        }`}
+                      >
+                        {s.dj?.display_name ?? "Unassigned"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default function AdminDjSlotsPage() {
   const [data, setData] = useState<SlotsResponse | null>(null);
   const [drops, setDrops] = useState<Drop[]>([]);
@@ -170,6 +290,14 @@ export default function AdminDjSlotsPage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [flash, setFlash] = useState<{ slot: string; ok: boolean } | null>(null);
   const [weekOf, setWeekOf] = useState<string>("");
+  // Slot row briefly ring-highlighted after a week-glance chip jump.
+  const [jumpSlot, setJumpSlot] = useState<string | null>(null);
+
+  const jumpToSlot = useCallback((slotId: string) => {
+    setJumpSlot(slotId);
+    document.getElementById(`slot-row-${slotId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => setJumpSlot((cur) => (cur === slotId ? null : cur)), 2200);
+  }, []);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -319,6 +447,8 @@ export default function AdminDjSlotsPage() {
       {loading || !data ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : (
+        <>
+        <WeekGlance slots={data.slots} dropByKey={dropByKey} weekOf={weekOf} onJump={jumpToSlot} />
         <div className="overflow-x-auto rounded-2xl border border-border">
           <table className="w-full min-w-[860px] text-sm">
             <thead className="bg-card/60 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -352,8 +482,9 @@ export default function AdminDjSlotsPage() {
                 return (
                   <tr
                     key={slot.id}
+                    id={`slot-row-${slot.id}`}
                     className={`border-t border-border align-top transition-colors ${
-                      flashOk ? "bg-[#74ddc7]/10" : flashBad ? "bg-red-500/10" : ""
+                      flashOk ? "bg-[#74ddc7]/10" : flashBad ? "bg-red-500/10" : jumpSlot === slot.id ? "bg-[#74ddc7]/[0.07] ring-2 ring-inset ring-[#74ddc7]/50" : ""
                     }`}
                   >
                     <td className="px-4 py-3 font-medium">
@@ -487,12 +618,13 @@ export default function AdminDjSlotsPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {data && (
         <p className="text-xs text-muted-foreground">
           {data.slots.length} slots • {data.slots.filter((s) => !s.dj_id).length} unassigned •{" "}
-          {data.djs.length} DJs available • Media opens in a new tab
+          {data.djs.length} DJs available
         </p>
       )}
     </div>
