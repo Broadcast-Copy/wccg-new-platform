@@ -39,6 +39,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Disc3,
+  Shuffle,
   Headphones,
   Loader2,
   Play,
@@ -612,9 +613,28 @@ function ArchiveInner() {
               <h2 className="inline-flex items-center gap-2 text-base font-black tracking-tight text-foreground">
                 <Disc3 className="h-5 w-5 text-[#74ddc7]" /> {selectedDj ? `${selectedDj.dj.display_name} in the archive` : "The full archive"}
               </h2>
-              <p className="text-xs text-muted-foreground">
-                {visibleMixes.length} {visibleMixes.length === 1 ? "mix" : "mixes"}
-              </p>
+              <div className="flex items-center gap-3">
+                {/* Shuffle the visible mixes (respects the DJ filter) into the player. */}
+                {visibleMixes.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const shuffled = [...visibleMixes];
+                      for (let i = shuffled.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                      }
+                      playFromList(shuffled, shuffled[0]);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#74ddc7]/50 bg-[#74ddc7]/10 px-4 py-1.5 text-xs font-bold text-[#0f9e88] transition-colors hover:bg-[#74ddc7]/20 dark:text-[#74ddc7]"
+                  >
+                    <Shuffle className="h-3.5 w-3.5" /> Shuffle{selectedDj ? "" : " all"}
+                  </button>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {visibleMixes.length} {visibleMixes.length === 1 ? "mix" : "mixes"}
+                </p>
+              </div>
             </div>
 
             {/* Filtered-DJ header card */}
