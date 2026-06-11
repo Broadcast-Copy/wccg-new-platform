@@ -29,6 +29,21 @@ const PROGRAMS = [
   { program: "Sports", category: "Sports", rating: "G", channelId: "UC-v9UWlnqtYeCQtPDO1lGVQ" }, // Duke Football
   { program: "Sports", category: "Sports", rating: "PG", channelId: "UC4DI4UXm2vIS5-6fhuCAh6g" }, // Pick'em Pros
 
+  // Local schools — area colleges & universities combined into one row.
+  { program: "Local Schools", category: "Education", rating: "G", channelId: "UCVEbUWk96dmaDFwenptsx5Q" }, // Fayetteville State University
+  { program: "Local Schools", category: "Education", rating: "G", channelId: "UCrls-lOh_mu0_mBrze6R7dg" }, // Campbell University
+  { program: "Local Schools", category: "Education", rating: "G", channelId: "UCncT4o1lMhk9KL17JJLabqQ" }, // Methodist University
+  { program: "Local Schools", category: "Education", rating: "G", channelId: "UC6UeI2Av47gbem_mTZEa1Ww" }, // Fayetteville Technical Community College
+  { program: "Local Schools", category: "Education", rating: "G", channelId: "UCfo6rz_-iMCzQswPCDbRwBw" }, // Robeson Community College
+
+  // Local government & utilities — city, counties, and PWC in one row.
+  { program: "Local Government", category: "Community", rating: "G", channelId: "UCae_2JwaN6G7KvTJDU3TD6g" }, // City of Fayetteville
+  { program: "Local Government", category: "Community", rating: "G", channelId: "UCjz2EfG0AqCqa-voV5Xb-VQ" }, // Fayetteville PWC
+  { program: "Local Government", category: "Community", rating: "G", channelId: "UCWW_IJSglN-zz1vLQ2AkPiA" }, // Cumberland County
+  { program: "Local Government", category: "Community", rating: "G", channelId: "UCU7mTF6HTD65x_98EhAMeMg" }, // Harnett County
+  { program: "Local Government", category: "Community", rating: "G", channelId: "UCpZ9fEh38OXp_YrGZYVne3g" }, // Sampson County
+  { program: "Local Government", category: "Community", rating: "G", channelId: "UCQ6c7WFfXy_H4zuzd32viJw" }, // Lee County
+
   // Gospel — every gospel broadcast combined into one "Gospel" row.
   // NOTE: the id UCvxWyn4rfcI2H9APhfUIB1Q that used to be labeled "Dr. Tony Haire"
   // here is actually JOEL OSTEEN's channel — WCCG does NOT broadcast Joel Osteen.
