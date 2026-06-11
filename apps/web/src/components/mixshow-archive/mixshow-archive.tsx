@@ -199,6 +199,8 @@ function ArchiveInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedSlug = searchParams.get("dj");
+  // Archive sort order — newest air date first by default.
+  const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
 
   const [supabase] = useState(() => createClient());
   const { user } = useAuth();
@@ -336,42 +338,31 @@ function ArchiveInner() {
     [djCards, selectedSlug],
   );
 
-  // "This Week On Air": the current broadcast week's drops; if the week has no
-  // uploads yet, fall back to the most recent week that does (honest label).
-  const railWeek = useMemo<string | null>(() => {
-    const weeks = Array.from(new Set(mixes.map((m) => m.drop.week_of))).sort().reverse();
-    if (weeks.length === 0) return null;
-    if (weeks.includes(currentMonday)) return currentMonday;
-    return weeks.find((w) => w < currentMonday) ?? weeks[weeks.length - 1];
-  }, [mixes, currentMonday]);
+  // "On Air This Week" is SCHEDULE-driven: every assigned slot this broadcast
+  // week appears in air order — with its uploaded files attached when they
+  // exist, and an honest "drops <day>" card when they don't. (Previously the
+  // rail only showed DJs who had already uploaded, so today's lineup looked
+  // wrong until files landed.)
+  const scheduleShows = useMemo(() => {
+    const djById = new Map(djs.map((d) => [d.id, d]));
+    const items = slots.flatMap((s) => {
+      if (!s.dj_id) return [];
+      const dj = djById.get(s.dj_id);
+      if (!dj || dj.slug === "dj-admin") return [];
+      const airDate = dateForDay(currentMonday, s.day_of_week);
+      const parts = mixes
+        .filter((m) => m.slot?.id === s.id && m.drop.week_of === currentMonday)
+        .sort((a, b) => a.drop.file_code.localeCompare(b.drop.file_code));
+      return [{ key: s.id, slot: s, dj, airDate, parts }];
+    });
+    items.sort(
+      (a, b) => a.airDate.getTime() - b.airDate.getTime() || a.slot.start_time.localeCompare(b.slot.start_time),
+    );
+    return items;
+  }, [slots, djs, mixes, currentMonday]);
 
-  const railMixes = useMemo(() => {
-    if (!railWeek) return [];
-    return mixes
-      .filter((m) => m.drop.week_of === railWeek)
-      .sort(
-        (a, b) =>
-          a.airDate.getTime() - b.airDate.getTime() ||
-          (a.slot?.start_time ?? "").localeCompare(b.slot?.start_time ?? "") ||
-          a.drop.file_code.localeCompare(b.drop.file_code),
-      );
-  }, [mixes, railWeek]);
-
-  // One rail card per SHOW (slot): both files of a two-part mix live on the
-  // same card instead of two near-identical cards. Parts keep code order.
-  const railShows = useMemo(() => {
-    const map = new Map<string, Mix[]>();
-    const order: string[] = [];
-    for (const m of railMixes) {
-      const key = m.slot?.id ?? `${m.dj?.id ?? "dj"}|${m.drop.week_of}`;
-      if (!map.has(key)) {
-        map.set(key, []);
-        order.push(key);
-      }
-      map.get(key)!.push(m);
-    }
-    return order.map((key) => ({ key, parts: map.get(key)! }));
-  }, [railMixes]);
+  // The week's playable files in schedule order — the queue the rail plays.
+  const weekQueue = useMemo(() => scheduleShows.flatMap((s) => s.parts), [scheduleShows]);
 
   // The main archive list (optionally filtered to one DJ), newest AIR DATE
   // first — mixes are organized by the exact day they air, not the week.
@@ -379,11 +370,11 @@ function ArchiveInner() {
     const list = selectedSlug ? mixes.filter((m) => m.dj?.slug === selectedSlug) : mixes;
     return [...list].sort(
       (a, b) =>
-        b.airDate.getTime() - a.airDate.getTime() ||
+        (sortDir === "desc" ? b.airDate.getTime() - a.airDate.getTime() : a.airDate.getTime() - b.airDate.getTime()) ||
         (a.slot?.start_time ?? "").localeCompare(b.slot?.start_time ?? "") ||
         a.drop.file_code.localeCompare(b.drop.file_code),
     );
-  }, [mixes, selectedSlug]);
+  }, [mixes, selectedSlug, sortDir]);
 
   // One group per exact air date (newest first), e.g. "Thursday, Jun 11, 2026".
   const airDateGroups = useMemo(() => {
@@ -408,15 +399,13 @@ function ArchiveInner() {
     [mixes],
   );
 
-  // Air-date range of the on-air rail, e.g. "Jun 8 – Jun 14" (or one date).
-  const railRangeLabel = useMemo(() => {
-    if (railMixes.length === 0) return "";
-    const lo = railMixes[0].airDate;
-    const hi = railMixes[railMixes.length - 1].airDate;
-    return lo.toDateString() === hi.toDateString()
-      ? `Airs ${fmtAirLong(lo)}`
-      : `Airing ${fmtAirShort(lo)} – ${fmtAirShort(hi)}`;
-  }, [railMixes]);
+  // The broadcast week's date range for the rail subtitle, e.g. "Jun 8 – Jun 14".
+  const weekRangeLabel = useMemo(() => {
+    const monday = new Date(currentMonday + "T00:00:00");
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    return `${fmtAirShort(monday)} – ${fmtAirShort(sunday)}`;
+  }, [currentMonday]);
 
   // ── Playback ──────────────────────────────────────────────────────────────
 
@@ -534,24 +523,36 @@ function ArchiveInner() {
 
       {!loading && !error && mixes.length > 0 && (
         <>
-          {/* ── This Week On Air rail ── */}
-          {railWeek && railMixes.length > 0 && (
-            <Rail
-              title={railWeek === currentMonday ? "This Week On Air" : "Latest On Air"}
-              subtitle={railRangeLabel}
-            >
-              {railShows.map(({ key, parts }) => (
-                <ShowRailCard
-                  key={key}
-                  parts={parts}
-                  nowPlayingId={nowPlayingId}
-                  onPlayPart={(m) => playFromList(railMixes, m)}
-                />
-              ))}
+          {/* ── On Air This Week rail — the full SCHEDULE in air order ── */}
+          {scheduleShows.length > 0 && (
+            <Rail title="On Air This Week" subtitle={weekRangeLabel}>
+              {scheduleShows.map(({ key, slot, dj, airDate, parts }) => {
+                const isToday = airDate.toDateString() === new Date().toDateString();
+                return parts.length > 0 ? (
+                  <ShowRailCard
+                    key={key}
+                    parts={parts}
+                    today={isToday}
+                    nowPlayingId={nowPlayingId}
+                    onPlayPart={(m) => playFromList(weekQueue, m)}
+                  />
+                ) : (
+                  <ScheduledRailCard
+                    key={key}
+                    djName={dj.display_name}
+                    day={slot.day_of_week}
+                    startTime={slot.start_time}
+                    endTime={slot.end_time}
+                    today={isToday}
+                    onOpen={() => toggleDjFilter(dj.slug)}
+                  />
+                );
+              })}
             </Rail>
           )}
 
-          {/* ── Browse by DJ ── */}
+          {/* ── Browse by DJ (replaced by the detail view while a DJ is open) ── */}
+          {!selectedDj && (
           <section className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="inline-flex items-center gap-2 text-base font-black tracking-tight text-foreground">
@@ -606,77 +607,163 @@ function ArchiveInner() {
               })}
             </div>
           </section>
+          )}
 
-          {/* ── The archive, grouped by week ── */}
-          <section className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="inline-flex items-center gap-2 text-base font-black tracking-tight text-foreground">
-                <Disc3 className="h-5 w-5 text-[#74ddc7]" /> {selectedDj ? `${selectedDj.dj.display_name} in the archive` : "The full archive"}
-              </h2>
-              <div className="flex items-center gap-3">
-                {/* Shuffle the visible mixes (respects the DJ filter) into the player. */}
-                {visibleMixes.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const shuffled = [...visibleMixes];
-                      for (let i = shuffled.length - 1; i > 0; i--) {
-                        const j = Math.floor(Math.random() * (i + 1));
-                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-                      }
-                      playFromList(shuffled, shuffled[0]);
-                    }}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-[#74ddc7]/50 bg-[#74ddc7]/10 px-4 py-1.5 text-xs font-bold text-[#0f9e88] transition-colors hover:bg-[#74ddc7]/20 dark:text-[#74ddc7]"
-                  >
-                    <Shuffle className="h-3.5 w-3.5" /> Shuffle{selectedDj ? "" : " all"}
-                  </button>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  {visibleMixes.length} {visibleMixes.length === 1 ? "mix" : "mixes"}
-                </p>
-              </div>
-            </div>
-
-            {/* Filtered-DJ header card */}
-            {selectedDj && (
-              <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-[#74ddc7]/30 bg-[#74ddc7]/[0.05] px-5 py-4">
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df]/40 to-[#74ddc7]/25 text-sm font-black text-[#74ddc7]">
-                  {initials(selectedDj.dj.display_name)}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-base font-black text-foreground">{selectedDj.dj.display_name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedDj.count} {selectedDj.count === 1 ? "mix" : "mixes"} in the archive
-                  </p>
-                </div>
-                <DjFollowButton
-                  djUserId={selectedDj.dj.user_id}
-                  djName={selectedDj.dj.display_name}
-                  followId={followIdFor(selectedDj.dj.user_id)}
-                  onFollowChange={handleFollowChange}
-                />
-                <Link
-                  href={`/djs/${selectedDj.dj.slug}`}
-                  className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground transition-colors hover:border-[#74ddc7]/50 hover:text-[#74ddc7]"
-                >
-                  View profile
-                </Link>
-              </div>
-            )}
-
-            {visibleMixes.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-card/40 px-6 py-12 text-center">
-                <Headphones className="mx-auto h-8 w-8 text-muted-foreground" />
-                <p className="mt-3 text-sm text-muted-foreground">No mixes match this filter.</p>
+          {/* ── DJ detail (card left, all their files right) OR the full archive ── */}
+          {selectedDj ? (
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="inline-flex items-center gap-2 text-base font-black tracking-tight text-foreground">
+                  <Disc3 className="h-5 w-5 text-[#74ddc7]" /> {selectedDj.dj.display_name}
+                </h2>
                 <button
                   onClick={() => router.replace("/mixshows", { scroll: false })}
-                  className="mt-3 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-bold text-[#74ddc7] transition-colors hover:border-[#74ddc7]/50"
+                  className="rounded-full border border-border bg-card px-4 py-1.5 text-xs font-bold text-muted-foreground transition-colors hover:border-[#74ddc7]/50 hover:text-[#74ddc7]"
                 >
-                  Show all mixes
+                  ← All DJs
                 </button>
               </div>
-            ) : (
-              airDateGroups.map(({ key, date, mixes: dayMixes }) => (
+              <div className="grid gap-4 lg:grid-cols-[300px_1fr] lg:items-start">
+                {/* DJ card — left, sticky on desktop */}
+                <div className="rounded-2xl border border-[#74ddc7]/30 bg-[#74ddc7]/[0.04] p-5 lg:sticky lg:top-24">
+                  <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df]/40 to-[#74ddc7]/25 text-2xl font-black text-[#74ddc7]">
+                    {initials(selectedDj.dj.display_name)}
+                  </span>
+                  <p className="mt-3 text-center text-lg font-black text-foreground">{selectedDj.dj.display_name}</p>
+                  {slots
+                    .filter((s) => s.dj_id === selectedDj.dj.id)
+                    .map((s) => (
+                      <p key={s.id} className="text-center text-xs text-muted-foreground">
+                        On air {DAY_SHORT[s.day_of_week]} · {fmt12h(s.start_time)}–{fmt12h(s.end_time)}
+                      </p>
+                    ))}
+                  <p className="mt-1 text-center text-xs text-muted-foreground">
+                    {selectedDj.count} {selectedDj.count === 1 ? "mix" : "mixes"} in the archive
+                  </p>
+                  <div className="mt-4 flex flex-col items-stretch gap-2">
+                    {visibleMixes.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const shuffled = [...visibleMixes];
+                          for (let i = shuffled.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                          }
+                          playFromList(shuffled, shuffled[0]);
+                        }}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#74ddc7]/50 bg-[#74ddc7]/10 px-4 py-2 text-xs font-bold text-[#0f9e88] transition-colors hover:bg-[#74ddc7]/20 dark:text-[#74ddc7]"
+                      >
+                        <Shuffle className="h-3.5 w-3.5" /> Shuffle their mixes
+                      </button>
+                    )}
+                    <div className="flex justify-center">
+                      <DjFollowButton
+                        djUserId={selectedDj.dj.user_id}
+                        djName={selectedDj.dj.display_name}
+                        followId={followIdFor(selectedDj.dj.user_id)}
+                        onFollowChange={handleFollowChange}
+                      />
+                    </div>
+                    <Link
+                      href={`/djs/${selectedDj.dj.slug}`}
+                      className="rounded-full border border-border bg-card px-4 py-2 text-center text-xs font-bold text-foreground transition-colors hover:border-[#74ddc7]/50 hover:text-[#74ddc7]"
+                    >
+                      View profile
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Files — right, scrollable */}
+                <div className="min-w-0 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card/50 px-4 py-2">
+                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                      All files · {visibleMixes.length}
+                    </p>
+                    <label className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                      Sort by date
+                      <select
+                        value={sortDir}
+                        onChange={(e) => setSortDir(e.target.value as "desc" | "asc")}
+                        className="rounded-full border border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-[#74ddc7]/40"
+                      >
+                        <option value="desc">Newest first</option>
+                        <option value="asc">Oldest first</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div className="space-y-5 lg:max-h-[68vh] lg:overflow-y-auto lg:pr-2">
+                    {visibleMixes.length === 0 && (
+                      <div className="rounded-2xl border border-dashed border-border bg-card/40 px-6 py-12 text-center">
+                        <Headphones className="mx-auto h-8 w-8 text-muted-foreground" />
+                        <p className="mt-3 text-sm text-muted-foreground">No mixes from this DJ yet.</p>
+                      </div>
+                    )}
+                    {airDateGroups.map(({ key, date, mixes: dayMixes }) => (
+                      <div key={key} className="space-y-2">
+                        <h3 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                          <CalendarDays className="h-3.5 w-3.5 text-[#74ddc7]" /> {fmtAirLong(date)}
+                          {date.toDateString() === new Date().toDateString() && (
+                            <span className="rounded-full bg-[#74ddc7]/15 px-2 py-0.5 text-[10px] font-bold text-[#74ddc7]">Today</span>
+                          )}
+                        </h3>
+                        <div className="space-y-2">
+                          {dayMixes.map((m) => (
+                            <MixRow
+                              key={m.drop.id}
+                              mix={m}
+                              playing={nowPlayingId === m.drop.id}
+                              onPlay={() => playFromList(visibleMixes, m)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          ) : (
+            <section className="space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="inline-flex items-center gap-2 text-base font-black tracking-tight text-foreground">
+                  <Disc3 className="h-5 w-5 text-[#74ddc7]" /> The full archive
+                </h2>
+                <div className="flex items-center gap-3">
+                  {visibleMixes.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const shuffled = [...visibleMixes];
+                        for (let i = shuffled.length - 1; i > 0; i--) {
+                          const j = Math.floor(Math.random() * (i + 1));
+                          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                        }
+                        playFromList(shuffled, shuffled[0]);
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[#74ddc7]/50 bg-[#74ddc7]/10 px-4 py-1.5 text-xs font-bold text-[#0f9e88] transition-colors hover:bg-[#74ddc7]/20 dark:text-[#74ddc7]"
+                    >
+                      <Shuffle className="h-3.5 w-3.5" /> Shuffle all
+                    </button>
+                  )}
+                  <label className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    Sort by date
+                    <select
+                      value={sortDir}
+                      onChange={(e) => setSortDir(e.target.value as "desc" | "asc")}
+                      className="rounded-full border border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-[#74ddc7]/40"
+                    >
+                      <option value="desc">Newest first</option>
+                      <option value="asc">Oldest first</option>
+                    </select>
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    {visibleMixes.length} {visibleMixes.length === 1 ? "mix" : "mixes"}
+                  </p>
+                </div>
+              </div>
+
+              {airDateGroups.map(({ key, date, mixes: dayMixes }) => (
                 <div key={key} className="space-y-2">
                   <h3 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                     <CalendarDays className="h-3.5 w-3.5 text-[#74ddc7]" /> {fmtAirLong(date)}
@@ -695,9 +782,9 @@ function ArchiveInner() {
                     ))}
                   </div>
                 </div>
-              ))
-            )}
-          </section>
+              ))}
+            </section>
+          )}
         </>
       )}
 
@@ -780,10 +867,12 @@ function Rail({ title, subtitle, children }: { title: string; subtitle: string; 
  * each part also gets its own chip so listeners can jump straight to hour 2. */
 function ShowRailCard({
   parts,
+  today,
   nowPlayingId,
   onPlayPart,
 }: {
   parts: Mix[];
+  today?: boolean;
   nowPlayingId: string | null;
   onPlayPart: (m: Mix) => void;
 }) {
@@ -794,10 +883,19 @@ function ShowRailCard({
     : fmtAirDate(first.airDate);
   return (
     <div
-      className={`w-64 shrink-0 snap-start rounded-2xl border p-4 transition-colors ${
-        anyPlaying ? "border-[#74ddc7]/60 bg-[#74ddc7]/[0.06]" : "border-border bg-card hover:border-[#74ddc7]/40"
+      className={`relative w-64 shrink-0 snap-start rounded-2xl border p-4 transition-colors ${
+        anyPlaying
+          ? "border-[#74ddc7]/60 bg-[#74ddc7]/[0.06]"
+          : today
+            ? "border-[#74ddc7]/50 bg-[#74ddc7]/[0.04] hover:border-[#74ddc7]/70"
+            : "border-border bg-card hover:border-[#74ddc7]/40"
       }`}
     >
+      {today && (
+        <span className="absolute -top-2 right-3 rounded-full bg-[#74ddc7] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#0a0a0f]">
+          Today
+        </span>
+      )}
       <button onClick={() => onPlayPart(first)} className="group flex w-full items-center gap-3 text-left">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df]/40 to-[#74ddc7]/25 text-sm font-black text-foreground">
           {initials(first.dj?.display_name ?? "WCCG DJ")}
@@ -842,6 +940,57 @@ function ShowRailCard({
         </p>
       )}
     </div>
+  );
+}
+
+/** A scheduled show whose files haven't landed yet — keeps today's real
+ * lineup on the rail. Clicking opens that DJ's archive. */
+function ScheduledRailCard({
+  djName,
+  day,
+  startTime,
+  endTime,
+  today,
+  onOpen,
+}: {
+  djName: string;
+  day: number;
+  startTime: string;
+  endTime: string;
+  today?: boolean;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={`relative w-64 shrink-0 snap-start rounded-2xl border border-dashed p-4 text-left transition-colors ${
+        today ? "border-[#74ddc7]/60 bg-[#74ddc7]/[0.04] hover:border-[#74ddc7]" : "border-border bg-card/50 hover:border-[#74ddc7]/40"
+      }`}
+    >
+      {today && (
+        <span className="absolute -top-2 right-3 rounded-full bg-[#74ddc7] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#0a0a0f]">
+          Today
+        </span>
+      )}
+      <div className="flex items-center gap-3">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df]/25 to-[#74ddc7]/15 text-sm font-black text-foreground/80">
+          {initials(djName)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold text-foreground">{djName}</p>
+          <p className="truncate text-[11px] text-muted-foreground">
+            {DAY_SHORT[day] ?? ""} · {fmt12h(startTime)}–{fmt12h(endTime)}
+          </p>
+        </div>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground/[0.06] text-muted-foreground">
+          <Radio className="h-4 w-4" />
+        </span>
+      </div>
+      <p className="mt-3 text-[11px] font-medium text-muted-foreground">
+        {today ? `On air today at ${fmt12h(startTime)}` : "Mix drops soon"} · tap for past shows
+      </p>
+    </button>
   );
 }
 
