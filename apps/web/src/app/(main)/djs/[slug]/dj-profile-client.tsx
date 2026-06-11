@@ -434,7 +434,12 @@ export default function DjProfileClient() {
       </div>
 
       {tab === "mixshows" ? (
-        <MixshowsTab drops={drops} nowPlaying={nowPlaying} onToggle={playTrack} />
+        <MixshowsTab
+          drops={drops}
+          airDay={(slots.find((s) => s.status === "active") ?? slots[0])?.day_of_week ?? null}
+          nowPlaying={nowPlaying}
+          onToggle={playTrack}
+        />
       ) : (
         <CollectionsTab
           dj={dj}
@@ -476,13 +481,23 @@ function TabButton({ active, onClick, icon, children }: { active: boolean; onCli
 
 function MixshowsTab({
   drops,
+  airDay,
   nowPlaying,
   onToggle,
 }: {
   drops: Drop[];
+  /** The DJ's broadcast day (dj_slots.day_of_week) — labels each mix with the
+   * EXACT date it aired, never the week's Monday. Null = no slot known. */
+  airDay: number | null;
   nowPlaying: string | null;
   onToggle: (id: string, url: string) => void;
 }) {
+  const airedLabel = (weekOf: string): string => {
+    const d = new Date(weekOf + "T00:00:00");
+    if (Number.isNaN(d.getTime())) return weekOf;
+    if (airDay !== null) d.setDate(d.getDate() + (airDay === 0 ? 6 : airDay - 1));
+    return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  };
   return (
     <section>
       <header className="mb-3 flex items-center justify-between">
@@ -512,7 +527,7 @@ function MixshowsTab({
                   <div className="min-w-0 flex-1">
                     <p className="font-mono text-sm font-bold text-foreground">{mix.fileCode}</p>
                     <p className="text-xs text-muted-foreground">
-                      Week of {mix.weekOf}
+                      Aired {airedLabel(mix.weekOf)}
                       {mix.format && <> · {mix.format.toUpperCase()}</>}
                       {mix.sizeBytes && <> · {fmtBytes(mix.sizeBytes)}</>}
                     </p>

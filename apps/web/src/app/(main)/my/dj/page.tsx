@@ -211,7 +211,15 @@ export default function DjPortalPage() {
           </h1>
           <p className="mt-1 inline-flex items-center gap-2 text-sm text-muted-foreground">
             <Calendar className="h-3.5 w-3.5" />
-            Week of {me.weekOf}
+            {(() => {
+              // Show the EXACT air date this upload week (station convention),
+              // not the week's Monday. Falls back to the raw week if no slot.
+              const slot = me.slots[0];
+              const d = new Date(me.weekOf + "T00:00:00");
+              if (!slot || Number.isNaN(d.getTime())) return `Week of ${me.weekOf}`;
+              d.setDate(d.getDate() + (slot.dayOfWeek === 0 ? 6 : slot.dayOfWeek - 1));
+              return `Airs ${d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}`;
+            })()}
           </p>
         </div>
         <Button onClick={reload} variant="outline" size="sm" className="rounded-full">

@@ -8,6 +8,11 @@
  *   • `dj_drops`  — published drops are public-readable (RLS, migration 025)
  *   • `djs`       — active roster, public-readable
  *   • `dj_slots`  — the weekly broadcast schedule, public-readable
+ *   • `entity_follows` — when signed in, the user's follow rows for ALL the
+ *                   page's DJs in ONE `.in("target_id", …)` query; each
+ *                   DjFollowButton gets its row id as `followId` and keeps its
+ *                   own toggle mutation, reporting back via onFollowChange so
+ *                   sibling pills and later remounts stay in sync.
  *   • storage     — the `dj-drops` bucket is PUBLIC, so getPublicUrl() gives a
  *                   directly-playable URL (no signing).
  *
@@ -42,6 +47,7 @@ import {
   Volume2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { ArchivePlayerBar, type ArchiveTrack } from "./archive-player-bar";
 import { DjFollowButton } from "./dj-follow-button";
 
@@ -74,6 +80,12 @@ interface DropRow {
   duration_seconds: number | null;
   size_bytes: number | null;
   format: string | null;
+}
+
+/** The signed-in user's follow row for one DJ (target_id = djs.user_id). */
+interface FollowRow {
+  id: string;
+  target_id: string;
 }
 
 /** A playable archive entry: a published drop joined to its DJ + slot. */
@@ -123,13 +135,13 @@ function fmtAirDate(d: Date): string {
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
-/** "June 8, 2026" — week-group headings. */
-function fmtWeekLong(weekOf: string): string {
-  return new Date(weekOf + "T00:00:00").toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+/** Long air-date label, e.g. "Thursday, Jun 11, 2026" — mixes are labeled by the
+ * EXACT day they air (the station convention), never by the week's Monday. */
+function fmtAirLong(d: Date): string {
+  return d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", year: "numeric" });
+}
+function fmtAirShort(d: Date): string {
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function fmtDuration(seconds: number): string {
@@ -188,12 +200,16 @@ function ArchiveInner() {
   const selectedSlug = searchParams.get("dj");
 
   const [supabase] = useState(() => createClient());
+  const { user } = useAuth();
   const [djs, setDjs] = useState<DjRow[]>([]);
   const [slots, setSlots] = useState<SlotRow[]>([]);
   const [drops, setDrops] = useState<DropRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadTick, setReloadTick] = useState(0);
+
+  // entity_follows row id per DJ user_id; null = batch lookup not resolved yet.
+  const [followMap, setFollowMap] = useState<Map<string, string> | null>(null);
 
   // Player: queue snapshot + active index. null index = bar closed.
   const [queue, setQueue] = useState<ArchiveTrack[]>([]);
@@ -237,6 +253,53 @@ function ArchiveInner() {
     setLoading(true);
     setError(null);
     setReloadTick((t) => t + 1);
+  };
+
+  // ── Follow states: ONE batched entity_follows query for the whole page ────
+  // (Previously each DjFollowButton fetched its own row — ~12 queries/load.)
+  const userId = user?.id ?? null;
+  useEffect(() => {
+    if (!userId || djs.length === 0) return;
+    const targetIds = djs.flatMap((d) => (d.user_id ? [d.user_id] : []));
+    if (targetIds.length === 0) return;
+    let active = true;
+    void (async () => {
+      const { data, error: followError } = await supabase
+        .from("entity_follows")
+        .select("id, target_id")
+        .eq("follower_id", userId)
+        .eq("target_type", "user")
+        .in("target_id", targetIds);
+      if (!active) return;
+      if (followError) {
+        // Non-critical: degrade to "not following" so the pills stay usable.
+        console.warn("entity_follows lookup failed:", followError.message);
+        setFollowMap(new Map());
+        return;
+      }
+      setFollowMap(new Map(((data ?? []) as FollowRow[]).map((r) => [r.target_id, r.id])));
+    })();
+    return () => {
+      active = false;
+    };
+  }, [supabase, djs, userId]);
+
+  // Toggle results flow back up so sibling pills (grid card + filtered-DJ
+  // header) and later remounts all see the same state.
+  const handleFollowChange = useCallback((djUserId: string, followId: string | null) => {
+    setFollowMap((prev) => {
+      const next = new Map(prev ?? []);
+      if (followId) next.set(djUserId, followId);
+      else next.delete(djUserId);
+      return next;
+    });
+  }, []);
+
+  /** undefined = lookup in flight → a signed-in pill renders its loader. */
+  const followIdFor = (djUserId: string | null): string | null | undefined => {
+    if (!djUserId) return null;
+    if (followMap === null) return undefined;
+    return followMap.get(djUserId) ?? null;
   };
 
   // ── Derived data ──────────────────────────────────────────────────────────
@@ -290,34 +353,50 @@ function ArchiveInner() {
       );
   }, [mixes, railWeek]);
 
-  // The main archive list (optionally filtered to one DJ), newest week first.
+  // The main archive list (optionally filtered to one DJ), newest AIR DATE
+  // first — mixes are organized by the exact day they air, not the week.
   const visibleMixes = useMemo(() => {
     const list = selectedSlug ? mixes.filter((m) => m.dj?.slug === selectedSlug) : mixes;
     return [...list].sort(
       (a, b) =>
-        b.drop.week_of.localeCompare(a.drop.week_of) ||
-        a.airDate.getTime() - b.airDate.getTime() ||
+        b.airDate.getTime() - a.airDate.getTime() ||
         (a.slot?.start_time ?? "").localeCompare(b.slot?.start_time ?? "") ||
         a.drop.file_code.localeCompare(b.drop.file_code),
     );
   }, [mixes, selectedSlug]);
 
-  const weekGroups = useMemo(() => {
-    const groups: { week: string; mixes: Mix[] }[] = [];
-    const byWeek = new Map<string, Mix[]>();
+  // One group per exact air date (newest first), e.g. "Thursday, Jun 11, 2026".
+  const airDateGroups = useMemo(() => {
+    const groups: { key: string; date: Date; mixes: Mix[] }[] = [];
+    const byDay = new Map<string, Mix[]>();
     for (const m of visibleMixes) {
-      let arr = byWeek.get(m.drop.week_of);
+      const key = m.airDate.toDateString();
+      let arr = byDay.get(key);
       if (!arr) {
         arr = [];
-        byWeek.set(m.drop.week_of, arr);
-        groups.push({ week: m.drop.week_of, mixes: arr });
+        byDay.set(key, arr);
+        groups.push({ key, date: m.airDate, mixes: arr });
       }
       arr.push(m);
     }
     return groups;
   }, [visibleMixes]);
 
-  const latestWeek = railWeek;
+  // Newest air date in the archive (for the header chip).
+  const latestAirDate = useMemo(
+    () => (mixes.length ? mixes.reduce((max, m) => (m.airDate > max ? m.airDate : max), mixes[0].airDate) : null),
+    [mixes],
+  );
+
+  // Air-date range of the on-air rail, e.g. "Jun 8 – Jun 14" (or one date).
+  const railRangeLabel = useMemo(() => {
+    if (railMixes.length === 0) return "";
+    const lo = railMixes[0].airDate;
+    const hi = railMixes[railMixes.length - 1].airDate;
+    return lo.toDateString() === hi.toDateString()
+      ? `Airs ${fmtAirLong(lo)}`
+      : `Airing ${fmtAirShort(lo)} – ${fmtAirShort(hi)}`;
+  }, [railMixes]);
 
   // ── Playback ──────────────────────────────────────────────────────────────
 
@@ -400,8 +479,8 @@ function ArchiveInner() {
             <>
               <StatChip icon={<Headphones className="h-3.5 w-3.5" />} label={`${mixes.length} ${mixes.length === 1 ? "mix" : "mixes"}`} />
               <StatChip icon={<Users2 className="h-3.5 w-3.5" />} label={`${djCards.length} DJs`} />
-              {latestWeek && (
-                <StatChip icon={<CalendarDays className="h-3.5 w-3.5" />} label={`Latest: week of ${fmtWeekLong(latestWeek)}`} />
+              {latestAirDate && (
+                <StatChip icon={<CalendarDays className="h-3.5 w-3.5" />} label={`Latest air date: ${fmtAirShort(latestAirDate)}`} />
               )}
             </>
           )}
@@ -439,7 +518,7 @@ function ArchiveInner() {
           {railWeek && railMixes.length > 0 && (
             <Rail
               title={railWeek === currentMonday ? "This Week On Air" : "Latest On Air"}
-              subtitle={`Week of ${fmtWeekLong(railWeek)}`}
+              subtitle={railRangeLabel}
             >
               {railMixes.map((m) => (
                 <RailCard
@@ -495,7 +574,12 @@ function ArchiveInner() {
                       </p>
                     </button>
                     <div className="mt-2 flex justify-center">
-                      <DjFollowButton djUserId={dj.user_id} djName={dj.display_name} />
+                      <DjFollowButton
+                        djUserId={dj.user_id}
+                        djName={dj.display_name}
+                        followId={followIdFor(dj.user_id)}
+                        onFollowChange={handleFollowChange}
+                      />
                     </div>
                   </div>
                 );
@@ -526,7 +610,12 @@ function ArchiveInner() {
                     {selectedDj.count} {selectedDj.count === 1 ? "mix" : "mixes"} in the archive
                   </p>
                 </div>
-                <DjFollowButton djUserId={selectedDj.dj.user_id} djName={selectedDj.dj.display_name} />
+                <DjFollowButton
+                  djUserId={selectedDj.dj.user_id}
+                  djName={selectedDj.dj.display_name}
+                  followId={followIdFor(selectedDj.dj.user_id)}
+                  onFollowChange={handleFollowChange}
+                />
                 <Link
                   href={`/djs/${selectedDj.dj.slug}`}
                   className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground transition-colors hover:border-[#74ddc7]/50 hover:text-[#74ddc7]"
@@ -548,16 +637,16 @@ function ArchiveInner() {
                 </button>
               </div>
             ) : (
-              weekGroups.map(({ week, mixes: weekMixes }) => (
-                <div key={week} className="space-y-2">
+              airDateGroups.map(({ key, date, mixes: dayMixes }) => (
+                <div key={key} className="space-y-2">
                   <h3 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                    <CalendarDays className="h-3.5 w-3.5 text-[#74ddc7]" /> Week of {fmtWeekLong(week)}
-                    {week === currentMonday && (
-                      <span className="rounded-full bg-[#74ddc7]/15 px-2 py-0.5 text-[10px] font-bold text-[#74ddc7]">This week</span>
+                    <CalendarDays className="h-3.5 w-3.5 text-[#74ddc7]" /> {fmtAirLong(date)}
+                    {date.toDateString() === new Date().toDateString() && (
+                      <span className="rounded-full bg-[#74ddc7]/15 px-2 py-0.5 text-[10px] font-bold text-[#74ddc7]">Today</span>
                     )}
                   </h3>
                   <div className="space-y-2">
-                    {weekMixes.map((m) => (
+                    {dayMixes.map((m) => (
                       <MixRow
                         key={m.drop.id}
                         mix={m}

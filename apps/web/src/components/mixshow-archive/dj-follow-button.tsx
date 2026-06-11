@@ -3,18 +3,25 @@
 /**
  * Compact Follow pill for a DJ in the public Mixshow Archive.
  *
- * Reuses the codebase's `entity_follows` pattern exactly (see
+ * Reuses the codebase's `entity_follows` pattern (see
  * components/social/follow-button.tsx): own-row insert/delete, RLS-backed,
  * Supabase-direct. The table's CHECK constraint only allows target_type
  * 'host' | 'show' | 'user', and every DJ with published drops has a linked
  * auth user, so following a DJ = following their user (target_type 'user',
  * target_id = djs.user_id). DJs with no linked user render nothing.
  *
+ * Follow STATE lives in the archive page, which batch-fetches the signed-in
+ * user's rows for every DJ in ONE entity_follows query (no per-button reads)
+ * and passes each pill its row id via `followId` (undefined while that lookup
+ * is in flight). This component only renders the state and owns the toggle
+ * mutation, reporting results through `onFollowChange` so sibling pills for
+ * the same DJ stay in sync.
+ *
  * Unlike the social FollowButton (which hides when signed out), signed-out
  * visitors see the pill and get a sign-in prompt toast with a /login action.
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check, Loader2, UserPlus } from "lucide-react";
@@ -24,48 +31,30 @@ import { useAuth } from "@/hooks/use-auth";
 export function DjFollowButton({
   djUserId,
   djName,
+  followId,
+  onFollowChange,
   className = "",
 }: {
   /** djs.user_id — the DJ's auth/profile id. Null → no follow target, renders nothing. */
   djUserId: string | null;
   djName: string;
+  /** entity_follows row id from the page's batch lookup; null = not following, undefined = lookup in flight. */
+  followId: string | null | undefined;
+  /** Reports toggle results so the page's follow map (and sibling pills) stay current. */
+  onFollowChange: (djUserId: string, followId: string | null) => void;
   className?: string;
 }) {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [supabase] = useState(() => createClient());
-  const [followId, setFollowId] = useState<string | null>(null);
-  const [checked, setChecked] = useState(false);
   const [busy, setBusy] = useState(false);
-
-  // Check follow status once we know the signed-in user. setState only happens
-  // after the await, behind the `active` guard (react-hooks/set-state-in-effect).
-  useEffect(() => {
-    if (!djUserId || !user) return;
-    let active = true;
-    void (async () => {
-      const { data, error } = await supabase
-        .from("entity_follows")
-        .select("id")
-        .eq("follower_id", user.id)
-        .eq("target_type", "user")
-        .eq("target_id", djUserId)
-        .maybeSingle();
-      if (!active) return;
-      if (!error) setFollowId((data as { id: string } | null)?.id ?? null);
-      setChecked(true);
-    })();
-    return () => {
-      active = false;
-    };
-  }, [user, supabase, djUserId]);
 
   if (!djUserId) return null;
 
   const base =
     "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors disabled:opacity-50";
 
-  if (authLoading || (user && !checked)) {
+  if (authLoading || (user && followId === undefined)) {
     return (
       <span className={`${base} border-border text-muted-foreground ${className}`}>
         <Loader2 className="h-3 w-3 animate-spin" />
@@ -96,12 +85,11 @@ export function DjFollowButton({
   const toggle = async () => {
     if (busy) return;
     setBusy(true);
-    if (isFollowing && followId) {
-      const prev = followId;
-      setFollowId(null); // optimistic
-      const { error } = await supabase.from("entity_follows").delete().eq("id", prev);
+    if (followId) {
+      onFollowChange(djUserId, null); // optimistic
+      const { error } = await supabase.from("entity_follows").delete().eq("id", followId);
       if (error) {
-        setFollowId(prev);
+        onFollowChange(djUserId, followId);
         toast.error("Failed to unfollow");
       }
     } else {
@@ -113,7 +101,7 @@ export function DjFollowButton({
       if (error) {
         toast.error("Failed to follow");
       } else {
-        setFollowId((data as { id: string }).id);
+        onFollowChange(djUserId, (data as { id: string }).id);
         toast.success(`Following ${djName}`);
       }
     }
