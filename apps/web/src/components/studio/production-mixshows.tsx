@@ -447,6 +447,10 @@ export function ProductionMixshows({
   // removed when the By-DJ view went flat, so it stays pinned to the current
   // week; the setter is intentionally unused (underscore-prefixed for lint).
   const [weekOf, _setWeekOf] = useState(isoMondayOfNow());
+  // Which broadcast week NEW uploads land in (flat By-DJ view). Defaults to
+  // the live week; the selector in the DJ header offers past/future weeks so
+  // a mix can be filed into exactly the week it airs.
+  const [uploadWeek, setUploadWeek] = useState(isoMondayOfNow());
   const [slots, setSlots] = useState<Slot[]>([]);
   // `drops` is scoped to the active `weekOf` and drives the By-Day view + the
   // active-week file rows. `allDrops` holds EVERY week so the flat By-DJ view
@@ -815,16 +819,17 @@ export function ProductionMixshows({
   // still gets this week's codes here, so their upload view always works.
   const djFlatItems = useMemo<FlatMix[]>(() => {
     if (!currentDjFolder) return [];
-    const thisWeek = isoMondayOfNow();
+    const targetWeek = uploadWeek;
     const out: FlatMix[] = [];
     const seen = new Set<string>();
-    // 1) This week's expected codes (uploaded or not) — the live upload targets.
+    // 1) The SELECTED week's expected codes (uploaded or not) — the live
+    //    upload targets. Defaults to this week; the header selector retargets.
     for (const slot of currentDjFolder.slots) {
       for (const code of slot.file_codes) {
-        const key = `${slot.id}|${code}|${thisWeek}`;
+        const key = `${slot.id}|${code}|${targetWeek}`;
         const drop = allDropByKey.get(key);
         const present = !!drop && !!drop.storage_path && PLAYABLE_STATUSES.includes(drop.status);
-        out.push({ slot, code, week: thisWeek, drop, present, airDate: dateForDay(thisWeek, slot.day_of_week) });
+        out.push({ slot, code, week: targetWeek, drop, present, airDate: dateForDay(targetWeek, slot.day_of_week) });
         seen.add(key);
       }
     }
@@ -840,7 +845,7 @@ export function ProductionMixshows({
     }
     out.sort((a, b) => b.airDate.getTime() - a.airDate.getTime() || a.slot.start_time.localeCompare(b.slot.start_time));
     return out;
-  }, [currentDjFolder, allDrops, allDropByKey, slotById]);
+  }, [currentDjFolder, allDrops, allDropByKey, slotById, uploadWeek]);
 
   // ── Multi-select over the active view's UPLOADED files ────────────────────
   // Unified selection model: one entry per selectable (on-air) file in the
@@ -868,10 +873,12 @@ export function ProductionMixshows({
 
   const allSelected = selectableItems.length > 0 && selectedDrops.length === selectableItems.length;
 
-  // Clear selection whenever we leave the file/DJ view or switch slot / DJ.
+  // Clear selection whenever we leave the file/DJ view or switch slot / DJ,
+  // and reset the upload-week selector back to the live week per DJ.
   useEffect(() => {
     setSelected(new Set());
     setAnchorCode(null);
+    setUploadWeek(isoMondayOfNow());
   }, [currentSlot?.id, currentDjKey]);
 
   // Toggle a row, honouring shift (range from anchor) + ctrl/cmd (toggle).
@@ -1172,6 +1179,29 @@ export function ProductionMixshows({
                 <UserCircle2 className="h-3.5 w-3.5" />
                 {currentDjFolder.label} · {filesByDjKey.get(currentDjFolder.key) ?? 0} mixshow{(filesByDjKey.get(currentDjFolder.key) ?? 0) === 1 ? "" : "s"}
               </span>
+              {/* Which week new uploads land in — labeled by the DJ's air date. */}
+              <label className="inline-flex items-center gap-1.5">
+                <span className="font-medium">Uploading for:</span>
+                <select
+                  value={uploadWeek}
+                  onChange={(e) => setUploadWeek(e.target.value)}
+                  className="rounded-full border border-border bg-card px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[#74ddc7]/40"
+                >
+                  {[-1, 0, 1, 2, 3].map((n) => {
+                    const monday = new Date(isoMondayOfNow() + "T00:00:00");
+                    monday.setDate(monday.getDate() + n * 7);
+                    const iso = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, "0")}-${String(monday.getDate()).padStart(2, "0")}`;
+                    const day = currentDjFolder.slots[0]?.day_of_week ?? 1;
+                    const air = dateForDay(iso, day);
+                    const label = air.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+                    return (
+                      <option key={iso} value={iso}>
+                        {n === 0 ? `Airs ${label} (this week)` : n === -1 ? `Aired ${label} (last week)` : `Airs ${label}`}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
               {selectableItems.length > 0 && (
                 <button
                   onClick={selectAllOrClear}

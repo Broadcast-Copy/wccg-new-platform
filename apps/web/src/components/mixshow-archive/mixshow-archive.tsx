@@ -309,7 +309,10 @@ function ArchiveInner() {
     const slotById = new Map(slots.map((s) => [s.id, s]));
     return drops.flatMap<Mix>((drop) => {
       if (!drop.storage_path) return [];
+      // The admin/test slot never belongs in the public archive.
+      if (drop.dj_id === "dj_admin" || drop.slot_id === "slot_admin_test") return [];
       const dj = drop.dj_id ? djById.get(drop.dj_id) ?? null : null;
+      if (dj?.slug === "dj-admin") return [];
       const slot = drop.slot_id ? slotById.get(drop.slot_id) ?? null : null;
       const airDate = slot ? dateForDay(drop.week_of, slot.day_of_week) : new Date(drop.week_of + "T00:00:00");
       const url = supabase.storage.from("dj-drops").getPublicUrl(drop.storage_path).data.publicUrl;
@@ -352,6 +355,22 @@ function ArchiveInner() {
           a.drop.file_code.localeCompare(b.drop.file_code),
       );
   }, [mixes, railWeek]);
+
+  // One rail card per SHOW (slot): both files of a two-part mix live on the
+  // same card instead of two near-identical cards. Parts keep code order.
+  const railShows = useMemo(() => {
+    const map = new Map<string, Mix[]>();
+    const order: string[] = [];
+    for (const m of railMixes) {
+      const key = m.slot?.id ?? `${m.dj?.id ?? "dj"}|${m.drop.week_of}`;
+      if (!map.has(key)) {
+        map.set(key, []);
+        order.push(key);
+      }
+      map.get(key)!.push(m);
+    }
+    return order.map((key) => ({ key, parts: map.get(key)! }));
+  }, [railMixes]);
 
   // The main archive list (optionally filtered to one DJ), newest AIR DATE
   // first — mixes are organized by the exact day they air, not the week.
@@ -520,12 +539,12 @@ function ArchiveInner() {
               title={railWeek === currentMonday ? "This Week On Air" : "Latest On Air"}
               subtitle={railRangeLabel}
             >
-              {railMixes.map((m) => (
-                <RailCard
-                  key={m.drop.id}
-                  mix={m}
-                  playing={nowPlayingId === m.drop.id}
-                  onPlay={() => playFromList(railMixes, m)}
+              {railShows.map(({ key, parts }) => (
+                <ShowRailCard
+                  key={key}
+                  parts={parts}
+                  nowPlayingId={nowPlayingId}
+                  onPlayPart={(m) => playFromList(railMixes, m)}
                 />
               ))}
             </Rail>
@@ -737,39 +756,72 @@ function Rail({ title, subtitle, children }: { title: string; subtitle: string; 
 }
 
 /** A card in the "This Week On Air" rail: DJ + air day/time + play. */
-function RailCard({ mix, playing, onPlay }: { mix: Mix; playing: boolean; onPlay: () => void }) {
-  const airLabel = mix.slot
-    ? `${DAY_SHORT[mix.slot.day_of_week] ?? ""} · ${fmt12h(mix.slot.start_time)}`
-    : fmtAirDate(mix.airDate);
+/** One card per SHOW: header plays the whole set (part 2 queues after part 1);
+ * each part also gets its own chip so listeners can jump straight to hour 2. */
+function ShowRailCard({
+  parts,
+  nowPlayingId,
+  onPlayPart,
+}: {
+  parts: Mix[];
+  nowPlayingId: string | null;
+  onPlayPart: (m: Mix) => void;
+}) {
+  const first = parts[0];
+  const anyPlaying = parts.some((p) => nowPlayingId === p.drop.id);
+  const airLabel = first.slot
+    ? `${DAY_SHORT[first.slot.day_of_week] ?? ""} · ${fmt12h(first.slot.start_time)}–${fmt12h(first.slot.end_time)}`
+    : fmtAirDate(first.airDate);
   return (
-    <button
-      onClick={onPlay}
-      className={`group w-60 shrink-0 snap-start rounded-2xl border p-4 text-left transition-colors ${
-        playing ? "border-[#74ddc7]/60 bg-[#74ddc7]/[0.06]" : "border-border bg-card hover:border-[#74ddc7]/40"
+    <div
+      className={`w-64 shrink-0 snap-start rounded-2xl border p-4 transition-colors ${
+        anyPlaying ? "border-[#74ddc7]/60 bg-[#74ddc7]/[0.06]" : "border-border bg-card hover:border-[#74ddc7]/40"
       }`}
     >
-      <div className="flex items-center gap-3">
+      <button onClick={() => onPlayPart(first)} className="group flex w-full items-center gap-3 text-left">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df]/40 to-[#74ddc7]/25 text-sm font-black text-foreground">
-          {initials(mix.dj?.display_name ?? "WCCG DJ")}
+          {initials(first.dj?.display_name ?? "WCCG DJ")}
         </span>
         <div className="min-w-0 flex-1">
-          <p className={`truncate text-sm font-bold ${playing ? "text-[#74ddc7]" : "text-foreground"}`}>
-            {mix.dj?.display_name ?? "WCCG DJ"}
+          <p className={`truncate text-sm font-bold ${anyPlaying ? "text-[#74ddc7]" : "text-foreground"}`}>
+            {first.dj?.display_name ?? "WCCG DJ"}
           </p>
           <p className="truncate text-[11px] text-muted-foreground">{airLabel}</p>
         </div>
         <span
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors ${
-            playing ? "bg-[#74ddc7] text-[#0a0a0f]" : "bg-foreground/10 text-foreground group-hover:bg-[#74ddc7]/25"
+            anyPlaying ? "bg-[#74ddc7] text-[#0a0a0f]" : "bg-foreground/10 text-foreground group-hover:bg-[#74ddc7]/25"
           }`}
         >
-          {playing ? <Volume2 className="h-4 w-4" /> : <Play className="h-4 w-4" fill="currentColor" />}
+          {anyPlaying ? <Volume2 className="h-4 w-4" /> : <Play className="h-4 w-4" fill="currentColor" />}
         </span>
-      </div>
-      <p className="mt-3 truncate font-mono text-[11px] text-muted-foreground/70">
-        {mix.drop.file_code}.{mix.drop.format ?? "mp3"}
-      </p>
-    </button>
+      </button>
+      {parts.length > 1 ? (
+        <div className="mt-3 flex gap-1.5">
+          {parts.map((p, i) => {
+            const playing = nowPlayingId === p.drop.id;
+            return (
+              <button
+                key={p.drop.id}
+                onClick={() => onPlayPart(p)}
+                className={`flex-1 rounded-full border px-2 py-1 text-[10px] font-bold transition-colors ${
+                  playing
+                    ? "border-[#74ddc7]/60 bg-[#74ddc7]/15 text-[#74ddc7]"
+                    : "border-border text-muted-foreground hover:border-[#74ddc7]/40 hover:text-foreground"
+                }`}
+                title={`${p.drop.file_code}.${p.drop.format ?? "mp3"}`}
+              >
+                {playing ? "▶ " : ""}Part {i + 1}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="mt-3 truncate font-mono text-[11px] text-muted-foreground/70">
+          {first.drop.file_code}.{first.drop.format ?? "mp3"}
+        </p>
+      )}
+    </div>
   );
 }
 
