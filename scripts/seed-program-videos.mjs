@@ -20,7 +20,6 @@ const PROGRAMS = [
   // Local Fayetteville culture — explicit language → rated R (parental-gated +
   // explicit-content warning on the watch page).
   { program: "Big Cas", category: "Talk & Culture", rating: "R", channelId: "UCQmsI0AAbXvTevWkqMIBU-Q" },
-  { program: "Views From The Ville", category: "Talk & Culture", rating: "R", channelId: "UC-M-efaUuEVvH4SYBI1FHww" },
 
   // News
   { program: "ABC News", category: "News", rating: "PG", channelId: "UCBi2mrWuNuyYy4gbM6fU18Q" },

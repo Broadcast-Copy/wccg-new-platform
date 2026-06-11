@@ -43,7 +43,6 @@ const CHANNELS: ChannelConfig[] = [
   // parental controls are locked, and the watch page shows an explicit-content
   // warning before playback when unlocked.
   { program: "Big Cas", creator: "BigCas910 TV", category: "Talk & Culture", rating: "R", channelId: "UCQmsI0AAbXvTevWkqMIBU-Q" },
-  { program: "Views From The Ville", creator: "Views From The Ville", category: "Talk & Culture", rating: "R", channelId: "UC-M-efaUuEVvH4SYBI1FHww" },
 
   // News
   { program: "ABC News", creator: "ABC News", category: "News", rating: "PG", channelId: "UCBi2mrWuNuyYy4gbM6fU18Q" },
