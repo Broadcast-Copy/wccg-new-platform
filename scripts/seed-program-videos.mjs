@@ -17,6 +17,10 @@ const PROGRAMS = [
   { program: "Posted on The Corner", category: "Talk & Culture", rating: "PG-13", channelId: "UCB4JlD2jIkXanFehab9CbDw" },
   { program: "The Bootleg Kev Show", category: "Talk & Culture", rating: "PG-13", channelId: "UCBgOGeH-NL4o2WGutwverqQ" },
   { program: "Put Me On Game", category: "Talk & Culture", rating: "PG-13", channelId: "UCMZlwNcYLu5eV2Zm2lLmF-Q" },
+  // Local Fayetteville culture — explicit language → rated R (parental-gated +
+  // explicit-content warning on the watch page).
+  { program: "Big Cas", category: "Talk & Culture", rating: "R", channelId: "UCQmsI0AAbXvTevWkqMIBU-Q" },
+  { program: "Views From The Ville", category: "Talk & Culture", rating: "R", channelId: "UC-M-efaUuEVvH4SYBI1FHww" },
 
   // News
   { program: "ABC News", category: "News", rating: "PG", channelId: "UCBi2mrWuNuyYy4gbM6fU18Q" },

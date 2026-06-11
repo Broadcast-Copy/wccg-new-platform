@@ -675,6 +675,32 @@ export const SHOW_FRIDAY_NIGHT_SHOCKWAVE: ShowData = {
 
 // ─── All Shows ────────────────────────────────────────────────────
 
+export const SHOW_BIG_CAS: ShowData = {
+  id: "show_big_cas",
+  name: "Big Cas",
+  slug: "big-cas",
+  hostNames: "Big Cas",
+  hostIds: [],
+  timeSlot: "On Demand",
+  days: "New episodes weekly",
+  streamId: "stream_wccg",
+  description:
+    "Big Cas brings Fayetteville the culture unfiltered — hip-hop news, reactions, interviews, and the stories moving the 910. Straight talk from Fayettenam's own. Contains explicit language.",
+  tagline: "Fayettenam culture, unfiltered",
+  gradient: "from-[#1a0533] via-[#2d0a4e] to-[#0a0a1a]",
+  imageUrl: null,
+  showImageUrl: null,
+  youtube: {
+    channelName: "BigCas910 TV",
+    channelUrl: "https://www.youtube.com/@bigcas910",
+    channelId: "UCQmsI0AAbXvTevWkqMIBU-Q",
+    searchQuery: "BigCas910 TV",
+  },
+  isSyndicated: false,
+  isActive: true,
+  category: "mixsquad",
+};
+
 export const ALL_SHOWS: ShowData[] = [
   // Weekday
   SHOW_STREETZ_MORNING,
@@ -705,6 +731,7 @@ export const ALL_SHOWS: ShowData[] = [
   // 24/7 Stream
   SHOW_MIXSQUAD_RADIO,
   // Podcast-Only
+  SHOW_BIG_CAS,
   SHOW_IN_IT_BIG_A,
   SHOW_CAROLINA_EFFECT,
   SHOW_INSIDE_THE_LINES,

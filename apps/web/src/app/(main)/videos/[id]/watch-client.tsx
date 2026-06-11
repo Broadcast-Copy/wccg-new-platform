@@ -144,6 +144,27 @@ export default function WatchClient() {
 
   const gated = video ? locked && isMatureRating(video.rating) : false;
 
+  // Explicit-language warning: even when parental controls are unlocked,
+  // mature (R/NR) videos pop a one-time warning before anything plays.
+  // Acknowledgment lasts for the browser session.
+  const [ackExplicit, setAckExplicit] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return sessionStorage.getItem("wccg_explicit_ok") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const acknowledgeExplicit = () => {
+    try {
+      sessionStorage.setItem("wccg_explicit_ok", "1");
+    } catch {
+      /* private mode — in-memory ack still applies */
+    }
+    setAckExplicit(true);
+  };
+  const needsExplicitWarning = !!video && !gated && isMatureRating(video.rating) && !ackExplicit;
+
   // Native-player progress: seek to the resume point once, then upsert every ~10s.
   useEffect(() => {
     const el = videoElRef.current;
@@ -259,6 +280,39 @@ export default function WatchClient() {
                   >
                     <Lock className="h-4 w-4" /> Unlock to watch
                   </button>
+                </div>
+              </div>
+            ) : needsExplicitWarning ? (
+              <div className="relative h-full w-full">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={videoThumb(video)}
+                  alt=""
+                  className="absolute inset-0 h-full w-full scale-110 object-cover opacity-30 blur-2xl"
+                />
+                <div className="relative flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-400/20 text-amber-400">
+                    <ShieldAlert className="h-6 w-6" />
+                  </div>
+                  <p className="text-base font-bold text-white">Explicit content warning</p>
+                  <p className="max-w-sm text-xs text-white/70">
+                    This video contains explicit language and is intended for mature audiences.
+                    Viewer discretion is advised.
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                    <Link
+                      href="/videos"
+                      className="rounded-full border border-white/25 bg-black/40 px-4 py-2 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-black/60"
+                    >
+                      Go back
+                    </Link>
+                    <button
+                      onClick={acknowledgeExplicit}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-[#74ddc7] px-4 py-2 text-sm font-bold text-[#0a0a0f] hover:bg-[#74ddc7]/90"
+                    >
+                      I understand — play
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : video.youtube_id ? (
