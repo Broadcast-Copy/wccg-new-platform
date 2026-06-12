@@ -14,7 +14,6 @@ export const metadata = {
 const PODCAST_IDS = [
   "show_big_cas",
   "show_island_frequency",
-  "show_in_it_big_a",
   "show_carolina_effect",
   "show_riich_villianz",
   "show_inside_the_lines",

@@ -141,25 +141,6 @@ export const SHOW_WAY_UP_ANGELA_YEE: ShowData = {
   category: "weekday",
 };
 
-export const SHOW_IN_IT_BIG_A: ShowData = {
-  id: "show_in_it_big_a",
-  name: "In It with Big A",
-  slug: "in-it-with-big-a",
-  hostNames: "Big A",
-  hostIds: ["host_big_a"],
-  timeSlot: "On Demand",
-  days: "Weekly",
-  streamId: "stream_wccg",
-  description: "Big A keeps it real with unfiltered conversations, community topics, and the kind of talk that hits different. In It with Big A is the podcast where real life meets real talk.",
-  tagline: "Real life meets real talk",
-  gradient: "from-[#1a0533] via-[#2d1b69] to-[#1a1a2e]",
-  imageUrl: null,
-  showImageUrl: null,
-  isSyndicated: false,
-  isActive: true,
-  category: "weekday",
-};
-
 export const SHOW_GENERAL_PROGRAMMING_WEEKDAY: ShowData = {
   id: "show_general_programming_weekday",
   name: "General Programming",
@@ -629,14 +610,14 @@ export const SHOW_ABC_NEWS: ShowData = {
 
 export const SHOW_CAROLINA_EFFECT: ShowData = {
   id: "show_carolina_effect",
-  name: "The Carolina Effect with J. Reid",
+  name: "The Carolina Effect",
   slug: "carolina-effect",
-  hostNames: "J. Reid",
-  hostIds: ["host_j_reid"],
+  hostNames: "WCCG",
+  hostIds: [],
   timeSlot: "On Demand",
   days: "Weekly",
   streamId: "stream_wccg",
-  description: "J. Reid takes listeners on a deep dive into Carolina culture — music, sports, lifestyle, and the people shaping the Carolinas. Real conversations with local influencers, artists, and community leaders.",
+  description: "A deep dive into Carolina culture — music, sports, lifestyle, and the people shaping the Carolinas. Real conversations with local influencers, artists, and community leaders.",
   tagline: "The pulse of Carolina culture",
   gradient: "from-[#1e3a5f] via-[#0d2137] to-[#0a0a0f]",
   imageUrl: null,
@@ -743,7 +724,6 @@ export const ALL_SHOWS: ShowData[] = [
   SHOW_MIXSQUAD_RADIO,
   // Podcast-Only
   SHOW_BIG_CAS,
-  SHOW_IN_IT_BIG_A,
   SHOW_CAROLINA_EFFECT,
   SHOW_INSIDE_THE_LINES,
   SHOW_FRIDAY_NIGHT_SHOCKWAVE,
