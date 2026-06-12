@@ -38,6 +38,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   Disc3,
   Shuffle,
   Headphones,
@@ -49,7 +51,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { isoMondayOfNow } from "@/lib/broadcast-week";
+import { isoLocalDate, isoMondayOfNow } from "@/lib/broadcast-week";
 import { ArchivePlayerBar, type ArchiveTrack } from "./archive-player-bar";
 import { DjFollowButton } from "./dj-follow-button";
 
@@ -214,7 +216,28 @@ function ArchiveInner() {
   const [playerIndex, setPlayerIndex] = useState<number | null>(null);
 
   // Current broadcast week, fixed for the life of the page.
-  const [currentMonday] = useState(() => isoMondayOfNow());
+  // The week shown in the On-Air grid. Defaults to the current broadcast
+  // week; the grid header has prev/next arrows + a date picker (any picked
+  // date snaps to its Monday).
+  const [todayMonday] = useState(() => isoMondayOfNow());
+  const [currentMonday, setCurrentMonday] = useState(() => isoMondayOfNow());
+
+  const shiftWeek = useCallback((deltaWeeks: number) => {
+    setCurrentMonday((prev) => {
+      const d = new Date(prev + "T00:00:00");
+      d.setDate(d.getDate() + deltaWeeks * 7);
+      return isoLocalDate(d);
+    });
+  }, []);
+
+  /** Any picked calendar date snaps to the Monday of its week. */
+  const pickWeek = useCallback((value: string) => {
+    if (!value) return;
+    const d = new Date(value + "T00:00:00");
+    if (Number.isNaN(d.getTime())) return;
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    setCurrentMonday(isoLocalDate(d));
+  }, []);
 
   // ── Load everything (anon-readable; RLS limits drops to published) ────────
   useEffect(() => {
@@ -521,11 +544,50 @@ function ArchiveInner() {
           {/* ── On Air This Week — the whole broadcast week in ONE grid ── */}
           {scheduleShows.length > 0 && (
             <section className="space-y-2.5">
-              <div>
-                <h2 className="inline-flex items-center gap-2 text-base font-black tracking-tight text-foreground">
-                  <Radio className="h-5 w-5 text-[#74ddc7]" /> On Air This Week
-                </h2>
-                <p className="text-xs text-muted-foreground">{weekRangeLabel} · uploaded shows play right here</p>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h2 className="inline-flex items-center gap-2 text-base font-black tracking-tight text-foreground">
+                    <Radio className="h-5 w-5 text-[#74ddc7]" />
+                    {currentMonday === todayMonday ? "On Air This Week" : "On-Air Schedule"}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">{weekRangeLabel} · uploaded shows play right here</p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => shiftWeek(-1)}
+                    aria-label="Previous week"
+                    title="Previous week"
+                    className="rounded-full border border-border bg-card p-1.5 text-muted-foreground transition-colors hover:border-[#74ddc7]/50 hover:text-[#74ddc7]"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <input
+                    type="date"
+                    value={currentMonday}
+                    onChange={(e) => pickWeek(e.target.value)}
+                    aria-label="Jump to week"
+                    className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-[#74ddc7]/40"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => shiftWeek(1)}
+                    aria-label="Next week"
+                    title="Next week"
+                    className="rounded-full border border-border bg-card p-1.5 text-muted-foreground transition-colors hover:border-[#74ddc7]/50 hover:text-[#74ddc7]"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                  {currentMonday !== todayMonday && (
+                    <button
+                      type="button"
+                      onClick={() => setCurrentMonday(todayMonday)}
+                      className="rounded-full border border-[#74ddc7]/50 bg-[#74ddc7]/10 px-3 py-1.5 text-xs font-bold text-[#0f9e88] transition-colors hover:bg-[#74ddc7]/20 dark:text-[#74ddc7]"
+                    >
+                      This week
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
                 {WEEK_DAYS.map((day) => {
@@ -626,7 +688,7 @@ function ArchiveInner() {
                             >
                               <span className="block truncate text-xs font-bold text-foreground/80">{dj.display_name}</span>
                               <span className="block text-[10px] text-muted-foreground">
-                                {fmt12h(slot.start_time)} · drops soon
+                                {fmt12h(slot.start_time)} · {currentMonday < todayMonday ? "not archived" : "drops soon"}
                               </span>
                             </button>
                           );
