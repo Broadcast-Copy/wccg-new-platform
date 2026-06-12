@@ -564,7 +564,12 @@ export default function ShowDetailPage({
         {/* ─── Podcasts Tab ─── */}
         <TabsContent value="podcasts">
           <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 space-y-6">
+              {/* Gospel churches: their weekly sermon broadcasts ARE their
+                  podcast — the archive leads this tab. */}
+              {SERMON_CODES[show.id] && (
+                <SermonArchive churchCode={SERMON_CODES[show.id]} showName={show.name} />
+              )}
               {rssLoading ? (
                 <div className="flex h-48 items-center justify-center rounded-xl border border-border bg-muted/30">
                   <div className="flex items-center gap-2 text-muted-foreground">
@@ -573,16 +578,20 @@ export default function ShowDetailPage({
                   </div>
                 </div>
               ) : (
-                <PodcastPlayer
-                  episodes={show.episodes}
-                  rssEpisodes={rssEpisodes}
-                  showName={show.name}
-                  showImage={show.imageUrl}
-                  onPlayEpisode={handlePlayEpisode}
-                  onPlayRss={handlePlayRss}
-                  isPlaying={isPlaying}
-                  currentStream={currentStream}
-                />
+                // Churches without a separate RSS feed don't need an empty
+                // podcast player under their sermons.
+                (!SERMON_CODES[show.id] || rssEpisodes.length > 0 || show.episodes.length > 0) && (
+                  <PodcastPlayer
+                    episodes={show.episodes}
+                    rssEpisodes={rssEpisodes}
+                    showName={show.name}
+                    showImage={show.imageUrl}
+                    onPlayEpisode={handlePlayEpisode}
+                    onPlayRss={handlePlayRss}
+                    isPlaying={isPlaying}
+                    currentStream={currentStream}
+                  />
+                )
               )}
             </div>
 
@@ -683,11 +692,6 @@ export default function ShowDetailPage({
                 </p>
               </div>
 
-              {/* Sermon archive — gospel caravan churches replay past Sunday
-                  broadcasts right on the program page. */}
-              {SERMON_CODES[show.id] && (
-                <SermonArchive churchCode={SERMON_CODES[show.id]} showName={show.name} />
-              )}
 
               {/* Schedule */}
               {schedule && (

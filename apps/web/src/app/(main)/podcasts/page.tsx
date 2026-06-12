@@ -20,6 +20,13 @@ const PODCAST_IDS = [
   "show_inside_the_lines",
   "show_friday_night_shockwave",
   "show_sunday_snacks",
+  // Gospel caravan churches — their weekly sermon archives play on each
+  // show page's Podcasts tab.
+  "show_grace_plus_nothing",
+  "show_encouraging_moment",
+  "show_family_fellowship",
+  "show_progressive_mbc",
+  "show_lewis_chapel",
 ];
 
 function getPodcasts() {
