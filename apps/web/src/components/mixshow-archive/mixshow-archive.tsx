@@ -92,6 +92,13 @@ interface FollowRow {
   target_id: string;
 }
 
+/** Mix Squad member profile bits merged into the archive (profiles_public). */
+interface DjProfile {
+  avatar_url: string | null;
+  username: string | null;
+  bio: string | null;
+}
+
 /** A playable archive entry: a published drop joined to its DJ + slot. */
 interface Mix {
   drop: DropRow;
@@ -207,6 +214,8 @@ function ArchiveInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadTick, setReloadTick] = useState(0);
+  /** Mix Squad member profiles keyed by djs.user_id (avatar/handle/bio). */
+  const [profileMap, setProfileMap] = useState<Map<string, DjProfile>>(new Map());
 
   // entity_follows row id per DJ user_id; null = batch lookup not resolved yet.
   const [followMap, setFollowMap] = useState<Map<string, string> | null>(null);
@@ -259,11 +268,29 @@ function ArchiveInner() {
         setLoading(false);
         return;
       }
-      setDjs((djRes.data ?? []) as DjRow[]);
+      const djRows = (djRes.data ?? []) as DjRow[];
+      setDjs(djRows);
       setSlots((slotRes.data ?? []) as SlotRow[]);
       setDrops((dropRes.data ?? []) as DropRow[]);
       setError(null);
       setLoading(false);
+
+      // Mix Squad profiles: avatars/bios/handles for DJs with linked member
+      // accounts — ONE batched profiles_public query (non-critical: the rail
+      // falls back to initials when missing).
+      const ids = djRows.flatMap((d) => (d.user_id ? [d.user_id] : []));
+      if (ids.length) {
+        const { data: profs, error: profErr } = await supabase
+          .from("profiles_public")
+          .select("id, avatar_url, username, bio")
+          .in("id", ids);
+        if (!active || profErr) return;
+        const map = new Map<string, DjProfile>();
+        for (const p of (profs ?? []) as (DjProfile & { id: string })[]) {
+          map.set(p.id, { avatar_url: p.avatar_url, username: p.username, bio: p.bio });
+        }
+        setProfileMap(map);
+      }
     })();
     return () => {
       active = false;
@@ -707,10 +734,12 @@ function ArchiveInner() {
               <Disc3 className="h-5 w-5 text-[#74ddc7]" /> Browse the archive
             </h2>
             <div className="grid gap-4 lg:grid-cols-[300px_1fr] lg:items-start">
-              {/* DJ browser — left, sticky on desktop */}
+              {/* Mix Squad browser — left, sticky on desktop. DJ profile cards
+                  (avatars/bios from linked member accounts) merged with the
+                  archive so the squad and their mixes live on one page. */}
               <aside className="rounded-2xl border border-border bg-card/60 p-3 lg:sticky lg:top-24">
                 <p className="inline-flex items-center gap-1.5 px-2 pb-2 pt-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                  <Users2 className="h-3.5 w-3.5 text-[#74ddc7]" /> Browse by DJ
+                  <Users2 className="h-3.5 w-3.5 text-[#74ddc7]" /> The Mix Squad
                 </p>
                 <div className="space-y-1 lg:max-h-[62vh] lg:overflow-y-auto lg:pr-1">
                   <button
@@ -733,6 +762,7 @@ function ArchiveInner() {
 
                   {djCards.map(({ dj, count }) => {
                     const active = selectedSlug === dj.slug;
+                    const profile = dj.user_id ? profileMap.get(dj.user_id) : undefined;
                     return (
                       <div key={dj.id}>
                         <button
@@ -742,26 +772,52 @@ function ArchiveInner() {
                             active ? "bg-[#74ddc7]/10" : "hover:bg-foreground/[0.05]"
                           }`}
                         >
-                          <span
-                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df]/40 to-[#74ddc7]/25 text-xs font-black ${
-                              active ? "text-[#74ddc7] ring-2 ring-[#74ddc7]/60" : "text-foreground"
-                            }`}
-                          >
-                            {initials(dj.display_name)}
-                          </span>
+                          {profile?.avatar_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={profile.avatar_url}
+                              alt=""
+                              className={`h-9 w-9 shrink-0 rounded-full object-cover ${
+                                active ? "ring-2 ring-[#74ddc7]/60" : ""
+                              }`}
+                              loading="lazy"
+                            />
+                          ) : (
+                            <span
+                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df]/40 to-[#74ddc7]/25 text-xs font-black ${
+                                active ? "text-[#74ddc7] ring-2 ring-[#74ddc7]/60" : "text-foreground"
+                              }`}
+                            >
+                              {initials(dj.display_name)}
+                            </span>
+                          )}
                           <span className="min-w-0 flex-1">
                             <span className={`block truncate text-sm font-bold ${active ? "text-[#74ddc7]" : "text-foreground"}`}>
                               {dj.display_name}
                             </span>
-                            <span className="block text-[11px] text-muted-foreground">
+                            <span className="block truncate text-[11px] text-muted-foreground">
                               {count} {count === 1 ? "mix" : "mixes"}
+                              {profile?.username ? ` · @${profile.username}` : ""}
                             </span>
                           </span>
                         </button>
 
-                        {/* Selected DJ expands in place: schedule + actions. */}
+                        {/* Selected DJ expands in place: profile + schedule + actions. */}
                         {active && (
-                          <div className="mb-1 mt-1 space-y-2 rounded-xl border border-[#74ddc7]/30 bg-[#74ddc7]/[0.04] p-3">
+                          <div className="mb-1 mt-1 space-y-2 rounded-xl border border-[#74ddc7]/30 bg-gradient-to-b from-[#7401df]/[0.08] to-[#74ddc7]/[0.04] p-3">
+                            {profile?.avatar_url && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={profile.avatar_url}
+                                alt={dj.display_name}
+                                className="mx-auto h-16 w-16 rounded-full border-2 border-[#74ddc7]/50 object-cover"
+                              />
+                            )}
+                            {profile?.bio && (
+                              <p className="line-clamp-3 text-center text-[11px] leading-snug text-muted-foreground">
+                                {profile.bio}
+                              </p>
+                            )}
                             {slots
                               .filter((s) => s.dj_id === dj.id)
                               .map((s) => (
@@ -799,6 +855,14 @@ function ArchiveInner() {
                             >
                               View profile
                             </Link>
+                            {profile?.username && (
+                              <Link
+                                href={`/u/${profile.username}`}
+                                className="block rounded-full border border-border bg-card px-4 py-2 text-center text-xs font-bold text-foreground transition-colors hover:border-[#74ddc7]/50 hover:text-[#74ddc7]"
+                              >
+                                @{profile.username} — member profile
+                              </Link>
+                            )}
                           </div>
                         )}
                       </div>
