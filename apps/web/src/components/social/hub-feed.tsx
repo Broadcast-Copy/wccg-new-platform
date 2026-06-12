@@ -21,6 +21,10 @@ interface HubFeedProps {
   accentColor: string;
   postTypes: PostType[];
   placeholder: string;
+  /** Profile-feed mode: show only this user's posts (across every hub) and
+   *  let only that user compose (their posts land in `hubType`). Used by the
+   *  public DJ profiles. */
+  authorId?: string;
 }
 
 interface HubPost {
@@ -106,16 +110,18 @@ function avatarHue(name: string): number {
 // ---------------------------------------------------------------------------
 const PAGE_SIZE = 20;
 
-export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFeedProps) {
+export function HubFeed({ hubType, accentColor, postTypes, placeholder, authorId }: HubFeedProps) {
   const { supabase } = useSupabase();
   const { user } = useAuth();
   const { hasRealRole } = useUserRoles();
   // Listeners may post in the Listener hub; the Creator/Vendor hubs are
   // post-restricted to creators/vendors (admins always pass via hasRealRole).
-  const canPost =
-    hubType === "listener" ||
-    (hubType === "creator" && hasRealRole("content_creator")) ||
-    (hubType === "vendor" && hasRealRole("vendor"));
+  // Profile-feed mode: only the profile's owner composes on their own feed.
+  const canPost = authorId
+    ? user?.id === authorId
+    : hubType === "listener" ||
+      (hubType === "creator" && hasRealRole("content_creator")) ||
+      (hubType === "vendor" && hasRealRole("vendor"));
 
   // Feed vs. Reels (TikTok-style) view. Defaults to the post feed; kept in
   // component state so switching tabs doesn't lose the loaded post list.
@@ -141,10 +147,11 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
       const from = pageNum * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
-      const { data: rawPosts } = await supabase
-        .from("hub_posts")
-        .select("*")
-        .eq("hub_type", hubType)
+      // Profile-feed mode shows the author's posts from EVERY hub; hub mode
+      // shows one hub's posts from everyone.
+      let query = supabase.from("hub_posts").select("*");
+      query = authorId ? query.eq("user_id", authorId) : query.eq("hub_type", hubType);
+      const { data: rawPosts } = await query
         .order("created_at", { ascending: false })
         .range(from, to);
 
@@ -192,7 +199,7 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder }: HubFee
 
       return { posts: enriched, hasMore: rawPosts.length === PAGE_SIZE };
     },
-    [supabase, hubType, user]
+    [supabase, hubType, user, authorId]
   );
 
   // Initial load (and reload when hub/user identity changes). setState lives in

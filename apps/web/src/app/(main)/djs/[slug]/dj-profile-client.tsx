@@ -24,7 +24,9 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
+  BookOpen,
   Calendar,
+  CalendarCheck,
   ChevronDown,
   ChevronRight,
   Disc3,
@@ -34,6 +36,7 @@ import {
   Layers,
   Loader2,
   Music,
+  Newspaper,
   Pause,
   Pencil,
   Play,
@@ -44,6 +47,8 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useUserRoles } from "@/hooks/use-user-roles";
+import { HubFeed } from "@/components/social/hub-feed";
+import { DjFollowButton } from "@/components/mixshow-archive/dj-follow-button";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -271,7 +276,15 @@ export default function DjProfileClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [tab, setTab] = useState<"mixshows" | "collections">("mixshows");
+  const [tab, setTab] = useState<"mixshows" | "collections" | "feed" | "bio" | "booking">("mixshows");
+  /** Mix Squad member profile (avatar/bio/handle) for the hero — null = none. */
+  const [memberProfile, setMemberProfile] = useState<{
+    avatar_url: string | null;
+    username: string | null;
+    bio: string | null;
+  } | null>(null);
+  /** entity_follows row id for the signed-in viewer (undefined = loading). */
+  const [followId, setFollowId] = useState<string | null | undefined>(undefined);
 
   // One shared <audio> element drives playback for BOTH tabs. Playing a new
   // track replaces the source so only one thing ever plays at a time.
@@ -306,6 +319,37 @@ export default function DjProfileClient() {
         setError(null);
         // Default to Mixshows when there are drops, else Collections.
         setTab(profile.drops.length > 0 ? "mixshows" : "collections");
+
+        // Mix Squad member profile + the viewer's follow state (both
+        // non-critical: the hero degrades to initials / a hidden pill).
+        const targetUserId = profile.dj.user_id;
+        const viewerId = userRes.data.user?.id ?? null;
+        if (targetUserId) {
+          const [profRes, followRes] = await Promise.all([
+            supabase
+              .from("profiles_public")
+              .select("avatar_url, username, bio")
+              .eq("id", targetUserId)
+              .maybeSingle(),
+            viewerId
+              ? supabase
+                  .from("entity_follows")
+                  .select("id")
+                  .eq("follower_id", viewerId)
+                  .eq("target_type", "user")
+                  .eq("target_id", targetUserId)
+                  .maybeSingle()
+              : Promise.resolve({ data: null, error: null }),
+          ]);
+          if (!active) return;
+          setMemberProfile(
+            (profRes.data as { avatar_url: string | null; username: string | null; bio: string | null } | null) ?? null,
+          );
+          setFollowId((followRes.data as { id: string } | null)?.id ?? null);
+        } else {
+          setMemberProfile(null);
+          setFollowId(null);
+        }
       } catch (e) {
         if (active) setError((e as Error).message);
       } finally {
@@ -402,10 +446,53 @@ export default function DjProfileClient() {
         <ArrowLeft className="h-3 w-3" /> All DJs
       </Link>
 
-      <header>
-        <p className="text-[11px] font-bold uppercase tracking-widest text-[#74ddc7]">WCCG DJ</p>
-        <h1 className="text-4xl font-black tracking-tight text-foreground md:text-5xl">{dj.display_name}</h1>
-        {dj.notes && <p className="mt-1 text-base text-muted-foreground">{dj.notes}</p>}
+      {/* ── Hero — Mix Squad profile style ──────────────────────────────── */}
+      <header className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-[#7401df]/20 via-card to-[#74ddc7]/10 px-6 py-8 sm:px-10 sm:py-10">
+        <Disc3 className="pointer-events-none absolute -right-8 -top-8 h-48 w-48 text-[#74ddc7]/[0.07]" />
+        <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+          {memberProfile?.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={memberProfile.avatar_url}
+              alt={dj.display_name}
+              className="h-24 w-24 shrink-0 rounded-full border-2 border-[#74ddc7]/60 object-cover sm:h-28 sm:w-28"
+            />
+          ) : (
+            <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df]/40 to-[#74ddc7]/25 text-3xl font-black text-[#74ddc7] sm:h-28 sm:w-28">
+              {dj.display_name
+                .replace(/^dj\s+/i, "")
+                .split(/\s+/)
+                .slice(0, 2)
+                .map((w) => (w[0] ?? "").toUpperCase())
+                .join("") || "DJ"}
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#74ddc7]">The Mix Squad</p>
+            <h1 className="text-4xl font-black tracking-tight text-foreground md:text-5xl">{dj.display_name}</h1>
+            {(memberProfile?.bio || dj.notes) && (
+              <p className="mt-1.5 line-clamp-2 max-w-2xl text-sm text-muted-foreground sm:text-base">
+                {memberProfile?.bio || dj.notes}
+              </p>
+            )}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <DjFollowButton
+                djUserId={dj.user_id}
+                djName={dj.display_name}
+                followId={followId}
+                onFollowChange={(_, id) => setFollowId(id)}
+              />
+              {memberProfile?.username && (
+                <Link
+                  href={`/u/${memberProfile.username}`}
+                  className="rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-bold text-foreground transition-colors hover:border-[#74ddc7]/50 hover:text-[#74ddc7]"
+                >
+                  @{memberProfile.username}
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
       </header>
 
       {sortedSlots.length > 0 && (
@@ -423,24 +510,34 @@ export default function DjProfileClient() {
         </section>
       )}
 
-      {/* ── Tabs ─────────────────────────────────────────────────────────── */}
-      <div className="flex w-fit items-center gap-1 rounded-full border border-border bg-card p-1">
+      {/* ── Tabs (Mix Squad profile: player, feed, bio, booking) ─────────── */}
+      <div className="flex w-fit max-w-full flex-wrap items-center gap-1 rounded-full border border-border bg-card p-1">
         <TabButton active={tab === "mixshows"} onClick={() => setTab("mixshows")} icon={<Headphones className="h-3.5 w-3.5" />}>
-          Mixshows{hasDrops ? ` · ${drops.length}` : ""}
+          Mixes{hasDrops ? ` · ${drops.length}` : ""}
         </TabButton>
         <TabButton active={tab === "collections"} onClick={() => setTab("collections")} icon={<Layers className="h-3.5 w-3.5" />}>
           Collections{collections.length > 0 ? ` · ${collections.length}` : ""}
         </TabButton>
+        <TabButton active={tab === "feed"} onClick={() => setTab("feed")} icon={<Newspaper className="h-3.5 w-3.5" />}>
+          Feed
+        </TabButton>
+        <TabButton active={tab === "bio"} onClick={() => setTab("bio")} icon={<BookOpen className="h-3.5 w-3.5" />}>
+          DJ Bio
+        </TabButton>
+        <TabButton active={tab === "booking"} onClick={() => setTab("booking")} icon={<CalendarCheck className="h-3.5 w-3.5" />}>
+          Booking
+        </TabButton>
       </div>
 
-      {tab === "mixshows" ? (
+      {tab === "mixshows" && (
         <MixshowsTab
           drops={drops}
           airDay={(slots.find((s) => s.status === "active") ?? slots[0])?.day_of_week ?? null}
           nowPlaying={nowPlaying}
           onToggle={playTrack}
         />
-      ) : (
+      )}
+      {tab === "collections" && (
         <CollectionsTab
           dj={dj}
           collections={collections}
@@ -452,6 +549,76 @@ export default function DjProfileClient() {
           onToggle={playTrack}
           onChanged={reloadCollections}
         />
+      )}
+      {tab === "feed" && (
+        dj.user_id ? (
+          <HubFeed
+            hubType="listener"
+            accentColor="#74ddc7"
+            postTypes={[
+              { value: "update", label: "Update" },
+              { value: "mix_drop", label: "New Mix" },
+              { value: "event", label: "Event" },
+            ]}
+            placeholder={`What's new, ${dj.display_name}?`}
+            authorId={dj.user_id}
+          />
+        ) : (
+          <div className="rounded-2xl border border-dashed border-border bg-card/40 px-6 py-14 text-center">
+            <Newspaper className="mx-auto h-9 w-9 text-muted-foreground" />
+            <p className="mt-3 text-sm text-muted-foreground">
+              {dj.display_name} hasn&apos;t linked a member account yet — their feed will appear here once they join the hub.
+            </p>
+          </div>
+        )
+      )}
+      {tab === "bio" && (
+        <section className="max-w-3xl space-y-4">
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <h2 className="mb-3 text-lg font-black tracking-tight text-foreground">About {dj.display_name}</h2>
+            {memberProfile?.bio || dj.notes ? (
+              <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                {memberProfile?.bio || dj.notes}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Bio coming soon — {dj.display_name} can add it from their member profile.
+              </p>
+            )}
+          </div>
+          {sortedSlots.length > 0 && (
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h3 className="mb-3 text-sm font-black tracking-tight text-foreground">Catch the show</h3>
+              <div className="flex flex-wrap gap-2">
+                {sortedSlots.map((s, i) => (
+                  <span key={`bio-${s.day_of_week}-${s.start_time}-${i}`} className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs">
+                    <Calendar className="h-3 w-3 text-[#74ddc7]" />
+                    <span className="font-bold">{DAYS[s.day_of_week]}</span>
+                    <span className="text-muted-foreground">{fmt12h(s.start_time)}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+      {tab === "booking" && (
+        <section className="max-w-3xl">
+          <div className="rounded-2xl border border-border bg-gradient-to-br from-[#7401df]/15 via-card to-[#74ddc7]/10 p-8 text-center">
+            <CalendarCheck className="mx-auto h-10 w-10 text-[#74ddc7]" />
+            <h2 className="mt-3 text-xl font-black tracking-tight text-foreground">Book {dj.display_name}</h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+              Want {dj.display_name} on your event, club night, or campaign? All Mix Squad bookings go
+              through the station so your date gets locked in right.
+            </p>
+            <Link
+              href="/contact"
+              className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#7401df] to-[#74ddc7] px-6 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90"
+            >
+              Contact WCCG to book <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </section>
       )}
     </div>
   );
