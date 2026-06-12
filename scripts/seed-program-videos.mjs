@@ -12,10 +12,18 @@ const PER_CHANNEL = 8;
 // share a program label to form one combined row (e.g. all Sports, all Gospel).
 // Talk/hip-hop shows are PG-13 (visible but flagged); news PG; gospel/sports G.
 const PROGRAMS = [
-  // Talk & culture — one row per show
-  { program: "Way Up with Angela Yee", category: "Talk & Culture", rating: "PG-13", channelId: "UCJVR_M2dXZT6uXIapYGHtTA" },
-  { program: "Posted on The Corner", category: "Talk & Culture", rating: "PG-13", channelId: "UCB4JlD2jIkXanFehab9CbDw" },
-  { program: "The Bootleg Kev Show", category: "Talk & Culture", rating: "PG-13", channelId: "UCBgOGeH-NL4o2WGutwverqQ" },
+  // The station's own channel — interviews, podcasts & events produced by WCCG.
+  { program: "WCCG 104.5 FM Original Content", creator: "WCCG 104.5 FM", category: "Originals", rating: "PG", channelId: "UC7fsAn1jAj4lX8sk_bd8H4A" },
+  // Drect Media — hip-hop culture talk & debates from Drect Williams.
+  { program: "Drect Media", creator: "Drect Williams", category: "Talk & Culture", rating: "PG-13", channelId: "UCPwUv_AYzOlK8VZP-dUM6ew" },
+
+  // From The Radio — the syndicated shows heard on 104.5, one combined row.
+  // `creator` (optional, defaults to program) keeps each show's own name.
+  { program: "From The Radio", creator: "Way Up with Angela Yee", category: "Talk & Culture", rating: "PG-13", channelId: "UCJVR_M2dXZT6uXIapYGHtTA" },
+  { program: "From The Radio", creator: "Angela Yee", category: "Talk & Culture", rating: "PG-13", channelId: "UCWS_UtIkoPGKODjeJEHMdEg" }, // her personal channel
+  { program: "From The Radio", creator: "The Deja Vu Show", category: "Talk & Culture", rating: "PG", channelId: "UCO_M1X6yEa-T1UH_XhWA8Yw" }, // WCCG Saturday throwbacks
+  { program: "From The Radio", creator: "Posted on The Corner", category: "Talk & Culture", rating: "PG-13", channelId: "UCB4JlD2jIkXanFehab9CbDw" },
+  { program: "From The Radio", creator: "The Bootleg Kev Show", category: "Talk & Culture", rating: "PG-13", channelId: "UCBgOGeH-NL4o2WGutwverqQ" },
   { program: "Put Me On Game", category: "Talk & Culture", rating: "PG-13", channelId: "UCMZlwNcYLu5eV2Zm2lLmF-Q" },
   // Local Fayetteville culture — explicit language → rated R (parental-gated +
   // explicit-content warning on the watch page).
@@ -29,20 +37,20 @@ const PROGRAMS = [
   { program: "Sports", category: "Sports", rating: "G", channelId: "UC-v9UWlnqtYeCQtPDO1lGVQ" }, // Duke Football
   { program: "Sports", category: "Sports", rating: "PG", channelId: "UC4DI4UXm2vIS5-6fhuCAh6g" }, // Pick'em Pros
 
-  // Local schools — area colleges & universities combined into one row.
-  { program: "Local Schools", category: "Education", rating: "G", channelId: "UCVEbUWk96dmaDFwenptsx5Q" }, // Fayetteville State University
-  { program: "Local Schools", category: "Education", rating: "G", channelId: "UCrls-lOh_mu0_mBrze6R7dg" }, // Campbell University
-  { program: "Local Schools", category: "Education", rating: "G", channelId: "UCncT4o1lMhk9KL17JJLabqQ" }, // Methodist University
-  { program: "Local Schools", category: "Education", rating: "G", channelId: "UC6UeI2Av47gbem_mTZEa1Ww" }, // Fayetteville Technical Community College
-  { program: "Local Schools", category: "Education", rating: "G", channelId: "UCfo6rz_-iMCzQswPCDbRwBw" }, // Robeson Community College
+  // From Your College — area colleges & universities combined into one row.
+  { program: "From Your College", creator: "Fayetteville State University", category: "Education", rating: "G", channelId: "UCVEbUWk96dmaDFwenptsx5Q" },
+  { program: "From Your College", creator: "Campbell University", category: "Education", rating: "G", channelId: "UCrls-lOh_mu0_mBrze6R7dg" },
+  { program: "From Your College", creator: "Methodist University", category: "Education", rating: "G", channelId: "UCncT4o1lMhk9KL17JJLabqQ" },
+  { program: "From Your College", creator: "Fayetteville Technical Community College", category: "Education", rating: "G", channelId: "UC6UeI2Av47gbem_mTZEa1Ww" },
+  { program: "From Your College", creator: "Robeson Community College", category: "Education", rating: "G", channelId: "UCfo6rz_-iMCzQswPCDbRwBw" },
 
-  // Local government & utilities — city, counties, and PWC in one row.
-  { program: "Local Government", category: "Community", rating: "G", channelId: "UCae_2JwaN6G7KvTJDU3TD6g" }, // City of Fayetteville
-  { program: "Local Government", category: "Community", rating: "G", channelId: "UCjz2EfG0AqCqa-voV5Xb-VQ" }, // Fayetteville PWC
-  { program: "Local Government", category: "Community", rating: "G", channelId: "UCWW_IJSglN-zz1vLQ2AkPiA" }, // Cumberland County
-  { program: "Local Government", category: "Community", rating: "G", channelId: "UCU7mTF6HTD65x_98EhAMeMg" }, // Harnett County
-  { program: "Local Government", category: "Community", rating: "G", channelId: "UCpZ9fEh38OXp_YrGZYVne3g" }, // Sampson County
-  { program: "Local Government", category: "Community", rating: "G", channelId: "UCQ6c7WFfXy_H4zuzd32viJw" }, // Lee County
+  // Government — city, counties, and PWC in one row.
+  { program: "Government", creator: "City of Fayetteville", category: "Community", rating: "G", channelId: "UCae_2JwaN6G7KvTJDU3TD6g" },
+  { program: "Government", creator: "Fayetteville PWC", category: "Community", rating: "G", channelId: "UCjz2EfG0AqCqa-voV5Xb-VQ" },
+  { program: "Government", creator: "Cumberland County", category: "Community", rating: "G", channelId: "UCWW_IJSglN-zz1vLQ2AkPiA" },
+  { program: "Government", creator: "Harnett County", category: "Community", rating: "G", channelId: "UCU7mTF6HTD65x_98EhAMeMg" },
+  { program: "Government", creator: "Sampson County", category: "Community", rating: "G", channelId: "UCpZ9fEh38OXp_YrGZYVne3g" },
+  { program: "Government", creator: "Lee County", category: "Community", rating: "G", channelId: "UCQ6c7WFfXy_H4zuzd32viJw" },
 
   // Gospel — every gospel broadcast combined into one "Gospel" row.
   // NOTE: the id UCvxWyn4rfcI2H9APhfUIB1Q that used to be labeled "Dr. Tony Haire"
@@ -103,6 +111,7 @@ async function main() {
         rows.push({
           ...e,
           program: p.program,
+          creator: p.creator ?? p.program,
           category: p.category,
           rating: p.rating,
         });
@@ -124,6 +133,7 @@ async function main() {
     .map((r) => {
       const cols = [
         sq(r.program),
+        sq(r.creator),
         sq(r.title),
         sq(r.id),
         sq(r.category),
@@ -139,13 +149,13 @@ async function main() {
 delete from public.videos where user_id = '${STATION_USER}';
 insert into public.videos
   (user_id, program, creator_name, title, youtube_id, youtube_url, thumbnail_url, category, rating, status, visibility, views, published_at)
-select '${STATION_USER}'::uuid, t.program, t.program, t.title, t.ytid,
+select '${STATION_USER}'::uuid, t.program, t.creator, t.title, t.ytid,
        'https://www.youtube.com/watch?v=' || t.ytid,
        'https://i.ytimg.com/vi/' || t.ytid || '/hqdefault.jpg',
        t.category, t.rating, 'published', 'public', t.views, t.published::timestamptz
 from (values
 ${values}
-) as t(program, title, ytid, category, rating, views, published);`;
+) as t(program, creator, title, ytid, category, rating, views, published);`;
 
   const fs = await import("node:fs");
   fs.writeFileSync(new URL("./seed-program-videos.sql", import.meta.url), sql);

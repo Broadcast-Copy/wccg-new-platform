@@ -18,11 +18,19 @@ export default async function Page({
 }) {
   const { showId } = await params;
   const show = getShowById(showId) ?? getShowBySlug(showId);
-  const channelId = show?.youtube?.channelId;
+  const yt = show?.youtube;
+  const channelIds = [yt?.channelId, ...(yt?.extraChannelIds ?? [])].filter(
+    (id): id is string => !!id,
+  );
 
-  const youtubeVideos = channelId
-    ? await fetchYouTubeVideos(channelId)
-    : [];
+  // Merge every configured channel (show + host personal), newest first.
+  const lists = await Promise.all(channelIds.map((id) => fetchYouTubeVideos(id)));
+  const seen = new Set<string>();
+  const youtubeVideos = lists
+    .flat()
+    .filter((v) => !seen.has(v.videoId) && (seen.add(v.videoId), true))
+    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
+    .slice(0, 12);
 
   return <ShowDetailPage youtubeVideos={youtubeVideos} />;
 }

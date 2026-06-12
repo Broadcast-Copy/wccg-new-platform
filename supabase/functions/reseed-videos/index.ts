@@ -34,14 +34,22 @@ interface ChannelConfig {
 }
 
 const CHANNELS: ChannelConfig[] = [
-  // Talk & culture — one row per show
-  { program: "Way Up with Angela Yee", creator: "Way Up with Angela Yee", category: "Talk & Culture", rating: "PG-13", channelId: "UCJVR_M2dXZT6uXIapYGHtTA" },
-  { program: "Posted on The Corner", creator: "Posted on The Corner", category: "Talk & Culture", rating: "PG-13", channelId: "UCB4JlD2jIkXanFehab9CbDw" },
-  { program: "The Bootleg Kev Show", creator: "The Bootleg Kev Show", category: "Talk & Culture", rating: "PG-13", channelId: "UCBgOGeH-NL4o2WGutwverqQ" },
+  // The station's own channel — interviews, podcasts & events produced by WCCG.
+  { program: "WCCG 104.5 FM Original Content", creator: "WCCG 104.5 FM", category: "Originals", rating: "PG", channelId: "UC7fsAn1jAj4lX8sk_bd8H4A" },
+  // Drect Media — hip-hop culture talk & debates from Drect Williams.
+  { program: "Drect Media", creator: "Drect Williams", category: "Talk & Culture", rating: "PG-13", channelId: "UCPwUv_AYzOlK8VZP-dUM6ew" },
+
+  // From The Radio — the syndicated shows heard on 104.5, combined into one
+  // row. `creator` keeps each show's name so cards still say which show.
+  { program: "From The Radio", creator: "Way Up with Angela Yee", category: "Talk & Culture", rating: "PG-13", channelId: "UCJVR_M2dXZT6uXIapYGHtTA" },
+  { program: "From The Radio", creator: "Angela Yee", category: "Talk & Culture", rating: "PG-13", channelId: "UCWS_UtIkoPGKODjeJEHMdEg" }, // her personal channel
+  { program: "From The Radio", creator: "The Deja Vu Show", category: "Talk & Culture", rating: "PG", channelId: "UCO_M1X6yEa-T1UH_XhWA8Yw" }, // WCCG Saturday throwbacks
+  { program: "From The Radio", creator: "Posted on The Corner", category: "Talk & Culture", rating: "PG-13", channelId: "UCB4JlD2jIkXanFehab9CbDw" },
+  { program: "From The Radio", creator: "The Bootleg Kev Show", category: "Talk & Culture", rating: "PG-13", channelId: "UCBgOGeH-NL4o2WGutwverqQ" },
   { program: "Put Me On Game", creator: "Put Me On Game", category: "Talk & Culture", rating: "PG-13", channelId: "UCMZlwNcYLu5eV2Zm2lLmF-Q" },
-  // Local Fayetteville culture — explicit language, so rated R: hidden while
-  // parental controls are locked, and the watch page shows an explicit-content
-  // warning before playback when unlocked.
+  // Local Fayetteville culture — explicit language, so rated R: thumbnails
+  // show but playback is locked while parental controls are on, and the watch
+  // page shows an explicit-content warning before playback when unlocked.
   { program: "Big Cas", creator: "BigCas910 TV", category: "Talk & Culture", rating: "R", channelId: "UCQmsI0AAbXvTevWkqMIBU-Q" },
 
   // News
@@ -52,20 +60,20 @@ const CHANNELS: ChannelConfig[] = [
   { program: "Sports", creator: "Duke Blue Devils", category: "Sports", rating: "G", channelId: "UC-v9UWlnqtYeCQtPDO1lGVQ" }, // Duke Football
   { program: "Sports", creator: "Pick'em Pros", category: "Sports", rating: "PG", channelId: "UC4DI4UXm2vIS5-6fhuCAh6g" }, // Pick'em Pros
 
-  // Local schools — area colleges & universities combined into one row.
-  { program: "Local Schools", creator: "Fayetteville State University", category: "Education", rating: "G", channelId: "UCVEbUWk96dmaDFwenptsx5Q" },
-  { program: "Local Schools", creator: "Campbell University", category: "Education", rating: "G", channelId: "UCrls-lOh_mu0_mBrze6R7dg" },
-  { program: "Local Schools", creator: "Methodist University", category: "Education", rating: "G", channelId: "UCncT4o1lMhk9KL17JJLabqQ" },
-  { program: "Local Schools", creator: "Fayetteville Technical Community College", category: "Education", rating: "G", channelId: "UC6UeI2Av47gbem_mTZEa1Ww" },
-  { program: "Local Schools", creator: "Robeson Community College", category: "Education", rating: "G", channelId: "UCfo6rz_-iMCzQswPCDbRwBw" },
+  // From Your College — area colleges & universities combined into one row.
+  { program: "From Your College", creator: "Fayetteville State University", category: "Education", rating: "G", channelId: "UCVEbUWk96dmaDFwenptsx5Q" },
+  { program: "From Your College", creator: "Campbell University", category: "Education", rating: "G", channelId: "UCrls-lOh_mu0_mBrze6R7dg" },
+  { program: "From Your College", creator: "Methodist University", category: "Education", rating: "G", channelId: "UCncT4o1lMhk9KL17JJLabqQ" },
+  { program: "From Your College", creator: "Fayetteville Technical Community College", category: "Education", rating: "G", channelId: "UC6UeI2Av47gbem_mTZEa1Ww" },
+  { program: "From Your College", creator: "Robeson Community College", category: "Education", rating: "G", channelId: "UCfo6rz_-iMCzQswPCDbRwBw" },
 
-  // Local government & utilities — city, counties, and PWC in one row.
-  { program: "Local Government", creator: "City of Fayetteville", category: "Community", rating: "G", channelId: "UCae_2JwaN6G7KvTJDU3TD6g" },
-  { program: "Local Government", creator: "Fayetteville PWC", category: "Community", rating: "G", channelId: "UCjz2EfG0AqCqa-voV5Xb-VQ" },
-  { program: "Local Government", creator: "Cumberland County", category: "Community", rating: "G", channelId: "UCWW_IJSglN-zz1vLQ2AkPiA" },
-  { program: "Local Government", creator: "Harnett County", category: "Community", rating: "G", channelId: "UCU7mTF6HTD65x_98EhAMeMg" },
-  { program: "Local Government", creator: "Sampson County", category: "Community", rating: "G", channelId: "UCpZ9fEh38OXp_YrGZYVne3g" },
-  { program: "Local Government", creator: "Lee County", category: "Community", rating: "G", channelId: "UCQ6c7WFfXy_H4zuzd32viJw" },
+  // Government — city, counties, and PWC in one row.
+  { program: "Government", creator: "City of Fayetteville", category: "Community", rating: "G", channelId: "UCae_2JwaN6G7KvTJDU3TD6g" },
+  { program: "Government", creator: "Fayetteville PWC", category: "Community", rating: "G", channelId: "UCjz2EfG0AqCqa-voV5Xb-VQ" },
+  { program: "Government", creator: "Cumberland County", category: "Community", rating: "G", channelId: "UCWW_IJSglN-zz1vLQ2AkPiA" },
+  { program: "Government", creator: "Harnett County", category: "Community", rating: "G", channelId: "UCU7mTF6HTD65x_98EhAMeMg" },
+  { program: "Government", creator: "Sampson County", category: "Community", rating: "G", channelId: "UCpZ9fEh38OXp_YrGZYVne3g" },
+  { program: "Government", creator: "Lee County", category: "Community", rating: "G", channelId: "UCQ6c7WFfXy_H4zuzd32viJw" },
 
   // Gospel — every gospel broadcast combined into one "Gospel" row.
   { program: "Gospel", creator: "The Encouraging Moment", category: "Gospel", rating: "G", channelId: "UCc6aixt81vdBrFDV772Z1Gw" }, // The Encouraging Moment (Dr. Tony Haire)

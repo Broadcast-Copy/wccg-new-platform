@@ -89,7 +89,7 @@ const HERO_PROGRAMS = [
 ];
 
 /** Program rows pinned to the top of the wall, in order. */
-const HERO_TOP_ROWS = ["Sports", "Way Up with Angela Yee"];
+const HERO_TOP_ROWS = ["WCCG 104.5 FM Original Content", "Sports", "From The Radio"];
 
 function VideosWall() {
   const searchParams = useSearchParams();
@@ -142,7 +142,11 @@ function VideosWall() {
 
         const [all, mostWatched, watching] = await Promise.all([
           browseVideos({ limit: 500, program: program ?? undefined }),
-          program ? Promise.resolve<VideoRecord[]>([]) : topVideos(10),
+          // Over-fetch then drop news: national headlines rack up huge view
+          // counts and would crowd local shows out of the Top 10.
+          program
+            ? Promise.resolve<VideoRecord[]>([])
+            : topVideos(30).then((list) => list.filter((v) => v.category !== "News").slice(0, 10)),
           user ? continueWatching(user.id, { program: program ?? undefined }) : Promise.resolve<ContinueItem[]>([]),
         ]);
 
@@ -198,7 +202,10 @@ function VideosWall() {
           subtitle={
             program === "Gospel"
               ? "The latest gospel videos from across all of our gospel programming."
-              : `Every published video from ${program}.`
+              : program.startsWith("From ")
+                ? // "From The Radio" → "…video from The Radio." (avoid "from From")
+                  `Every published video from ${program.slice(5)}.`
+                : `Every published video from ${program}.`
           }
           back={{ href: "/videos", label: "All videos" }}
         />
@@ -607,7 +614,7 @@ function MatureNotice({ count, onUnlock }: { count: number; onUnlock: () => void
   return (
     <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-xs text-muted-foreground">
       <Lock className="h-3.5 w-3.5 text-[#74ddc7]" />
-      {count} mature {count === 1 ? "video is" : "videos are"} hidden by parental controls.
+      {count} mature {count === 1 ? "video is" : "videos are"} locked by parental controls — thumbnails show, playback stays locked.
       <button onClick={onUnlock} className="font-bold text-[#74ddc7] hover:underline">
         Unlock
       </button>
@@ -711,20 +718,19 @@ function Thumb({ v, gated, children }: { v: VideoRecord; gated: boolean; childre
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={videoThumb(v)}
-        alt={gated ? "Mature content (locked)" : v.title}
-        className={`h-full w-full object-cover transition-transform duration-300 ${
-          gated ? "scale-110 blur-xl" : "group-hover:scale-[1.04]"
-        }`}
+        alt={gated ? `${v.title} (locked)` : v.title}
+        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
         loading="lazy"
       />
       <span className="absolute left-1.5 top-1.5 z-10">
         <RatingBadge rating={v.rating} />
       </span>
       {gated ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/70 px-3 text-center">
-          <Lock className="h-5 w-5 text-white" />
-          <span className="text-[11px] font-bold text-white">Mature — locked</span>
-          <span className="text-[10px] text-white/70">Rated {v.rating}</span>
+        /* Locked = real thumbnail stays visible; only playback is gated. */
+        <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/80 via-black/10 to-transparent p-2">
+          <span className="flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+            <Lock className="h-3 w-3 text-[#74ddc7]" /> Rated {v.rating ?? "NR"} — locked
+          </span>
         </div>
       ) : (
         <>
@@ -767,10 +773,10 @@ function PosterCard({
             gated ? "" : "group-hover:text-[#74ddc7]"
           }`}
         >
-          {gated ? "Mature content" : v.title}
+          {v.title}
         </h3>
         <p className="mt-0.5 truncate text-xs text-muted-foreground">
-          {gated ? "Locked by parental controls" : programOf(v)}
+          {v.creator_name?.trim() || programOf(v)}
         </p>
         {gated ? (
           <button onClick={onUnlock} className="mt-0.5 text-xs font-bold text-[#74ddc7] hover:underline">
@@ -829,7 +835,7 @@ function RankCard({
               gated ? "" : "group-hover:text-[#74ddc7]"
             }`}
           >
-            {gated ? "Mature content" : v.title}
+            {v.title}
           </h3>
           {gated ? (
             <button onClick={onUnlock} className="text-xs font-bold text-[#74ddc7] hover:underline">
@@ -877,7 +883,7 @@ function ContinueCard({ item, locked, onUnlock }: { item: ContinueItem; locked: 
             gated ? "" : "group-hover:text-[#74ddc7]"
           }`}
         >
-          {gated ? "Mature content" : v.title}
+          {v.title}
         </h3>
         {gated ? (
           <button onClick={onUnlock} className="text-xs font-bold text-[#74ddc7] hover:underline">

@@ -262,7 +262,7 @@ export default function WatchClient() {
                 <img
                   src={videoThumb(video)}
                   alt=""
-                  className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-2xl"
+                  className="absolute inset-0 h-full w-full object-cover opacity-40"
                 />
                 <div className="relative flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#74ddc7]/15 text-[#74ddc7]">
@@ -288,7 +288,7 @@ export default function WatchClient() {
                 <img
                   src={videoThumb(video)}
                   alt=""
-                  className="absolute inset-0 h-full w-full scale-110 object-cover opacity-30 blur-2xl"
+                  className="absolute inset-0 h-full w-full object-cover opacity-40"
                 />
                 <div className="relative flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-400/20 text-amber-400">
@@ -421,14 +421,14 @@ export default function WatchClient() {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={videoThumb(r)}
-                      alt={rGated ? "Mature (locked)" : r.title}
-                      className={`h-full w-full object-cover ${rGated ? "scale-110 blur-lg" : ""}`}
+                      alt={rGated ? `${r.title} (locked)` : r.title}
+                      className="h-full w-full object-cover"
                       loading="lazy"
                     />
                     {rGated ? (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-                        <Lock className="h-4 w-4 text-white" />
-                      </div>
+                      <span className="absolute bottom-1 left-1 flex items-center gap-1 rounded bg-black/80 px-1 py-0.5 text-[10px] font-bold text-white">
+                        <Lock className="h-3 w-3 text-[#74ddc7]" /> {r.rating ?? "NR"}
+                      </span>
                     ) : r.duration_seconds ? (
                       <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1 py-0.5 text-[10px] font-bold text-white">
                         {fmtDuration(r.duration_seconds)}
@@ -437,7 +437,7 @@ export default function WatchClient() {
                   </div>
                   <div className="min-w-0">
                     <h3 className="line-clamp-2 text-xs font-bold leading-snug text-foreground group-hover:text-[#74ddc7]">
-                      {rGated ? "Mature content" : r.title}
+                      {r.title}
                     </h3>
                     <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{programOf(r)}</p>
                     <p className="text-[11px] text-muted-foreground">
@@ -475,14 +475,14 @@ function ProgramMini({ v, locked }: { v: VideoRecord; locked: boolean }) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={videoThumb(v)}
-          alt={gated ? "Mature (locked)" : v.title}
-          className={`h-full w-full object-cover ${gated ? "scale-110 blur-lg" : "transition-transform group-hover:scale-105"}`}
+          alt={gated ? `${v.title} (locked)` : v.title}
+          className={`h-full w-full object-cover ${gated ? "" : "transition-transform group-hover:scale-105"}`}
           loading="lazy"
         />
         {gated ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-            <Lock className="h-4 w-4 text-white" />
-          </div>
+          <span className="absolute bottom-1 left-1 flex items-center gap-1 rounded bg-black/80 px-1 py-0.5 text-[10px] font-bold text-white">
+            <Lock className="h-3 w-3 text-[#74ddc7]" /> {v.rating ?? "NR"}
+          </span>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
             <Play className="h-6 w-6 text-white" fill="currentColor" />
@@ -490,7 +490,7 @@ function ProgramMini({ v, locked }: { v: VideoRecord; locked: boolean }) {
         )}
       </div>
       <p className="mt-1.5 line-clamp-2 text-xs font-bold leading-snug text-foreground group-hover:text-[#74ddc7]">
-        {gated ? "Mature content" : v.title}
+        {v.title}
       </p>
     </>
   );

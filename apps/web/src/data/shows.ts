@@ -23,6 +23,9 @@ export interface ShowData {
     channelName: string;
     channelUrl: string;
     channelId?: string;
+    /** Additional channels whose videos merge into the show page rail
+     *  (e.g. a host's personal channel alongside the show channel). */
+    extraChannelIds?: string[];
     searchQuery: string;
   };
   podcastRss?: string;
@@ -128,6 +131,8 @@ export const SHOW_WAY_UP_ANGELA_YEE: ShowData = {
     channelName: "Way Up With Angela Yee",
     channelUrl: "https://www.youtube.com/@wayupwithyee",
     channelId: "UCJVR_M2dXZT6uXIapYGHtTA",
+    // Angela Yee's personal channel (@AngelaYee) — merged into her profile rail.
+    extraChannelIds: ["UCWS_UtIkoPGKODjeJEHMdEg"],
     searchQuery: "Way Up With Angela Yee",
   },
   segments: ["Shine a Light on 'Em", "Tell Us a Secret", "Rumor Report", "Ask Yee"],
@@ -263,6 +268,12 @@ export const SHOW_DEJA_VU: ShowData = {
   gradient: "from-[#1a1a2e] via-[#2d1b69] to-[#1a0533]",
   imageUrl: null,
   showImageUrl: null,
+  youtube: {
+    channelName: "The Deja Vu Show",
+    channelUrl: "https://www.youtube.com/@TheDejaVuShow",
+    channelId: "UCO_M1X6yEa-T1UH_XhWA8Yw",
+    searchQuery: "The Deja Vu Show WCCG",
+  },
   isSyndicated: false,
   isActive: true,
   category: "saturday",
