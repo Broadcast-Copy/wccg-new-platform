@@ -204,7 +204,7 @@ export interface ProgramRow {
  *  single prolific source (e.g. a burst of shorts) doesn't dominate the front of
  *  the row. Each source keeps its own newest-first order; single-source rows are
  *  returned unchanged. */
-function interleaveBySource(videos: VideoRecord[]): VideoRecord[] {
+export function interleaveBySource(videos: VideoRecord[]): VideoRecord[] {
   const bySource = new Map<string, VideoRecord[]>();
   const order: string[] = [];
   for (const v of videos) {

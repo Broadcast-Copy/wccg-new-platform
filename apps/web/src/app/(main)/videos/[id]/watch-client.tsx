@@ -253,9 +253,16 @@ export default function WatchClient() {
       </Link>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        {/* Player + meta */}
+        {/* Player + meta. The player is capped by viewport height (not just
+            column width) so big monitors don't get a wall-to-wall video. */}
         <div className="space-y-4">
-          <div className="aspect-video overflow-hidden rounded-2xl border border-border bg-black">
+          <div
+            className={`mx-auto w-full overflow-hidden rounded-2xl border border-border bg-black ${
+              video.is_portrait
+                ? "aspect-[9/16] max-w-[calc(78vh*9/16)]"
+                : "aspect-video max-w-[calc(78vh*16/9)]"
+            }`}
+          >
             {gated ? (
               <div className="relative h-full w-full">
                 {/* eslint-disable-next-line @next/next/no-img-element */}

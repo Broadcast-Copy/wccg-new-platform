@@ -16,10 +16,12 @@
  *   • storage     — the `dj-drops` bucket is PUBLIC, so getPublicUrl() gives a
  *                   directly-playable URL (no signing).
  *
- * Layout: hero (stats) → "This Week On Air" rail → Browse-by-DJ grid (filters
- * the archive client-side, synced to ?dj=<slug>) → the archive grouped by
- * broadcast week (newest first) → sticky bottom player bar (queue = the
- * visible list when play was pressed).
+ * Layout: hero (stats) → "On Air This Week" Mon→Sun grid (the whole broadcast
+ * week in one view: uploaded shows play in place, pending ones link to the
+ * DJ's archive) → a persistent two-pane browser: DJ list on the left (filters
+ * via ?dj=<slug>, selected DJ expands with follow/shuffle/profile), archive
+ * files grouped by exact air date on the right → sticky bottom player bar
+ * (queue = the visible list when play was pressed).
  *
  * Play starts insert a fire-and-forget row into `content_plays` (anon insert
  * is allowed; user_id is the signed-in uid or null).
@@ -30,14 +32,12 @@
  * error state.
  */
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   CalendarDays,
-  ChevronLeft,
-  ChevronRight,
   Disc3,
   Shuffle,
   Headphones,
@@ -104,6 +104,9 @@ interface Mix {
 // ---------------------------------------------------------------------------
 
 const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** Broadcast-week column order for the On-Air grid: Monday → Sunday. */
+const WEEK_DAYS = [1, 2, 3, 4, 5, 6, 0];
 
 /** ISO Monday (YYYY-MM-DD) of the current broadcast week, in ET. */
 function isoMondayOfNow(): string {
@@ -523,124 +526,240 @@ function ArchiveInner() {
 
       {!loading && !error && mixes.length > 0 && (
         <>
-          {/* ── On Air This Week rail — the full SCHEDULE in air order ── */}
+          {/* ── On Air This Week — the whole broadcast week in ONE grid ── */}
           {scheduleShows.length > 0 && (
-            <Rail title="On Air This Week" subtitle={weekRangeLabel}>
-              {scheduleShows.map(({ key, slot, dj, airDate, parts }) => {
-                const isToday = airDate.toDateString() === new Date().toDateString();
-                return parts.length > 0 ? (
-                  <ShowRailCard
-                    key={key}
-                    parts={parts}
-                    today={isToday}
-                    nowPlayingId={nowPlayingId}
-                    onPlayPart={(m) => playFromList(weekQueue, m)}
-                  />
-                ) : (
-                  <ScheduledRailCard
-                    key={key}
-                    djName={dj.display_name}
-                    day={slot.day_of_week}
-                    startTime={slot.start_time}
-                    endTime={slot.end_time}
-                    today={isToday}
-                    onOpen={() => toggleDjFilter(dj.slug)}
-                  />
-                );
-              })}
-            </Rail>
-          )}
-
-          {/* ── Browse by DJ (replaced by the detail view while a DJ is open) ── */}
-          {!selectedDj && (
-          <section className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="inline-flex items-center gap-2 text-base font-black tracking-tight text-foreground">
-                <Users2 className="h-5 w-5 text-[#74ddc7]" /> Browse by DJ
-              </h2>
-              {selectedSlug && (
-                <button
-                  onClick={() => router.replace("/mixshows", { scroll: false })}
-                  className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-bold text-muted-foreground transition-colors hover:border-[#74ddc7]/50 hover:text-[#74ddc7]"
-                >
-                  Show all DJs
-                </button>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-              {djCards.map(({ dj, count }) => {
-                const active = selectedSlug === dj.slug;
-                return (
-                  <div
-                    key={dj.id}
-                    className={`rounded-2xl border p-4 text-center transition-colors ${
-                      active
-                        ? "border-[#74ddc7]/60 bg-[#74ddc7]/[0.06]"
-                        : "border-border bg-card hover:border-[#74ddc7]/40"
-                    }`}
-                  >
-                    <button onClick={() => toggleDjFilter(dj.slug)} className="block w-full" aria-pressed={active}>
-                      <span
-                        className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df]/40 to-[#74ddc7]/25 text-base font-black ${
-                          active ? "text-[#74ddc7] ring-2 ring-[#74ddc7]/60" : "text-foreground"
+            <section className="space-y-2.5">
+              <div>
+                <h2 className="inline-flex items-center gap-2 text-base font-black tracking-tight text-foreground">
+                  <Radio className="h-5 w-5 text-[#74ddc7]" /> On Air This Week
+                </h2>
+                <p className="text-xs text-muted-foreground">{weekRangeLabel} · uploaded shows play right here</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+                {WEEK_DAYS.map((day) => {
+                  const date = dateForDay(currentMonday, day);
+                  const isToday = date.toDateString() === new Date().toDateString();
+                  const shows = scheduleShows.filter((s) => s.slot.day_of_week === day);
+                  return (
+                    <div
+                      key={day}
+                      className={`rounded-2xl border p-2.5 ${
+                        isToday ? "border-[#74ddc7]/60 bg-[#74ddc7]/[0.05]" : "border-border bg-card/60"
+                      }`}
+                    >
+                      <p
+                        className={`flex items-center justify-between text-[11px] font-black uppercase tracking-wider ${
+                          isToday ? "text-[#74ddc7]" : "text-muted-foreground"
                         }`}
                       >
-                        {initials(dj.display_name)}
-                      </span>
-                      <p className={`mt-2 truncate text-sm font-bold ${active ? "text-[#74ddc7]" : "text-foreground"}`}>
-                        {dj.display_name}
+                        {DAY_SHORT[day]}
+                        {isToday ? (
+                          <span className="rounded-full bg-[#74ddc7] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#0a0a0f]">
+                            Today
+                          </span>
+                        ) : (
+                          <span className="font-bold normal-case tracking-normal">{fmtAirShort(date)}</span>
+                        )}
                       </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {count} {count === 1 ? "mix" : "mixes"}
-                      </p>
-                    </button>
-                    <div className="mt-2 flex justify-center">
-                      <DjFollowButton
-                        djUserId={dj.user_id}
-                        djName={dj.display_name}
-                        followId={followIdFor(dj.user_id)}
-                        onFollowChange={handleFollowChange}
-                      />
+                      <div className="mt-2 space-y-1.5">
+                        {shows.length === 0 && (
+                          <p className="py-3 text-center text-[10px] text-muted-foreground/50">No mixshow</p>
+                        )}
+                        {shows.map(({ key, slot, dj, parts }) => {
+                          const anyPlaying = parts.some((p) => nowPlayingId === p.drop.id);
+                          return parts.length > 0 ? (
+                            <div
+                              key={key}
+                              className={`rounded-xl border p-2 transition-colors ${
+                                anyPlaying
+                                  ? "border-[#74ddc7]/60 bg-[#74ddc7]/10"
+                                  : "border-border bg-card hover:border-[#74ddc7]/40"
+                              }`}
+                            >
+                              <button
+                                onClick={() => playFromList(weekQueue, parts[0])}
+                                className="flex w-full items-center gap-1.5 text-left"
+                                title={`Play ${dj.display_name}`}
+                              >
+                                <span
+                                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+                                    anyPlaying ? "bg-[#74ddc7] text-[#0a0a0f]" : "bg-foreground/10 text-foreground"
+                                  }`}
+                                >
+                                  {anyPlaying ? (
+                                    <Volume2 className="h-3 w-3" />
+                                  ) : (
+                                    <Play className="h-3 w-3" fill="currentColor" />
+                                  )}
+                                </span>
+                                <span className="min-w-0">
+                                  <span
+                                    className={`block truncate text-xs font-bold ${
+                                      anyPlaying ? "text-[#74ddc7]" : "text-foreground"
+                                    }`}
+                                  >
+                                    {dj.display_name}
+                                  </span>
+                                  <span className="block text-[10px] text-muted-foreground">{fmt12h(slot.start_time)}</span>
+                                </span>
+                              </button>
+                              {parts.length > 1 && (
+                                <div className="mt-1.5 flex gap-1">
+                                  {parts.map((p, i) => {
+                                    const pl = nowPlayingId === p.drop.id;
+                                    return (
+                                      <button
+                                        key={p.drop.id}
+                                        onClick={() => playFromList(weekQueue, p)}
+                                        title={`${p.drop.file_code}.${p.drop.format ?? "mp3"}`}
+                                        className={`flex-1 rounded-full border px-1 py-0.5 text-[9px] font-bold transition-colors ${
+                                          pl
+                                            ? "border-[#74ddc7]/60 bg-[#74ddc7]/15 text-[#74ddc7]"
+                                            : "border-border text-muted-foreground hover:border-[#74ddc7]/40 hover:text-foreground"
+                                        }`}
+                                      >
+                                        {pl ? "▶ " : ""}P{i + 1}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              key={key}
+                              onClick={() => toggleDjFilter(dj.slug)}
+                              title={`${dj.display_name} — tap for past shows`}
+                              className="block w-full rounded-xl border border-dashed border-border bg-card/40 p-2 text-left transition-colors hover:border-[#74ddc7]/50"
+                            >
+                              <span className="block truncate text-xs font-bold text-foreground/80">{dj.display_name}</span>
+                              <span className="block text-[10px] text-muted-foreground">
+                                {fmt12h(slot.start_time)} · drops soon
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+                  );
+                })}
+              </div>
+            </section>
           )}
 
-          {/* ── DJ detail (card left, all their files right) OR the full archive ── */}
-          {selectedDj ? (
-            <section className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="inline-flex items-center gap-2 text-base font-black tracking-tight text-foreground">
-                  <Disc3 className="h-5 w-5 text-[#74ddc7]" /> {selectedDj.dj.display_name}
-                </h2>
-                <button
-                  onClick={() => router.replace("/mixshows", { scroll: false })}
-                  className="rounded-full border border-border bg-card px-4 py-1.5 text-xs font-bold text-muted-foreground transition-colors hover:border-[#74ddc7]/50 hover:text-[#74ddc7]"
-                >
-                  ← All DJs
-                </button>
-              </div>
-              <div className="grid gap-4 lg:grid-cols-[300px_1fr] lg:items-start">
-                {/* DJ card — left, sticky on desktop */}
-                <div className="rounded-2xl border border-[#74ddc7]/30 bg-[#74ddc7]/[0.04] p-5 lg:sticky lg:top-24">
-                  <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df]/40 to-[#74ddc7]/25 text-2xl font-black text-[#74ddc7]">
-                    {initials(selectedDj.dj.display_name)}
-                  </span>
-                  <p className="mt-3 text-center text-lg font-black text-foreground">{selectedDj.dj.display_name}</p>
-                  {slots
-                    .filter((s) => s.dj_id === selectedDj.dj.id)
-                    .map((s) => (
-                      <p key={s.id} className="text-center text-xs text-muted-foreground">
-                        On air {DAY_SHORT[s.day_of_week]} · {fmt12h(s.start_time)}–{fmt12h(s.end_time)}
-                      </p>
-                    ))}
-                  <p className="mt-1 text-center text-xs text-muted-foreground">
-                    {selectedDj.count} {selectedDj.count === 1 ? "mix" : "mixes"} in the archive
+          {/* ── Browse: DJ list on the left, archive files on the right ── */}
+          <section className="space-y-3">
+            <h2 className="inline-flex items-center gap-2 text-base font-black tracking-tight text-foreground">
+              <Disc3 className="h-5 w-5 text-[#74ddc7]" /> Browse the archive
+            </h2>
+            <div className="grid gap-4 lg:grid-cols-[300px_1fr] lg:items-start">
+              {/* DJ browser — left, sticky on desktop */}
+              <aside className="rounded-2xl border border-border bg-card/60 p-3 lg:sticky lg:top-24">
+                <p className="inline-flex items-center gap-1.5 px-2 pb-2 pt-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                  <Users2 className="h-3.5 w-3.5 text-[#74ddc7]" /> Browse by DJ
+                </p>
+                <div className="space-y-1 lg:max-h-[62vh] lg:overflow-y-auto lg:pr-1">
+                  <button
+                    onClick={() => router.replace("/mixshows", { scroll: false })}
+                    aria-pressed={!selectedSlug}
+                    className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors ${
+                      !selectedSlug ? "bg-[#74ddc7]/10 text-[#74ddc7]" : "text-foreground hover:bg-foreground/[0.05]"
+                    }`}
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df]/40 to-[#74ddc7]/25 text-[10px] font-black">
+                      ALL
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-bold">All DJs</span>
+                      <span className="block text-[11px] text-muted-foreground">
+                        {mixes.length} {mixes.length === 1 ? "mix" : "mixes"}
+                      </span>
+                    </span>
+                  </button>
+
+                  {djCards.map(({ dj, count }) => {
+                    const active = selectedSlug === dj.slug;
+                    return (
+                      <div key={dj.id}>
+                        <button
+                          onClick={() => toggleDjFilter(dj.slug)}
+                          aria-pressed={active}
+                          className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors ${
+                            active ? "bg-[#74ddc7]/10" : "hover:bg-foreground/[0.05]"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df]/40 to-[#74ddc7]/25 text-xs font-black ${
+                              active ? "text-[#74ddc7] ring-2 ring-[#74ddc7]/60" : "text-foreground"
+                            }`}
+                          >
+                            {initials(dj.display_name)}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className={`block truncate text-sm font-bold ${active ? "text-[#74ddc7]" : "text-foreground"}`}>
+                              {dj.display_name}
+                            </span>
+                            <span className="block text-[11px] text-muted-foreground">
+                              {count} {count === 1 ? "mix" : "mixes"}
+                            </span>
+                          </span>
+                        </button>
+
+                        {/* Selected DJ expands in place: schedule + actions. */}
+                        {active && (
+                          <div className="mb-1 mt-1 space-y-2 rounded-xl border border-[#74ddc7]/30 bg-[#74ddc7]/[0.04] p-3">
+                            {slots
+                              .filter((s) => s.dj_id === dj.id)
+                              .map((s) => (
+                                <p key={s.id} className="text-center text-[11px] text-muted-foreground">
+                                  On air {DAY_SHORT[s.day_of_week]} · {fmt12h(s.start_time)}–{fmt12h(s.end_time)}
+                                </p>
+                              ))}
+                            {visibleMixes.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const shuffled = [...visibleMixes];
+                                  for (let i = shuffled.length - 1; i > 0; i--) {
+                                    const j = Math.floor(Math.random() * (i + 1));
+                                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                                  }
+                                  playFromList(shuffled, shuffled[0]);
+                                }}
+                                className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-[#74ddc7]/50 bg-[#74ddc7]/10 px-4 py-2 text-xs font-bold text-[#0f9e88] transition-colors hover:bg-[#74ddc7]/20 dark:text-[#74ddc7]"
+                              >
+                                <Shuffle className="h-3.5 w-3.5" /> Shuffle their mixes
+                              </button>
+                            )}
+                            <div className="flex justify-center">
+                              <DjFollowButton
+                                djUserId={dj.user_id}
+                                djName={dj.display_name}
+                                followId={followIdFor(dj.user_id)}
+                                onFollowChange={handleFollowChange}
+                              />
+                            </div>
+                            <Link
+                              href={`/djs/${dj.slug}`}
+                              className="block rounded-full border border-border bg-card px-4 py-2 text-center text-xs font-bold text-foreground transition-colors hover:border-[#74ddc7]/50 hover:text-[#74ddc7]"
+                            >
+                              View profile
+                            </Link>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </aside>
+
+              {/* Archive files — right, scrollable, grouped by exact air date */}
+              <div className="min-w-0 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card/50 px-4 py-2">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                    {selectedDj ? selectedDj.dj.display_name : "All mixes"} · {visibleMixes.length}
                   </p>
-                  <div className="mt-4 flex flex-col items-stretch gap-2">
+                  <div className="flex items-center gap-3">
                     {visibleMixes.length > 1 && (
                       <button
                         type="button"
@@ -652,34 +771,11 @@ function ArchiveInner() {
                           }
                           playFromList(shuffled, shuffled[0]);
                         }}
-                        className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#74ddc7]/50 bg-[#74ddc7]/10 px-4 py-2 text-xs font-bold text-[#0f9e88] transition-colors hover:bg-[#74ddc7]/20 dark:text-[#74ddc7]"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-[#74ddc7]/50 bg-[#74ddc7]/10 px-3.5 py-1.5 text-xs font-bold text-[#0f9e88] transition-colors hover:bg-[#74ddc7]/20 dark:text-[#74ddc7]"
                       >
-                        <Shuffle className="h-3.5 w-3.5" /> Shuffle their mixes
+                        <Shuffle className="h-3.5 w-3.5" /> {selectedDj ? "Shuffle" : "Shuffle all"}
                       </button>
                     )}
-                    <div className="flex justify-center">
-                      <DjFollowButton
-                        djUserId={selectedDj.dj.user_id}
-                        djName={selectedDj.dj.display_name}
-                        followId={followIdFor(selectedDj.dj.user_id)}
-                        onFollowChange={handleFollowChange}
-                      />
-                    </div>
-                    <Link
-                      href={`/djs/${selectedDj.dj.slug}`}
-                      className="rounded-full border border-border bg-card px-4 py-2 text-center text-xs font-bold text-foreground transition-colors hover:border-[#74ddc7]/50 hover:text-[#74ddc7]"
-                    >
-                      View profile
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Files — right, scrollable */}
-                <div className="min-w-0 space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card/50 px-4 py-2">
-                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                      All files · {visibleMixes.length}
-                    </p>
                     <label className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                       Sort by date
                       <select
@@ -692,99 +788,39 @@ function ArchiveInner() {
                       </select>
                     </label>
                   </div>
-                  <div className="space-y-5 lg:max-h-[68vh] lg:overflow-y-auto lg:pr-2">
-                    {visibleMixes.length === 0 && (
-                      <div className="rounded-2xl border border-dashed border-border bg-card/40 px-6 py-12 text-center">
-                        <Headphones className="mx-auto h-8 w-8 text-muted-foreground" />
-                        <p className="mt-3 text-sm text-muted-foreground">No mixes from this DJ yet.</p>
-                      </div>
-                    )}
-                    {airDateGroups.map(({ key, date, mixes: dayMixes }) => (
-                      <div key={key} className="space-y-2">
-                        <h3 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                          <CalendarDays className="h-3.5 w-3.5 text-[#74ddc7]" /> {fmtAirLong(date)}
-                          {date.toDateString() === new Date().toDateString() && (
-                            <span className="rounded-full bg-[#74ddc7]/15 px-2 py-0.5 text-[10px] font-bold text-[#74ddc7]">Today</span>
-                          )}
-                        </h3>
-                        <div className="space-y-2">
-                          {dayMixes.map((m) => (
-                            <MixRow
-                              key={m.drop.id}
-                              mix={m}
-                              playing={nowPlayingId === m.drop.id}
-                              onPlay={() => playFromList(visibleMixes, m)}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </div>
-              </div>
-            </section>
-          ) : (
-            <section className="space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="inline-flex items-center gap-2 text-base font-black tracking-tight text-foreground">
-                  <Disc3 className="h-5 w-5 text-[#74ddc7]" /> The full archive
-                </h2>
-                <div className="flex items-center gap-3">
-                  {visibleMixes.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const shuffled = [...visibleMixes];
-                        for (let i = shuffled.length - 1; i > 0; i--) {
-                          const j = Math.floor(Math.random() * (i + 1));
-                          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-                        }
-                        playFromList(shuffled, shuffled[0]);
-                      }}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-[#74ddc7]/50 bg-[#74ddc7]/10 px-4 py-1.5 text-xs font-bold text-[#0f9e88] transition-colors hover:bg-[#74ddc7]/20 dark:text-[#74ddc7]"
-                    >
-                      <Shuffle className="h-3.5 w-3.5" /> Shuffle all
-                    </button>
-                  )}
-                  <label className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                    Sort by date
-                    <select
-                      value={sortDir}
-                      onChange={(e) => setSortDir(e.target.value as "desc" | "asc")}
-                      className="rounded-full border border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-[#74ddc7]/40"
-                    >
-                      <option value="desc">Newest first</option>
-                      <option value="asc">Oldest first</option>
-                    </select>
-                  </label>
-                  <p className="text-xs text-muted-foreground">
-                    {visibleMixes.length} {visibleMixes.length === 1 ? "mix" : "mixes"}
-                  </p>
-                </div>
-              </div>
 
-              {airDateGroups.map(({ key, date, mixes: dayMixes }) => (
-                <div key={key} className="space-y-2">
-                  <h3 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                    <CalendarDays className="h-3.5 w-3.5 text-[#74ddc7]" /> {fmtAirLong(date)}
-                    {date.toDateString() === new Date().toDateString() && (
-                      <span className="rounded-full bg-[#74ddc7]/15 px-2 py-0.5 text-[10px] font-bold text-[#74ddc7]">Today</span>
-                    )}
-                  </h3>
-                  <div className="space-y-2">
-                    {dayMixes.map((m) => (
-                      <MixRow
-                        key={m.drop.id}
-                        mix={m}
-                        playing={nowPlayingId === m.drop.id}
-                        onPlay={() => playFromList(visibleMixes, m)}
-                      />
-                    ))}
-                  </div>
+                <div className="space-y-5 lg:max-h-[72vh] lg:overflow-y-auto lg:pr-2">
+                  {visibleMixes.length === 0 && (
+                    <div className="rounded-2xl border border-dashed border-border bg-card/40 px-6 py-12 text-center">
+                      <Headphones className="mx-auto h-8 w-8 text-muted-foreground" />
+                      <p className="mt-3 text-sm text-muted-foreground">No mixes here yet.</p>
+                    </div>
+                  )}
+                  {airDateGroups.map(({ key, date, mixes: dayMixes }) => (
+                    <div key={key} className="space-y-2">
+                      <h3 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                        <CalendarDays className="h-3.5 w-3.5 text-[#74ddc7]" /> {fmtAirLong(date)}
+                        {date.toDateString() === new Date().toDateString() && (
+                          <span className="rounded-full bg-[#74ddc7]/15 px-2 py-0.5 text-[10px] font-bold text-[#74ddc7]">Today</span>
+                        )}
+                      </h3>
+                      <div className="space-y-2">
+                        {dayMixes.map((m) => (
+                          <MixRow
+                            key={m.drop.id}
+                            mix={m}
+                            playing={nowPlayingId === m.drop.id}
+                            onPlay={() => playFromList(visibleMixes, m)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </section>
-          )}
+              </div>
+            </div>
+          </section>
         </>
       )}
 
@@ -812,185 +848,6 @@ function StatChip({ icon, label }: { icon: React.ReactNode; label: string }) {
       <span className="text-[#74ddc7]">{icon}</span>
       {label}
     </span>
-  );
-}
-
-/** Horizontally-scrolling rail with hover chevrons (videos-page idiom). */
-function Rail({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
-  const scrollerRef = useRef<HTMLDivElement>(null);
-  const scrollBy = useCallback((dir: -1 | 1) => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir * Math.max(el.clientWidth * 0.85, 280), behavior: "smooth" });
-  }, []);
-
-  return (
-    <section className="group/rail space-y-2.5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className="inline-flex items-center gap-2 text-base font-black tracking-tight text-foreground">
-            <Radio className="h-5 w-5 text-[#74ddc7]" /> {title}
-          </h2>
-          <p className="text-xs text-muted-foreground">{subtitle}</p>
-        </div>
-        <div className="hidden gap-1 sm:flex">
-          <button
-            type="button"
-            aria-label="Scroll left"
-            onClick={() => scrollBy(-1)}
-            className="rounded-full border border-border bg-card p-1.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/rail:opacity-100"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            aria-label="Scroll right"
-            onClick={() => scrollBy(1)}
-            className="rounded-full border border-border bg-card p-1.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/rail:opacity-100"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-      <div
-        ref={scrollerRef}
-        className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {children}
-      </div>
-    </section>
-  );
-}
-
-/** A card in the "This Week On Air" rail: DJ + air day/time + play. */
-/** One card per SHOW: header plays the whole set (part 2 queues after part 1);
- * each part also gets its own chip so listeners can jump straight to hour 2. */
-function ShowRailCard({
-  parts,
-  today,
-  nowPlayingId,
-  onPlayPart,
-}: {
-  parts: Mix[];
-  today?: boolean;
-  nowPlayingId: string | null;
-  onPlayPart: (m: Mix) => void;
-}) {
-  const first = parts[0];
-  const anyPlaying = parts.some((p) => nowPlayingId === p.drop.id);
-  const airLabel = first.slot
-    ? `${DAY_SHORT[first.slot.day_of_week] ?? ""} · ${fmt12h(first.slot.start_time)}–${fmt12h(first.slot.end_time)}`
-    : fmtAirDate(first.airDate);
-  return (
-    <div
-      className={`relative w-64 shrink-0 snap-start rounded-2xl border p-4 transition-colors ${
-        anyPlaying
-          ? "border-[#74ddc7]/60 bg-[#74ddc7]/[0.06]"
-          : today
-            ? "border-[#74ddc7]/50 bg-[#74ddc7]/[0.04] hover:border-[#74ddc7]/70"
-            : "border-border bg-card hover:border-[#74ddc7]/40"
-      }`}
-    >
-      {today && (
-        <span className="absolute -top-2 right-3 rounded-full bg-[#74ddc7] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#0a0a0f]">
-          Today
-        </span>
-      )}
-      <button onClick={() => onPlayPart(first)} className="group flex w-full items-center gap-3 text-left">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df]/40 to-[#74ddc7]/25 text-sm font-black text-foreground">
-          {initials(first.dj?.display_name ?? "WCCG DJ")}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className={`truncate text-sm font-bold ${anyPlaying ? "text-[#74ddc7]" : "text-foreground"}`}>
-            {first.dj?.display_name ?? "WCCG DJ"}
-          </p>
-          <p className="truncate text-[11px] text-muted-foreground">{airLabel}</p>
-        </div>
-        <span
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors ${
-            anyPlaying ? "bg-[#74ddc7] text-[#0a0a0f]" : "bg-foreground/10 text-foreground group-hover:bg-[#74ddc7]/25"
-          }`}
-        >
-          {anyPlaying ? <Volume2 className="h-4 w-4" /> : <Play className="h-4 w-4" fill="currentColor" />}
-        </span>
-      </button>
-      {parts.length > 1 ? (
-        <div className="mt-3 flex gap-1.5">
-          {parts.map((p, i) => {
-            const playing = nowPlayingId === p.drop.id;
-            return (
-              <button
-                key={p.drop.id}
-                onClick={() => onPlayPart(p)}
-                className={`flex-1 rounded-full border px-2 py-1 text-[10px] font-bold transition-colors ${
-                  playing
-                    ? "border-[#74ddc7]/60 bg-[#74ddc7]/15 text-[#74ddc7]"
-                    : "border-border text-muted-foreground hover:border-[#74ddc7]/40 hover:text-foreground"
-                }`}
-                title={`${p.drop.file_code}.${p.drop.format ?? "mp3"}`}
-              >
-                {playing ? "▶ " : ""}Part {i + 1}
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="mt-3 truncate font-mono text-[11px] text-muted-foreground/70">
-          {first.drop.file_code}.{first.drop.format ?? "mp3"}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/** A scheduled show whose files haven't landed yet — keeps today's real
- * lineup on the rail. Clicking opens that DJ's archive. */
-function ScheduledRailCard({
-  djName,
-  day,
-  startTime,
-  endTime,
-  today,
-  onOpen,
-}: {
-  djName: string;
-  day: number;
-  startTime: string;
-  endTime: string;
-  today?: boolean;
-  onOpen: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className={`relative w-64 shrink-0 snap-start rounded-2xl border border-dashed p-4 text-left transition-colors ${
-        today ? "border-[#74ddc7]/60 bg-[#74ddc7]/[0.04] hover:border-[#74ddc7]" : "border-border bg-card/50 hover:border-[#74ddc7]/40"
-      }`}
-    >
-      {today && (
-        <span className="absolute -top-2 right-3 rounded-full bg-[#74ddc7] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#0a0a0f]">
-          Today
-        </span>
-      )}
-      <div className="flex items-center gap-3">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#7401df]/25 to-[#74ddc7]/15 text-sm font-black text-foreground/80">
-          {initials(djName)}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-foreground">{djName}</p>
-          <p className="truncate text-[11px] text-muted-foreground">
-            {DAY_SHORT[day] ?? ""} · {fmt12h(startTime)}–{fmt12h(endTime)}
-          </p>
-        </div>
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground/[0.06] text-muted-foreground">
-          <Radio className="h-4 w-4" />
-        </span>
-      </div>
-      <p className="mt-3 text-[11px] font-medium text-muted-foreground">
-        {today ? `On air today at ${fmt12h(startTime)}` : "Mix drops soon"} · tap for past shows
-      </p>
-    </button>
   );
 }
 

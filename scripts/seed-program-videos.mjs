@@ -22,14 +22,14 @@ const PROGRAMS = [
   { program: "From The Radio", creator: "The Deja Vu Show", category: "Talk & Culture", rating: "PG", channelId: "UCO_M1X6yEa-T1UH_XhWA8Yw" }, // WCCG Saturday throwbacks
   { program: "From The Radio", creator: "Posted on The Corner", category: "Talk & Culture", rating: "PG-13", channelId: "UCB4JlD2jIkXanFehab9CbDw" },
   { program: "From The Radio", creator: "The Bootleg Kev Show", category: "Talk & Culture", rating: "PG-13", channelId: "UCBgOGeH-NL4o2WGutwverqQ" },
+  // ABC News rides in From The Radio (no standalone news row). category stays
+  // "News" so the Latest rail keeps excluding headline volume.
+  { program: "From The Radio", creator: "ABC News", category: "News", rating: "PG", channelId: "UCBi2mrWuNuyYy4gbM6fU18Q" },
   // Local Content Creators — Fayetteville-area creators in one combined row.
   // Big Cas stays rated R (explicit language → parental gate + warning).
   { program: "Local Content Creators", creator: "Big Cas", category: "Talk & Culture", rating: "R", channelId: "UCQmsI0AAbXvTevWkqMIBU-Q" },
   { program: "Local Content Creators", creator: "Drect Williams", category: "Talk & Culture", rating: "PG-13", channelId: "UCPwUv_AYzOlK8VZP-dUM6ew" }, // Drect Media
   { program: "Local Content Creators", creator: "Put Me On Game", category: "Talk & Culture", rating: "PG-13", channelId: "UCMZlwNcYLu5eV2Zm2lLmF-Q" },
-
-  // News
-  { program: "ABC News", category: "News", rating: "PG", channelId: "UCBi2mrWuNuyYy4gbM6fU18Q" },
 
   // Sports — Duke + Pick'em Pros combined into one "Sports" row
   { program: "Sports", category: "Sports", rating: "G", channelId: "UC9KCzNMmf0IRcEIsFDgt2bg" }, // Duke Basketball

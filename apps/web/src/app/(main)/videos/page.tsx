@@ -40,6 +40,7 @@ import {
   browseVideos,
   continueWatching,
   groupByProgram,
+  interleaveBySource,
   programOf,
   videoThumb,
   fmtDuration,
@@ -88,8 +89,16 @@ const HERO_PROGRAMS = [
   "Pick'em Pros",
 ];
 
-/** Program rows pinned to the top of the wall, in order. */
-const HERO_TOP_ROWS = ["WCCG 104.5 FM Original Content", "Sports", "From The Radio"];
+/** Wall row order (after the Latest rail). Unlisted programs follow, in
+ *  natural newest-first order. */
+const ROW_ORDER = [
+  "WCCG 104.5 FM Original Content",
+  "From Your College",
+  "Local Government",
+  "Sports",
+  "From The Radio",
+  "Gospel",
+];
 
 function VideosWall() {
   const searchParams = useSearchParams();
@@ -159,10 +168,10 @@ function VideosWall() {
   const programRows: ProgramRow[] = useMemo(() => {
     if (program) return [];
     const rows = groupByProgram(videos);
-    // Pin Sports + Angela Yee to the top; the rest keep their natural order.
+    // Fixed row order; anything unlisted keeps its natural order at the end.
     const rank = (p: string) => {
-      const i = HERO_TOP_ROWS.indexOf(p);
-      return i === -1 ? HERO_TOP_ROWS.length + 1 : i;
+      const i = ROW_ORDER.indexOf(p);
+      return i === -1 ? ROW_ORDER.length + 1 : i;
     };
     return [...rows].sort((a, b) => rank(a.program) - rank(b.program));
   }, [program, videos]);
@@ -183,14 +192,20 @@ function VideosWall() {
     ).filter((list) => list.length > 0);
   }, [program, videos]);
 
-  // The Latest rail: newest uploads across every program. News and Duke are
-  // excluded — both post daily at volume and would crowd out local shows
-  // (each still has its own row).
+  // The Latest rail: newest uploads across every program. News, Duke, and
+  // Bootleg Kev are excluded — all three post daily at volume and would crowd
+  // out everyone else (each still appears in its own row). The rest is
+  // interleaved by source so no single channel floods the rail.
   const latest = useMemo<VideoRecord[]>(() => {
     if (program) return [];
-    return videos
-      .filter((v) => v.category !== "News" && v.creator_name !== "Duke Blue Devils")
-      .slice(0, 10);
+    return interleaveBySource(
+      videos.filter(
+        (v) =>
+          v.category !== "News" &&
+          v.creator_name !== "Duke Blue Devils" &&
+          v.creator_name !== "The Bootleg Kev Show",
+      ),
+    ).slice(0, 10);
   }, [program, videos]);
 
   const lockedMatureCount = useMemo(
