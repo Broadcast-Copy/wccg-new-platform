@@ -5,8 +5,10 @@
  *
  * Rows (each horizontally scrollable, empty rows omitted):
  *   • Continue Watching  — signed-in only, from `video_progress` (incomplete, >5s)
- *   • Latest — newest uploads across programs (news + Duke excluded; they
- *     post at volume and would crowd local shows out of the rail)
+ *   • Latest — newest uploads across programs (news + Duke + Bootleg Kev
+ *     excluded; they post at volume and would crowd local shows out)
+ *   • Most Watched / Top 10 — by `views` desc, big rank numerals (news +
+ *     Duke excluded), right above the first program row
  *   • Program rows       — grouped by coalesce(program, creator_name); header links
  *                          to that program's focused view (?program=<name>)
  *
@@ -33,6 +35,7 @@ import {
   Play,
   ShieldAlert,
   ShieldCheck,
+  TrendingUp,
   Video as VideoIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -41,6 +44,7 @@ import {
   continueWatching,
   groupByProgram,
   interleaveBySource,
+  topVideos,
   programOf,
   videoThumb,
   fmtDuration,
@@ -105,6 +109,7 @@ function VideosWall() {
   const program = searchParams.get("program")?.trim() || null;
 
   const [videos, setVideos] = useState<VideoRecord[]>([]);
+  const [top, setTop] = useState<VideoRecord[]>([]);
   const [cont, setCont] = useState<ContinueItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -148,13 +153,23 @@ function VideosWall() {
           data: { user },
         } = await supabase.auth.getUser();
 
-        const [all, watching] = await Promise.all([
+        const [all, mostWatched, watching] = await Promise.all([
           browseVideos({ limit: 500, program: program ?? undefined }),
+          // Over-fetch then drop news + Duke: both rack up view counts that
+          // would crowd local shows out of the Top 10 (each keeps its row).
+          program
+            ? Promise.resolve<VideoRecord[]>([])
+            : topVideos(30).then((list) =>
+                list
+                  .filter((v) => v.category !== "News" && v.creator_name !== "Duke Blue Devils")
+                  .slice(0, 10),
+              ),
           user ? continueWatching(user.id, { program: program ?? undefined }) : Promise.resolve<ContinueItem[]>([]),
         ]);
 
         if (!active) return;
         setVideos(all);
+        setTop(mostWatched);
         setCont(watching);
       } finally {
         if (active) setLoading(false);
@@ -299,6 +314,14 @@ function VideosWall() {
             <Row title="Latest" icon={<Clock className="h-6 w-6" />}>
               {latest.map((v) => (
                 <PosterCard key={v.id} v={v} locked={locked} onUnlock={toggleLock} />
+              ))}
+            </Row>
+          )}
+
+          {top.length > 0 && (
+            <Row title="Most Watched" icon={<TrendingUp className="h-6 w-6" />}>
+              {top.map((v, i) => (
+                <RankCard key={v.id} v={v} rank={i + 1} locked={locked} onUnlock={toggleLock} />
               ))}
             </Row>
           )}
@@ -819,6 +842,64 @@ function PosterCard({
   return (
     <Link href={`/videos/${v.id}`} className={cls}>
       {body}
+    </Link>
+  );
+}
+
+/** Top-10 card with a large rank numeral behind the poster. */
+function RankCard({
+  v,
+  rank,
+  locked,
+  onUnlock,
+}: {
+  v: VideoRecord;
+  rank: number;
+  locked: boolean;
+  onUnlock: () => void;
+}) {
+  const gated = locked && isMatureRating(v.rating);
+  const inner = (
+    <>
+      {/* Giant rank numeral, Netflix-style, tucked behind the poster's left edge. */}
+      <span
+        aria-hidden
+        className="pointer-events-none select-none font-black leading-none text-transparent"
+        style={{
+          WebkitTextStroke: "2px rgba(116,221,199,0.55)",
+          fontSize: "5.5rem",
+          marginRight: "-1.25rem",
+        }}
+      >
+        {rank}
+      </span>
+      <div className="w-[12.5rem] shrink-0 sm:w-[13.5rem]">
+        <Thumb v={v} gated={gated} />
+        <div className="mt-2 min-w-0">
+          <h3
+            className={`line-clamp-1 text-sm font-bold leading-snug text-foreground ${
+              gated ? "" : "group-hover:text-[#74ddc7]"
+            }`}
+          >
+            {v.title}
+          </h3>
+          {gated ? (
+            <button onClick={onUnlock} className="text-xs font-bold text-[#74ddc7] hover:underline">
+              Unlock to watch
+            </button>
+          ) : (
+            <p className="truncate text-xs text-muted-foreground">{fmtViews(v.views)}</p>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
+  const cls = "group flex shrink-0 snap-start items-end";
+  if (gated) return <div className={cls}>{inner}</div>;
+  return (
+    <Link href={`/videos/${v.id}`} className={cls}>
+      {inner}
     </Link>
   );
 }
