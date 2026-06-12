@@ -456,10 +456,8 @@ export const SHOW_PROGRESSIVE_MBC: ShowData = {
   name: "Progressive Missionary Baptist Church",
   slug: "progressive-mbc",
   hostNames: "Rev. F. Bernard Fuller",
-  hostIds: ["host_pastor_fuller"],
-  // Exact caravan hour unconfirmed — every listed hour is taken; update when
-  // the station confirms where Progressive airs.
-  timeSlot: "Sunday Gospel Caravan",
+  hostIds: ["host_rev_fuller"],
+  timeSlot: "1:00 PM - 2:00 PM",
   days: "Sunday",
   streamId: "stream_wccg",
   description: "Reverend F. Bernard Fuller leads Progressive Missionary Baptist Church — relevant, radical, and real faith through strong biblical teaching — broadcast as part of The Sunday Gospel Caravan.",
@@ -472,36 +470,6 @@ export const SHOW_PROGRESSIVE_MBC: ShowData = {
     channelUrl: "https://www.youtube.com/@progressivemissionarybapti7744",
     channelId: "UCavo4QHyzuMM2FED2W6PwEg",
     searchQuery: "Progressive Missionary Baptist Church Fayetteville",
-  },
-  isSyndicated: false,
-  isActive: true,
-  category: "gospel",
-};
-
-export const SHOW_MT_PISGAH: ShowData = {
-  id: "show_mt_pisgah",
-  name: "Mt. Pisgah Missionary Baptist Church",
-  slug: "mt-pisgah-mbc",
-  hostNames: "Mt. Pisgah MBC",
-  hostIds: [],
-  timeSlot: "1:00 PM - 2:00 PM",
-  days: "Sunday",
-  streamId: "stream_wccg",
-  description: "The Sunday service from Mt. Pisgah Missionary Baptist Church comes to the airwaves as part of The Sunday Gospel Caravan.",
-  tagline: "Faith-based Sunday service broadcast",
-  gradient: "from-[#16213e] via-[#0d1b2a] to-[#1a1a2e]",
-  imageUrl: null,
-  // Was wearing Progressive MBC's artwork (and pastor) by mistake — that
-  // identity now lives on SHOW_PROGRESSIVE_MBC. Needs its own image.
-  showImageUrl: null,
-  // NOTE: this entry previously pointed at Progressive MBC's channel by
-  // mistake. Mount Pisgah MBC (Raeford) is the active Missionary Baptist
-  // channel matching this broadcast's name.
-  youtube: {
-    channelName: "Mount Pisgah MBC",
-    channelUrl: "https://www.youtube.com/channel/UCiQQb9DM7OLC6dRv81HvOxw",
-    channelId: "UCiQQb9DM7OLC6dRv81HvOxw",
-    searchQuery: "Mount Pisgah Missionary Baptist Church",
   },
   isSyndicated: false,
   isActive: true,
@@ -765,7 +733,6 @@ export const ALL_SHOWS: ShowData[] = [
   SHOW_MARVIN_SAPP,
   SHOW_FAMILY_FELLOWSHIP,
   SHOW_PROGRESSIVE_MBC,
-  SHOW_MT_PISGAH,
   SHOW_LEWIS_CHAPEL,
   // Sunday – Afternoon/Evening
   SHOW_GENERAL_PROGRAMMING_SUNDAY,

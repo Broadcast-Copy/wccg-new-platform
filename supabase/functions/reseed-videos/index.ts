@@ -80,7 +80,6 @@ const CHANNELS: ChannelConfig[] = [
   { program: "Gospel", creator: "Family Fellowship Worship Center", category: "Gospel", rating: "G", channelId: "UCxTzK_2da5bZag5WTAbiVzQ" }, // Family Fellowship Worship Center
   { program: "Gospel", creator: "Progressive MBC", category: "Gospel", rating: "G", channelId: "UCavo4QHyzuMM2FED2W6PwEg" }, // Progressive MBC
   { program: "Gospel", creator: "Lewis Chapel Missionary Baptist Church", category: "Gospel", rating: "G", channelId: "UCOe1fQxFPHNf3N7Rb55ySTA" }, // Lewis Chapel Missionary Baptist Church
-  { program: "Gospel", creator: "Mt. Pisgah Missionary Baptist Church", category: "Gospel", rating: "G", channelId: "UCiQQb9DM7OLC6dRv81HvOxw" }, // Mount Pisgah MBC (Raeford) — active weekly services
 ];
 
 const CORS = {

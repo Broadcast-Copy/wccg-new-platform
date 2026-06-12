@@ -78,9 +78,9 @@ const GOSPEL_CARAVAN_SHOWS: GospelCaravanShow[] = [
       "https://wccg1045fm.com/wp-content/uploads/2025/10/ffwc-1024x743-1.png",
   },
   {
-    id: "show_mt_pisgah",
+    id: "show_progressive_mbc",
     name: "Progressive Missionary Baptist Church",
-    slug: "mt-pisgah-mbc",
+    slug: "progressive-mbc",
     timeSlot: "Sundays 1:00 PM EST",
     description:
       "Reverend F. Bernard Fuller delivers the Sunday service broadcast from Progressive Missionary Baptist Church with faith-filled messages and community worship.",

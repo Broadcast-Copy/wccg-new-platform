@@ -37,8 +37,8 @@ export const CHECK_IN_LOCATIONS: CheckInLocation[] = [
     address: "335 Ray Ave, Fayetteville, NC 28301",
   },
   {
-    id: "loc_mt_pisgah",
-    name: "WCCG Gospel Caravan - Mt. Pisgah",
+    id: "loc_progressive_mbc",
+    name: "WCCG Gospel Caravan - Progressive MBC",
     description: "Join the WCCG Gospel Caravan for an uplifting afternoon of praise and fellowship.",
     lat: 35.0703,
     lng: -78.9134,

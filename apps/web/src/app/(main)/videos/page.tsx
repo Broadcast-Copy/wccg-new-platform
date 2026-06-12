@@ -78,7 +78,7 @@ function WallLoading() {
 /**
  * Display label for a program row. "Gospel" reads as "Latest Gospel" — one row
  * of the newest videos across every gospel broadcast (The Encouraging Moment,
- * Lewis Chapel, Mt. Pisgah, Family Fellowship, Grace Plus Nothing, etc.). The
+ * Lewis Chapel, Family Fellowship, Grace Plus Nothing, etc.). The
  * underlying program value stays "Gospel" for filtering/links.
  */
 function displayProgram(program: string): string {

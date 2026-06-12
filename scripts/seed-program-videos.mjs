@@ -60,10 +60,6 @@ const PROGRAMS = [
   { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCxTzK_2da5bZag5WTAbiVzQ" }, // Family Fellowship Worship Center
   { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCavo4QHyzuMM2FED2W6PwEg" }, // Progressive MBC (this id was mislabeled "Mt. Pisgah")
   { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCOe1fQxFPHNf3N7Rb55ySTA" }, // Lewis Chapel Missionary Baptist Church
-  // Mount Pisgah MBC (Raeford) — the active "Missionary Baptist" channel
-  // matching the broadcast name. (Fayetteville's "Mount Pisgah Baptist Church"
-  // channel UCzIkbXguZbWkAfp88zubLYQ is dormant with timestamp-only titles.)
-  { program: "Gospel", creator: "Mt. Pisgah Missionary Baptist Church", category: "Gospel", rating: "G", channelId: "UCiQQb9DM7OLC6dRv81HvOxw" },
 ];
 
 function decode(s) {

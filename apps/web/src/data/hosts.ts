@@ -292,7 +292,7 @@ export const HOST_REV_FULLER: HostData = {
   id: "host_rev_fuller",
   name: "Rev. F. Bernard Fuller",
   role: "Pastor",
-  showIds: ["show_mt_pisgah"],
+  showIds: ["show_progressive_mbc"],
   bio: "Rev. F. Bernard Fuller brings the Sunday service from Progressive Missionary Baptist Church to the airwaves, reaching the community with faith-based programming each week.",
   imageUrl: null,
   socialLinks: [],

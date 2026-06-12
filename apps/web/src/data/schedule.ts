@@ -169,9 +169,9 @@ const SUNDAY_BLOCKS: ScheduleBlock[] = [
     endTime: "13:00",
   },
   {
-    showId: "show_mt_pisgah",
-    showName: "Mt. Pisgah Missionary Baptist Church",
-    hostNames: "Pastor F. Benard Fuller",
+    showId: "show_progressive_mbc",
+    showName: "Progressive Missionary Baptist Church",
+    hostNames: "Rev. F. Bernard Fuller",
     startTime: "13:00",
     endTime: "14:00",
   },
