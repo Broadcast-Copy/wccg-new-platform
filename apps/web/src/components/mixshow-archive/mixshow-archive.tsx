@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { isoMondayOfNow } from "@/lib/broadcast-week";
 import { ArchivePlayerBar, type ArchiveTrack } from "./archive-player-bar";
 import { DjFollowButton } from "./dj-follow-button";
 
@@ -107,15 +108,6 @@ const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /** Broadcast-week column order for the On-Air grid: Monday → Sunday. */
 const WEEK_DAYS = [1, 2, 3, 4, 5, 6, 0];
-
-/** ISO Monday (YYYY-MM-DD) of the current broadcast week, in ET. */
-function isoMondayOfNow(): string {
-  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
-  const offset = (now.getDay() + 6) % 7;
-  const mon = new Date(now);
-  mon.setDate(now.getDate() - offset);
-  return mon.toISOString().slice(0, 10);
-}
 
 /** Calendar date for a given day-of-week within the week starting at weekOf (a Monday). */
 function dateForDay(weekOf: string, day: number): Date {

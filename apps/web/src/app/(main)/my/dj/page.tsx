@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { isoMondayOfNow } from "@/lib/broadcast-week";
 import {
   Calendar,
   RefreshCw,
@@ -24,12 +25,9 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /** ISO Monday of the current week in America/New_York (YYYY-MM-DD). */
 function currentWeekOfET(): string {
-  const nowEt = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
-  const day = nowEt.getDay(); // 0=Sun..6=Sat
-  const offsetToMon = (day + 6) % 7;
-  const monday = new Date(nowEt);
-  monday.setDate(nowEt.getDate() - offsetToMon);
-  return monday.toISOString().slice(0, 10);
+  // Shared helper formats the LOCAL date — the old toISOString() version
+  // rolled to the next day after 8 PM ET and filed uploads in the wrong week.
+  return isoMondayOfNow();
 }
 
 interface Drop {

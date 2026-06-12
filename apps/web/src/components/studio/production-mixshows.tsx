@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { isoMondayOfNow } from "@/lib/broadcast-week";
 
 // A single track the bottom player can load. `src` may be resolved lazily
 // (e.g. a Supabase signed URL) so callers can build a queue of not-yet-signed
@@ -117,13 +118,6 @@ interface Drop {
   uploaded_at: string | null;
 }
 
-function isoMondayOfNow(): string {
-  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
-  const offset = (now.getDay() + 6) % 7;
-  const mon = new Date(now);
-  mon.setDate(now.getDate() - offset);
-  return mon.toISOString().slice(0, 10);
-}
 function fmt12h(hhmm: string): string {
   const [h, m] = hhmm.split(":").map(Number);
   if (Number.isNaN(h)) return hhmm;
