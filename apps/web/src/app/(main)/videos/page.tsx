@@ -142,11 +142,16 @@ function VideosWall() {
 
         const [all, mostWatched, watching] = await Promise.all([
           browseVideos({ limit: 500, program: program ?? undefined }),
-          // Over-fetch then drop news: national headlines rack up huge view
-          // counts and would crowd local shows out of the Top 10.
+          // Over-fetch then drop news + Duke: national headlines and Duke
+          // highlights rack up huge view counts and would crowd local shows
+          // out of the Top 10 (Duke still has its own Sports row).
           program
             ? Promise.resolve<VideoRecord[]>([])
-            : topVideos(30).then((list) => list.filter((v) => v.category !== "News").slice(0, 10)),
+            : topVideos(30).then((list) =>
+                list
+                  .filter((v) => v.category !== "News" && v.creator_name !== "Duke Blue Devils")
+                  .slice(0, 10),
+              ),
           user ? continueWatching(user.id, { program: program ?? undefined }) : Promise.resolve<ContinueItem[]>([]),
         ]);
 
