@@ -465,11 +465,14 @@ export const SHOW_MT_PISGAH: ShowData = {
   gradient: "from-[#16213e] via-[#0d1b2a] to-[#1a1a2e]",
   imageUrl: null,
   showImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/10/progressive-1024x743-1.png",
+  // NOTE: this entry previously pointed at Progressive MBC's channel by
+  // mistake. Mount Pisgah MBC (Raeford) is the active Missionary Baptist
+  // channel matching this broadcast's name.
   youtube: {
-    channelName: "Progressive Missionary Baptist Church",
-    channelUrl: "https://www.youtube.com/@progressivemissionarybapti7744",
-    channelId: "UCavo4QHyzuMM2FED2W6PwEg",
-    searchQuery: "Progressive Missionary Baptist Church",
+    channelName: "Mount Pisgah MBC",
+    channelUrl: "https://www.youtube.com/channel/UCiQQb9DM7OLC6dRv81HvOxw",
+    channelId: "UCiQQb9DM7OLC6dRv81HvOxw",
+    searchQuery: "Mount Pisgah Missionary Baptist Church",
   },
   isSyndicated: false,
   isActive: true,

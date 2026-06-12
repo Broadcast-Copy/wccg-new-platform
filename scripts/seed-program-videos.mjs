@@ -14,8 +14,6 @@ const PER_CHANNEL = 8;
 const PROGRAMS = [
   // The station's own channel — interviews, podcasts & events produced by WCCG.
   { program: "WCCG 104.5 FM Original Content", creator: "WCCG 104.5 FM", category: "Originals", rating: "PG", channelId: "UC7fsAn1jAj4lX8sk_bd8H4A" },
-  // Drect Media — hip-hop culture talk & debates from Drect Williams.
-  { program: "Drect Media", creator: "Drect Williams", category: "Talk & Culture", rating: "PG-13", channelId: "UCPwUv_AYzOlK8VZP-dUM6ew" },
 
   // From The Radio — the syndicated shows heard on 104.5, one combined row.
   // `creator` (optional, defaults to program) keeps each show's own name.
@@ -24,10 +22,11 @@ const PROGRAMS = [
   { program: "From The Radio", creator: "The Deja Vu Show", category: "Talk & Culture", rating: "PG", channelId: "UCO_M1X6yEa-T1UH_XhWA8Yw" }, // WCCG Saturday throwbacks
   { program: "From The Radio", creator: "Posted on The Corner", category: "Talk & Culture", rating: "PG-13", channelId: "UCB4JlD2jIkXanFehab9CbDw" },
   { program: "From The Radio", creator: "The Bootleg Kev Show", category: "Talk & Culture", rating: "PG-13", channelId: "UCBgOGeH-NL4o2WGutwverqQ" },
-  { program: "Put Me On Game", category: "Talk & Culture", rating: "PG-13", channelId: "UCMZlwNcYLu5eV2Zm2lLmF-Q" },
-  // Local Fayetteville culture — explicit language → rated R (parental-gated +
-  // explicit-content warning on the watch page).
-  { program: "Big Cas", category: "Talk & Culture", rating: "R", channelId: "UCQmsI0AAbXvTevWkqMIBU-Q" },
+  // Local Content Creators — Fayetteville-area creators in one combined row.
+  // Big Cas stays rated R (explicit language → parental gate + warning).
+  { program: "Local Content Creators", creator: "Big Cas", category: "Talk & Culture", rating: "R", channelId: "UCQmsI0AAbXvTevWkqMIBU-Q" },
+  { program: "Local Content Creators", creator: "Drect Williams", category: "Talk & Culture", rating: "PG-13", channelId: "UCPwUv_AYzOlK8VZP-dUM6ew" }, // Drect Media
+  { program: "Local Content Creators", creator: "Put Me On Game", category: "Talk & Culture", rating: "PG-13", channelId: "UCMZlwNcYLu5eV2Zm2lLmF-Q" },
 
   // News
   { program: "ABC News", category: "News", rating: "PG", channelId: "UCBi2mrWuNuyYy4gbM6fU18Q" },
@@ -44,13 +43,13 @@ const PROGRAMS = [
   { program: "From Your College", creator: "Fayetteville Technical Community College", category: "Education", rating: "G", channelId: "UC6UeI2Av47gbem_mTZEa1Ww" },
   { program: "From Your College", creator: "Robeson Community College", category: "Education", rating: "G", channelId: "UCfo6rz_-iMCzQswPCDbRwBw" },
 
-  // Government — city, counties, and PWC in one row.
-  { program: "Government", creator: "City of Fayetteville", category: "Community", rating: "G", channelId: "UCae_2JwaN6G7KvTJDU3TD6g" },
-  { program: "Government", creator: "Fayetteville PWC", category: "Community", rating: "G", channelId: "UCjz2EfG0AqCqa-voV5Xb-VQ" },
-  { program: "Government", creator: "Cumberland County", category: "Community", rating: "G", channelId: "UCWW_IJSglN-zz1vLQ2AkPiA" },
-  { program: "Government", creator: "Harnett County", category: "Community", rating: "G", channelId: "UCU7mTF6HTD65x_98EhAMeMg" },
-  { program: "Government", creator: "Sampson County", category: "Community", rating: "G", channelId: "UCpZ9fEh38OXp_YrGZYVne3g" },
-  { program: "Government", creator: "Lee County", category: "Community", rating: "G", channelId: "UCQ6c7WFfXy_H4zuzd32viJw" },
+  // Local Government — city, counties, and PWC in one row.
+  { program: "Local Government", creator: "City of Fayetteville", category: "Community", rating: "G", channelId: "UCae_2JwaN6G7KvTJDU3TD6g" },
+  { program: "Local Government", creator: "Fayetteville PWC", category: "Community", rating: "G", channelId: "UCjz2EfG0AqCqa-voV5Xb-VQ" },
+  { program: "Local Government", creator: "Cumberland County", category: "Community", rating: "G", channelId: "UCWW_IJSglN-zz1vLQ2AkPiA" },
+  { program: "Local Government", creator: "Harnett County", category: "Community", rating: "G", channelId: "UCU7mTF6HTD65x_98EhAMeMg" },
+  { program: "Local Government", creator: "Sampson County", category: "Community", rating: "G", channelId: "UCpZ9fEh38OXp_YrGZYVne3g" },
+  { program: "Local Government", creator: "Lee County", category: "Community", rating: "G", channelId: "UCQ6c7WFfXy_H4zuzd32viJw" },
 
   // Gospel — every gospel broadcast combined into one "Gospel" row.
   // NOTE: the id UCvxWyn4rfcI2H9APhfUIB1Q that used to be labeled "Dr. Tony Haire"
@@ -61,11 +60,10 @@ const PROGRAMS = [
   { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCxTzK_2da5bZag5WTAbiVzQ" }, // Family Fellowship Worship Center
   { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCavo4QHyzuMM2FED2W6PwEg" }, // Progressive MBC (this id was mislabeled "Mt. Pisgah")
   { program: "Gospel", category: "Gospel", rating: "G", channelId: "UCOe1fQxFPHNf3N7Rb55ySTA" }, // Lewis Chapel Missionary Baptist Church
-  // Mt. Pisgah Missionary Baptist Church — confirm the correct channel before
-  // seeding. Fayetteville "Mount Pisgah Baptist Church" (UCzIkbXguZbWkAfp88zubLYQ)
-  // posts only sporadic, timestamp-titled videos; a Raeford "Mount Pisgah
-  // Missionary Baptist Church" also exists. Add the confirmed one here:
-  // { program: "Gospel", category: "Gospel", rating: "G", channelId: "<MT_PISGAH_CHANNEL_ID>" }, // Mt. Pisgah Missionary Baptist Church
+  // Mount Pisgah MBC (Raeford) — the active "Missionary Baptist" channel
+  // matching the broadcast name. (Fayetteville's "Mount Pisgah Baptist Church"
+  // channel UCzIkbXguZbWkAfp88zubLYQ is dormant with timestamp-only titles.)
+  { program: "Gospel", creator: "Mt. Pisgah Missionary Baptist Church", category: "Gospel", rating: "G", channelId: "UCiQQb9DM7OLC6dRv81HvOxw" },
 ];
 
 function decode(s) {
