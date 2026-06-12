@@ -78,6 +78,26 @@ function decode(s) {
 }
 const sq = (s) => (s == null ? "null" : `'${String(s).replace(/'/g, "''")}'`);
 
+// True = portrait/Shorts-style (hidden from the wall). youtube.com/shorts/<id>
+// answers 200 for actual Shorts and redirects to /watch for regular videos.
+// (oEmbed is useless for this — it reports 200x113 for everything.)
+async function probePortrait(id) {
+  try {
+    const res = await fetch(`https://www.youtube.com/shorts/${id}`, {
+      redirect: "manual",
+      headers: { "user-agent": "Mozilla/5.0 wccg-seed" },
+    });
+    if (res.status === 200) return true;
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get("location") ?? "";
+      return loc.includes("/watch") ? false : null;
+    }
+    return res.status >= 400 && res.status < 500 ? false : null;
+  } catch {
+    return null;
+  }
+}
+
 function parseEntries(xml, limit) {
   const out = [];
   const blocks = xml.split("<entry>").slice(1);
@@ -112,6 +132,7 @@ async function main() {
           creator: p.creator ?? p.program,
           category: p.category,
           rating: p.rating,
+          is_portrait: await probePortrait(e.id), // one probe per video; slow but exact
         });
       }
     } catch (err) {
@@ -138,6 +159,7 @@ async function main() {
         sq(r.rating),
         String(r.views),
         r.published ? sq(r.published) : "now()",
+        r.is_portrait === true ? "true" : r.is_portrait === false ? "false" : "null",
       ];
       return `(${cols.join(",")})`;
     })
@@ -146,14 +168,14 @@ async function main() {
   const sql = `-- Seeded ${rows.length} real program videos from YouTube RSS.
 delete from public.videos where user_id = '${STATION_USER}';
 insert into public.videos
-  (user_id, program, creator_name, title, youtube_id, youtube_url, thumbnail_url, category, rating, status, visibility, views, published_at)
+  (user_id, program, creator_name, title, youtube_id, youtube_url, thumbnail_url, category, rating, status, visibility, views, published_at, is_portrait)
 select '${STATION_USER}'::uuid, t.program, t.creator, t.title, t.ytid,
        'https://www.youtube.com/watch?v=' || t.ytid,
        'https://i.ytimg.com/vi/' || t.ytid || '/hqdefault.jpg',
-       t.category, t.rating, 'published', 'public', t.views, t.published::timestamptz
+       t.category, t.rating, 'published', 'public', t.views, t.published::timestamptz, t.portrait::boolean
 from (values
 ${values}
-) as t(program, creator, title, ytid, category, rating, views, published);`;
+) as t(program, creator, title, ytid, category, rating, views, published, portrait);`;
 
   const fs = await import("node:fs");
   fs.writeFileSync(new URL("./seed-program-videos.sql", import.meta.url), sql);

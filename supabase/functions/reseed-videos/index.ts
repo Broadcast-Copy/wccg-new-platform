@@ -115,6 +115,37 @@ interface Entry {
   thumbnail: string;
 }
 
+// Probe whether a video is a phone-style portrait Short (no API key).
+// youtube.com/shorts/<id> answers 200 for actual Shorts and redirects (3xx)
+// to /watch for regular videos — oEmbed is useless here, it reports 200x113
+// for everything. Returns true (Short — hidden from the wall), false (wide),
+// or null (transient failure — left unknown and retried by a later backfill).
+// Unavailable videos (4xx) count as wide: they're dead links either way and
+// must not wedge the backfill loop.
+async function probePortrait(videoId: string): Promise<boolean | null> {
+  try {
+    const res = await fetch(`https://www.youtube.com/shorts/${videoId}`, {
+      redirect: "manual",
+      headers: {
+        "user-agent": "Mozilla/5.0 wccg-reseed",
+        // Pre-acknowledge the consent interstitial so EU-routed requests
+        // still get the real 200-vs-redirect answer.
+        cookie: "CONSENT=YES+cb.20210328-17-p0.en+FX+419; SOCS=CAI",
+      },
+    });
+    if (res.status === 200) return true;
+    if (res.status >= 300 && res.status < 400) {
+      // Consent bounces go to consent.youtube.com for Shorts too — treat a
+      // redirect WITHIN youtube as "regular video", anything else as unknown.
+      const loc = res.headers.get("location") ?? "";
+      return loc.includes("/watch") ? false : null;
+    }
+    return res.status >= 400 && res.status < 500 ? false : null;
+  } catch {
+    return null;
+  }
+}
+
 // Parse the YouTube Atom feed without an XML lib (matches the seed script style,
 // keeps the function dependency-free). Returns up to `limit` newest entries.
 function parseEntries(xml: string, limit: number): Entry[] {
@@ -145,10 +176,55 @@ Deno.serve(async (req: Request) => {
   const auth = { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` };
 
   // dryRun: parse feeds + compute would-insert/would-update counts, no DB writes.
-  let dryRun = new URL(req.url).searchParams.get("dryRun") != null;
+  const url = new URL(req.url);
+  let dryRun = url.searchParams.get("dryRun") != null;
+  let backfill = url.searchParams.get("backfill") != null;
   if (req.method === "POST") {
     const body = await req.json().catch(() => ({}));
-    if (body && typeof body === "object" && (body as Record<string, unknown>).dryRun) dryRun = true;
+    if (body && typeof body === "object") {
+      if ((body as Record<string, unknown>).dryRun) dryRun = true;
+      if ((body as Record<string, unknown>).backfill) backfill = true;
+    }
+  }
+
+  // Backfill mode: probe orientation for existing rows where is_portrait is
+  // still null, 150 per invocation. Invoke repeatedly until remaining = 0.
+  if (backfill) {
+    const listRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/videos?select=id,youtube_id&user_id=eq.${STATION_USER}&is_portrait=is.null&youtube_id=not.is.null&limit=150`,
+      { headers: auth },
+    );
+    if (!listRes.ok) return json({ ok: false, error: `list failed HTTP ${listRes.status}` }, 500);
+    const rows = (await listRes.json()) as Array<{ id: string; youtube_id: string }>;
+
+    const portraitIds: string[] = [];
+    const wideIds: string[] = [];
+    let unknown = 0;
+    for (const r of rows) {
+      const p = await probePortrait(r.youtube_id);
+      if (p === null) unknown++;
+      else if (p) portraitIds.push(r.id);
+      else wideIds.push(r.id);
+    }
+    for (const [ids, val] of [[portraitIds, true], [wideIds, false]] as const) {
+      if (ids.length === 0) continue;
+      const upRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/videos?id=in.(${ids.join(",")})`,
+        {
+          method: "PATCH",
+          headers: { ...auth, "Content-Type": "application/json", Prefer: "return=minimal" },
+          body: JSON.stringify({ is_portrait: val }),
+        },
+      );
+      if (!upRes.ok) return json({ ok: false, error: `patch failed HTTP ${upRes.status}` }, 500);
+    }
+
+    const countRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/videos?select=id&user_id=eq.${STATION_USER}&is_portrait=is.null&youtube_id=not.is.null&limit=1`,
+      { method: "HEAD", headers: { ...auth, Prefer: "count=exact" } },
+    );
+    const remaining = Number(countRes.headers.get("content-range")?.split("/")[1] ?? -1);
+    return json({ ok: true, backfill: true, checked: rows.length, portrait: portraitIds.length, wide: wideIds.length, unknown, remaining });
   }
 
   const results: Array<Record<string, unknown>> = [];
@@ -202,21 +278,27 @@ Deno.serve(async (req: Request) => {
       let updated = 0;
 
       // 3a. INSERT new videos (bulk). Set the full row from the channel config.
+      // Each new video is orientation-probed so portrait/Shorts uploads never
+      // surface on the wall (is_portrait=true rows are filtered client-side).
       if (toInsert.length > 0) {
-        const payload = toInsert.map((e) => ({
-          user_id: STATION_USER,
-          program: ch.program,
-          creator_name: ch.creator,
-          title: e.title,
-          youtube_id: e.videoId,
-          youtube_url: `https://www.youtube.com/watch?v=${e.videoId}`,
-          thumbnail_url: e.thumbnail,
-          category: ch.category,
-          rating: ch.rating,
-          status: "published",
-          visibility: "public",
-          published_at: e.published,
-        }));
+        const payload = [];
+        for (const e of toInsert) {
+          payload.push({
+            user_id: STATION_USER,
+            program: ch.program,
+            creator_name: ch.creator,
+            title: e.title,
+            youtube_id: e.videoId,
+            youtube_url: `https://www.youtube.com/watch?v=${e.videoId}`,
+            thumbnail_url: e.thumbnail,
+            category: ch.category,
+            rating: ch.rating,
+            status: "published",
+            visibility: "public",
+            published_at: e.published,
+            is_portrait: await probePortrait(e.videoId),
+          });
+        }
         const insRes = await fetch(`${SUPABASE_URL}/rest/v1/videos`, {
           method: "POST",
           headers: { ...auth, "Content-Type": "application/json", Prefer: "return=minimal" },

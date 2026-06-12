@@ -40,10 +40,12 @@ export interface VideoRecord {
   likes: number;
   published_at: string | null;
   created_at: string;
+  /** Portrait/Shorts-style video (hidden from the wall). null = not probed yet. */
+  is_portrait: boolean | null;
 }
 
 export const SELECT_COLS =
-  "id,user_id,creator_name,program,title,description,storage_path,video_url,youtube_id,youtube_url,thumbnail_url,duration_seconds,category,rating,tags,visibility,status,views,likes,published_at,created_at";
+  "id,user_id,creator_name,program,title,description,storage_path,video_url,youtube_id,youtube_url,thumbnail_url,duration_seconds,category,rating,tags,visibility,status,views,likes,published_at,created_at,is_portrait";
 
 /** The program a video belongs to on the wall: explicit `program`, else creator, else station. */
 export function programOf(v: Pick<VideoRecord, "program" | "creator_name">): string {
@@ -59,6 +61,9 @@ export async function browseVideos(
     .select(SELECT_COLS)
     .eq("status", "published")
     .eq("visibility", "public")
+    // Phone/Shorts-style portrait videos pillarbox badly in 16:9 cards — keep
+    // them off the wall. `not is true` keeps null (not-yet-probed) rows.
+    .not("is_portrait", "is", true)
     .order("published_at", { ascending: false })
     .limit(Math.min(Math.max(opts.limit ?? 200, 1), 500));
   if (opts.category) query = query.eq("category", opts.category);
@@ -100,6 +105,7 @@ export async function relatedVideos(excludeId: string, category: string | null, 
     .select(SELECT_COLS)
     .eq("status", "published")
     .eq("visibility", "public")
+    .not("is_portrait", "is", true)
     .neq("id", excludeId)
     .order("published_at", { ascending: false })
     .limit(limit);
@@ -127,7 +133,7 @@ export interface ContinueItem {
 }
 
 /**
- * Most-watched published videos, by `views` desc (the Top 10 row).
+ * Most-watched published videos, by `views` desc.
  * Falls back to recency for ties via a secondary order.
  */
 export async function topVideos(limit = 10): Promise<VideoRecord[]> {
@@ -137,6 +143,7 @@ export async function topVideos(limit = 10): Promise<VideoRecord[]> {
     .select(SELECT_COLS)
     .eq("status", "published")
     .eq("visibility", "public")
+    .not("is_portrait", "is", true)
     .order("views", { ascending: false })
     .order("published_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 50));
