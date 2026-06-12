@@ -207,9 +207,9 @@ function VideosWall() {
     ).filter((list) => list.length > 0);
   }, [program, videos]);
 
-  // The Latest rail: newest uploads across every program. News, Duke, and
-  // Bootleg Kev are excluded — all three post daily at volume and would crowd
-  // out everyone else (each still appears in its own row). The rest is
+  // The Latest rail: newest uploads across every program. News, Duke,
+  // Bootleg Kev, and Gospel are excluded — they post at volume and would
+  // crowd out everyone else (each still appears in its own row). The rest is
   // interleaved by source so no single channel floods the rail.
   const latest = useMemo<VideoRecord[]>(() => {
     if (program) return [];
@@ -217,6 +217,7 @@ function VideosWall() {
       videos.filter(
         (v) =>
           v.category !== "News" &&
+          v.category !== "Gospel" &&
           v.creator_name !== "Duke Blue Devils" &&
           v.creator_name !== "The Bootleg Kev Show",
       ),
