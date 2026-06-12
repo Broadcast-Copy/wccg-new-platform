@@ -159,7 +159,7 @@ function VideosWall() {
           // would crowd local shows out of the Top 10 (each keeps its row).
           program
             ? Promise.resolve<VideoRecord[]>([])
-            : topVideos(30).then((list) =>
+            : topVideos(50).then((list) =>
                 list
                   .filter((v) => v.category !== "News" && v.creator_name !== "Duke Blue Devils")
                   .slice(0, 10),

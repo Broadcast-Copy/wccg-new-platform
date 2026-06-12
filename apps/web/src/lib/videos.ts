@@ -52,6 +52,19 @@ export function programOf(v: Pick<VideoRecord, "program" | "creator_name">): str
   return (v.program?.trim() || v.creator_name?.trim() || "WCCG 104.5 FM");
 }
 
+/** Channels sometimes upload the same content twice, or title every weekly
+ *  service identically — viewers read both as duplicates. Keep only the first
+ *  (i.e. newest, lists arrive newest-first) of each (creator, title) pair. */
+function dedupeByCreatorTitle(rows: VideoRecord[]): VideoRecord[] {
+  const seen = new Set<string>();
+  return rows.filter((v) => {
+    const key = `${(v.creator_name ?? "").trim().toLowerCase()}|${v.title.trim().toLowerCase()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export async function browseVideos(
   opts: { q?: string; category?: string; program?: string; limit?: number } = {},
 ): Promise<VideoRecord[]> {
@@ -72,7 +85,7 @@ export async function browseVideos(
     query = query.or(`title.ilike.%${v}%,creator_name.ilike.%${v}%,program.ilike.%${v}%,description.ilike.%${v}%`);
   }
   const { data } = await query;
-  let rows = (data ?? []) as VideoRecord[];
+  let rows = dedupeByCreatorTitle((data ?? []) as VideoRecord[]);
   // `program` may be null (older rows) — match on the effective program client-side
   // so "WCCG 104.5 FM" (the creator fallback) still filters correctly.
   if (opts.program) {
@@ -111,7 +124,7 @@ export async function relatedVideos(excludeId: string, category: string | null, 
     .limit(limit);
   if (category) query = query.eq("category", category);
   const { data } = await query;
-  return (data ?? []) as VideoRecord[];
+  return dedupeByCreatorTitle((data ?? []) as VideoRecord[]);
 }
 
 // ─── Netflix-style browse helpers ───────────────────────────────────────────
@@ -147,7 +160,7 @@ export async function topVideos(limit = 10): Promise<VideoRecord[]> {
     .order("views", { ascending: false })
     .order("published_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 50));
-  return (data ?? []) as VideoRecord[];
+  return dedupeByCreatorTitle((data ?? []) as VideoRecord[]);
 }
 
 /**
