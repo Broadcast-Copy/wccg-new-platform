@@ -451,20 +451,49 @@ export const SHOW_FAMILY_FELLOWSHIP: ShowData = {
   category: "gospel",
 };
 
+export const SHOW_PROGRESSIVE_MBC: ShowData = {
+  id: "show_progressive_mbc",
+  name: "Progressive Missionary Baptist Church",
+  slug: "progressive-mbc",
+  hostNames: "Rev. F. Bernard Fuller",
+  hostIds: ["host_pastor_fuller"],
+  // Exact caravan hour unconfirmed — every listed hour is taken; update when
+  // the station confirms where Progressive airs.
+  timeSlot: "Sunday Gospel Caravan",
+  days: "Sunday",
+  streamId: "stream_wccg",
+  description: "Reverend F. Bernard Fuller leads Progressive Missionary Baptist Church — relevant, radical, and real faith through strong biblical teaching — broadcast as part of The Sunday Gospel Caravan.",
+  tagline: "Relevant, radical, and real faith",
+  gradient: "from-[#0d1b2a] via-[#16213e] to-[#1a1a2e]",
+  imageUrl: null,
+  showImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/10/progressive-1024x743-1.png",
+  youtube: {
+    channelName: "Progressive Missionary Baptist Church",
+    channelUrl: "https://www.youtube.com/@progressivemissionarybapti7744",
+    channelId: "UCavo4QHyzuMM2FED2W6PwEg",
+    searchQuery: "Progressive Missionary Baptist Church Fayetteville",
+  },
+  isSyndicated: false,
+  isActive: true,
+  category: "gospel",
+};
+
 export const SHOW_MT_PISGAH: ShowData = {
   id: "show_mt_pisgah",
   name: "Mt. Pisgah Missionary Baptist Church",
   slug: "mt-pisgah-mbc",
-  hostNames: "Pastor F. Benard Fuller",
-  hostIds: ["host_pastor_fuller"],
+  hostNames: "Mt. Pisgah MBC",
+  hostIds: [],
   timeSlot: "1:00 PM - 2:00 PM",
   days: "Sunday",
   streamId: "stream_wccg",
-  description: "Pastor F. Benard Fuller brings the Sunday service from Mt. Pisgah Missionary Baptist Church to the airwaves as part of The Sunday Gospel Caravan.",
+  description: "The Sunday service from Mt. Pisgah Missionary Baptist Church comes to the airwaves as part of The Sunday Gospel Caravan.",
   tagline: "Faith-based Sunday service broadcast",
   gradient: "from-[#16213e] via-[#0d1b2a] to-[#1a1a2e]",
   imageUrl: null,
-  showImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/10/progressive-1024x743-1.png",
+  // Was wearing Progressive MBC's artwork (and pastor) by mistake — that
+  // identity now lives on SHOW_PROGRESSIVE_MBC. Needs its own image.
+  showImageUrl: null,
   // NOTE: this entry previously pointed at Progressive MBC's channel by
   // mistake. Mount Pisgah MBC (Raeford) is the active Missionary Baptist
   // channel matching this broadcast's name.
@@ -735,6 +764,7 @@ export const ALL_SHOWS: ShowData[] = [
   SHOW_ENCOURAGING_MOMENT,
   SHOW_MARVIN_SAPP,
   SHOW_FAMILY_FELLOWSHIP,
+  SHOW_PROGRESSIVE_MBC,
   SHOW_MT_PISGAH,
   SHOW_LEWIS_CHAPEL,
   // Sunday – Afternoon/Evening

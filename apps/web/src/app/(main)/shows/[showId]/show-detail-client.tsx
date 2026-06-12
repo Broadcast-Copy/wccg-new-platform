@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { FollowButton } from "@/components/social/follow-button";
+import { SermonArchive, SERMON_CODES } from "@/components/shows/sermon-archive";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -681,6 +682,12 @@ export default function ShowDetailPage({
                   {show.description ?? "Show description coming soon."}
                 </p>
               </div>
+
+              {/* Sermon archive — gospel caravan churches replay past Sunday
+                  broadcasts right on the program page. */}
+              {SERMON_CODES[show.id] && (
+                <SermonArchive churchCode={SERMON_CODES[show.id]} showName={show.name} />
+              )}
 
               {/* Schedule */}
               {schedule && (
