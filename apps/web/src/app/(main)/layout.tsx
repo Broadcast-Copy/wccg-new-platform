@@ -24,7 +24,6 @@ import {
   Compass,
   CalendarDays,
   Video,
-  Users2,
   Mail,
   Home,
   Radio,
@@ -33,7 +32,6 @@ import {
   ShoppingCart,
   ShoppingBag,
   MapPin,
-  Disc3,
   type LucideIcon,
 } from "lucide-react";
 import { useSupabase } from "@/components/providers/supabase-provider";
@@ -52,10 +50,8 @@ const mobileNavLinks = [
   { href: "/events", label: "Events", icon: CalendarDays },
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/videos", label: "Watch", icon: Video },
-  { href: "/mixshows", label: "Mixshows", icon: Disc3 },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
   { href: "/community", label: "Directory", icon: MapPin },
-  { href: "/members", label: "Members", icon: Users2 },
   { href: "/contact", label: "Connect", icon: Mail },
 ];
 
@@ -327,10 +323,6 @@ export default function MainLayout({
             <StreamingMegaMenu />
             {/* Watch — public video wall */}
             <NavLink href="/videos" label="Watch" pathname={pathname} icon={Video} />
-            {/* Mixshows — public weekly mix archive */}
-            <NavLink href="/mixshows" label="Mixshows" pathname={pathname} />
-            {/* Members — people directory */}
-            <NavLink href="/members" label="Members" pathname={pathname} />
             {/* Support */}
             <NavLink href="/contact" label="Support" pathname={pathname} />
           </nav>
