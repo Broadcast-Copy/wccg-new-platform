@@ -49,6 +49,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useUserRoles } from "@/hooks/use-user-roles";
 import { HubFeed } from "@/components/social/hub-feed";
 import { DjFollowButton } from "@/components/mixshow-archive/dj-follow-button";
+import { DjBookingForm } from "@/components/djs/dj-booking-form";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -604,20 +605,7 @@ export default function DjProfileClient() {
       )}
       {tab === "booking" && (
         <section className="max-w-3xl">
-          <div className="rounded-2xl border border-border bg-gradient-to-br from-[#7401df]/15 via-card to-[#74ddc7]/10 p-8 text-center">
-            <CalendarCheck className="mx-auto h-10 w-10 text-[#74ddc7]" />
-            <h2 className="mt-3 text-xl font-black tracking-tight text-foreground">Book {dj.display_name}</h2>
-            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-              Want {dj.display_name} on your event, club night, or campaign? All Mix Squad bookings go
-              through the station so your date gets locked in right.
-            </p>
-            <Link
-              href="/contact"
-              className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#7401df] to-[#74ddc7] px-6 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90"
-            >
-              Contact WCCG to book <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
+          <DjBookingForm djId={dj.id} djName={dj.display_name} />
         </section>
       )}
     </div>
