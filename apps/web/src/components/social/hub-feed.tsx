@@ -392,7 +392,7 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder, authorId
             </div>
           </div>
         </div>
-        ) : (
+        ) : authorId ? null : (
           <div
             className="rounded-2xl border border-border p-6 text-center"
             style={{ background: `linear-gradient(135deg, ${accentColor}14, transparent)` }}
@@ -418,7 +418,7 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder, authorId
             </Link>
           </div>
         )
-      ) : (
+      ) : authorId ? null : (
         <div
           className="rounded-2xl border border-border p-6 text-center"
           style={{ background: `linear-gradient(135deg, ${accentColor}14, transparent)` }}
@@ -457,7 +457,9 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder, authorId
             🎉
           </div>
           <p className="font-semibold text-foreground">It&apos;s quiet in here</p>
-          <p className="mt-1 text-sm text-muted-foreground">Be the first to share 🎉</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {authorId ? (canPost ? "Share your first post 🎉" : "No posts yet — check back soon.") : "Be the first to share 🎉"}
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
