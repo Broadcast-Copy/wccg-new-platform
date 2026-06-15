@@ -83,7 +83,7 @@ SERMONS = {
     "lewischapel.org":                    dict(code="lcc1", djb="DJB_52014", ext="mp3", kind="attachment",  transcode=False, church="Lewis Chapel",         air="2-3 PM"),
     "mondselite27@yahoo.com":             dict(code="gpn1", djb="DJB_52002", ext="mp3", kind="dropbox",     transcode=False, church="Grace Plus Nothing",   air="AM"),
     "ffwcaudio@gmail.com":                dict(code="dvp1", djb="DJB_52008", ext="mp3", kind="dropbox",     transcode=False, church="Family Fellowship",    air="AM"),
-    "drive-shares-dm-noreply@google.com": dict(code="thm1", djb="DJB_52005", ext="mp3", kind="drive_share", transcode=True,  church="Encouraging Moment",   air="~9 AM"),
+    "drive-shares-dm-noreply@google.com": dict(code="thm1", djb="DJB_52005", ext="mp3", kind="drive_share", transcode=True,  church="Encouraging Moment",   air="~9 AM", sharer="tony haire"),
 }
 
 # DJ-mix senders: detect + notify only (download still via hourly task for v1)
@@ -389,6 +389,22 @@ def handle_message(gmail, drive, mid, state):
     spec = next((v for k, v in SERMONS.items() if k in frm), None)
     if not spec:
         state["processed"].append(mid)  # matched query but unknown — skip quietly
+        return
+
+    # The Drive-share address (drive-shares-dm-noreply@google.com) is used by BOTH the
+    # sermon provider AND DJs (e.g. DJ VI shares his weekly mix the same way). Only stage
+    # as the sermon when the actual sharer matches; otherwise it's a DJ/other mix —
+    # notify and skip so it never clobbers the sermon cart.
+    if spec.get("sharer") and spec["sharer"] not in frm:
+        raw_from = header(msg, "From")
+        log(f"  Drive share \"{subj}\" is from {raw_from}, not the {spec['code']} "
+            f"sermon sharer ({spec['sharer']}) — notifying, NOT staging as sermon")
+        send_mail(gmail, f"DJ/Drive mix shared (not a sermon): {subj}",
+                  f"A Google Drive share arrived from {raw_from}: \"{subj}\".\n\n"
+                  f"It is NOT the {spec['church']} ({spec['code']}) sermon, so the sermon cart "
+                  f"{spec['djb']}.{spec['ext']} was left untouched. If this is a DJ mix, pull it "
+                  f"to that DJ's b-mixshows folder / on-air cart.")
+        state["processed"].append(mid)
         return
 
     log(f"  SERMON {spec['code']} from {frm} airs {spec['air']}: \"{subj}\"")

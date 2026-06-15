@@ -19,6 +19,7 @@ import {
   Building2,
   ArrowLeft,
   Loader2,
+  Printer,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -691,14 +692,23 @@ export default function SalesDealsPage() {
             {/* Modal footer */}
             <div className="flex items-center justify-between gap-2 border-t border-border px-5 py-4">
               {editing.id ? (
-                <button
-                  type="button"
-                  onClick={removeDeal}
-                  disabled={saving}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
-                >
-                  <Trash2 className="h-3.5 w-3.5" /> Delete
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={removeDeal}
+                    disabled={saving}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Delete
+                  </button>
+                  <Link
+                    href={`/my/sales/quote?deal=${editing.id}`}
+                    target="_blank"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
+                  >
+                    <Printer className="h-3.5 w-3.5" /> Quote
+                  </Link>
+                </div>
               ) : (
                 <span />
               )}
