@@ -119,6 +119,7 @@ const promotionsModules: AdminModule[] = [
   { icon: Trophy, title: "Contests Manager", description: "Run contests, giveaways, and listener promotions.", href: "/contests", color: "from-[#f59e0b] to-[#d97706]" },
   { icon: MessageSquare, title: "Community Hub", description: "Engage with listeners and manage community content.", href: "/community", color: "from-[#3b82f6] to-[#1d4ed8]" },
   { icon: Palette, title: "Social Content", description: "Create and schedule social media content.", href: "/studio/social-content", color: "from-[#7401df] to-[#4c1d95]" },
+  { icon: Trophy, title: "Points & Rewards", description: "Manage the rewards store and what each listener action earns.", href: "/my/admin/points", color: "from-[#f59e0b] to-[#d97706]" },
 ];
 
 const departmentModules: AdminModule[] = [
@@ -133,6 +134,7 @@ const allModules: AdminModule[] = [
   { icon: Megaphone, title: "Campaign Builder", description: "Create and manage advertising campaigns.", href: "/my/admin/campaigns", color: "from-[#dc2626] to-[#b91c1c]" },
   { icon: BarChart3, title: "Reports", description: "Revenue tracking, pipeline, and sales analytics.", href: "/my/admin/reports", color: "from-[#f59e0b] to-[#d97706]" },
   { icon: Radio, title: "Programming", description: "Programming schedules, show management, and hosts.", href: "/my/admin/programming", color: "from-[#74ddc7] to-[#0d9488]" },
+  { icon: Trophy, title: "Points & Rewards", description: "Manage the rewards store and what each listener action earns.", href: "/my/admin/points", color: "from-[#f59e0b] to-[#d97706]" },
   ...departmentModules,
 ];
 

@@ -101,12 +101,14 @@ _Done 2026-06-15: migration **079_award_points_rpc** — SECURITY DEFINER `award
 - **Acceptance:** earning an event writes a `points_history` row + updates `user_points` server-side; refreshing in another browser shows the same balance; redeem (existing `redeem_reward`) still works against the server balance.
 - **Files:** `supabase/migrations/079_award_points_rpc.sql`; `lib/points-storage.ts`/`points-sync.ts`/`hooks/use-listening-points.ts`.
 
-### ☐ TODO [AUTO] PT2 — Rules-driven earning + seed rules
+### ☑ DONE PT2 — Rules-driven earning + seed rules
+_Done 2026-06-15: migration **080_points_rules_driven** — converted `points_rules.trigger_type` enum→**text** (the enum labels didn't match the client reasons, and the enum=text comparison errored at runtime, so PT1's RPC could never match a rule — fixed). `award_points` now awards the matching active rule's `points_amount` (**authoritative**) + cooldown, else clamps the client amount to 500. Seeded rules for the real client reasons: DAILY_BOUNTY 25 (cd 1000m), SHARE 2, VIDEO_WATCH 3, REFERRAL 5, KEYWORD_ENTRY 5, EVENT_CHECKIN 10. Changing a rule's `points_amount` now changes earning with no code change. LISTENING (continuous per-90s) and STREAK_BONUS (two amounts) intentionally stay rule-less (no-rule clamp path). Applied live + verified (trigger_type=text, 10 active rules)._
 - **Scope:** drive earn amounts from `points_rules` (trigger_type, points_amount, threshold, cooldown_minutes) instead of hardcoded constants; seed the active rules (listening-minute, daily-streak, event-checkin, signup-bonus, purchase). The `award_points` RPC (PT1) reads the rule for the trigger.
 - **Acceptance:** changing a rule's `points_amount` changes what users earn (no code change); seeded rules cover the existing earn triggers.
 - **Files:** `supabase/migrations/080_seed_points_rules.sql`; earn call sites.
 
-### ☐ TODO [AUTO] PT3 — Reward + rules admin UI
+### ☑ DONE PT3 — Reward + rules admin UI
+_Done 2026-06-15: migration **081_points_admin_rls** — staff `is_staff()` write policies on `reward_catalog` + `points_rules` (both previously had only public-read + service-write). New **/my/admin/points** — two-tab staff admin: Rewards (CRUD `reward_catalog` — name/description/image/category/points_cost/stock/active) + Earning Rules (CRUD `points_rules` — name/trigger_type/points_amount/threshold/cooldown/active, with the known earn-reason list as a datalist). Supabase-direct, gated by the `/my/admin` RequireRole layout; linked from the Station Control dashboard ("Points & Rewards" card). No hardcoded demo/arcade fallback existed in the rewards components (6 real `reward_catalog` rows already power /rewards), so nothing to drop. Build green._
 - **Scope:** a staff page to CRUD `reward_catalog` (name, description, image, points_cost, stock, category, active) and view/edit `points_rules`. Replace any hardcoded "arcade" demo fallback with real catalog rows.
 - **Acceptance:** staff add a reward → it appears on `/rewards`; staff edit a points rule → earning reflects it; non-staff can't access the admin page.
 - **Files:** `app/(main)/my/admin/points/page.tsx`; `components/rewards/*` (drop demo fallback).
