@@ -50,10 +50,27 @@ interface Slot {
   files: Array<{ fileCode: string; drop: Drop | null }>;
 }
 
+interface Booking {
+  id: string;
+  event_name: string;
+  event_date: string | null;
+  event_time: string | null;
+  venue_name: string | null;
+  city: string | null;
+  state: string | null;
+  contact_name: string;
+  contact_email: string;
+  contact_phone: string | null;
+  message: string | null;
+  status: "pending" | "reviewing" | "confirmed" | "declined";
+  created_at: string;
+}
+
 interface MeResponse {
   dj: { id: string; slug: string; displayName: string; email: string | null; isActive: boolean };
   weekOf: string;
   slots: Slot[];
+  bookings: Booking[];
 }
 
 export default function DjPortalPage() {
@@ -101,6 +118,15 @@ export default function DjPortalPage() {
           .eq("dj_id", dj.id)
           .eq("week_of", weekOf);
 
+        // Booking requests addressed to this DJ (read-only; RLS scopes to own).
+        const { data: bookings } = await supabase
+          .from("dj_bookings")
+          .select(
+            "id, event_name, event_date, event_time, venue_name, city, state, contact_name, contact_email, contact_phone, message, status, created_at",
+          )
+          .eq("dj_id", dj.id)
+          .order("created_at", { ascending: false });
+
         const dropByCode = new Map((drops ?? []).map((d) => [d.file_code, d]));
         setMe({
           dj: {
@@ -108,6 +134,7 @@ export default function DjPortalPage() {
             email: dj.email, isActive: dj.is_active,
           },
           weekOf,
+          bookings: (bookings ?? []) as Booking[],
           slots: (slots ?? []).map((s) => ({
             slotId: s.id, dayOfWeek: s.day_of_week, startTime: s.start_time,
             endTime: s.end_time, status: s.status, notes: s.notes,
@@ -321,6 +348,9 @@ export default function DjPortalPage() {
           )}
         </div>
       </section>
+
+      {/* Booking requests addressed to this DJ (read-only — staff manage status) */}
+      <BookingsSection bookings={me.bookings} />
     </div>
   );
 }
@@ -502,4 +532,70 @@ function prettyBytes(n: number): string {
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
   if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`;
   return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
+
+// ─── Booking requests (read-only; status is staff-managed) ──────────────
+function BookingsSection({ bookings }: { bookings: Booking[] }) {
+  return (
+    <section className="space-y-3">
+      <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+        Booking requests
+      </h2>
+      {bookings.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-border bg-card/50 p-6 text-center text-sm text-muted-foreground">
+          No booking requests yet. When someone requests you from your profile, it shows up here.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {bookings.map((b) => (
+            <BookingCard key={b.id} b={b} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function BookingCard({ b }: { b: Booking }) {
+  const when = [b.event_date, b.event_time].filter(Boolean).join(" · ") || "Date TBD";
+  const where = [b.venue_name, [b.city, b.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ");
+  const badge: Record<Booking["status"], string> = {
+    pending: "bg-amber-500/15 text-amber-500",
+    reviewing: "bg-sky-500/15 text-sky-500",
+    confirmed: "bg-[#74ddc7]/15 text-[#74ddc7]",
+    declined: "bg-muted text-muted-foreground",
+  };
+  return (
+    <article className="rounded-2xl border border-border bg-card p-5">
+      <header className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="truncate text-sm font-bold text-foreground">{b.event_name}</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {when}
+            {where ? ` · ${where}` : ""}
+          </p>
+        </div>
+        <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest ${badge[b.status]}`}>
+          {b.status}
+        </span>
+      </header>
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+        <span className="text-foreground">{b.contact_name}</span>
+        <a href={`mailto:${b.contact_email}`} className="text-[#74ddc7] hover:underline">
+          {b.contact_email}
+        </a>
+        {b.contact_phone && (
+          <a href={`tel:${b.contact_phone}`} className="text-muted-foreground hover:text-foreground">
+            {b.contact_phone}
+          </a>
+        )}
+      </div>
+      {b.message && (
+        <p className="mt-2 rounded-lg bg-muted/40 p-2.5 text-xs text-muted-foreground">{b.message}</p>
+      )}
+      <p className="mt-2 text-[10px] text-muted-foreground">
+        Requested {new Date(b.created_at).toLocaleDateString()}
+      </p>
+    </article>
+  );
 }

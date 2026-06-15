@@ -52,7 +52,8 @@ _Done 2026-06-15: migration **074_booking_notification** (`trg_notify_on_booking
 - **Acceptance:** inserting a `dj_bookings` row (test it with `set role anon` insert, then delete) fires one email; no email on status updates. Mirror any migration to repo.
 - **Files:** new edge function or `notify-sync` action; migration for the trigger; `supabase/migrations/074_*.sql`.
 
-### ☐ TODO [AUTO] B2 — DJ sees their own incoming bookings in the DJ portal
+### ☑ DONE B2 — DJ sees their own incoming bookings in the DJ portal
+_Done 2026-06-15: migration **075_dj_reads_own_bookings** (additive SELECT policy — a DJ reads dj_bookings where djs.user_id = auth.uid(), OR'd with staff-read; public still has no read). Added a read-only **"Booking Requests"** section to `/my/dj` (event, when/where, contact links, status badge, message, empty state). Build passed (full static export)._
 - **Why:** a DJ should see who's trying to book them without admin access.
 - **Scope:** add an RLS SELECT policy so a DJ reads `dj_bookings` where `dj_id` maps to their `user_id` (join `djs`). Add a "Booking Requests" section to `/my/dj` listing their pending/confirmed requests (read-only; status is staff-managed). Contacts visible to the DJ themselves.
 - **Acceptance:** signed in as a DJ, `/my/dj` shows that DJ's bookings and no one else's (verify RLS with a second identity). Empty state when none.
