@@ -803,16 +803,15 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-foreground/80">Change Password</p>
-              <p className="text-xs text-muted-foreground/60">Coming soon</p>
+              <p className="text-xs text-muted-foreground/60">Update your account password</p>
             </div>
-            <button
-              type="button"
-              disabled
-              className="inline-flex items-center gap-2 rounded-lg border border-border bg-foreground/[0.04] px-3 py-1.5 text-sm text-muted-foreground/60 cursor-not-allowed"
+            <Link
+              href="/my/settings/security"
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-foreground/[0.04] px-3 py-1.5 text-sm text-foreground/80 transition-colors hover:border-[#74ddc7]/50 hover:text-foreground"
             >
               <KeyRound className="h-3.5 w-3.5" />
               Change
-            </button>
+            </Link>
           </div>
 
           {/* 2FA */}

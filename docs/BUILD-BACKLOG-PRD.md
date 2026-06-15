@@ -61,32 +61,38 @@ _Done 2026-06-15: migration **075_dj_reads_own_bookings** (additive SELECT polic
 
 ## P2 — Real stubs to finish
 
-### ☐ TODO [AUTO] S1 — Settings → Change Password
+### ☑ DONE S1 — Settings → Change Password
+_Done 2026-06-15: the working flow already lived on /my/settings/security (auth.updateUser + min-length + confirm + honest success/error; no badge on it). Wired the main /my/settings "Change Password — Coming soon" card → a Link to /my/settings/security ("Update your account password"). Frontend-only; batched into the S/E deploy._
 - **Why:** `app/(main)/my/settings/page.tsx` (~L806) shows "Change Password — Coming soon", but `app/(main)/my/settings/security/page.tsx` already has a working `handleChangePassword` behind a "Coming Soon" badge.
 - **Scope:** wire the working flow (Supabase `auth.updateUser({ password })`), remove the "Coming Soon" badge/labels, link the settings card to the security page. Keep the min-length + confirm checks already present.
 - **Acceptance:** a signed-in user can change their password and is told success/failure honestly.
 - **Files:** `my/settings/page.tsx`, `my/settings/security/page.tsx`.
 
-### ☐ TODO [AUTO] S2 — Sermon archive: hide future-dated broadcasts from the public until air date
+### ☑ DONE S2 — Sermon archive: hide future-dated broadcasts from the public until air date
+_Done 2026-06-15: `components/shows/sermon-archive.tsx` query now `.lte("air_date", isoLocalDate(new Date()))` — future-dated sermons (e.g. an early-filed lcc1) don't render until their air date; newest-first preserved; local date (no UTC slicing). Frontend-only; batched._
 - **Why:** Lewis Chapel (lcc1) is filed a week early; a future-dated sermon shows on the church's Podcasts tab before it airs.
 - **Scope:** in `components/shows/sermon-archive.tsx`, filter rows to `air_date <= today` for the public view (staff/owner may still see upcoming). Keep newest-first.
 - **Acceptance:** a sermon with `air_date` in the future does not render for an anonymous visitor; it appears on/after its air date.
 - **Files:** `components/shows/sermon-archive.tsx` (compute "today" locally — see `lib/broadcast-week.ts`, don't use UTC slicing).
 
-### ☐ TODO [AUTO] S3 — Mixshow archive "Latest air date" chip should never show a future date
+### ☑ DONE S3 — Mixshow archive "Latest air date" chip should never show a future date
+_Done 2026-06-15: `latestAirDate` in `mixshow-archive.tsx` now filters mixes to `airDate <= isoLocalDate(new Date())` before reducing — the chip reflects the newest *aired* mix, not a future-dated upload; the week grid still shows upcoming. Frontend-only; batched._
 - **Why:** DJs occasionally upload future-dated files; the hero chip can read a date that hasn't happened.
 - **Scope:** cap `latestAirDate` in `components/mixshow-archive/mixshow-archive.tsx` to `<= today` (still allow the week grid to show upcoming).
 - **Acceptance:** the "Latest air date" chip reflects the newest *aired* mix, not a future-dated upload.
 
 ## P3 — Enhancements (do after P1/P2)
 
-### ☐ TODO [AUTO] E1 — "Book this DJ" entry point from the Mixshow Archive
+### ☑ DONE E1 — "Book this DJ" entry point from the Mixshow Archive
+_Done 2026-06-15: added a red "Book this DJ" button beside "View profile" on the expanded Mix Squad card in `mixshow-archive.tsx` → `/djs/<slug>` (Booking is a tab there). Kept it a plain link (profile tabs are local state, no URL deep-link) to stay low-risk. Frontend-only; batched._
 - **Scope:** on the Mix Squad DJ card in `mixshow-archive.tsx`, add a small "Book" link to `/djs/<slug>` (the Booking tab). Low risk, high discoverability.
 
-### ☐ TODO [AUTO] E2 — Admin DJ Bookings: pending-count badge on the admin dashboard card
+### ☑ DONE E2 — Admin DJ Bookings: pending-count badge on the admin dashboard card
+_Done 2026-06-15: `/my/admin` dashboard fetches a cheap `count(exact, head)` of pending dj_bookings (staff-read RLS) and renders a red count badge on the "DJ Bookings" card when >0. Frontend-only; batched._
 - **Scope:** the admin dashboard card for DJ Bookings shows a count of `pending` requests (one lightweight count query). Keep it cheap.
 
-### ☐ TODO [AUTO] E3 — DJ profiles: surface a Spotify/SoundCloud/social link row when present
+### ⛔ BLOCKED [USER] E3 — DJ profiles: surface a Spotify/SoundCloud/social link row when present
+_Checked 2026-06-15 (per the item's own instruction): `profiles_public` has NO social columns (only id, display_name, avatar_url, artist_name, username, bio, is_internal, has_creator_access, has_vendor_access, user_type, creator_type). **Owner decision needed:** add social-handle columns (e.g. instagram, twitter/x, spotify, soundcloud, youtube, website) to the profiles table + expose via profiles_public? Once columns exist + are populated, this becomes [AUTO] (render an icon row in the DJ hero)._
 - **Scope:** if `profiles_public` has social handles, render an icon row in the DJ hero. (Check the column set first; skip if no social columns exist — convert to BLOCKED asking whether to add them.)
 
 ---

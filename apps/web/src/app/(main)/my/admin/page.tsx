@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles } from "@/hooks/use-user-roles";
 import Link from "next/link";
@@ -34,6 +34,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -255,6 +256,24 @@ export default function StationControlPage() {
   } = useUserRoles();
 
   const [selectedStat, setSelectedStat] = useState<QuickStat | null>(null);
+  const [bookingsPending, setBookingsPending] = useState(0);
+
+  // Count of pending DJ booking requests — surfaces as a badge on the card so
+  // staff see new requests without opening the console. Staff-read RLS scopes it.
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const supabase = createClient();
+      const { count } = await supabase
+        .from("dj_bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+      if (active) setBookingsPending(count ?? 0);
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const displayName =
     user?.user_metadata?.display_name ||
@@ -390,6 +409,11 @@ export default function StationControlPage() {
               href={mod.href}
               className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:border-input hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20"
             >
+              {mod.href === "/my/admin/dj-bookings" && bookingsPending > 0 && (
+                <span className="absolute right-3 top-3 z-10 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-[#dc2626] px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {bookingsPending}
+                </span>
+              )}
               <div className="flex items-start gap-4">
                 <div
                   className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${mod.color}`}

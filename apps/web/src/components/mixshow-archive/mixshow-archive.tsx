@@ -438,11 +438,16 @@ function ArchiveInner() {
     return groups;
   }, [visibleMixes]);
 
-  // Newest air date in the archive (for the header chip).
-  const latestAirDate = useMemo(
-    () => (mixes.length ? mixes.reduce((max, m) => (m.airDate > max ? m.airDate : max), mixes[0].airDate) : null),
-    [mixes],
-  );
+  // Newest *aired* date in the archive (for the header chip). Capped at today
+  // so a future-dated upload doesn't make the chip read a date that hasn't
+  // happened (the week grid below still shows upcoming). Local date, no UTC.
+  const latestAirDate = useMemo(() => {
+    const today = isoLocalDate(new Date());
+    const aired = mixes.filter((m) => isoLocalDate(m.airDate) <= today);
+    return aired.length
+      ? aired.reduce((max, m) => (m.airDate > max ? m.airDate : max), aired[0].airDate)
+      : null;
+  }, [mixes]);
 
   // The broadcast week's date range for the rail subtitle, e.g. "Jun 8 – Jun 14".
   const weekRangeLabel = useMemo(() => {
@@ -854,6 +859,12 @@ function ArchiveInner() {
                               className="block rounded-full border border-border bg-card px-4 py-2 text-center text-xs font-bold text-foreground transition-colors hover:border-[#74ddc7]/50 hover:text-[#74ddc7]"
                             >
                               View profile
+                            </Link>
+                            <Link
+                              href={`/djs/${dj.slug}`}
+                              className="block rounded-full bg-[#dc2626] px-4 py-2 text-center text-xs font-bold text-white transition-colors hover:bg-[#b91c1c]"
+                            >
+                              Book this DJ
                             </Link>
                             {profile?.username && (
                               <Link

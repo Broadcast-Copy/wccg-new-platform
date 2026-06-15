@@ -16,6 +16,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, Church, Play, Volume2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { isoLocalDate } from "@/lib/broadcast-week";
 
 /** show id → sermon church code (matches RadioSpider/file conventions). */
 export const SERMON_CODES: Record<string, string> = {
@@ -59,10 +60,15 @@ export function SermonArchive({ churchCode, showName }: { churchCode: string; sh
   useEffect(() => {
     let active = true;
     void (async () => {
+      // Hide future-dated sermons from the public archive until they actually
+      // air (lcc1 etc. can be filed a few days early). Local date — never UTC
+      // slicing (see lib/broadcast-week).
+      const today = isoLocalDate(new Date());
       const { data, error } = await supabase
         .from("sermons")
         .select("id,church_code,air_date,storage_path,format,size_bytes")
         .eq("church_code", churchCode)
+        .lte("air_date", today)
         .order("air_date", { ascending: false })
         .limit(300);
       if (!active) return;
