@@ -84,7 +84,8 @@ _Done 2026-06-15: migration **078_sales_invoices** — `sales_invoices` + snapsh
 - **Acceptance:** a won deal produces an invoice with correct line items + total; invoice list reads real data; mark-paid flips deal + invoice status; printable quote renders.
 - **Files:** migration for invoices; `app/(main)/my/sales/invoices/page.tsx`, quote/proposal view, retire mock invoice data.
 
-### ☐ TODO [AUTO] SP5 — Rate-card admin
+### ☑ DONE SP5 — Rate-card admin
+_Done 2026-06-15: `/my/sales/rate-card` — staff CRUD over `sales_products`, grouped by category. Add/edit (category, name, description, unit, unit_price), activate/deactivate (deactivated products drop out of the deal-builder catalog, which filters `is_active`). Supabase-direct, staff-RLS gated; the dashboard "Rate Card" quick action links here. No migration (uses the 077 table). Build green; shipped with SP4's deploy batch._
 - **Scope:** a page for sales/admin to manage `sales_products` (add/edit/deactivate, set unit_price) — the rate card behind the deal builder. Supabase-direct, staff-gated.
 - **Acceptance:** staff add/edit a product + price; it appears in the deal builder catalog; non-staff can't access.
 - **Files:** `app/(main)/my/sales/rate-card/page.tsx`.
