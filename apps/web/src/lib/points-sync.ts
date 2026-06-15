@@ -14,17 +14,21 @@
  * `balance = sum(points_history)`, so a client cannot forge a balance even
  * with a session token). See migrations 006/007/039.
  *
- * Consequently the outbox flush is now a SAFE NO-OP:
- *  - `enqueuePointEvent(...)` still records the optimistic award locally so the
- *    UI feels instant (the displayed balance lives in `wccg_listening_points*`,
- *    NOT in this outbox).
- *  - `flushPointsOutbox()` no longer calls any endpoint. It simply drains the
- *    eligible batch from the local outbox so it can't grow unbounded, and
- *    resolves successfully. No points are inserted — awarding stays locked
- *    behind the secure RPCs.
- *  - The auto-flusher / timer / listeners are kept intact so callers and the
- *    boot path are unchanged; they just no longer hit a dead URL.
+ * PT1 update: the outbox now flushes to a secure server-side RPC.
+ *  - `enqueuePointEvent(...)` records the optimistic award locally so the UI
+ *    feels instant (the cache lives in `wccg_listening_points*`).
+ *  - `flushPointsOutbox()` drains the eligible batch and calls the
+ *    `award_points` SECURITY DEFINER RPC for each event (only when signed in;
+ *    otherwise events stay queued for after login). The RPC caps each award at
+ *    the matching `points_rules` value + cooldown (else a sane clamp), inserts
+ *    `points_history`, and a DB trigger recomputes `user_points.balance`. So
+ *    balances are server-authoritative and survive across devices, while a
+ *    client still cannot forge an arbitrary balance.
+ *  - Succeeded events are dropped; failed ones back off and retry. The
+ *    auto-flusher / timer / listeners are unchanged.
  */
+
+import { createClient } from "@/lib/supabase/client";
 
 // ---------------------------------------------------------------------------
 // Outbox storage
@@ -110,18 +114,11 @@ export function enqueuePointEvent(ev: {
 }
 
 /**
- * Drain the outbox once.
- *
- * SAFE NO-OP: points are awarded exclusively by secure server-side RPCs
- * (integrity — the client has no award path by design), so there is no
- * endpoint to POST to. This used to mirror awards to a now-removed NestJS
- * `/points/sync` route. We keep the signature and the auto-flusher wiring, but
- * the body simply removes the eligible batch from the local outbox so it can't
- * grow without bound, then resolves successfully. NOTHING is inserted and no
- * balance is written from here.
- *
- * Returns null (no server balance is fetched here — the badge reads
- * `user_points.balance` directly via Supabase). The inner gate prevents
+ * Drain the outbox once, awarding each eligible event via the `award_points`
+ * RPC (server-authoritative). Only runs when signed in; otherwise events stay
+ * queued and sync after login. Succeeded events are removed; failed ones get an
+ * exponential backoff and are retried on the next flush. Returns the latest
+ * server balance reported by the RPC (or null). The inner gate prevents
  * concurrent drains.
  */
 let flushInFlight = false;
@@ -135,15 +132,58 @@ export async function flushPointsOutbox(): Promise<number | null> {
     const events = loadOutbox();
     if (events.length === 0) return null;
 
-    // Drop the batch we would historically have synced. The optimistic balance
-    // the user sees is stored separately (wccg_listening_points*), so clearing
-    // these queued events does not lose any displayed points — it only stops
-    // the outbox from accumulating dead entries forever.
-    const drained = events.slice(0, MAX_BATCH);
-    const drainedKeys = new Set(drained.map((e) => e.idempotencyKey));
-    const remaining = loadOutbox().filter((e) => !drainedKeys.has(e.idempotencyKey));
-    saveOutbox(remaining);
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    // Not signed in: keep events queued so they sync once the user logs in.
+    if (!user) return null;
 
+    const now = Date.now();
+    const batch = events
+      .filter((e) => (e.nextAttemptAt ?? 0) <= now)
+      .slice(0, MAX_BATCH);
+    if (batch.length === 0) return null;
+
+    const succeeded = new Set<string>();
+    const failedAttempts = new Map<string, number>();
+    let latestBalance: number | null = null;
+
+    for (const ev of batch) {
+      const { data, error } = await supabase.rpc("award_points", {
+        p_amount: Math.max(0, Math.round(ev.amount)),
+        p_reason: ev.reason,
+        p_description: ev.referenceId ?? ev.referenceType ?? null,
+      });
+      if (error) {
+        failedAttempts.set(ev.idempotencyKey, (ev.attempts ?? 0) + 1);
+      } else {
+        succeeded.add(ev.idempotencyKey);
+        if (typeof data === "number") latestBalance = data;
+      }
+    }
+
+    // Rewrite the outbox: drop succeeded, back off failed, keep the rest.
+    const current = loadOutbox();
+    const next: OutboxEvent[] = [];
+    for (const e of current) {
+      if (succeeded.has(e.idempotencyKey)) continue;
+      const attempts = failedAttempts.get(e.idempotencyKey);
+      if (attempts !== undefined) {
+        next.push({
+          ...e,
+          attempts,
+          nextAttemptAt: now + Math.min(5 * 60_000, 1000 * 2 ** Math.min(attempts, 8)),
+        });
+      } else {
+        next.push(e);
+      }
+    }
+    saveOutbox(next);
+
+    return latestBalance;
+  } catch {
+    // Network/transient failure — leave the outbox intact for the next flush.
     return null;
   } finally {
     flushInFlight = false;
