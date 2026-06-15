@@ -1081,7 +1081,7 @@ function DukeVideoSlider() {
               href={`https://www.youtube.com/watch?v=${v.youtube_id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="group block w-[200px] shrink-0 snap-start sm:w-[240px]"
+              className="group block w-[250px] shrink-0 snap-start sm:w-[300px]"
               aria-label={v.title}
             >
               {card}
@@ -1090,7 +1090,7 @@ function DukeVideoSlider() {
             <Link
               key={v.id}
               href={`/videos/${v.id}`}
-              className="group block w-[200px] shrink-0 snap-start sm:w-[240px]"
+              className="group block w-[250px] shrink-0 snap-start sm:w-[300px]"
               aria-label={v.title}
             >
               {card}

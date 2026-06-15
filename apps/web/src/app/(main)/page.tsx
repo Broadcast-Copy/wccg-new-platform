@@ -304,8 +304,8 @@ export default function HomePage() {
               (_, i) => platformFeatures[(i + row * 3) % platformFeatures.length],
             );
             const loop = [...items, ...items];
-            const anim = row % 2 === 1 ? "marquee-right" : "marquee-left";
-            const dur = 46 + row * 6; // 46s / 52s / 58s — organic, not lockstep
+            const anim = "marquee-left"; // every row scrolls left (per request)
+            const dur = 60 + row * 8; // 60s / 68s / 76s — slow, organic, not lockstep
             return (
               <div key={row} className="group/marq relative overflow-hidden">
                 <ul
