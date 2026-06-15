@@ -4,19 +4,17 @@ import {
   Disc3,
   Headphones,
   Play,
-  Radio,
   Music,
-  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AppImage } from "@/components/ui/app-image";
 import {
-  ALL_HOSTS,
   MIXSQUAD_HOSTS,
   WEEKEND_HOSTS,
   SUNDAY_HOSTS,
   type HostData,
 } from "@/data/hosts";
+import { MixSquadLiveStrip } from "@/components/mix-squad/live-strip";
 
 export const metadata = {
   title: "The Mix Squad | WCCG 104.5 FM",
@@ -35,16 +33,6 @@ function getInitials(name: string): string {
     .join("")
     .toUpperCase()
     .slice(0, 2);
-}
-
-/** All DJs — mixsquad + weekend + sunday categories */
-function getAllDJs(): HostData[] {
-  return ALL_HOSTS.filter(
-    (h) =>
-      h.category === "mixsquad" ||
-      h.category === "weekend" ||
-      h.category === "sunday"
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -115,7 +103,6 @@ function DJCard({ dj }: { dj: HostData }) {
 // ---------------------------------------------------------------------------
 
 export default function MixSquadPage() {
-  const allDJs = getAllDJs();
   const coreDJs = MIXSQUAD_HOSTS;
   const weekendDJs = WEEKEND_HOSTS;
   const sundayDJs = SUNDAY_HOSTS;
@@ -123,7 +110,7 @@ export default function MixSquadPage() {
   return (
     <div className="space-y-10">
       {/* ── Hero Banner ──────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-purple-950/60 to-gray-900 border border-border/30">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a1030] via-[#2a1556] to-[#120a26] border border-white/10">
         <div className="absolute inset-0 opacity-15">
           <div
             className="absolute inset-0"
@@ -157,14 +144,14 @@ export default function MixSquadPage() {
 
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-foreground">
+                <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
                   The Mix Squad
                 </h1>
-                <span className="hidden sm:inline text-[10px] text-muted-foreground bg-foreground/[0.06] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider">
+                <span className="hidden sm:inline text-[10px] text-white/60 bg-white/10 px-2 py-0.5 rounded-full font-medium uppercase tracking-wider">
                   WCCG 104.5 FM
                 </span>
               </div>
-              <p className="text-base text-muted-foreground max-w-2xl">
+              <p className="text-base text-white/75 max-w-2xl">
                 Our curated roster of DJs delivering non-stop mixes, live sets,
                 and exclusive blends. From hip hop to R&amp;B, dancehall to
                 Afrobeats &mdash; the Mix Squad keeps the energy moving 24/7.
@@ -184,7 +171,7 @@ export default function MixSquadPage() {
                   variant="outline"
                   size="sm"
                   asChild
-                  className="rounded-full border-white/20 text-foreground hover:bg-white/5 px-5"
+                  className="rounded-full border-white/25 text-white hover:bg-white/10 px-5"
                 >
                   <Link href="/mixes">
                     <Music className="mr-2 h-3.5 w-3.5" />
@@ -195,38 +182,8 @@ export default function MixSquadPage() {
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="mt-8 grid grid-cols-3 gap-4">
-            <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-[#74ddc7]" />
-                <span className="text-sm font-medium text-gray-300">
-                  DJs
-                </span>
-              </div>
-              <p className="mt-1 text-2xl font-bold text-foreground">
-                {allDJs.length}
-              </p>
-            </div>
-            <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
-              <div className="flex items-center gap-2">
-                <Radio className="h-4 w-4 text-[#7401df]" />
-                <span className="text-sm font-medium text-gray-300">
-                  Live Stream
-                </span>
-              </div>
-              <p className="mt-1 text-2xl font-bold text-foreground">24/7</p>
-            </div>
-            <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-3">
-              <div className="flex items-center gap-2">
-                <Disc3 className="h-4 w-4 text-[#ec4899]" />
-                <span className="text-sm font-medium text-gray-300">
-                  Genres
-                </span>
-              </div>
-              <p className="mt-1 text-2xl font-bold text-foreground">6+</p>
-            </div>
-          </div>
+          {/* Live schedule — who's on now / up next / this week */}
+          <MixSquadLiveStrip />
         </div>
       </div>
 
