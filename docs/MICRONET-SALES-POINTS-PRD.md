@@ -53,7 +53,8 @@ _Done 2026-06-15: feed renders each `media_paths` entry by inferred kind — ima
 
 ## P2 — End-to-end sales portal (sell airtime, sponsorships, production, DJ/events)
 
-### ☐ TODO [AUTO] SP1 — Sales data model + seed catalog
+### ☑ DONE SP1 — Sales data model + seed catalog
+_Done 2026-06-15: migration **077_sales_portal** — `sales_products` (rate card) + `sales_deals` + `sales_deal_items`, staff-only RLS (`(select public.is_staff())` for initplan perf), FK-covering + status indexes, `updated_at` trigger; seeded **16 products (4 per category)**. Applied live + verified (16 rows, RLS on all 3 tables, 3 policies). File mirrored to repo._
 - **Why:** there's no unified products/deals model; the dashboard is localStorage/mock.
 - **Scope:** migration creating:
   - `sales_products` — id, category (check in `ad_spot`|`sponsorship`|`production`|`dj_event`), name, description, unit (e.g. spot, week, month, package, hour, event), unit_price numeric, is_active, created_at. (This is the **rate card**.)
@@ -64,13 +65,15 @@ _Done 2026-06-15: feed renders each `media_paths` entry by inferred kind — ima
 - **Acceptance:** tables + RLS live; staff can read; anon cannot; seed catalog present across all 4 categories. Mirror migration.
 - **Files:** `supabase/migrations/077_sales_portal.sql`.
 
-### ☐ TODO [AUTO] SP2 — Sales dashboard → Supabase-direct (kill localStorage/mock)
+### ☑ DONE SP2 — Sales dashboard → Supabase-direct (kill localStorage/mock)
+_Done 2026-06-15: `/my/sales/page.tsx` rewritten Supabase-direct — Overview stats (open deals, won revenue, clients, pending invoices) computed from `sales_deals` + `crm_clients`; Recent Deals table from real deals; Clients tab now reads real `crm_clients` (search + per-client open/total deal counts + new-deal link). All `loadOrSeed`/`SEED_*` localStorage + mock removed; honest loading/empty states. Batched deploy with SP3._
 - **Why:** `/my/sales/page.tsx` runs on `loadOrSeed()` localStorage + `SEED_*` mock data.
 - **Scope:** rewrite the dashboard to read real data: pipeline counts by status, monthly revenue (sum of won/invoiced/paid deals), client count (`crm_clients`), pending invoices — all from Supabase. Remove the seed/localStorage path. Keep the existing visual layout/warm header.
 - **Acceptance:** dashboard stats reflect real `sales_deals`/`crm_clients`; no localStorage seed; empty states are honest.
 - **Files:** `app/(main)/my/sales/page.tsx` (+ remove/retire its seed module).
 
-### ☐ TODO [AUTO] SP3 — Deal builder + pipeline
+### ☑ DONE SP3 — Deal builder + pipeline
+_Done 2026-06-15: `/my/sales/deals/page.tsx` — kanban pipeline by status (lead→quoted→won→invoiced→paid + lost, with per-column count + sum) + modal deal builder: pick or create a `crm_client` inline, add line items from the rate-card catalog (category-grouped picker prefills description + unit_price; qty/price editable; Custom line supported), live `line_total` + deal subtotal, status select, notes; associate = `auth.uid()`. Supabase-direct CRUD — create/update (edit re-writes items), cascade delete. Reads `?id`/`?client` from the URL (dashboard deep-links). Batched build+deploy with SP2 + the 077 mirror + the Mix Squad hero._
 - **Scope:** a deals pipeline page (list/kanban by status) + a deal editor: pick/create a `crm_client`, add line items from the `sales_products` catalog (choose product → qty → unit_price defaults from catalog, editable), auto-compute line_total + deal subtotal, set status. Associate = current user. Supabase-direct CRUD with RLS.
 - **Acceptance:** an associate creates a deal for a client, adds mixed line items (an airtime package + a sponsorship + a production service + a DJ/event), totals compute, status advances lead→quoted→won; persists + reloads correctly.
 - **Files:** `app/(main)/my/sales/deals/page.tsx` (+ editor component); link from the dashboard.
