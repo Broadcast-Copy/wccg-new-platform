@@ -32,6 +32,8 @@ interface Reel {
   views: number | null;
   likes: number | null;
   rating: string | null;
+  /** True when this reel is a community hub_posts video (not a videos-table row). */
+  isPost?: boolean;
 }
 
 interface HubReelsProps {
@@ -71,7 +73,7 @@ export function HubReels({ accentColor }: HubReelsProps) {
     const supabase = createClient();
 
     async function load(): Promise<{ rows: Reel[]; uid: string | null }> {
-      const [{ data }, { data: auth }] = await Promise.all([
+      const [{ data: vids }, { data: postRows }, { data: auth }] = await Promise.all([
         supabase
           .from("videos")
           .select(REELS_SELECT)
@@ -79,9 +81,49 @@ export function HubReels({ accentColor }: HubReelsProps) {
           .eq("visibility", "public")
           .order("created_at", { ascending: false })
           .limit(30),
+        // Community video posts (file attachments in the public post-media bucket).
+        supabase
+          .from("hub_posts")
+          .select("id, user_id, content, media_paths, likes_count")
+          .eq("media_type", "video")
+          .order("created_at", { ascending: false })
+          .limit(15),
         supabase.auth.getUser(),
       ]);
-      return { rows: (data as Reel[] | null) ?? [], uid: auth.user?.id ?? null };
+
+      const pr = (postRows ?? []) as Array<{
+        id: string; user_id: string; content: string;
+        media_paths: string[] | null; likes_count: number;
+      }>;
+      const postUserIds = [...new Set(pr.map((p) => p.user_id))];
+      const { data: profs } = postUserIds.length
+        ? await supabase.from("profiles_public").select("id, display_name").in("id", postUserIds)
+        : { data: [] };
+      const nameById = new Map(
+        (profs ?? []).map((p: { id: string; display_name: string | null }) => [p.id, p.display_name]),
+      );
+      const postReels: Reel[] = pr
+        .map((p): Reel | null => {
+          const vpath = (p.media_paths ?? []).find((x) => /\.(mp4|mov|webm|m4v|ogv)$/i.test(x));
+          if (!vpath) return null;
+          return {
+            id: p.id,
+            title: p.content || "Community video",
+            creator_name: nameById.get(p.user_id) ?? "Community",
+            program: "Community",
+            video_url: supabase.storage.from("post-media").getPublicUrl(vpath).data.publicUrl,
+            youtube_id: null,
+            thumbnail_url: null,
+            views: null,
+            likes: p.likes_count ?? 0,
+            rating: "G",
+            isPost: true,
+          };
+        })
+        .filter((r): r is Reel => r !== null);
+
+      const rows = [...(((vids as Reel[] | null) ?? [])), ...postReels];
+      return { rows, uid: auth.user?.id ?? null };
     }
 
     load().then(({ rows, uid }) => {
@@ -208,11 +250,16 @@ export function HubReels({ accentColor }: HubReelsProps) {
       setLikeDelta((prev) => ({ ...prev, [r.id]: (prev[r.id] ?? 0) + (already ? -1 : 1) }));
       try {
         const supabase = createClient();
-        const base = r.likes ?? 0;
-        await supabase
-          .from("videos")
-          .update({ likes: Math.max(0, base + (already ? -1 : 1)) })
-          .eq("id", r.id);
+        if (r.isPost) {
+          // Community-post reel: toggle via the hub-post like RPC.
+          await supabase.rpc("hub_post_toggle_like", { p_post_id: r.id });
+        } else {
+          const base = r.likes ?? 0;
+          await supabase
+            .from("videos")
+            .update({ likes: Math.max(0, base + (already ? -1 : 1)) })
+            .eq("id", r.id);
+        }
       } catch {
         /* like persistence is best-effort */
       }

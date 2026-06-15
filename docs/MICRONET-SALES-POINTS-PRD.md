@@ -29,19 +29,22 @@ State as of 2026-06-15 (from a full audit):
 
 ## P1 — Micro-network: share images / videos / PDFs in the feed
 
-### ☐ TODO [AUTO] M1 — Post-media storage bucket + schema
+### ☑ DONE M1 — Post-media storage bucket + schema
+_Done 2026-06-15: migration **076_post_media** — public `post-media` bucket + 4 storage RLS policies (public read; owner-folder `<uid>/` insert/update/delete) + `hub_posts.media_type` (image|video|pdf) and `media_paths text[]`. Verified live (cols present, bucket public, 4 policies). Backend-only; mirror committed next push._
 - **Why:** the composer can't attach files; `hub_posts.media_url` is unsettable and there's no bucket.
 - **Scope:** migration: create a **public** `post-media` storage bucket; RLS — authenticated users INSERT to their own `auth.uid()/...` folder, public READ, owner DELETE. Add columns to `hub_posts`: `media_type text` (check in image|video|pdf|null) and `media_paths text[]` (support up to ~4 attachments; keep `media_url` working for legacy/links).
 - **Acceptance:** an authenticated user can upload to `post-media/<uid>/...`; a second user cannot write there; rows store media_type + paths. Mirror migration to repo.
 - **Files:** `supabase/migrations/076_post_media.sql`.
 
-### ☐ TODO [AUTO] M2 — Composer upload (images/videos/PDFs)
+### ☑ DONE M2 — Composer upload (images/videos/PDFs)
+_Done 2026-06-15: hub-feed composer now has an Attach button + hidden file input (accept image/*,video/*,application/pdf, ≤4 files, ≤100MB video / ≤25MB else), file chips with image previews + remove, uploads each to `post-media/<uid>/<ts>/...`, inserts hub_posts with media_paths[] + coarse media_type (video>image>pdf), and allows posting with files even when text is empty. Honest error surfacing. Batched with M3._
 - **Why:** users need to attach files when posting.
 - **Scope:** in `components/social/hub-feed.tsx`, add a file picker + drag-drop to the composer accepting `image/*,video/*,application/pdf` (cap count + size, e.g. ≤4 files, video ≤100 MB). Upload to `post-media/<uid>/<postdraft>/...` via supabase storage, then insert the `hub_posts` row with `media_type` + `media_paths`. Show thumbnails/preview + remove-before-post. Keep existing link/YouTube behavior.
 - **Acceptance:** a user attaches an image, a video, and a PDF, posts, and the row persists with the files in the bucket; errors are surfaced honestly; no PII/security regressions.
 - **Files:** `components/social/hub-feed.tsx` (+ a small upload helper if needed).
 
-### ☐ TODO [AUTO] M3 — Render attached media in the feed + reels
+### ☑ DONE M3 — Render attached media in the feed + reels
+_Done 2026-06-15: feed renders each `media_paths` entry by inferred kind — images (grid, lazy), `<video controls>`, and PDF download cards — via getPublicUrl. `hub-reels.tsx` now also merges community video posts (hub_posts media_type='video') into the reel column, mapped to the reel shape, with likes routed through `hub_post_toggle_like` for post-reels. Build passes._
 - **Scope:** render `media_paths` by `media_type` — images in a responsive grid/lightbox, `<video controls>` for video, and a PDF as an inline card (icon + filename + open/download via public URL). Update `hub-reels.tsx` to include video posts. Lazy-load; getPublicUrl (no signing).
 - **Acceptance:** image/video/PDF posts display correctly in the feed (and video in reels), on mobile + desktop.
 - **Files:** `components/social/hub-feed.tsx`, `components/social/hub-reels.tsx`.

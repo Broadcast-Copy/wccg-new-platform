@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles } from "@/hooks/use-user-roles";
-import { Heart, ChevronDown, Link2, LogIn, Lock, Sparkles, LayoutList, Clapperboard } from "lucide-react";
+import { Heart, ChevronDown, Link2, LogIn, Lock, Sparkles, LayoutList, Clapperboard, Paperclip, X, FileText, Film } from "lucide-react";
 import Link from "next/link";
 import { HubReels } from "@/components/social/hub-reels";
 
@@ -34,6 +34,8 @@ interface HubPost {
   post_type: string;
   content: string;
   media_url: string | null;
+  media_type: string | null;
+  media_paths: string[] | null;
   link_url: string | null;
   likes_count: number;
   created_at: string;
@@ -69,6 +71,17 @@ function getYouTubeId(url: string): string | null {
     /* ignore */
   }
   return null;
+}
+
+const IMAGE_EXTS = ["jpg", "jpeg", "png", "gif", "webp", "avif", "heic", "heif"];
+const VIDEO_EXTS = ["mp4", "mov", "webm", "m4v", "ogv"];
+/** Infer a media kind from a path/name extension so one post can mix types. */
+function mediaKind(pathOrName: string): "image" | "video" | "pdf" | "other" {
+  const ext = pathOrName.split(".").pop()?.toLowerCase() ?? "";
+  if (IMAGE_EXTS.includes(ext)) return "image";
+  if (VIDEO_EXTS.includes(ext)) return "video";
+  if (ext === "pdf") return "pdf";
+  return "other";
 }
 
 function initials(name: string): string {
@@ -131,6 +144,9 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder, authorId
   const [content, setContent] = useState("");
   const [postType, setPostType] = useState(postTypes[0]?.value ?? "");
   const [submitting, setSubmitting] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploadErr, setUploadErr] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   // Feed state
   const [posts, setPosts] = useState<HubPost[]>([]);
@@ -234,29 +250,89 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder, authorId
     });
   };
 
-  // ------- Submit post -------
+  // ------- Submit post (with optional image / video / PDF attachments) -------
+  const MAX_FILES = 4;
   const handleSubmit = async () => {
-    if (!user || !content.trim()) return;
+    if (!user || (!content.trim() && files.length === 0)) return;
     setSubmitting(true);
+    setUploadErr(null);
 
-    const { error } = await supabase.from("hub_posts").insert({
-      hub_type: hubType,
-      user_id: user.id,
-      post_type: postType,
-      content: content.trim(),
-    });
+    try {
+      const mediaPaths: string[] = [];
+      let mediaType: string | null = null;
+      if (files.length) {
+        const folder = `${user.id}/${Date.now()}`;
+        for (const f of files) {
+          const safe = f.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-60);
+          const path = `${folder}/${crypto.randomUUID()}-${safe}`;
+          const { error: upErr } = await supabase.storage
+            .from("post-media")
+            .upload(path, f, { upsert: false, contentType: f.type || undefined });
+          if (upErr) throw new Error(upErr.message);
+          mediaPaths.push(path);
+        }
+        // One coarse media_type for the post (video > image > pdf); render still
+        // infers each attachment's kind from its own path so mixed posts work.
+        const kinds = files.map((f) =>
+          f.type.startsWith("video/")
+            ? "video"
+            : f.type.startsWith("image/")
+              ? "image"
+              : f.type === "application/pdf"
+                ? "pdf"
+                : "other",
+        );
+        mediaType = kinds.includes("video")
+          ? "video"
+          : kinds.includes("image")
+            ? "image"
+            : kinds.includes("pdf")
+              ? "pdf"
+              : null;
+      }
 
-    if (!error) {
+      const { error } = await supabase.from("hub_posts").insert({
+        hub_type: hubType,
+        user_id: user.id,
+        post_type: postType,
+        content: content.trim(),
+        media_type: mediaType,
+        media_paths: mediaPaths.length ? mediaPaths : null,
+      });
+      if (error) throw new Error(error.message);
+
       setContent("");
+      setFiles([]);
       setPage(0);
       const res = await fetchPage(0);
       if (res) {
         setPosts(res.posts);
         setHasMore(res.hasMore);
       }
+    } catch (e) {
+      setUploadErr((e as Error).message);
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
+
+  // Add picked files: cap at MAX_FILES, reject oversized (video 100MB / else 25MB).
+  const addFiles = (incoming: FileList | null) => {
+    if (!incoming) return;
+    setUploadErr(null);
+    const picked = Array.from(incoming);
+    const tooBig = picked.find((f) =>
+      f.type.startsWith("video/") ? f.size > 100 * 1024 * 1024 : f.size > 25 * 1024 * 1024,
+    );
+    if (tooBig) {
+      setUploadErr(`"${tooBig.name}" is too large (max 100 MB video / 25 MB image·PDF).`);
+      return;
+    }
+    setFiles((prev) => [...prev, ...picked].slice(0, MAX_FILES));
+  };
+
+  const publicUrl = (path: string) =>
+    supabase.storage.from("post-media").getPublicUrl(path).data.publicUrl;
 
   // ------- Like / unlike -------
   const toggleLike = async (post: HubPost) => {
@@ -369,21 +445,73 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder, authorId
               className="w-full resize-none rounded-xl border border-border bg-foreground/[0.04] px-4 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
               style={{ "--accent": accentColor } as React.CSSProperties}
             />
-            <div className="flex items-center justify-between gap-3">
-              <select
-                value={postType}
-                onChange={(e) => setPostType(e.target.value)}
-                className="rounded-full border border-border bg-foreground/[0.04] px-3 py-1.5 text-sm text-foreground focus:outline-none"
-              >
-                {postTypes.map((pt) => (
-                  <option key={pt.value} value={pt.value} className="bg-card">
-                    {postEmoji(pt.value, pt.label)} {pt.label}
-                  </option>
+            {uploadErr && <p className="text-xs text-red-500">{uploadErr}</p>}
+            {files.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {files.map((f, i) => (
+                  <span
+                    key={`${f.name}-${i}`}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-foreground/[0.04] py-1 pl-1.5 pr-2 text-xs"
+                  >
+                    {f.type.startsWith("image/") ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={URL.createObjectURL(f)} alt="" className="h-7 w-7 rounded object-cover" />
+                    ) : f.type.startsWith("video/") ? (
+                      <Film className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <span className="max-w-[8rem] truncate text-foreground/80">{f.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
+                      className="text-muted-foreground hover:text-red-500"
+                      aria-label={`Remove ${f.name}`}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </span>
                 ))}
-              </select>
+              </div>
+            )}
+            <input
+              ref={fileRef}
+              type="file"
+              multiple
+              accept="image/*,video/*,application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                addFiles(e.currentTarget.files);
+                e.currentTarget.value = "";
+              }}
+            />
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <select
+                  value={postType}
+                  onChange={(e) => setPostType(e.target.value)}
+                  className="rounded-full border border-border bg-foreground/[0.04] px-3 py-1.5 text-sm text-foreground focus:outline-none"
+                >
+                  {postTypes.map((pt) => (
+                    <option key={pt.value} value={pt.value} className="bg-card">
+                      {postEmoji(pt.value, pt.label)} {pt.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={files.length >= MAX_FILES}
+                  title="Attach images, video, or a PDF"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-foreground/[0.04] px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+                >
+                  <Paperclip className="h-4 w-4" />
+                  Attach
+                </button>
+              </div>
               <button
                 onClick={handleSubmit}
-                disabled={submitting || !content.trim()}
+                disabled={submitting || (!content.trim() && files.length === 0)}
                 className="rounded-full px-6 py-2 text-sm font-bold text-white shadow-sm transition-all hover:brightness-105 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
                 style={{ backgroundColor: accentColor }}
               >
@@ -540,7 +668,7 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder, authorId
                   {post.content}
                 </p>
 
-                {/* Media */}
+                {/* Media (legacy single linked image) */}
                 {post.media_url && (
                   <div className="rounded-lg overflow-hidden border border-border">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -549,6 +677,53 @@ export function HubFeed({ hubType, accentColor, postTypes, placeholder, authorId
                       alt="Post media"
                       className="w-full max-h-80 object-cover"
                     />
+                  </div>
+                )}
+
+                {/* Attached media — images / videos / PDFs (each rendered by its own kind) */}
+                {post.media_paths && post.media_paths.length > 0 && (
+                  <div className={`grid gap-2 ${post.media_paths.length > 1 ? "sm:grid-cols-2" : ""}`}>
+                    {post.media_paths.map((path) => {
+                      const url = publicUrl(path);
+                      const kind = mediaKind(path);
+                      if (kind === "image") {
+                        return (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            key={path}
+                            src={url}
+                            alt="Post attachment"
+                            loading="lazy"
+                            className="w-full max-h-96 rounded-lg border border-border object-cover"
+                          />
+                        );
+                      }
+                      if (kind === "video") {
+                        return (
+                          <video
+                            key={path}
+                            src={url}
+                            controls
+                            preload="metadata"
+                            className="w-full max-h-96 rounded-lg border border-border bg-black"
+                          />
+                        );
+                      }
+                      const name = (path.split("/").pop() ?? "Attachment").replace(/^[0-9a-f-]+-/i, "");
+                      return (
+                        <a
+                          key={path}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 rounded-lg border border-border bg-foreground/[0.04] px-3 py-2.5 text-sm transition-colors hover:border-input"
+                        >
+                          <FileText className="h-5 w-5 shrink-0" style={{ color: accentColor }} />
+                          <span className="min-w-0 flex-1 truncate text-foreground/90">{name}</span>
+                          <span className="shrink-0 text-xs font-semibold text-muted-foreground">PDF</span>
+                        </a>
+                      );
+                    })}
                   </div>
                 )}
 
