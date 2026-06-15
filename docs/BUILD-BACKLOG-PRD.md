@@ -30,9 +30,23 @@ AUTONOMOUS** item, builds it end-to-end, ships it, checks it off, and moves on.
 
 ---
 
+## P0 — Instant sermon-sync watcher (core DONE 2026-06-15 — small follow-ups remain)
+
+### ☑ DONE — Gmail-API instant sermon watcher is LIVE
+`scripts/gmail-watcher.py` (OAuth: gmail.readonly + gmail.send + drive.readonly) under Cloud project `wccg-gmail-watcher` (published to production, Desktop client, `token.json` authorized). Installed as the **"WCCG Gmail Watcher"** Windows scheduled task (at-logon, `pythonw`, auto-restart) — runs 24/7 headless, **independent of the Claude app**. Baseline-seeded, polling every 20s. Sermons (pmb1/lcc1/gpn1/dvp1/thm1) now auto-download the instant they email in → Sunday folder + `M:/JBMusic/DJB_520xx`, self-email biggleem. Runbook: `scripts/GMAIL-WATCHER-RUNBOOK.md`. (OAuth quirk for the record: the sandboxed browser can't reach localhost, so the auth code was delivered to the local `run_local_server` via `curl` from the shell.)
+
+### ☑ DONE W1 — Hand sermons off from the hourly task to the watcher
+_Done 2026-06-15: hourly `wccg-email-mix-sermon-watch` SKILL.md section D flipped to "watcher-owned — SKIP all 5 sermon senders" (download details kept as manual fallback). No double-download/double-email; DJ-mix + dj-drops handling unchanged._
+The hourly `wccg-email-mix-sermon-watch` SKILL.md still downloads sermons too — now redundant with the daemon (double-work / double-email risk). Edit that SKILL.md so the 5 sermon senders are marked **watcher-owned (skip)**, and the hourly task keeps only the DJ-mix senders + the `sync-dj-drops.py` portal sweep as backstop. **Acceptance:** the hourly task no longer re-downloads sermons; DJ-mix handling unchanged.
+
+### ☑ DONE W2 — Record the watcher in memory
+_Done 2026-06-15: `wccg-email-mix-sermon-pipeline` memory updated with the gmail-watcher daemon (Windows task, OAuth scopes, config dir), the curl-the-code-from-shell trick, and "sermons now instant/headless; hourly task = DJ-mix backstop only."_
+Update the `wccg-email-mix-sermon-pipeline` memory: the gmail-watcher daemon (Windows task + OAuth scopes + config dir `C:\Users\wccg1\.wccg-gmail-watcher`), the curl-the-code-from-shell trick, and that sermons are now instant/headless (hourly task = DJ-mix backstop only). **Acceptance:** memory reflects current reality; no contradictory stale notes.
+
 ## P1 — Finish the DJ booking loop (just shipped the core)
 
-### ☐ TODO [AUTO] B1 — Email staff when a new booking request arrives
+### ☑ DONE B1 — Email staff when a new booking request arrives
+_Done 2026-06-15: migration **074_booking_notification** (`trg_notify_on_booking`, AFTER INSERT WHEN status='pending' → pg_net POST) + **`notify-booking`** edge function (deployed v1, verify_jwt=false, re-fetches booking w/ service role, Resend-emails the station). Verified live: INSERT fires the function (pg_net 200); UPDATE does NOT fire (no new http_response). ⚠️ **Email won't actually send until `RESEND_API_KEY` is set as a project secret** — it's currently NOT visible to edge functions (the function returned `{"ok":false,"reason":"RESEND_API_KEY not set"}`). This also affects notify-admin-on-drop + notify-sync. Owner action — see U4. Committed in this push._
 - **Why:** bookings currently land silently in `dj_bookings`; staff only see them if they open the admin console.
 - **Scope:** DB trigger on `dj_bookings` INSERT → call an edge function that Resend-emails a summary (DJ, event, date, contact) to the station. Reuse the `notify-admin-on-drop` pattern (Resend key already in that function) or extend `notify-sync`. Resend is test-mode → recipient must be `wccg1045fm@gmail.com` until a domain is verified (see U4).
 - **Acceptance:** inserting a `dj_bookings` row (test it with `set role anon` insert, then delete) fires one email; no email on status updates. Mirror any migration to repo.
@@ -81,6 +95,7 @@ AUTONOMOUS** item, builds it end-to-end, ships it, checks it off, and moves on.
 - **[USER] U1 — thm1 (The Encouraging Moment / Dr. Tony Haire) sermon source.** No email sender found; the hourly watch can't fetch it. Need: which address/service delivers it weekly (or a YouTube channel to pull from).
 - **[USER] U2 — Bios for the 6 DJs not on the legacy site:** DJ Corleone, DJ Crisco, DJ Drop, DJ KVNG, DJ VI. Need bio text (or approval to draft from public info).
 - **[USER] U3 — Mt. Pisgah image + confirmed Gospel Caravan hours** for Progressive vs. any other church (Mt. Pisgah was removed; Progressive holds the 1–2 PM hour pending confirmation).
+- **[USER] U4a — ⚠️ `RESEND_API_KEY` is NOT set as an Edge Functions secret** (discovered 2026-06-15: `notify-booking` returned `RESEND_API_KEY not set`). Until it's set (Dashboard → Edge Functions → Secrets), notify-booking / notify-admin-on-drop / notify-sync all silently skip their emails. Set this FIRST.
 - **[USER] U4 — Verify a domain at resend.com/domains** so booking/sync emails can go to biggleem@gmail.com (or a personal address) instead of only wccg1045fm@gmail.com; then set `SYNC_NOTIFY_EMAIL` + `NOTIFY_FROM`.
 - **[USER] U5 — Delete the temporary `mint-sermon-upload` edge function** (dashboard → Edge Functions). Its work (sermon archive, Tony Neal R&B, DJ bios) is done.
 - **[USER] U6 — Supabase leaked-password protection** (dashboard auth setting) and **VAPID private key** for web push.
@@ -90,4 +105,4 @@ AUTONOMOUS** item, builds it end-to-end, ships it, checks it off, and moves on.
 
 ## Already shipped (context — don't redo)
 
-DJ Mix Squad profiles (hero, bios×28, mix player, social feed, booking tab) · DJ booking system (form + admin console, migration 073) · Watch wall (rows, ordering, Latest+Most Watched, portrait filtering, dedupe) · Sermon archive on church Podcasts tabs (590 files) · Mixshows week grid + two-pane archive · hourly email-mix-sermon watch task with `notify-sync` emails · menu cleanup (Mixshows/Members removed) · Mt. Pisgah removal / Progressive MBC.
+DJ Mix Squad profiles (hero, bios×28, mix player, social feed, booking tab) · DJ booking system (form + admin console, migration 073) · Watch wall (rows, ordering, Latest+Most Watched, portrait filtering, dedupe) · Sermon archive on church Podcasts tabs (590 files) · Mixshows week grid + two-pane archive · hourly email-mix-sermon watch task with `notify-sync` emails · menu cleanup (Mixshows/Members removed) · Mt. Pisgah removal / Progressive MBC · **instant Gmail-API sermon watcher — OAuth + Windows scheduled task, live 2026-06-15** · sermon sync emails switched to Gmail self-send to biggleem (was Resend test box) · pmb1 air-time corrected to 1 PM · lcc1 download method documented (Gmail attachment via Drive viewer).
