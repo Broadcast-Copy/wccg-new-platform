@@ -111,9 +111,9 @@ function StreamingMegaMenu() {
             ? "bg-foreground/10 text-[#74ddc7]"
             : "text-muted-foreground hover:text-foreground/80 hover:bg-foreground/[0.04]"
         }`}
-        aria-label="Toggle streaming channels menu"
+        aria-label="Toggle stream channels menu"
       >
-        Streaming
+        Stream
         <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
