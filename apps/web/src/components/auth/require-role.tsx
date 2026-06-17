@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Lock, Loader2 } from "lucide-react";
+import { Lock, Loader2, Clock } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles, type UserRole } from "@/hooks/use-user-roles";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * Client-side route guard for the static-export app.
@@ -33,6 +34,29 @@ export function RequireRole({
   const loading = authLoading || rolesLoading;
   const allowed = !!user && hasRealRole(...roles);
 
+  // When access is denied, check whether the user has an APPROVAL-PENDING
+  // request (creator/vendor/employee) so the screen reads "under review"
+  // instead of a flat denial. Only runs on the denied path.
+  const [pendingRole, setPendingRole] = useState<string | null>(null);
+  useEffect(() => {
+    if (loading || !user || allowed) return;
+    let active = true;
+    (async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("profiles")
+        .select("access_request_status, requested_role")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (active && data?.access_request_status === "pending") {
+        setPendingRole((data.requested_role as string) ?? "access");
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [loading, user, allowed]);
+
   useEffect(() => {
     if (loading) return;
     if (!user) {
@@ -58,16 +82,43 @@ export function RequireRole({
   }
 
   if (!allowed) {
+    const roleLabel =
+      pendingRole === "vendor"
+        ? "Vendor"
+        : pendingRole === "employee"
+          ? "Staff"
+          : pendingRole === "creator"
+            ? "Creator"
+            : null;
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-4">
         <div className="max-w-md rounded-2xl border border-border bg-card p-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-            <Lock className="h-6 w-6 text-muted-foreground" />
+          <div
+            className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full ${
+              pendingRole ? "bg-[#7401df]/10" : "bg-muted"
+            }`}
+          >
+            {pendingRole ? (
+              <Clock className="h-6 w-6 text-[#7401df]" />
+            ) : (
+              <Lock className="h-6 w-6 text-muted-foreground" />
+            )}
           </div>
-          <h1 className="mb-2 text-lg font-semibold">Access restricted</h1>
+          <h1 className="mb-2 text-lg font-semibold">
+            {pendingRole
+              ? `${roleLabel ?? "Access"} request under review`
+              : "Access restricted"}
+          </h1>
           <p className="mb-6 text-sm text-muted-foreground">
-            Your account doesn&apos;t have permission to view {area}. If you
-            believe this is a mistake, ask an administrator to grant your role.
+            {pendingRole ? (
+              `Your ${roleLabel ?? "access"} request is pending approval. We'll let you know as soon as an admin reviews it — then ${area} unlocks automatically.`
+            ) : (
+              <>
+                Your account doesn&apos;t have permission to view {area}. If you
+                believe this is a mistake, ask an administrator to grant your
+                role.
+              </>
+            )}
           </p>
           <Link
             href="/my"

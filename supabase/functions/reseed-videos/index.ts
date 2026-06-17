@@ -112,6 +112,7 @@ interface Entry {
   title: string;
   published: string | null;
   thumbnail: string;
+  views: number | null;
 }
 
 // Probe whether a video is a phone-style portrait Short (no API key).
@@ -155,6 +156,9 @@ function parseEntries(xml: string, limit: number): Entry[] {
     const titleRaw = b.match(/<title>([\s\S]*?)<\/title>/)?.[1];
     const published = b.match(/<published>(.*?)<\/published>/)?.[1] ?? null;
     const thumb = b.match(/<media:thumbnail\s+url="(.*?)"/)?.[1];
+    // YouTube channel feeds carry the live view count per entry — use it so
+    // reseeded/synced videos show real numbers instead of 0.
+    const viewsRaw = b.match(/<media:statistics\s+views="(\d+)"/)?.[1];
     if (!id || !titleRaw) continue;
     out.push({
       videoId: id,
@@ -162,6 +166,7 @@ function parseEntries(xml: string, limit: number): Entry[] {
       published,
       // Prefer the feed's thumbnail; fall back to the deterministic hqdefault URL.
       thumbnail: thumb ? decode(thumb) : `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+      views: viewsRaw ? Number(viewsRaw) : null,
     });
   }
   return out;
@@ -255,6 +260,7 @@ async function syncUserChannel(p: SyncProfile, SUPABASE_URL: string, auth: Recor
       status: "published",
       visibility: "unlisted",
       source: "youtube_sync",
+      views: e.views ?? 0,
       published_at: e.published,
       is_portrait: await probePortrait(e.videoId),
     });
@@ -414,6 +420,7 @@ Deno.serve(async (req: Request) => {
             status: "published",
             visibility: "public",
             source: "reseed",
+            views: e.views ?? 0,
             published_at: e.published,
             is_portrait: await probePortrait(e.videoId),
           });
@@ -437,7 +444,7 @@ Deno.serve(async (req: Request) => {
           {
             method: "PATCH",
             headers: { ...auth, "Content-Type": "application/json", Prefer: "return=minimal" },
-            body: JSON.stringify({ title: e.title, thumbnail_url: e.thumbnail }),
+            body: JSON.stringify({ title: e.title, thumbnail_url: e.thumbnail, ...(e.views != null ? { views: e.views } : {}) }),
           },
         );
         if (upRes.ok) {

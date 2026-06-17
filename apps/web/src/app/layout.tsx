@@ -9,6 +9,7 @@ import { GlobalPlayer } from "@/components/player/global-player";
 import { StreamPlayerProvider } from "@/components/player/stream-player-overlay";
 import { InactivityGuard } from "@/components/providers/inactivity-guard";
 import { Toaster } from "@/components/ui/sonner";
+import { SITE_URL } from "@/lib/site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,14 +26,14 @@ export const metadata: Metadata = {
   description:
     "Your community radio station. Listen live, discover shows, earn rewards, and connect with your favorite hosts.",
   manifest: "/manifest.json",
-  metadataBase: new URL("https://app.wccg1045fm.com"),
+  metadataBase: new URL(SITE_URL),
   openGraph: {
     type: "website",
     siteName: "WCCG 104.5 FM",
     title: "WCCG 104.5 FM — The Hip Hop Station",
     description:
       "Fayetteville's Hip Hop Station. Listen live, earn points, request songs, and connect with your community.",
-    url: "https://app.wccg1045fm.com",
+    url: SITE_URL,
     images: [
       {
         url: "/images/logos/wccg-logo.png",

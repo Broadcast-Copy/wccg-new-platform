@@ -1,5 +1,7 @@
 "use client";
 
+import { SITE_HOST } from "@/lib/site";
+
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
@@ -633,7 +635,7 @@ export default function SettingsPage() {
               />
               <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                 <span className="text-muted-foreground/70">
-                  app.wccg1045fm.com/u/
+                  {SITE_HOST}/u/
                   <span className="text-foreground/80">
                     {ppUsername || "your-handle"}
                   </span>

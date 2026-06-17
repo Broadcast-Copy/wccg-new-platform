@@ -1,5 +1,7 @@
 "use client";
 
+import { SITE_HOST } from "@/lib/site";
+
 /**
  * Printable quote / invoice document (SP4). Reads ?deal=<id> (a proposal/quote
  * from a sales_deal) or ?invoice=<id> (a sales_invoice). Supabase-direct; a
@@ -192,7 +194,7 @@ export default function QuoteDocPage() {
         <div className="flex items-start justify-between gap-4 border-b border-zinc-200 pb-6">
           <div>
             <h1 className="text-2xl font-black tracking-tight text-zinc-900">WCCG 104.5 FM</h1>
-            <p className="text-sm text-zinc-500">Fayetteville, NC · app.wccg1045fm.com</p>
+            <p className="text-sm text-zinc-500">Fayetteville, NC · {SITE_HOST}</p>
           </div>
           <div className="text-right">
             <p className="text-xl font-bold tracking-widest text-[#7401df]">{heading}</p>

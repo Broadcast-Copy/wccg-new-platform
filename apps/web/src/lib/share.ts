@@ -2,7 +2,7 @@
  * Share utilities — Web Share API with clipboard fallback + UTM tracking
  */
 
-const BASE_URL = "https://app.wccg1045fm.com";
+import { SITE_URL } from "@/lib/site";
 
 interface ShareOptions {
   title: string;
@@ -47,7 +47,7 @@ export function getShareUrl(
   medium: string = "social",
   campaign?: string,
 ): string {
-  const url = new URL(path, BASE_URL);
+  const url = new URL(path, SITE_URL);
   url.searchParams.set("utm_source", source);
   url.searchParams.set("utm_medium", medium);
   if (campaign) url.searchParams.set("utm_campaign", campaign);
