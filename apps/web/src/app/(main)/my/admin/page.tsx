@@ -32,6 +32,7 @@ import {
   Tv2,
   Tv,
   UserCheck,
+  Film,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,7 @@ const opsModules: AdminModule[] = [
   { icon: CalendarCheck, title: "DJ Bookings", description: "Booking requests submitted from DJ profiles — review, contact, and confirm.", href: "/my/admin/dj-bookings", color: "from-[#7401df] to-[#4c1d95]" },
   { icon: Bell, title: "EAS Logbook", description: "FCC Emergency Alert System log — every received, originated, and test event.", href: "/my/admin/eas", color: "from-[#f59e0b] to-[#d97706]" },
   { icon: ListMusic, title: "Record Pool Moderation", description: "Approve or reject DJ + label uploads to the WCCG record pool.", href: "/my/admin/pool", color: "from-[#74ddc7] to-[#0d9488]" },
+  { icon: Film, title: "Video Moderation", description: "Approve or reject creator video submissions before they hit the Watch feed.", href: "/my/admin/video-moderation", color: "from-[#ec4899] to-[#be185d]" },
   { icon: Tv2, title: "Restream Destinations", description: "Simulcast WCCG to YouTube Live, Twitch, Facebook, and custom RTMP.", href: "/my/admin/restream", color: "from-[#ec4899] to-[#be185d]" },
 ];
 
@@ -262,6 +264,7 @@ export default function StationControlPage() {
   const [selectedStat, setSelectedStat] = useState<QuickStat | null>(null);
   const [bookingsPending, setBookingsPending] = useState(0);
   const [accessPending, setAccessPending] = useState(0);
+  const [videoPending, setVideoPending] = useState(0);
 
   // Count of pending DJ booking requests — surfaces as a badge on the card so
   // staff see new requests without opening the console. Staff-read RLS scopes it.
@@ -280,6 +283,12 @@ export default function StationControlPage() {
         .select("id", { count: "exact", head: true })
         .eq("access_request_status", "pending");
       if (active) setAccessPending(accessCount ?? 0);
+
+      const { count: videoCount } = await supabase
+        .from("videos")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending_review");
+      if (active) setVideoPending(videoCount ?? 0);
     })();
     return () => {
       active = false;
@@ -420,12 +429,21 @@ export default function StationControlPage() {
               href={mod.href}
               className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:border-input hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20"
             >
-              {((mod.href === "/my/admin/dj-bookings" && bookingsPending > 0) ||
-                (mod.href === "/my/admin/access-requests" && accessPending > 0)) && (
-                <span className="absolute right-3 top-3 z-10 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-[#dc2626] px-1.5 py-0.5 text-[10px] font-bold text-white">
-                  {mod.href === "/my/admin/access-requests" ? accessPending : bookingsPending}
-                </span>
-              )}
+              {(() => {
+                const badge =
+                  mod.href === "/my/admin/dj-bookings"
+                    ? bookingsPending
+                    : mod.href === "/my/admin/access-requests"
+                      ? accessPending
+                      : mod.href === "/my/admin/video-moderation"
+                        ? videoPending
+                        : 0;
+                return badge > 0 ? (
+                  <span className="absolute right-3 top-3 z-10 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-[#dc2626] px-1.5 py-0.5 text-[10px] font-bold text-white">
+                    {badge}
+                  </span>
+                ) : null;
+              })()}
               <div className="flex items-start gap-4">
                 <div
                   className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${mod.color}`}

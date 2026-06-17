@@ -150,6 +150,7 @@ export const adminProductionNav: RoleNavItem[] = [
   { href: "/my/admin/studios", label: "Studio Manager", icon: Mic },
   { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
   { href: "/my/admin/creators", label: "Creator Manager", icon: Palette },
+  { href: "/my/admin/video-moderation", label: "Video Moderation", icon: Film },
 ];
 
 /** Pick the admin console nav for the active admin override (production default). */

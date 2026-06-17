@@ -39,7 +39,7 @@ export default function PublishVideoPage() {
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<{ id: string } | null>(null);
+  const [done, setDone] = useState<{ id: string; status: string } | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const thumbRef = useRef<HTMLInputElement | null>(null);
   const [creatorName, setCreatorName] = useState("WCCG 104.5 FM");
@@ -140,11 +140,11 @@ export default function PublishVideoPage() {
           status: "published",
           published_at: new Date().toISOString(),
         })
-        .select("id")
+        .select("id, status")
         .single();
       if (insErr) throw new Error(insErr.message);
 
-      setDone({ id: row.id });
+      setDone({ id: row.id, status: row.status });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -153,18 +153,27 @@ export default function PublishVideoPage() {
   };
 
   if (done) {
+    const pending = done.status === "pending_review";
     return (
       <div className="space-y-4 py-12 text-center">
         <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#74ddc7]/15 text-[#74ddc7]">
           <CheckCircle2 className="h-7 w-7" />
         </div>
-        <h1 className="text-2xl font-black tracking-tight">Published to the video wall</h1>
-        <p className="text-sm text-muted-foreground">Your video is live at /videos.</p>
+        <h1 className="text-2xl font-black tracking-tight">
+          {pending ? "Submitted for review" : "Published to the video wall"}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {pending
+            ? "An admin will review your video shortly. Once approved, it appears on the Watch feed."
+            : "Your video is live at /videos."}
+        </p>
         <div className="flex justify-center gap-2 pt-2">
           <Button variant="outline" onClick={() => { setDone(null); setFile(null); setThumb(null); setMeta({ ...meta, title: "", description: "", program: "", youtubeUrl: "" }); }}>
             Publish another
           </Button>
-          <Button onClick={() => router.push(`/videos/${done.id}`)}>Watch it</Button>
+          <Button onClick={() => router.push(`/videos/${done.id}`)}>
+            {pending ? "View submission" : "Watch it"}
+          </Button>
         </div>
       </div>
     );
