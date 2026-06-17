@@ -1,5 +1,11 @@
 RewriteEngine On
 
+# Never rewrite or redirect ACME / cPanel DCV challenges — they must stay
+# reachable over plain HTTP so AutoSSL (Let's Encrypt / Sectigo) can validate
+# the domain and ISSUE the certificate. A blanket HTTP->HTTPS redirect bounces
+# the validation request to a not-yet-valid HTTPS and breaks issuance.
+RewriteRule ^\.well-known/ - [L]
+
 # Force HTTPS
 RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
