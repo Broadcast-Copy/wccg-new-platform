@@ -538,6 +538,18 @@ export function RegisterForm() {
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center">
+          {userType !== "listener" && (
+            <div className="mb-4 rounded-lg border border-[#7401df]/30 bg-[#7401df]/5 p-3 text-left text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">One more step:</span>{" "}
+              {userType === "vendor"
+                ? "Vendor"
+                : userType === "employee"
+                  ? "Staff"
+                  : "Creator"}{" "}
+              access is reviewed by our team. Once an admin approves you, your
+              tools unlock — until then you can use WCCG as a listener.
+            </div>
+          )}
           <p className="text-sm text-muted-foreground">
             Already confirmed?{" "}
             <Link

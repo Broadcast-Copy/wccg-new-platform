@@ -60,6 +60,7 @@ import {
 import { fetchMusicMetadata } from "@/lib/music-metadata";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { Button } from "@/components/ui/button";
+import { PendingAccessBanner } from "@/components/access/pending-access-banner";
 
 // --- Types ---
 
@@ -541,6 +542,9 @@ export default function UserDashboardPage() {
         </div>
         <p className="text-muted-foreground">{config.subtitle}</p>
       </div>
+
+      {/* ═══ Pending access-request notice (creator/vendor/staff) ═══ */}
+      <PendingAccessBanner />
 
       {/* ═══ Listen Live CTA strip — direct path to /listen ═══ */}
       <Link

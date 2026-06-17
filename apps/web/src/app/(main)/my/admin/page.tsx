@@ -31,6 +31,7 @@ import {
   ListMusic,
   Tv2,
   Tv,
+  UserCheck,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -89,6 +90,7 @@ const defaultModules: AdminModule[] = [
   ...opsModules,
   { icon: Radio, title: "Stream Management", description: "Manage live streams, channels, and on-air scheduling.", href: "/my/admin", color: "from-[#74ddc7] to-[#0d9488]" },
   { icon: Users, title: "User Management", description: "View and manage listeners, hosts, and admin accounts.", href: "/my/admin", color: "from-[#3b82f6] to-[#1d4ed8]" },
+  { icon: UserCheck, title: "Access Requests", description: "Approve creator, vendor & employee access requests from new signups.", href: "/my/admin/access-requests", color: "from-[#7401df] to-[#4c1d95]" },
   { icon: CalendarDays, title: "Events & Tickets", description: "Create events, manage ticket sales, and check-ins.", href: "/events/create", color: "from-[#ec4899] to-[#be185d]" },
   { icon: Megaphone, title: "Advertising", description: "Manage ad campaigns, clients, creatives, and billing.", href: "/advertise/portal", color: "from-[#dc2626] to-[#b91c1c]" },
   { icon: Music, title: "Shows & Programming", description: "Manage show listings, host assignments, and schedules.", href: "/shows", color: "from-[#7401df] to-[#4c1d95]" },
@@ -259,6 +261,7 @@ export default function StationControlPage() {
 
   const [selectedStat, setSelectedStat] = useState<QuickStat | null>(null);
   const [bookingsPending, setBookingsPending] = useState(0);
+  const [accessPending, setAccessPending] = useState(0);
 
   // Count of pending DJ booking requests — surfaces as a badge on the card so
   // staff see new requests without opening the console. Staff-read RLS scopes it.
@@ -271,6 +274,12 @@ export default function StationControlPage() {
         .select("id", { count: "exact", head: true })
         .eq("status", "pending");
       if (active) setBookingsPending(count ?? 0);
+
+      const { count: accessCount } = await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("access_request_status", "pending");
+      if (active) setAccessPending(accessCount ?? 0);
     })();
     return () => {
       active = false;
@@ -411,9 +420,10 @@ export default function StationControlPage() {
               href={mod.href}
               className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:border-input hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20"
             >
-              {mod.href === "/my/admin/dj-bookings" && bookingsPending > 0 && (
+              {((mod.href === "/my/admin/dj-bookings" && bookingsPending > 0) ||
+                (mod.href === "/my/admin/access-requests" && accessPending > 0)) && (
                 <span className="absolute right-3 top-3 z-10 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-[#dc2626] px-1.5 py-0.5 text-[10px] font-bold text-white">
-                  {bookingsPending}
+                  {mod.href === "/my/admin/access-requests" ? accessPending : bookingsPending}
                 </span>
               )}
               <div className="flex items-start gap-4">

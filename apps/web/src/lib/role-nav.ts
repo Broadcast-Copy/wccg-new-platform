@@ -44,6 +44,7 @@ import {
   Briefcase,
   Clapperboard,
   Mail,
+  UserCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -125,6 +126,7 @@ export const adminOperationsNav: RoleNavItem[] = [
   { href: "/my/admin/cms", label: "Web Editor / CMS", icon: Globe },
   { href: "/my/directory", label: "Listings", icon: Store },
   { href: "/my/admin/users", label: "User Management", icon: Users },
+  { href: "/my/admin/access-requests", label: "Access Requests", icon: UserCheck },
   { href: "/my/admin/fees", label: "Platform Fees", icon: DollarSign },
   { href: "/my/admin/moderation", label: "Moderation", icon: Eye },
   { href: "/my/admin/push", label: "Push Notifications", icon: Megaphone },
