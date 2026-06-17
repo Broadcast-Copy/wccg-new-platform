@@ -278,7 +278,7 @@ export default function ProfileClient() {
             .select("id, title, youtube_id, thumbnail_url, program, views, duration_seconds")
             .eq("user_id", p.id)
             .eq("status", "published")
-            .eq("visibility", "public")
+            .in("visibility", ["public", "unlisted"])
             .order("published_at", { ascending: false }),
         ]);
 

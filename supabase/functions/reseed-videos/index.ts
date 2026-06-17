@@ -167,6 +167,110 @@ function parseEntries(xml: string, limit: number): Entry[] {
   return out;
 }
 
+const PER_USER = 10; // latest uploads to sync per linked creator channel
+
+// Resolve a channel_id (UC...) from a stored channel URL/handle. Direct UC ids
+// and /channel/UC... return immediately; @handles / custom URLs are resolved by
+// fetching the channel page and reading its canonical channelId.
+async function resolveChannelId(urlOrId: string): Promise<string | null> {
+  const direct = urlOrId.match(/(UC[\w-]{20,})/)?.[1];
+  if (direct) return direct;
+  let pageUrl = urlOrId.trim();
+  if (!pageUrl) return null;
+  if (!/^https?:\/\//i.test(pageUrl)) {
+    pageUrl = `https://www.youtube.com/${pageUrl.startsWith("@") ? "" : "@"}${pageUrl}`;
+  }
+  try {
+    const res = await fetch(pageUrl, {
+      headers: { "user-agent": "Mozilla/5.0 wccg-reseed", cookie: "CONSENT=YES+cb; SOCS=CAI" },
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    return (
+      html.match(/"channelId":"(UC[\w-]{20,})"/)?.[1] ??
+      html.match(/channel\/(UC[\w-]{20,})/)?.[1] ??
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+
+interface SyncProfile {
+  id: string;
+  display_name: string | null;
+  artist_name: string | null;
+  youtube_channel_url: string | null;
+  youtube_channel_id: string | null;
+}
+
+// Pull a linked creator's latest public uploads onto their profile as
+// visibility='unlisted', source='youtube_sync' (shown on their profile, kept
+// out of the curated main Watch feed). Inserts new youtube_ids only.
+async function syncUserChannel(p: SyncProfile, SUPABASE_URL: string, auth: Record<string, string>) {
+  const label = p.display_name || p.id;
+  let channelId = p.youtube_channel_id;
+  if (!channelId) {
+    channelId = await resolveChannelId(p.youtube_channel_url || "");
+    if (channelId) {
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${p.id}`, {
+        method: "PATCH",
+        headers: { ...auth, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ youtube_channel_id: channelId }),
+      });
+    }
+  }
+  if (!channelId) return { user: label, inserted: 0, errors: 1, reason: "could not resolve channel id" };
+
+  const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`, {
+    headers: { "user-agent": "Mozilla/5.0 wccg-reseed" },
+  });
+  if (!res.ok) return { user: label, inserted: 0, errors: 1, reason: `feed HTTP ${res.status}` };
+  const entries = parseEntries(await res.text(), PER_USER);
+  if (entries.length === 0) return { user: label, inserted: 0, errors: 0, reason: "no entries" };
+
+  const inList = entries.map((e) => `"${e.videoId}"`).join(",");
+  const existRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/videos?select=youtube_id&user_id=eq.${p.id}&youtube_id=in.(${inList})`,
+    { headers: auth },
+  );
+  const existing = new Set(
+    (((await existRes.json().catch(() => [])) as Array<{ youtube_id: string }>) ?? []).map((r) => r.youtube_id),
+  );
+  const toInsert = entries.filter((e) => !existing.has(e.videoId));
+  if (toInsert.length === 0) return { user: label, inserted: 0, errors: 0 };
+
+  const creator = p.artist_name || p.display_name || "WCCG Creator";
+  const payload = [];
+  for (const e of toInsert) {
+    payload.push({
+      user_id: p.id,
+      creator_name: creator,
+      title: e.title,
+      youtube_id: e.videoId,
+      youtube_url: `https://www.youtube.com/watch?v=${e.videoId}`,
+      thumbnail_url: e.thumbnail,
+      category: "Creator",
+      rating: "G",
+      status: "published",
+      visibility: "unlisted",
+      source: "youtube_sync",
+      published_at: e.published,
+      is_portrait: await probePortrait(e.videoId),
+    });
+  }
+  const insRes = await fetch(`${SUPABASE_URL}/rest/v1/videos`, {
+    method: "POST",
+    headers: { ...auth, "Content-Type": "application/json", Prefer: "return=minimal" },
+    body: JSON.stringify(payload),
+  });
+  if (!insRes.ok) {
+    const t = await insRes.text();
+    return { user: label, inserted: 0, errors: 1, reason: `insert HTTP ${insRes.status}: ${t.slice(0, 120)}` };
+  }
+  return { user: label, inserted: toInsert.length, errors: 0 };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
@@ -178,11 +282,14 @@ Deno.serve(async (req: Request) => {
   const url = new URL(req.url);
   let dryRun = url.searchParams.get("dryRun") != null;
   let backfill = url.searchParams.get("backfill") != null;
+  let syncUserId: string | null = url.searchParams.get("syncUserId");
   if (req.method === "POST") {
     const body = await req.json().catch(() => ({}));
     if (body && typeof body === "object") {
       if ((body as Record<string, unknown>).dryRun) dryRun = true;
       if ((body as Record<string, unknown>).backfill) backfill = true;
+      const sid = (body as Record<string, unknown>).syncUserId;
+      if (typeof sid === "string" && sid) syncUserId = sid;
     }
   }
 
@@ -224,6 +331,18 @@ Deno.serve(async (req: Request) => {
     );
     const remaining = Number(countRes.headers.get("content-range")?.split("/")[1] ?? -1);
     return json({ ok: true, backfill: true, checked: rows.length, portrait: portraitIds.length, wide: wideIds.length, unknown, remaining });
+  }
+
+  // On-demand single-user YouTube sync (the "Sync now" button on Settings).
+  if (syncUserId) {
+    const pRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/profiles?select=id,display_name,artist_name,youtube_channel_url,youtube_channel_id&id=eq.${syncUserId}`,
+      { headers: auth },
+    );
+    const profs = (await pRes.json().catch(() => [])) as SyncProfile[];
+    if (!profs || profs.length === 0) return json({ ok: false, error: "profile not found" }, 404);
+    const synced = await syncUserChannel(profs[0], SUPABASE_URL, auth);
+    return json({ ok: true, synced });
   }
 
   const results: Array<Record<string, unknown>> = [];
@@ -294,6 +413,7 @@ Deno.serve(async (req: Request) => {
             rating: ch.rating,
             status: "published",
             visibility: "public",
+            source: "reseed",
             published_at: e.published,
             is_portrait: await probePortrait(e.videoId),
           });
@@ -338,11 +458,34 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // Linked creator channels — sync each creator's latest public uploads to
+  // their own profile (unlisted). Skipped on dryRun.
+  const userResults: Array<Record<string, unknown>> = [];
+  if (!dryRun) {
+    const pRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/profiles?select=id,display_name,artist_name,youtube_channel_url,youtube_channel_id&youtube_channel_url=not.is.null`,
+      { headers: auth },
+    );
+    const profs = (await pRes.json().catch(() => [])) as SyncProfile[];
+    for (const p of profs ?? []) {
+      try {
+        const r = await syncUserChannel(p, SUPABASE_URL, auth);
+        userResults.push(r);
+        totalInserted += (r.inserted as number) ?? 0;
+        if (r.errors) totalErrors += r.errors as number;
+      } catch (err) {
+        totalErrors++;
+        userResults.push({ user: p.display_name || p.id, inserted: 0, errors: 1, reason: String(err) });
+      }
+    }
+  }
+
   return json({
     ok: true,
     dryRun,
     channels: CHANNELS.length,
     totals: { inserted: totalInserted, updated: totalUpdated, errors: totalErrors },
     results,
+    userChannels: userResults,
   });
 });

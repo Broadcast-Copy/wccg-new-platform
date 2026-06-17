@@ -290,6 +290,8 @@ export default function SettingsPage() {
   const [ppUsername, setPpUsername] = useState("");
   const [ppBio, setPpBio] = useState("");
   const [ppAvatarUrl, setPpAvatarUrl] = useState("");
+  const [ppYoutubeUrl, setPpYoutubeUrl] = useState("");
+  const [ytSyncing, setYtSyncing] = useState(false);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -298,7 +300,7 @@ export default function SettingsPage() {
     async function load() {
       const { data } = await supabase
         .from("profiles")
-        .select("display_name, username, bio, avatar_url")
+        .select("display_name, username, bio, avatar_url, youtube_channel_url")
         .eq("id", user!.id)
         .maybeSingle();
       if (!active) return;
@@ -306,6 +308,7 @@ export default function SettingsPage() {
       setPpUsername(data?.username ?? "");
       setPpBio(data?.bio ?? "");
       setPpAvatarUrl(data?.avatar_url ?? "");
+      setPpYoutubeUrl(data?.youtube_channel_url ?? "");
       setProfileLoading(false);
     }
     load();
@@ -392,6 +395,8 @@ export default function SettingsPage() {
     }
 
     setProfileSaving(true);
+    const ytUrl = ppYoutubeUrl.trim();
+    const ytId = ytUrl.match(/(?:channel\/)?(UC[\w-]{20,})/)?.[1] ?? null;
     const supabase = createClient();
     const { error } = await supabase
       .from("profiles")
@@ -400,6 +405,8 @@ export default function SettingsPage() {
         username,
         bio: ppBio.trim() || null,
         avatar_url: ppAvatarUrl.trim() || null,
+        youtube_channel_url: ytUrl || null,
+        youtube_channel_id: ytId,
       })
       .eq("id", user.id);
     setProfileSaving(false);
@@ -417,6 +424,42 @@ export default function SettingsPage() {
       return;
     }
     toast.success("Public profile saved");
+  }
+
+  async function handleSyncYoutube() {
+    if (!user) return;
+    const ytUrl = ppYoutubeUrl.trim();
+    if (!ytUrl) {
+      toast.error("Add your YouTube channel link first.");
+      return;
+    }
+    setYtSyncing(true);
+    try {
+      const supabase = createClient();
+      const ytId = ytUrl.match(/(?:channel\/)?(UC[\w-]{20,})/)?.[1] ?? null;
+      // Persist the link first so the sync has it.
+      await supabase
+        .from("profiles")
+        .update({ youtube_channel_url: ytUrl, youtube_channel_id: ytId })
+        .eq("id", user.id);
+      const { data, error } = await supabase.functions.invoke("reseed-videos", {
+        body: { syncUserId: user.id },
+      });
+      if (error || !(data as { ok?: boolean } | null)?.ok) {
+        toast.error("Sync failed — double-check your channel link.");
+        return;
+      }
+      const n = (data as { synced?: { inserted?: number } }).synced?.inserted ?? 0;
+      toast.success(
+        n > 0
+          ? `Synced ${n} new video${n === 1 ? "" : "s"} to your profile`
+          : "Synced — no new public uploads found",
+      );
+    } catch {
+      toast.error("Sync failed — please try again.");
+    } finally {
+      setYtSyncing(false);
+    }
   }
 
   return (
@@ -629,6 +672,40 @@ export default function SettingsPage() {
                 rows={4}
                 className="resize-none bg-foreground/[0.04]"
               />
+            </div>
+
+            {/* YouTube channel sync */}
+            <div>
+              <Label
+                htmlFor="pp-youtube"
+                className="mb-1.5 block text-sm font-medium text-foreground/70"
+              >
+                YouTube channel{" "}
+                <span className="font-normal text-muted-foreground/50">
+                  (optional)
+                </span>
+              </Label>
+              <Input
+                id="pp-youtube"
+                type="url"
+                inputMode="url"
+                value={ppYoutubeUrl}
+                onChange={(e) => setPpYoutubeUrl(e.target.value)}
+                placeholder="https://www.youtube.com/@yourchannel"
+                className="bg-foreground/[0.04]"
+              />
+              <p className="mt-1.5 text-xs text-muted-foreground/70">
+                Paste your channel link and save — your latest public uploads
+                sync to your profile automatically.{" "}
+                <button
+                  type="button"
+                  onClick={handleSyncYoutube}
+                  disabled={ytSyncing || !ppYoutubeUrl.trim()}
+                  className="font-medium text-[#74ddc7] hover:underline disabled:no-underline disabled:opacity-50"
+                >
+                  {ytSyncing ? "Syncing…" : "Sync now"}
+                </button>
+              </p>
             </div>
 
             <div className="pt-1">
