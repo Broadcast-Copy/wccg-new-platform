@@ -101,6 +101,16 @@ export function stationBySlug(slug: string | null | undefined): Station | undefi
 }
 
 /**
+ * Find a station by its id (e.g. "stream_hot"). Note: "stream_wccg" (the main
+ * flagship label used in the show schedule) has no dedicated station entry —
+ * it maps to the DEFAULT_STATION / the main Listen experience.
+ */
+export function stationById(id: string | null | undefined): Station | undefined {
+  if (!id) return undefined;
+  return STATIONS.find((s) => s.id === id);
+}
+
+/**
  * IceCast JSON now-playing endpoint for one of our streams (root-level, not
  * under the mount). Returns null for non-WCCG URLs.
  */

@@ -2,9 +2,11 @@
 
 import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, Radio, ChevronDown } from "lucide-react";
+import Link from "next/link";
+import { Search, Radio, ChevronDown, Play } from "lucide-react";
 import { AppImage } from "@/components/ui/app-image";
 import { ShowCard } from "@/components/shows/show-card";
+import { stationById } from "@/lib/stations";
 
 interface FilterableShow {
   id: string;
@@ -193,6 +195,11 @@ function ShowFilterInner({ shows }: { shows: FilterableShow[] }) {
   const inactiveShows = filteredShows.filter((s) => !s.isActive);
 
   const activeStreamLabel = STREAM_TABS.find((t) => t.key === activeStream)?.label;
+  const activeStreamLogo = STREAM_TABS.find((t) => t.key === activeStream)?.logo;
+  // Where the "Listen" CTA points: the dedicated player page for a real station,
+  // or the main Listen hub for the flagship (stream_wccg) / anything unmapped.
+  const listenStation = stationById(activeStream);
+  const listenHref = listenStation ? `/listen/${listenStation.slug}` : "/listen";
 
   // Compute show counts for station dropdown
   const streamCounts = useMemo(() => {
@@ -236,6 +243,38 @@ function ShowFilterInner({ shows }: { shows: FilterableShow[] }) {
           onSelect={(key) => setActiveFilter(key as FilterTab)}
         />
       </div>
+
+      {/* Per-station Listen CTA — every station context gets a direct way to
+          actually play it, even when no shows are scheduled on it (the schedule
+          can legitimately be empty for a station). */}
+      {activeStream !== "all" && (
+        <Link
+          href={listenHref}
+          className="group flex items-center gap-3 rounded-2xl border border-[#74ddc7]/30 bg-gradient-to-r from-[#74ddc7]/10 to-transparent px-4 py-3 transition-all hover:border-[#74ddc7]/60"
+        >
+          {activeStreamLogo ? (
+            <span className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg ring-1 ring-border">
+              <AppImage src={activeStreamLogo} alt={activeStreamLabel ?? ""} fill className="object-cover" sizes="44px" />
+            </span>
+          ) : (
+            <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-[#74ddc7]/15">
+              <Radio className="h-5 w-5 text-[#74ddc7]" />
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-foreground">
+              Listen to {activeStreamLabel} live
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Open the {activeStreamLabel} player
+            </p>
+          </div>
+          <span className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-[#74ddc7] px-4 py-2 text-sm font-bold text-[#0a0a0f] transition-transform group-hover:scale-105">
+            <Play className="h-4 w-4" fill="currentColor" />
+            Listen
+          </span>
+        </Link>
+      )}
 
       {/* Show count */}
       <p className="text-sm text-muted-foreground">

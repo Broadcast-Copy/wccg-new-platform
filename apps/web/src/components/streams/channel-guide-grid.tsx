@@ -192,7 +192,7 @@ function ChannelTile({ stream }: { stream: Stream }) {
         {/* ── Left: Logo ── */}
         <div className="flex items-center p-3 sm:p-4">
           <Link
-            href={`/shows?stream=${stream.id}`}
+            href={stream.slug ? `/listen/${stream.slug}` : `/shows?stream=${stream.id}`}
             className="relative flex-shrink-0 h-20 w-20 sm:h-24 sm:w-24 lg:h-28 lg:w-28 rounded-lg overflow-hidden bg-foreground/[0.03] border border-border"
           >
             {logo ? (
@@ -213,7 +213,7 @@ function ChannelTile({ stream }: { stream: Stream }) {
 
         {/* ── Center: Info ── */}
         <div className="flex-1 min-w-0 py-3 sm:py-4 pr-3 space-y-1 sm:space-y-1.5">
-          <Link href={`/shows?stream=${stream.id}`}>
+          <Link href={stream.slug ? `/listen/${stream.slug}` : `/shows?stream=${stream.id}`}>
             <h3 className="text-base sm:text-lg lg:text-xl font-bold text-foreground group-hover:text-[#74ddc7] transition-colors">
               {stream.name}
             </h3>
@@ -287,7 +287,7 @@ function ChannelTile({ stream }: { stream: Stream }) {
                   href={`/listen/${stream.slug}`}
                   className="text-xs font-semibold text-[#74ddc7] hover:underline underline-offset-2"
                 >
-                  Open player page →
+                  ▶ Listen now
                 </Link>
               )}
               <Link
