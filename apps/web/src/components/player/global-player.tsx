@@ -34,6 +34,7 @@ import { ListenerCountBadge } from "@/components/player/listener-count-badge";
 import { WeatherStrip } from "@/components/player/weather-strip";
 import { MultiplierBanner } from "@/components/player/multiplier-banner";
 import { GameRibbon } from "@/components/player/game-ribbon";
+import { StationSwitcher } from "@/components/player/station-switcher";
 import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
 
@@ -495,6 +496,14 @@ export function GlobalPlayer() {
             className="w-56 accent-[#74ddc7]"
             aria-label="Volume"
           />
+
+          {/* Switch stations without leaving the player */}
+          <div className="w-full max-w-2xl pt-2">
+            <p className="mb-2 text-center text-[10px] font-bold uppercase tracking-widest text-white/40">
+              Switch Station
+            </p>
+            <StationSwitcher variant="full" />
+          </div>
         </div>
       </div>
     );
@@ -770,6 +779,9 @@ export function GlobalPlayer() {
             aria-label="Volume"
           />
         </div>
+
+        {/* Switch station (popover) */}
+        <StationSwitcher variant="mini" />
 
         {/* Maximize / Close Buttons */}
         <div className="flex items-center gap-0.5 shrink-0">
