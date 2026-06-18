@@ -9,11 +9,12 @@ import {
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { useListeningTracker } from "@/hooks/use-listening-tracker";
 import { useWikiTrigger } from "@/hooks/use-wiki-trigger";
+import { DEFAULT_STATION } from "@/lib/stations";
 
 // ---------------------------------------------------------------------------
-// WCCG Icecast stream URL — native HTML5 audio
+// Main "Listen Live" stream — the flagship self-hosted station (HTTPS IceCast).
 // ---------------------------------------------------------------------------
-const WCCG_STREAM_URL = "https://ice66.securenetsystems.net/WCCG";
+const WCCG_STREAM_URL = DEFAULT_STATION.streamUrl;
 
 // ---------------------------------------------------------------------------
 // Context

@@ -59,8 +59,8 @@ export function GlobalPlayer() {
     connectionError,
   } = useAudioPlayer();
 
-  // Poll for now-playing metadata while stream is active
-  const { data: nowPlaying } = useNowPlaying(isPlaying);
+  // Poll for now-playing metadata while stream is active (per current station)
+  const { data: nowPlaying } = useNowPlaying(isPlaying, currentStream);
 
   // Track listening time for points rewards — with bonus toast callback
   const handleBonus = useCallback((bonus: BonusEvent) => {
@@ -426,13 +426,67 @@ export function GlobalPlayer() {
         </div>
         {/* Weather strip — visible during drive times */}
         <WeatherStrip />
-        {/* SecureNet streaming widget */}
-        <iframe
-          src="https://streamdb7web.securenetsystems.net/cirruscontent/WCCG&"
-          className="w-full flex-1"
-          title="WCCG Streaming Player"
-          allow="autoplay"
-        />
+        {/* Native now-playing hero (replaces the old SecureNet iframe) */}
+        <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
+          <div className="flex h-56 w-56 sm:h-72 sm:w-72 items-center justify-center overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-[#74ddc7]/15 to-[#7401df]/15 shadow-2xl">
+            {(dukeOverride?.albumArt || metadata.albumArt) ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={dukeOverride?.albumArt || metadata.albumArt}
+                alt="Album art"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <Radio className="h-20 w-20 text-[#74ddc7]" />
+            )}
+          </div>
+          <div className="max-w-lg space-y-1">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-[#74ddc7]">
+              {isPlaying ? "Now Playing" : "Paused"}
+            </p>
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+              {songTitle}
+            </h2>
+            <p className="text-base text-white/70">{songArtist}</p>
+          </div>
+          <div className="flex items-center gap-5">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleShare}
+              aria-label="Share"
+              className="h-10 w-10 rounded-full text-white/70 hover:text-[#74ddc7] hover:bg-[#74ddc7]/10"
+            >
+              <Share2 className="h-5 w-5" />
+            </Button>
+            <Button
+              onClick={togglePlay}
+              aria-label={isPlaying ? "Pause" : "Play"}
+              className="flex h-16 w-16 items-center justify-center rounded-full bg-[#74ddc7] text-[#0a0a0f] hover:bg-[#74ddc7]/80"
+            >
+              <PlayPauseIcon size="md" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleMute}
+              aria-label={volume === 0 ? "Unmute" : "Mute"}
+              className="h-10 w-10 rounded-full text-white/70 hover:text-foreground hover:bg-foreground/[0.06]"
+            >
+              {volume === 0 ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+            </Button>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={volume}
+            onChange={(e) => setVolume(parseFloat(e.target.value))}
+            className="w-56 accent-[#74ddc7]"
+            aria-label="Volume"
+          />
+        </div>
       </div>
     );
   }

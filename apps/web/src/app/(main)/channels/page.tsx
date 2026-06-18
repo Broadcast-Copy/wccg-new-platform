@@ -1,4 +1,5 @@
 import { ChannelGuideGrid } from "@/components/streams/channel-guide-grid";
+import { STATIONS } from "@/lib/stations";
 import { Radio } from "lucide-react";
 
 export const metadata = {
@@ -7,85 +8,7 @@ export const metadata = {
     "Browse all WCCG 104.5 FM streaming channels. Hip Hop, Gospel, R&B, Jazz, Talk, and more — tap play to start listening.",
 };
 
-// ---------------------------------------------------------------------------
-// Static fallback data — used when API is unavailable (static export)
-// ---------------------------------------------------------------------------
-const STATIC_STREAMS = [
-  {
-    id: "stream_wccg",
-    name: "WCCG 104.5 FM",
-    slug: "stream_wccg",
-    description: "Fayetteville's #1 Hip Hop Station",
-    category: "MAIN",
-    status: "ACTIVE",
-    sortOrder: 1,
-    streamUrl: "https://ice66.securenetsystems.net/WCCG",
-  },
-  {
-    id: "stream_soul",
-    name: "SOUL 104.5 FM",
-    slug: "stream_soul",
-    description: "Hot R&B and Urban AC",
-    category: "RNB",
-    status: "COMING_SOON",
-    sortOrder: 2,
-  },
-  {
-    id: "stream_hot",
-    name: "HOT 104.5 FM",
-    slug: "stream_hot",
-    description: "Today's Hottest Hits",
-    category: "HIP_HOP",
-    status: "COMING_SOON",
-    sortOrder: 3,
-  },
-  {
-    id: "stream_vibe",
-    name: "104.5 THE VIBE",
-    slug: "stream_vibe",
-    description: "Non-stop Vibes & Chill",
-    category: "RNB",
-    status: "COMING_SOON",
-    sortOrder: 4,
-  },
-  {
-    id: "stream_mixsquad",
-    name: "MixxSquadd Radio",
-    slug: "stream_mixsquad",
-    description: "Live Sets, Exclusive Remixes, and High-Energy Mixes",
-    category: "HIP_HOP",
-    status: "COMING_SOON",
-    sortOrder: 5,
-  },
-  {
-    id: "stream_yard",
-    name: "Yard & Riddim Radio",
-    slug: "stream_yard",
-    description: "Caribbean & Reggae",
-    category: "COMMUNITY",
-    status: "COMING_SOON",
-    sortOrder: 6,
-  },
-];
-
-async function getStreams() {
-  try {
-    const apiUrl =
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
-    const res = await fetch(`${apiUrl}/streams`, {
-      next: { revalidate: 30 },
-    });
-    if (!res.ok) return STATIC_STREAMS;
-    const data = await res.json();
-    return data.length > 0 ? data : STATIC_STREAMS;
-  } catch {
-    return STATIC_STREAMS;
-  }
-}
-
-export default async function ChannelsPage() {
-  const streams = await getStreams();
-
+export default function ChannelsPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -101,8 +24,8 @@ export default async function ChannelsPage() {
         </p>
       </div>
 
-      {/* Channel Tiles */}
-      <ChannelGuideGrid streams={streams} />
+      {/* Channel Tiles — self-hosted WCCG stations (lib/stations.ts) */}
+      <ChannelGuideGrid streams={STATIONS} />
     </div>
   );
 }

@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { AppImage as Image } from "@/components/ui/app-image";
-import { useStreamPlayer } from "@/components/player/stream-player-overlay";
+import { useAudioPlayer } from "@/hooks/use-audio-player";
 import Link from "next/link";
-import { Radio, Sparkles, Lock, Unlock, Megaphone } from "lucide-react";
+import { Radio, Sparkles, Lock, Megaphone } from "lucide-react";
 import { ALL_SHOWS } from "@/data/shows";
 import type { ShowData } from "@/data/shows";
 import { getHostsByShowId } from "@/data/hosts";
@@ -78,18 +78,7 @@ const CHANNEL_ARTISTS: Record<string, string> = {
   stream_mixsquad: "DJ Ricoveli, DJ SpinWiz, DJ Rayn, DJ TommyGee Mixx, DJ Yodo...",
 };
 
-// Channel status — live, unlocked (coming soon), or locked (coming soon)
-const CHANNEL_STATUS: Record<
-  string,
-  { status: "live" | "unlocked" | "locked"; comingSoon?: string }
-> = {
-  stream_wccg: { status: "live" },
-  stream_soul: { status: "locked", comingSoon: "Coming 2026" },
-  stream_hot: { status: "locked", comingSoon: "Coming 2026" },
-  stream_vibe: { status: "locked", comingSoon: "Coming 2026" },
-  stream_yard: { status: "locked", comingSoon: "Coming 2026" },
-  stream_mixsquad: { status: "unlocked", comingSoon: "Coming 2026" },
-};
+// Live status is driven by each station's `status` field (lib/stations.ts).
 
 // ---------------------------------------------------------------------------
 // Schedule-based current show detection
@@ -152,15 +141,12 @@ const CATEGORIES = [
 // ---------------------------------------------------------------------------
 
 function ChannelTile({ stream }: { stream: Stream }) {
-  const { open } = useStreamPlayer();
+  const { play, pause, isPlaying, currentStream } = useAudioPlayer();
   const logo = CHANNEL_LOGOS[stream.id];
   const subtitle = CHANNEL_SUBTITLES[stream.id] || stream.description || "";
   const artists = CHANNEL_ARTISTS[stream.id] || "";
-  const channelStatus = CHANNEL_STATUS[stream.id] || {
-    status: "locked",
-    comingSoon: "Coming 2026",
-  };
-  const isLive = channelStatus.status === "live";
+  const isLive = stream.status === "ACTIVE";
+  const isThisPlaying = isPlaying && currentStream === stream.streamUrl;
 
   // Tick every minute so currentShow updates in real-time
   const [tick, setTick] = useState(0);
@@ -182,7 +168,12 @@ function ChannelTile({ stream }: { stream: Stream }) {
   const handleTogglePlay = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    open();
+    if (!isLive || !stream.streamUrl) return;
+    if (isThisPlaying) {
+      pause();
+    } else {
+      play(stream.streamUrl, { streamName: stream.name, albumArt: logo });
+    }
   };
 
   return (
@@ -341,29 +332,12 @@ function ChannelTile({ stream }: { stream: Stream }) {
                 {currentShow ? currentShow.name : "Live Now"}
               </span>
             </>
-          ) : channelStatus.status === "unlocked" ? (
-            <>
-              <Unlock className="h-5 w-5 text-muted-foreground" />
-              <span className="text-[11px] sm:text-xs font-semibold text-foreground">
-                Unlocked
-              </span>
-              {channelStatus.comingSoon && (
-                <span className="text-[10px] sm:text-[11px] text-[#74ddc7] font-medium">
-                  {channelStatus.comingSoon}
-                </span>
-              )}
-            </>
           ) : (
             <>
               <Lock className="h-5 w-5 text-muted-foreground" />
               <span className="text-[11px] sm:text-xs font-semibold text-foreground">
-                Locked
+                Coming Soon
               </span>
-              {channelStatus.comingSoon && (
-                <span className="text-[10px] sm:text-[11px] text-[#74ddc7] font-medium">
-                  {channelStatus.comingSoon}
-                </span>
-              )}
             </>
           )}
         </div>

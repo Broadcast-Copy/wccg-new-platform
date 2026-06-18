@@ -11,9 +11,9 @@ import {
   markAlarmTriggered,
   type AlarmConfig,
 } from "@/lib/alarm";
+import { DEFAULT_STATION } from "@/lib/stations";
 
-const WCCG_STREAM_URL =
-  "https://streamdb7web.securenetsystems.net/ciraborern?1=&session_token=null";
+const WCCG_STREAM_URL = DEFAULT_STATION.streamUrl;
 
 /**
  * useAlarm — monitors the wake-up alarm and auto-plays the stream when due.
