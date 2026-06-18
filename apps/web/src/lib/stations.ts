@@ -28,6 +28,21 @@ export interface Station {
 
 export const STATIONS: Station[] = [
   {
+    id: "stream_wccg",
+    name: "WCCG 104.5 FM",
+    slug: "wccg",
+    description: "The Hip Hop Station",
+    category: "HIP_HOP",
+    // Flagship: the over-the-air 104.5 FM simulcast — the original SecureNet
+    // feed (HTTPS, AAC+). The genre channels below are the self-hosted IceCast
+    // streams. No now-playing JSON here (SecureNet), so the player shows the
+    // station name until/unless a SecureNet now-playing feed is wired.
+    streamUrl: "https://ice66.securenetsystems.net/WCCG",
+    logo: "/images/logos/wccg-logo.png",
+    status: "ACTIVE",
+    sortOrder: 0,
+  },
+  {
     id: "stream_hot",
     name: "HOT 104.5 FM",
     slug: "hot",
@@ -86,7 +101,7 @@ export const STATIONS: Station[] = [
 ];
 
 /** The flagship stream the main "Listen Live" button plays. */
-export const DEFAULT_STATION = STATIONS[0]; // HOT 104.5 FM
+export const DEFAULT_STATION = STATIONS[0]; // WCCG 104.5 FM (over-the-air simulcast)
 
 /** Find a station by the stream URL currently loaded in the player. */
 export function stationByStreamUrl(url: string | null | undefined): Station | undefined {
