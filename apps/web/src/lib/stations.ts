@@ -20,6 +20,8 @@ export interface Station {
   category: string;
   /** HTTPS stream URL (port+1 IceCast SSL listener). */
   streamUrl: string;
+  /** Brand logo — used as the cover-art fallback before now-playing art loads. */
+  logo: string;
   status: "ACTIVE" | "COMING_SOON";
   sortOrder: number;
 }
@@ -32,6 +34,7 @@ export const STATIONS: Station[] = [
     description: "Today's Hottest Hits",
     category: "HIP_HOP",
     streamUrl: "https://music.wccg1045fm.com:8001/stream",
+    logo: "/images/logos/hot-1045-logo.png",
     status: "ACTIVE",
     sortOrder: 1,
   },
@@ -42,6 +45,7 @@ export const STATIONS: Station[] = [
     description: "Non-stop Vibes & Chill",
     category: "RNB",
     streamUrl: "https://music.wccg1045fm.com:8003/stream",
+    logo: "/images/logos/the-vibe-logo.png",
     status: "ACTIVE",
     sortOrder: 2,
   },
@@ -52,6 +56,7 @@ export const STATIONS: Station[] = [
     description: "Hot R&B and Urban AC",
     category: "RNB",
     streamUrl: "https://music.wccg1045fm.com:8005/stream",
+    logo: "/images/logos/soul-1045-logo.png",
     status: "ACTIVE",
     sortOrder: 3,
   },
@@ -62,6 +67,7 @@ export const STATIONS: Station[] = [
     description: "Caribbean & Reggae",
     category: "COMMUNITY",
     streamUrl: "https://music.wccg1045fm.com:8007/stream",
+    logo: "/images/logos/yard-riddim-logo.png",
     status: "ACTIVE",
     sortOrder: 4,
   },
@@ -72,6 +78,7 @@ export const STATIONS: Station[] = [
     description: "Live Sets, Exclusive Remixes, and High-Energy Mixes",
     // HTTPS will be :8009 once the station is provisioned + has media.
     streamUrl: "https://music.wccg1045fm.com:8009/stream",
+    logo: "/images/logos/mix-squad-logo.png",
     category: "HIP_HOP",
     status: "COMING_SOON",
     sortOrder: 5,
@@ -85,6 +92,12 @@ export const DEFAULT_STATION = STATIONS[0]; // HOT 104.5 FM
 export function stationByStreamUrl(url: string | null | undefined): Station | undefined {
   if (!url) return undefined;
   return STATIONS.find((s) => url.startsWith(s.streamUrl));
+}
+
+/** Find a station by its URL slug (e.g. "hot", "vibe"). */
+export function stationBySlug(slug: string | null | undefined): Station | undefined {
+  if (!slug) return undefined;
+  return STATIONS.find((s) => s.slug === slug);
 }
 
 /**

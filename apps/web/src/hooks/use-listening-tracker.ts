@@ -9,6 +9,8 @@ import {
   getSessions,
 } from "@/lib/listening-history";
 import { useNowPlaying } from "@/hooks/use-now-playing";
+import { useAudioPlayer } from "@/hooks/use-audio-player";
+import { stationByStreamUrl } from "@/lib/stations";
 import { createClient } from "@/lib/supabase/client";
 import { geoRewardsEnabled, captureListeningLocation, GEO_BADGES } from "@/lib/geo";
 import { toast } from "sonner";
@@ -31,6 +33,17 @@ export function useListeningTracker(isListening: boolean) {
 
   // Poll now-playing only while the overlay is open
   const { data: nowPlaying } = useNowPlaying(isListening);
+
+  // Resolve the station label for the loaded stream so DB sessions are
+  // attributed to the right station (HOT, The Vibe, Soul, Yard, …) instead of
+  // always "WCCG 104.5 FM". Kept in a ref so the async session insert reads the
+  // latest value without re-running the session effect.
+  const { currentStream } = useAudioPlayer();
+  const streamNameRef = useRef<string>("WCCG 104.5 FM");
+  useEffect(() => {
+    streamNameRef.current =
+      stationByStreamUrl(currentStream)?.name ?? "WCCG 104.5 FM";
+  }, [currentStream]);
 
   // Resolve the signed-in user once (null = logged out → DB writes skipped)
   useEffect(() => {
@@ -70,7 +83,7 @@ export function useListeningTracker(isListening: boolean) {
               .from("listening_sessions")
               .insert({
                 user_id: uid,
-                stream_name: "WCCG 104.5 FM",
+                stream_name: streamNameRef.current,
                 title: nowPlaying?.title ?? null,
                 artist: nowPlaying?.artist ?? null,
                 started_at: new Date().toISOString(),

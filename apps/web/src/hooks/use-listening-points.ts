@@ -42,6 +42,20 @@ export function setPointsUserEmail(email: string | null) {
   _currentEmail = email;
 }
 
+/**
+ * Currently playing station label — set via setCurrentStationLabel so awarded
+ * points are attributed to the station the listener is actually on (HOT, The
+ * Vibe, Soul, Yard…), not always "WCCG 104.5 FM". Points themselves accrue for
+ * ANY playing stream (this hook is driven by the global isPlaying); this only
+ * affects the `program` label written into the points history.
+ */
+let _currentStationLabel = "WCCG 104.5 FM";
+
+/** Set the station label used when attributing newly-awarded listening points. */
+export function setCurrentStationLabel(name: string | null | undefined) {
+  _currentStationLabel = name && name.trim() ? name.trim() : "WCCG 104.5 FM";
+}
+
 function storageKey(): string {
   return _currentEmail
     ? `wccg_listening_points_${_currentEmail}`
@@ -275,8 +289,8 @@ function awardListeningBatch(pointsToAward: number, listeningMs: number) {
     reason: "LISTENING",
     timestamp: ts,
     program: multiplier > 1
-      ? `WCCG 104.5 FM (${multiplier}x ${activeMultiplier!.label})`
-      : "WCCG 104.5 FM",
+      ? `${_currentStationLabel} (${multiplier}x ${activeMultiplier!.label})`
+      : _currentStationLabel,
   });
   if (data.history.length > 100) {
     data.history = data.history.slice(0, 100);
@@ -351,7 +365,7 @@ export function reconcileSessionPoints() {
       points: missed,
       reason: "LISTENING",
       timestamp: ts,
-      program: "WCCG 104.5 FM",
+      program: _currentStationLabel,
     });
     if (data.history.length > 100) {
       data.history = data.history.slice(0, 100);

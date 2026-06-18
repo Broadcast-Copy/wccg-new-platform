@@ -281,7 +281,15 @@ function ChannelTile({ stream }: { stream: Stream }) {
 
           {/* Action links */}
           {isLive && (
-            <div className="pt-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-2">
+              {stream.slug && (
+                <Link
+                  href={`/listen/${stream.slug}`}
+                  className="text-xs font-semibold text-[#74ddc7] hover:underline underline-offset-2"
+                >
+                  Open player page →
+                </Link>
+              )}
               <Link
                 href={`/shows?stream=${stream.id}`}
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"

@@ -9,8 +9,10 @@ import {
   useListeningPoints,
   awardSharePoints,
   getListeningProgress,
+  setCurrentStationLabel,
   type BonusEvent,
 } from "@/hooks/use-listening-points";
+import { stationByStreamUrl } from "@/lib/stations";
 import { getListeningStats } from "@/lib/listening-history";
 import { checkMilestones } from "@/lib/milestones";
 import { resolveNowPlaying, getUpNext, type ScheduleBlock } from "@/data/schedule";
@@ -75,6 +77,13 @@ export function GlobalPlayer() {
     });
   }, []);
   useListeningPoints(isPlaying, handleBonus);
+
+  // Attribute awarded listening points to whichever station is loaded (HOT,
+  // The Vibe, Soul, Yard, …) instead of always "WCCG 104.5 FM". Points accrue
+  // for any stream regardless; this only sets the history label.
+  useEffect(() => {
+    setCurrentStationLabel(stationByStreamUrl(currentStream)?.name);
+  }, [currentStream]);
 
   // Media Session API — shows "Now Playing" on lock screen, notification shade,
   // Bluetooth displays, and OS media controls for engagement even when phone is locked
