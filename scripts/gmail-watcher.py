@@ -339,8 +339,15 @@ def stage_sermon(data, spec):
     dest_sermon = os.path.join(folder, f"{code}.{ext}")
     dest_flat = os.path.join(ONAIR_FLAT, f"{djb}.{ext}")
 
-    if spec["transcode"]:
-        # thm1 arrives AAC/m4a -> must become a real mp3
+    # Transcode to a real mp3 when configured (thm1 is always AAC/m4a) OR when an
+    # mp3-expected sermon actually arrives as AAC/m4a — detected by the ISO-BMFF
+    # 'ftyp' box at offset 4. This self-heals a church that normally emails mp3
+    # but sends an m4a one week (e.g. dvp1 / Family Fellowship, 2026-06-21),
+    # which otherwise fails the mp3 header check and crash-loops.
+    arrived_m4a = len(data) >= 12 and data[4:8] == b"ftyp"
+    if spec["transcode"] or (ext == "mp3" and arrived_m4a):
+        if arrived_m4a and not spec["transcode"]:
+            log(f"    {code} arrived as AAC/m4a (expected mp3) — transcoding to mp3")
         raw = os.path.join(CONFIG_DIR, f"_{code}_in.bin")
         open(raw, "wb").write(data)
         r = subprocess.run([FFMPEG, "-y", "-i", raw, "-vn", "-c:a", "libmp3lame", "-b:a", "192k", dest_sermon],
