@@ -79,7 +79,7 @@ POLL_SECONDS = int(os.environ.get("WCCG_POLL_SECONDS", "20"))
 
 # sender-key (addr or domain, matched as substring of the From header) -> sermon spec
 SERMONS = {
-    "vesax86@gmail.com":                  dict(code="pmb1", djb="DJB_52011", ext="wav", kind="drive",       transcode=False, church="Progressive",          air="1:00 PM"),
+    "vesax86@gmail.com":                  dict(code="pmb1", djb="DJB_52011", ext="mp3", kind="drive",       transcode=False, church="Progressive",          air="1:00 PM"),  # WAV bytes, but the on-air cart RadioSpider plays is DJB_52011.mp3
     "lewischapel.org":                    dict(code="lcc1", djb="DJB_52014", ext="mp3", kind="attachment",  transcode=False, church="Lewis Chapel",         air="2-3 PM"),
     "mondselite27@yahoo.com":             dict(code="gpn1", djb="DJB_52002", ext="mp3", kind="dropbox",     transcode=False, church="Grace Plus Nothing",   air="AM"),
     "ffwcaudio@gmail.com":                dict(code="dvp1", djb="DJB_52008", ext="mp3", kind="dropbox",     transcode=False, church="Family Fellowship",    air="AM"),
@@ -138,12 +138,13 @@ def sunday_folder(d):
 
 def audio_header_ok(path, ext):
     try:
-        b = open(path, "rb").read(4)
+        b = open(path, "rb").read(12)
     except Exception:
         return False
-    if ext == "wav":
-        return b[:4] == b"RIFF"
-    return b[:3] == b"ID3" or b[0:1] == b"\xff"  # mp3 ID3 or MPEG frame sync
+    # Accept mp3 (ID3 / MPEG frame sync) OR RIFF/WAV. pmb1 is "WAV-content-as-.mp3"
+    # so a .mp3-named cart legitimately holds WAV bytes. (m4a/ftyp is intentionally
+    # NOT accepted here — it's caught by the transcode path in stage_sermon.)
+    return b[:3] == b"ID3" or b[0:1] == b"\xff" or b[:4] == b"RIFF"
 
 
 def ffmpeg_intact(path):
@@ -303,10 +304,25 @@ def fetch_audio(gmail, drive, msg, spec):
     kind = spec["kind"]
     if kind == "attachment":
         fn, aid = find_attachment(msg)
-        if not aid:
-            log("    no audio attachment found"); return None
-        log(f"    attachment: {fn}")
-        return gmail_attachment_bytes(gmail, msg["id"], aid)
+        if aid:
+            log(f"    attachment: {fn}")
+            return gmail_attachment_bytes(gmail, msg["id"], aid)
+        # Some weeks the church sends a Drive/Dropbox LINK instead of an attachment
+        # (e.g. Lewis Chapel 2026-06-21). Fall back to that so it doesn't loop.
+        log("    no audio attachment — checking body for a Drive/Dropbox link")
+        text = body_text(msg)
+        fid = extract_drive_id(text)
+        if fid:
+            log(f"    Drive id: {fid}")
+            try:
+                return drive_bytes(drive, fid)
+            except Exception as e:
+                log(f"    Drive get_media failed ({e})")
+        url = extract_dropbox(text)
+        if url:
+            log("    Dropbox link found")
+            return curl_bytes(url)
+        log("    no audio attachment and no Drive/Dropbox link found"); return None
 
     text = body_text(msg)
     if kind in ("drive", "drive_share"):
