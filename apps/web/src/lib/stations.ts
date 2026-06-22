@@ -139,3 +139,37 @@ export function nowPlayingUrlFor(streamUrl: string | null | undefined): string |
     return null;
   }
 }
+
+export interface NowPlayingSource {
+  url: string;
+  kind: "icecast" | "securenet";
+}
+
+/**
+ * Resolve the now-playing feed + format for a stream:
+ *  - self-hosted IceCast (*.wccg1045fm.com) → /status-json.xsl (needs IceCast CORS).
+ *  - SecureNet (the WCCG flagship, *.securenetsystems.net) → the Cirrus playHistory
+ *    feed, which DOES send Access-Control-Allow-Origin, so the flagship can show
+ *    live titles in the browser even while the IceCast titles are CORS-blocked.
+ */
+export function nowPlayingSourceFor(streamUrl: string | null | undefined): NowPlayingSource | null {
+  if (!streamUrl) return null;
+  try {
+    const u = new URL(streamUrl);
+    if (u.hostname.endsWith("wccg1045fm.com")) {
+      return { url: `${u.protocol}//${u.host}/status-json.xsl`, kind: "icecast" };
+    }
+    if (u.hostname.endsWith("securenetsystems.net")) {
+      const call = u.pathname.split("/").filter(Boolean).pop();
+      if (call) {
+        return {
+          url: `https://streamdb7web.securenetsystems.net/player_status_update/${call}_history.txt`,
+          kind: "securenet",
+        };
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}

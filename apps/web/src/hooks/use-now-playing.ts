@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { nowPlayingUrlFor } from "@/lib/stations";
+import { nowPlayingSourceFor } from "@/lib/stations";
 
 interface NowPlayingData {
   title: string;
@@ -74,6 +74,23 @@ function parseIcecast(json: unknown): NowPlayingData | null {
 }
 
 /**
+ * Parse a SecureNet/Cirrus `<CALL>_history.txt` payload. The current song is the
+ * first entry of `playHistory.song[]`, with title/artist already split out.
+ */
+function parseSecureNet(json: unknown): NowPlayingData | null {
+  const songs = (json as { playHistory?: { song?: unknown } })?.playHistory?.song;
+  const arr = Array.isArray(songs) ? songs : songs ? [songs] : [];
+  const cur = arr[0] as { title?: string; artist?: string; cover?: string } | undefined;
+  if (!cur) return null;
+  return {
+    title: (cur.title || "").trim(),
+    artist: (cur.artist || "").trim(),
+    albumArt: (cur.cover || "").trim() || null,
+    streamName: "WCCG 104.5 FM",
+  };
+}
+
+/**
  * Polls the currently-playing station's IceCast now-playing JSON.
  * Only polls while `enabled` and while a WCCG stream is loaded.
  *
@@ -88,14 +105,16 @@ export function useNowPlaying(enabled: boolean, streamUrl?: string | null) {
   const lastArtLookupRef = useRef<string>("");
 
   useEffect(() => {
-    const statusUrl = nowPlayingUrlFor(streamUrl);
-    if (!enabled || !statusUrl) {
+    const source = nowPlayingSourceFor(streamUrl);
+    if (!enabled || !source) {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
       return;
     }
+    const feedUrl = source.url;
+    const feedKind = source.kind;
 
     let cancelled = false;
 
@@ -103,13 +122,13 @@ export function useNowPlaying(enabled: boolean, streamUrl?: string | null) {
       try {
         setIsLoading(true);
         const cacheBuster = `_cb=${Date.now()}`;
-        const sep = statusUrl!.includes("?") ? "&" : "?";
-        const response = await fetch(`${statusUrl}${sep}${cacheBuster}`, {
+        const sep = feedUrl.includes("?") ? "&" : "?";
+        const response = await fetch(`${feedUrl}${sep}${cacheBuster}`, {
           signal: AbortSignal.timeout(8000),
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const json = await response.json();
-        const parsed = parseIcecast(json);
+        const parsed = feedKind === "securenet" ? parseSecureNet(json) : parseIcecast(json);
         if (!parsed || cancelled) return;
 
         if (parsed.artist || parsed.title) {

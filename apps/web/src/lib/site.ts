@@ -7,8 +7,8 @@
  * fallback below) to "https://wccg1045fm.com". Everything else follows.
  */
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL || "https://app.wccg1045fm.com"
+  process.env.NEXT_PUBLIC_SITE_URL || "https://wccg1045fm.com"
 ).replace(/\/+$/, "");
 
-/** Bare host (no protocol), e.g. for display like "app.wccg1045fm.com/u/handle". */
+/** Bare host (no protocol), e.g. for display like "wccg1045fm.com/u/handle". */
 export const SITE_HOST = SITE_URL.replace(/^https?:\/\//, "");

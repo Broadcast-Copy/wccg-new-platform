@@ -25,6 +25,7 @@ import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 import { useNowPlaying } from "@/hooks/use-now-playing";
 import { useMcrOnAir } from "@/hooks/use-mcr-on-air";
+import { DEFAULT_STATION } from "@/lib/stations";
 import {
   getListeningPoints,
   getListeningProgress,
@@ -47,8 +48,9 @@ export function LiveNowHero() {
   //   1. MCR state (operator-authored or metadata-poll worker) — preferred
   //      because it tracks the actual operator intent, not what a third-
   //      party metadata aggregator scraped.
-  //   2. Cirrus/SecureNet XML feed — fallback when MCR is empty or stale.
-  const { data: nowPlaying } = useNowPlaying(true);
+  //   2. SecureNet now-playing feed (the WCCG flagship) — fallback when MCR is
+  //      empty or stale. CORS-enabled, so live titles show on the landing hero.
+  const { data: nowPlaying } = useNowPlaying(true, DEFAULT_STATION.streamUrl);
   const mcr = useMcrOnAir(true);
 
   // Live points + progress, refreshed by a 1s tick and by cross-tab sync.
