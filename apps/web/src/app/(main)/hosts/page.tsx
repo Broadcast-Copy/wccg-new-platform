@@ -3,7 +3,7 @@ import { Users, Mic2, Radio } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ALL_HOSTS } from "@/data/hosts";
+import { getHostsFromDb } from "@/lib/content-db";
 
 export const metadata = {
   title: "Hosts & DJs | WCCG 104.5 FM",
@@ -22,8 +22,13 @@ interface Host {
   updatedAt: string;
 }
 
-function getLocalHosts(): Host[] {
-  return ALL_HOSTS.map((h) => ({
+/**
+ * Source hosts from Supabase at build time (with TS fallback baked into
+ * `getHostsFromDb`), then shape to the page's `Host` view model.
+ */
+async function getHosts(): Promise<Host[]> {
+  const hosts = await getHostsFromDb();
+  return hosts.map((h) => ({
     id: h.id,
     name: h.name,
     slug: h.id,
@@ -34,18 +39,6 @@ function getLocalHosts(): Host[] {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }));
-}
-
-async function getHosts(): Promise<Host[]> {
-  try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
-    const res = await fetch(`${apiUrl}/hosts`, { next: { revalidate: 300 } });
-    if (!res.ok) return getLocalHosts();
-    const data = await res.json();
-    return data.length > 0 ? data : getLocalHosts();
-  } catch {
-    return getLocalHosts();
-  }
 }
 
 function getInitials(name: string): string {

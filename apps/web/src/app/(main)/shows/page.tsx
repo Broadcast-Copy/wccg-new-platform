@@ -1,6 +1,6 @@
 import { Mic2, Zap, Podcast, Radio, Clock } from "lucide-react";
-import { ALL_SHOWS, getDayPart, getShowById } from "@/data/shows";
-import { getHostsByShowId } from "@/data/hosts";
+import { getDayPart } from "@/data/shows";
+import { getShowsFromDb, getHostsFromDb, getHostsByShowIdFrom } from "@/lib/content-db";
 import { fetchYouTubeVideos } from "@/lib/youtube-rss";
 import Link from "next/link";
 import { ShowFilter } from "@/components/shows/show-filter";
@@ -41,9 +41,19 @@ interface Show {
   updatedAt: string;
 }
 
-async function getLocalShows(): Promise<Show[]> {
+/**
+ * Source shows + hosts from Supabase at build time (each helper has a TS
+ * fallback baked in), enrich with latest YouTube videos, and shape to the
+ * page's `Show` view model.
+ */
+async function getShows(): Promise<Show[]> {
+  const [dbShows, dbHosts] = await Promise.all([
+    getShowsFromDb(),
+    getHostsFromDb(),
+  ]);
+
   // Fetch latest YouTube videos for shows that have channel IDs
-  const showsWithYT = ALL_SHOWS.filter((s) => s.youtube?.channelId);
+  const showsWithYT = dbShows.filter((s) => s.youtube?.channelId);
   const ytResults = await Promise.allSettled(
     showsWithYT.map((s) => fetchYouTubeVideos(s.youtube!.channelId!, 1))
   );
@@ -56,8 +66,8 @@ async function getLocalShows(): Promise<Show[]> {
     }
   });
 
-  return ALL_SHOWS.map((s) => {
-    const hosts = getHostsByShowId(s.id);
+  return dbShows.map((s) => {
+    const hosts = getHostsByShowIdFrom(dbHosts, s.id);
     const latestVideo = ytMap.get(s.id);
     return {
       id: s.id,
@@ -91,35 +101,6 @@ async function getLocalShows(): Promise<Show[]> {
       updatedAt: new Date().toISOString(),
     };
   });
-}
-
-async function getShows(): Promise<Show[]> {
-  try {
-    const apiUrl =
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
-    const res = await fetch(`${apiUrl}/shows`, { next: { revalidate: 300 } });
-    if (!res.ok) return getLocalShows();
-    const data = await res.json();
-    if (data.length > 0) {
-      return data.map((show: Show) => {
-        const localShow = getShowById(show.id);
-        return {
-          ...show,
-          tagline: show.tagline ?? localShow?.tagline,
-          timeSlot: show.timeSlot ?? localShow?.timeSlot,
-          days: show.days ?? localShow?.days,
-          dayPart:
-            show.dayPart ?? (localShow ? getDayPart(localShow) : undefined),
-          category: show.category ?? localShow?.category,
-          streamId: show.streamId ?? localShow?.streamId,
-          isSyndicated: show.isSyndicated ?? localShow?.isSyndicated,
-        };
-      });
-    }
-    return getLocalShows();
-  } catch {
-    return getLocalShows();
-  }
 }
 
 /** Determine which show is currently on air (EST-aware, server-side) */
