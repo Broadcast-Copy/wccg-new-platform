@@ -1,46 +1,51 @@
 # WCCG — remaining actions that need server / dashboard access
 
-Everything app-side is done (apex cutover, WCCG live titles, sermon syncs,
-hardened gmail-watcher, sermon-summary email sent). These six need the Centova
-box, the Supabase dashboard, or the shared passwords — which the assistant
-cannot/should not handle. In rough priority order.
+Status as of 2026-06-22. The Centova/IceCast **server items (#1, #2, #4) are DONE** —
+completed over SSH (key access is now installed: `~/.ssh/wccg_centova`). The three
+items left all need the Supabase dashboard or a password reset, which the assistant
+can't/shouldn't do.
 
-## 1. Install the stream supervisor  ← highest impact (stops Vibe/Soul/Yard dropping)
-On the Centova box (`root@67.222.26.128 -p 2200`):
-```
-scp -P 2200 "C:\Users\wccg1\dev\wccg-new-platform\scripts\centova-stream-supervisor.sh" root@67.222.26.128:/usr/local/sbin/
-ssh -p 2200 root@67.222.26.128
-chmod 700 /usr/local/sbin/centova-stream-supervisor.sh
-printf '%s' 'YOUR_CENTOVA_ADMIN_PW' > /usr/local/centovacast/etc/.wccg-admin-pw && chmod 600 /usr/local/centovacast/etc/.wccg-admin-pw
-( crontab -l 2>/dev/null; echo '*/2 * * * * /usr/local/sbin/centova-stream-supervisor.sh' ) | crontab -
-/usr/local/sbin/centova-stream-supervisor.sh && tail /var/log/wccg-stream-supervisor.log
-```
+## ✅ 1. Stream supervisor — DONE (the flapping is fixed)
+Root cause of Vibe/Soul/Yard (and HOT) dropping: the AutoDJ **ezstream source
+processes hang** — still running but disconnected from IceCast (`/autodj` gone) —
+while Centova still reports them `sourcestate:1`, so nothing restarted them. On top
+of that, the existing watchdog had a **cron-PATH bug** (`ss` lives in `/usr/sbin`,
+not in cron's PATH) that made it misfire every 2 min for 7 days (1016×/station)
+without ever truly checking state. Fixes:
+- Rewrote `/usr/local/bin/wccg-stream-heal.sh` to **v2**: checks the real `/autodj`
+  mount via `status-json.xsl` (not just the process), and on a hung source it kills
+  the stuck ezstream + `ccmanage restart` (run as the `centovacast` user).
+- Added `export PATH=...` so cron finds `ss`.
+- Restarted all four stations clean — all broadcasting. Verified the cron now runs
+  with zero false heals.
 
-## 2. IceCast CORS header (so HOT/Vibe/Soul/Yard show song titles like WCCG now does)
-In each station's `<vhost>/etc/server.conf` (the same files the SSL block was added to),
-add inside the root `<icecast>` element, then restart that station:
-```
-<http-headers>
-    <header name="Access-Control-Allow-Origin" value="*" />
-</http-headers>
-```
-Restart: `printf '%s\n' 'ADMIN_PW' | /usr/local/centovacast/bin/ccmanage restart <user>`
-(accounts: vibe1045fm, soul1045fm, yard1045fm, wccg1045fm). Note: if Centova
-regenerates server.conf, re-apply (the SSL edits persisted, so this should too).
+## ✅ 2. IceCast CORS header — DONE
+Added `<http-headers><header name="Access-Control-Allow-Origin" value="*"/></http-headers>`
+to every station's `server.conf` AND the skel template
+(`/usr/local/centovacast/system/servers/IceCast/skel/etc/server.conf`, so it
+survives a reconfigure). Live-reloaded via SIGHUP (no downtime). Verified
+end-to-end over HTTPS: HOT/Vibe/Soul/Yard return the header + live song titles.
 
-## 3. Rotate the passwords shared in chat (security)
-Server root, Centova `admin`, the per-station source/admin passwords, and the 3
-mailbox passwords (noreply@/info@/contact@wccg1045fm.com).
+## ✅ 4. HOT ccmanage-managed — DONE
+HOT (`wccg1045fm`) authenticates and is covered by the watchdog. It had actually
+been **silent** (orphaned/hung AutoDJ source) — now fixed and broadcasting.
 
-## 4. Make HOT ccmanage-managed
-Reset the `wccg1045fm` (HOT) account password in Centova so the supervisor can
-restart it (it's been running manually). Then it survives reboots/AutoSSL restarts.
+## 3. Rotate the passwords shared in chat (security) — OWNER
+Server root (retrieved/typed this week — rotate it), Centova `admin`, the
+per-station passwords (stored in the watchdog script), and the 3 mailbox passwords
+(noreply@/info@/contact@wccg1045fm.com).
 
-## 5. Finish Supabase custom SMTP (task #43)
+## 5. Finish Supabase custom SMTP (task #43) — OWNER
 Supabase dashboard → Auth → SMTP Settings → host `mail.wccg1045fm.com`, port 465
 (SSL) or 587 (TLS), username `noreply@wccg1045fm.com`, paste its password → Save.
 
-## 6. Supabase Site URL → apex (optional; cosmetic)
+## 6. Supabase Site URL → apex (task #42 dashboard half) — OWNER
 Supabase dashboard → Auth → URL Configuration → Site URL = `https://wccg1045fm.com`
-(+ redirect URLs). `app.` already 301s to apex so auth links work either way; this
-just makes them link to apex directly. (Codebase SITE_URL is already on apex.)
+(+ redirect URLs). `app.` already 301s to apex so auth links work either way.
+(Codebase SITE_URL is already on apex.)
+
+## Bonus note — HOT account config (optional cleanup)
+HOT's `wccg1045fm` IceCast config still carries Centova defaults (`hostname
+example.com`, `bind 0.0.0.0`, source IP `.129`). It works fine, but for consistency
+reconfigure the HOT account in the Centova panel so its config regenerates to match
+the other three.
