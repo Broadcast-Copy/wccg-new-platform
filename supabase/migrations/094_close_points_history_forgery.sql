@@ -1,0 +1,16 @@
+-- Close the legacy points-forgery hole.
+--
+-- Before: the policy "Users can insert own points history" (from 007_user_sync.sql)
+-- let any authenticated user directly INSERT points_history rows for themselves.
+-- Because user_points.balance is a trigger-computed SUM(points_history), a user
+-- could open DevTools and insert {amount: 1000000} to forge their balance — and
+-- the legacy client sync (apps/web/src/lib/user-sync.ts) did exactly this kind of
+-- direct insert as a double-write alongside the secure award_points RPC (079).
+--
+-- After: points_history is written ONLY by SECURITY DEFINER RPCs — award_points
+-- for earning, redeem_reward for spending — which bypass RLS. Every function that
+-- writes points_history was verified SECURITY DEFINER, so dropping the client
+-- INSERT policy breaks no legitimate path. The client-side direct insert is
+-- removed in the same change (user-sync.ts). Balance stays authoritative via the
+-- user_points enforce-balance trigger, which recomputes balance = SUM(history).
+drop policy if exists "Users can insert own points history" on public.points_history;

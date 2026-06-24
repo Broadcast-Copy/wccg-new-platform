@@ -236,7 +236,7 @@ export async function pullAndMerge() {
     saveLocalBounties(email, mergedBounties);
 
     // ── Push merged to Supabase ──
-    await pushToRemote(userId, email, mergedLocal, mergedHistory, mergedMilestones, mergedBounties, remoteHistory);
+    await pushToRemote(userId, email, mergedLocal, mergedMilestones, mergedBounties);
   } catch (err) {
     console.warn("[user-sync] pull failed:", err);
   }
@@ -249,10 +249,8 @@ async function pushToRemote(
   userId: string,
   email: string,
   data: LocalPointsData,
-  mergedHistory: LocalPointsData["history"],
   milestones: string[],
   bounties: string[],
-  existingRemoteHistory: RemoteHistoryRow[],
 ) {
   const supabase = createClient();
 
@@ -273,24 +271,14 @@ async function pushToRemote(
       await supabase.from("user_points").insert({ user_id: userId, ...pointsPayload });
     }
 
-    // Insert new history rows (ones not already in remote)
-    const existingKeys = new Set(
-      existingRemoteHistory.map(rh => `${rh.created_at}_${rh.reason}_${rh.amount}`),
-    );
-    const newHistoryRows = mergedHistory
-      .filter(h => !existingKeys.has(`${h.timestamp}_${h.reason}_${h.points}`))
-      .map(h => ({
-        user_id: userId,
-        amount: h.points,
-        reason: h.reason,
-        description: h.reason,
-        program: h.program || null,
-        created_at: h.timestamp,
-      }));
-
-    if (newHistoryRows.length > 0) {
-      await supabase.from("points_history").insert(newHistoryRows);
-    }
+    // Points history is now written exclusively by the server-side award_points
+    // SECURITY DEFINER RPC (earning) and redeem_reward (spending). Clients can no
+    // longer insert points_history directly — the forgeable client INSERT policy
+    // was dropped in migration 094_close_points_history_forgery. The old direct
+    // insert here was a double-write that could also inject arbitrary amounts;
+    // balance stays authoritative via the user_points enforce-balance trigger
+    // (balance = SUM(history)). We still pull remote history into localStorage
+    // for display (see pullAndMerge above).
 
     // Upsert milestones — try update first, insert if no rows affected
     const milestonesPayload = {
@@ -344,7 +332,6 @@ export async function flushSync() {
     _flushTimer = null;
   }
 
-  const supabase = createClient();
   const userId = _userId;
   const email = _email;
 
@@ -353,23 +340,7 @@ export async function flushSync() {
     const milestones = loadLocalMilestones(email);
     const bounties = loadLocalBounties(email);
 
-    // Fetch existing remote history to avoid duplication
-    const { data: existingHistory } = await supabase
-      .from("points_history")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(100);
-
-    await pushToRemote(
-      userId,
-      email,
-      local,
-      local.history,
-      milestones,
-      bounties,
-      (existingHistory ?? []) as RemoteHistoryRow[],
-    );
+    await pushToRemote(userId, email, local, milestones, bounties);
   } catch (err) {
     console.warn("[user-sync] flush failed:", err);
     // Re-mark as dirty so we retry
