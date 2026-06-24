@@ -179,10 +179,12 @@ export function ShowCard({
 }: ShowCardProps) {
   const { open } = useStreamPlayer();
   const primaryHost = hosts?.find((h) => h.avatarUrl) ?? hosts?.[0];
-  const avatarUrl = primaryHost?.avatarUrl ?? imageUrl;
+  const avatarUrl = primaryHost?.avatarUrl ?? imageUrl ?? youtubeThumbnailUrl;
   const dpStyle = dayPartStyle(dayPart);
   const stream = streamId ? STREAM_INFO[streamId] : null;
   const onAir = isShowOnAir(timeSlot, days);
+  // On-demand shows (e.g. the Big Cas podcast) aren't live/scheduled.
+  const isPodcast = timeSlot === "On Demand" || Boolean(_podcastRss);
 
   // Host avatars — show up to 3 unique hosts with images
   const hostAvatars = hosts?.filter((h) => h.avatarUrl).slice(0, 3) ?? [];
@@ -196,6 +198,8 @@ export function ShowCard({
         : days === "Every Day"
           ? "Daily"
           : (days ?? "");
+    // On-demand / podcasts have no clock schedule \u2014 show the cadence, no "EST".
+    if (isPodcast) return dayLabel || timeSlot || "On Demand";
     const timePart = timeSlot ? timeSlot.replace(" - ", " \u2013 ") : "";
     if (dayLabel && timePart) return `${dayLabel}: ${timePart}, EST`;
     return timePart || dayLabel;
@@ -312,7 +316,15 @@ export function ShowCard({
 
           {/* Badges row */}
           <div className="flex items-center gap-2 flex-wrap">
-            {dayPart && (
+            {isPodcast && (
+              <Badge
+                variant="outline"
+                className="bg-pink-500/10 text-pink-400 border-0 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5"
+              >
+                Podcast
+              </Badge>
+            )}
+            {!isPodcast && dayPart && (
               <Badge
                 variant="outline"
                 className={`${dpStyle.bg} ${dpStyle.text} border-0 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5`}
