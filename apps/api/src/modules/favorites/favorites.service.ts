@@ -6,6 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
+import { STATION_ID } from '../../common/supabase/station.js';
 
 /** Maps incoming camelCase target types to the DB enum values */
 const TARGET_TYPE_MAP: Record<string, string> = {
@@ -106,6 +107,7 @@ export class FavoritesService {
 
     const { data: created, error } = await this.db.from('favorites')
       .insert({
+        station_id: STATION_ID,
         user_id: userId,
         target_type: dbTargetType,
         stream_id: streamId,

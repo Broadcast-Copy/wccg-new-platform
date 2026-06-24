@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { FavoriteButton } from "@/components/favorites/favorite-button";
@@ -75,8 +74,8 @@ interface Show {
 
 // ─── Shared data imports ────────────────────────────────────────────────
 
-import { getShowById, getShowBySlug, type ShowData } from "@/data/shows";
-import { getHostsByShowId } from "@/data/hosts";
+import type { ShowData } from "@/data/shows";
+import type { HostData } from "@/data/hosts";
 import { YouTubeGrid } from "@/components/youtube/youtube-grid";
 import type { YouTubeVideo } from "@/lib/youtube-rss";
 
@@ -131,13 +130,10 @@ async function fetchRssEpisodes(rssUrl: string): Promise<RssEpisode[]> {
   }
 }
 
-// ─── Local data fallback ────────────────────────────────────────────────
+// ─── Build the view model from DB-sourced props ──────────────────────────
 
-function localShowFallback(showId: string): Show | null {
-  const data: ShowData | undefined =
-    getShowById(showId) || getShowBySlug(showId);
-  if (!data) return null;
-  const hosts = getHostsByShowId(data.id);
+/** Assemble the page's `Show` view model from the resolved show + its hosts. */
+function buildShow(data: ShowData, hosts: HostData[]): Show {
   return {
     id: data.id,
     name: data.name,
@@ -358,10 +354,15 @@ function PodcastPlayer({
 
 // ─── YouTube Feed ───────────────────────────────────────────────────────
 
-function YouTubeFeed({ showId, showName, videos }: { showId: string; showName: string; videos?: YouTubeVideo[] }) {
-  const showData = getShowById(showId);
-  const youtube = showData?.youtube;
-
+function YouTubeFeed({
+  youtube,
+  showName,
+  videos,
+}: {
+  youtube: ShowData["youtube"];
+  showName: string;
+  videos?: YouTubeVideo[];
+}) {
   if (!youtube) {
     return (
       <div className="flex h-48 items-center justify-center rounded-xl border border-border bg-muted/30">
@@ -387,32 +388,21 @@ function YouTubeFeed({ showId, showName, videos }: { showId: string; showName: s
 // ─── Main Component ─────────────────────────────────────────────────────
 
 export default function ShowDetailPage({
+  showData,
+  hosts,
   youtubeVideos,
 }: {
+  /** Resolved show (by id or slug) from the DB at build time; null = not found. */
+  showData: ShowData | null;
+  /** Hosts for this show, from the DB. */
+  hosts: HostData[];
   youtubeVideos?: YouTubeVideo[];
 }) {
-  // Resolve the show id/slug from the REAL URL. Under `output: export`,
-  // /shows/<x> can be served by the _placeholder shim, so useParams() would
-  // return "_placeholder" — but usePathname() reflects the actual browser
-  // path, so derive the id from it.
-  const pathname = usePathname();
-  const showId = useMemo(() => {
-    const segs = (pathname ?? "").split("/").filter(Boolean);
-    const i = segs.indexOf("shows");
-    const seg = i >= 0 ? segs[i + 1] : undefined;
-    if (!seg || seg === "_placeholder") return "";
-    try {
-      return decodeURIComponent(seg);
-    } catch {
-      return seg;
-    }
-  }, [pathname]);
-
-  // The show resolves synchronously from static data (by id OR slug) — there
-  // is no API server, so local data is the only source.
+  // The server parent already resolved the show (by id OR slug) from the DB —
+  // there is no API server, so the passed-in data is the only source.
   const show = useMemo<Show | null>(
-    () => (showId ? localShowFallback(showId) : null),
-    [showId],
+    () => (showData ? buildShow(showData, hosts) : null),
+    [showData, hosts],
   );
 
   const [rssEpisodes, setRssEpisodes] = useState<RssEpisode[]>([]);
@@ -420,21 +410,20 @@ export default function ShowDetailPage({
   const { play, pause, isPlaying, currentStream } = useAudioPlayer();
 
   // Fetch RSS episodes if show has podcastRss
+  const podcastRss = showData?.podcastRss;
   useEffect(() => {
-    if (!showId) return;
-    const showData = getShowById(showId) ?? getShowBySlug(showId);
-    if (!showData?.podcastRss) return;
+    if (!podcastRss) return;
     let cancelled = false;
     (async () => {
       setRssLoading(true);
-      const eps = await fetchRssEpisodes(showData.podcastRss!);
+      const eps = await fetchRssEpisodes(podcastRss);
       if (!cancelled) {
         setRssEpisodes(eps);
         setRssLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [showId]);
+  }, [podcastRss]);
 
   const handlePlayEpisode = useCallback((episode: Episode) => {
     if (!episode.audioUrl) return;
@@ -460,7 +449,8 @@ export default function ShowDetailPage({
     );
   }
 
-  const showData = getShowById(show.id);
+  // `showData` is the resolved show passed in from the server parent (the same
+  // object used to build `show` above); read its presentational fields here.
   const schedule = showData?.timeSlot ?? null;
   const days = showData?.days ?? null;
   const hasYT = !!showData?.youtube?.channelUrl;
@@ -676,7 +666,7 @@ export default function ShowDetailPage({
 
           {/* YouTube content below podcasts */}
           <div className="mt-8">
-            <YouTubeFeed showId={show.id} showName={show.name} videos={youtubeVideos} />
+            <YouTubeFeed youtube={showData?.youtube} showName={show.name} videos={youtubeVideos} />
           </div>
         </TabsContent>
 
@@ -794,7 +784,7 @@ export default function ShowDetailPage({
         {/* ─── Videos Tab ─── */}
         {hasYT && (
           <TabsContent value="videos">
-            <YouTubeFeed showId={show.id} showName={show.name} videos={youtubeVideos} />
+            <YouTubeFeed youtube={showData?.youtube} showName={show.name} videos={youtubeVideos} />
           </TabsContent>
         )}
       </Tabs>

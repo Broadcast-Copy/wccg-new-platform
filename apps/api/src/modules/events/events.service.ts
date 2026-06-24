@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
+import { STATION_ID } from '../../common/supabase/station.js';
 import { randomUUID } from 'node:crypto';
 
 @Injectable()
@@ -101,6 +102,7 @@ export class EventsService {
     const { error: eventError } = await this.db.from('events')
       .insert({
         id,
+        station_id: STATION_ID,
         creator_id: userId,
         title,
         slug,
@@ -134,6 +136,7 @@ export class EventsService {
     // Add creator as organizer with OWNER role
     await this.db.from('event_organizers')
       .insert({
+        station_id: STATION_ID,
         event_id: id,
         user_id: userId,
         role: 'OWNER',
@@ -143,6 +146,7 @@ export class EventsService {
     if (ticketTypes && ticketTypes.length > 0) {
       const ticketRows = ticketTypes.map((tt: any) => ({
         id: tt.id ?? randomUUID(),
+        station_id: STATION_ID,
         event_id: id,
         name: tt.name as string,
         price: tt.price ?? 0,
@@ -362,6 +366,7 @@ export class EventsService {
       await this.db.from('event_registrations')
         .insert({
           id,
+          station_id: STATION_ID,
           event_id: eventId,
           user_id: userId,
           ticket_type_id: dto.ticketTypeId,
@@ -386,6 +391,7 @@ export class EventsService {
         // Create a default free ticket type
         const { data: newTicket, error: ticketError } = await this.db.from('ticket_types')
           .insert({
+            station_id: STATION_ID,
             event_id: eventId,
             name: 'General Admission',
             price: 0,
@@ -418,6 +424,7 @@ export class EventsService {
       await this.db.from('event_registrations')
         .insert({
           id,
+          station_id: STATION_ID,
           event_id: eventId,
           user_id: userId,
           ticket_type_id: defaultTicketId,

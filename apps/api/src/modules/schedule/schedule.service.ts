@@ -6,6 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
+import { STATION_ID } from '../../common/supabase/station.js';
 
 @Injectable()
 export class ScheduleService {
@@ -206,6 +207,7 @@ export class ScheduleService {
 
     const { data: created, error } = await this.db.from('schedule_blocks')
       .insert({
+        station_id: STATION_ID,
         stream_id: streamId,
         show_id: showId,
         title,

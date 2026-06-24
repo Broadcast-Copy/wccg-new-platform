@@ -50,8 +50,8 @@ type HeroSlide =
   | { type: "image"; data: HeroImageSlide };
 
 /** Interleave show slides with image slides */
-const ALL_HERO_SLIDES: HeroSlide[] = (() => {
-  const shows = HERO_SHOWS.map((s): HeroSlide => ({ type: "show", data: s }));
+function buildHeroSlides(heroShows: ShowData[]): HeroSlide[] {
+  const shows = heroShows.map((s): HeroSlide => ({ type: "show", data: s }));
   const images = HERO_IMAGES.map((img): HeroSlide => ({ type: "image", data: img }));
   const result: HeroSlide[] = [];
   const max = Math.max(shows.length, images.length);
@@ -60,7 +60,7 @@ const ALL_HERO_SLIDES: HeroSlide[] = (() => {
     if (i < images.length) result.push(images[i]);
   }
   return result;
-})();
+}
 
 const FALLBACK_TICKER_ITEMS = [
   "WCCG 104.5 FM — Fayetteville's Hip Hop Station",
@@ -107,21 +107,26 @@ function useTickerItems() {
   }, [dukeNews, blogTitles]);
 }
 
-export function Hero() {
+export function Hero({ heroShows = HERO_SHOWS }: { heroShows?: ShowData[] }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const currentHeroSlide = ALL_HERO_SLIDES[activeIndex];
+  // Hero shows come from the DB via props (server parent); the curated TS list
+  // (HERO_SHOWS) is the default fallback. Image slides are interleaved.
+  const heroSlides = useMemo(() => buildHeroSlides(heroShows), [heroShows]);
+
+  const currentHeroSlide = heroSlides[activeIndex];
   // For the overlay text: show slides use show data, image slides use their label
-  const currentShowSlide = currentHeroSlide.type === "show" ? currentHeroSlide.data : null;
+  const currentShowSlide =
+    currentHeroSlide?.type === "show" ? currentHeroSlide.data : null;
 
   const advanceSlide = useCallback(() => {
     setIsTransitioning(true);
-    setActiveIndex((prev) => (prev + 1) % ALL_HERO_SLIDES.length);
+    setActiveIndex((prev) => (prev + 1) % heroSlides.length);
     setTimeout(() => setIsTransitioning(false), 600);
-  }, []);
+  }, [heroSlides.length]);
 
   // Auto-advance timer
   useEffect(() => {
@@ -163,7 +168,7 @@ export function Hero() {
         <div className="relative overflow-hidden rounded-2xl border border-border">
           {/* Sliding image */}
           <div className="relative aspect-[4/3]">
-            {ALL_HERO_SLIDES.map((heroSlide, index) => (
+            {heroSlides.map((heroSlide, index) => (
               <div
                 key={heroSlide.data.id}
                 className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
@@ -221,7 +226,7 @@ export function Hero() {
 
               {/* Dots */}
               <div className="flex items-center gap-1.5">
-                {ALL_HERO_SLIDES.map((_, index) => (
+                {heroSlides.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => goToSlide(index)}
@@ -301,7 +306,7 @@ export function Hero() {
       <div className="hidden md:grid md:grid-cols-[2fr_3fr] gap-4">
         {/* ── LEFT CARD: Sliding image ── */}
         <div className="relative overflow-hidden rounded-2xl border border-border aspect-[4/3] lg:aspect-auto lg:min-h-[460px]">
-          {ALL_HERO_SLIDES.map((heroSlide, index) => (
+          {heroSlides.map((heroSlide, index) => (
             <div
               key={heroSlide.data.id}
               className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
@@ -357,7 +362,7 @@ export function Hero() {
               </Link>
             ) : null}
             <div className="flex items-center gap-1.5">
-              {ALL_HERO_SLIDES.map((_, index) => (
+              {heroSlides.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => goToSlide(index)}

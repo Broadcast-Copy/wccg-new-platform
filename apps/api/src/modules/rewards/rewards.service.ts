@@ -4,6 +4,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
+import { STATION_ID } from '../../common/supabase/station.js';
 
 @Injectable()
 export class RewardsService {
@@ -59,6 +60,7 @@ export class RewardsService {
     const { data: row, error } = await this.db.from('reward_catalog')
       .insert({
         ...(dto.id ? { id: dto.id as string } : {}),
+        station_id: STATION_ID,
         name: dto.name as string,
         description: (dto.description as string) ?? null,
         image_url: (dto.imageUrl as string) ?? null,

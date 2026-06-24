@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
+import { STATION_ID } from '../../common/supabase/station.js';
 
 interface CreateDto {
   slug: string;
@@ -124,6 +125,7 @@ export class RestreamService {
 
     const { data, error } = await this.db.from('restream_destinations')
       .insert({
+        station_id: STATION_ID,
         slug: merged.slug,
         label: merged.label,
         platform: merged.platform,
@@ -189,6 +191,7 @@ export class RestreamService {
       throw new BadRequestException('destinationId + eventType required');
     }
     await this.db.from('restream_events').insert({
+      station_id: STATION_ID,
       destination_id: dto.destinationId,
       event_type: dto.eventType,
       status: dto.status ?? null,

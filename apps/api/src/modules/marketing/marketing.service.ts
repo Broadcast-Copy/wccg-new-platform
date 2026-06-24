@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'node:crypto';
 import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
+import { STATION_ID } from '../../common/supabase/station.js';
 import { PointsService } from '../points/points.service.js';
 
 /**
@@ -34,6 +35,7 @@ export class MarketingService {
     const { data: row, error } = await this.db.from('newsletter_subscribers')
       .upsert(
         {
+          station_id: STATION_ID,
           email,
           source: source ?? null,
           status: 'pending',

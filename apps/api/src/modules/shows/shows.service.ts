@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
+import { STATION_ID } from '../../common/supabase/station.js';
 
 /**
  * Exported for controller/other consumers that reference the host shape.
@@ -99,6 +100,7 @@ export class ShowsService {
     const { data: show, error } = await this.db.from('shows')
       .insert({
         ...(dto.id ? { id: dto.id as string } : {}),
+        station_id: STATION_ID,
         name,
         slug,
         description: (dto.description as string) ?? null,
@@ -120,6 +122,7 @@ export class ShowsService {
     // Insert host associations
     if (hostIds && hostIds.length > 0) {
       const hostRows = hostIds.map((hostId, i) => ({
+        station_id: STATION_ID,
         show_id: show.id,
         host_id: hostId,
         is_primary: i === 0,
@@ -171,6 +174,7 @@ export class ShowsService {
 
       if (hostIds.length > 0) {
         const hostRows = hostIds.map((hostId, i) => ({
+          station_id: STATION_ID,
           show_id: id,
           host_id: hostId,
           is_primary: i === 0,

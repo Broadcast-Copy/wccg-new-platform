@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
+import { STATION_ID } from '../../common/supabase/station.js';
 
 @Injectable()
 export class MixesService {
@@ -81,6 +82,7 @@ export class MixesService {
 
     const { data: row, error } = await this.db.from('dj_mixes')
       .insert({
+        station_id: STATION_ID,
         uploader_id: userId,
         host_id: dto.hostId as string,
         title: dto.title as string,

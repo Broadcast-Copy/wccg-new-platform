@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
+import { STATION_ID } from '../../common/supabase/station.js';
 
 @Injectable()
 export class HostsService {
@@ -59,6 +60,7 @@ export class HostsService {
     const { data: row, error } = await this.db.from('hosts')
       .insert({
         ...(dto.id ? { id: dto.id as string } : {}),
+        station_id: STATION_ID,
         name,
         slug,
         bio: (dto.bio as string) ?? null,

@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
+import { STATION_ID } from '../../common/supabase/station.js';
 
 const VALID_HUB_TYPES = ['creator', 'vendor', 'listener'] as const;
 type HubType = (typeof VALID_HUB_TYPES)[number];
@@ -70,6 +71,7 @@ export class HubsService {
 
     const { data, error } = await this.db.from('hub_posts')
       .insert({
+        station_id: STATION_ID,
         hub_type: hubType,
         user_id: userId,
         post_type: body.postType,
@@ -143,7 +145,7 @@ export class HubsService {
 
     // Insert like
     const { error: likeError } = await this.db.from('hub_post_likes')
-      .insert({ post_id: postId, user_id: userId });
+      .insert({ station_id: STATION_ID, post_id: postId, user_id: userId });
 
     if (likeError) throw likeError;
 
@@ -234,7 +236,7 @@ export class HubsService {
     }
 
     const { error } = await this.db.from('hub_memberships')
-      .insert({ user_id: userId, hub_type: hubType });
+      .insert({ station_id: STATION_ID, user_id: userId, hub_type: hubType });
 
     if (error) throw error;
 

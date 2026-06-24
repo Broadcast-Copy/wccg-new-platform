@@ -5,9 +5,8 @@ import { AppImage as Image } from "@/components/ui/app-image";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import Link from "next/link";
 import { Radio, Sparkles, Lock, Megaphone } from "lucide-react";
-import { ALL_SHOWS } from "@/data/shows";
 import type { ShowData } from "@/data/shows";
-import { getHostsByShowId } from "@/data/hosts";
+import type { HostData } from "@/data/hosts";
 import { parseTime12h } from "@/lib/time-utils";
 import { useNowPlaying } from "@/hooks/use-now-playing";
 
@@ -44,6 +43,10 @@ interface Stream {
 
 interface ChannelGuideGridProps {
   streams: Stream[];
+  /** Shows from the DB (build-time), used to resolve the on-air show per stream. */
+  shows: ShowData[];
+  /** Hosts from the DB (build-time), used to show host avatars for the on-air show. */
+  hosts: HostData[];
 }
 
 // ---------------------------------------------------------------------------
@@ -85,7 +88,7 @@ const CHANNEL_ARTISTS: Record<string, string> = {
 // Schedule-based current show detection
 // ---------------------------------------------------------------------------
 
-function getCurrentShowForStream(streamId: string): ShowData | null {
+function getCurrentShowForStream(streamId: string, allShows: ShowData[]): ShowData | null {
   // Station schedule is US Eastern — resolve "now" in America/New_York so the
   // live show is correct regardless of the viewer's timezone.
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
@@ -94,7 +97,7 @@ function getCurrentShowForStream(streamId: string): ShowData | null {
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const currentDay = dayNames[dayIndex];
 
-  const shows = ALL_SHOWS.filter((s) => s.streamId === streamId && s.isActive);
+  const shows = allShows.filter((s) => s.streamId === streamId && s.isActive);
 
   for (const show of shows) {
     let matchesDay = false;
@@ -141,7 +144,7 @@ const CATEGORIES = [
 // Wide Channel Tile — matches reference layout
 // ---------------------------------------------------------------------------
 
-function ChannelTile({ stream }: { stream: Stream }) {
+function ChannelTile({ stream, shows, hosts }: { stream: Stream; shows: ShowData[]; hosts: HostData[] }) {
   const { play, pause, isPlaying, currentStream } = useAudioPlayer();
   const logo = CHANNEL_LOGOS[stream.id];
   const subtitle = CHANNEL_SUBTITLES[stream.id] || stream.description || "";
@@ -166,12 +169,14 @@ function ChannelTile({ stream }: { stream: Stream }) {
   }, []);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const currentShow = useMemo(() => isLive ? getCurrentShowForStream(stream.id) : null, [isLive, stream.id, tick]);
+  const currentShow = useMemo(() => isLive ? getCurrentShowForStream(stream.id, shows) : null, [isLive, stream.id, shows, tick]);
   const showImage =
     (currentShow?.showImageUrl || currentShow?.imageUrl) ||
     stream.metadata?.currentShowImage ||
     null;
-  const currentShowHosts = currentShow ? getHostsByShowId(currentShow.id) : [];
+  const currentShowHosts = currentShow
+    ? hosts.filter((h) => h.showIds.includes(currentShow.id))
+    : [];
 
   const handleTogglePlay = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -374,7 +379,7 @@ function ChannelTile({ stream }: { stream: Stream }) {
 // Component
 // ---------------------------------------------------------------------------
 
-export function ChannelGuideGrid({ streams }: ChannelGuideGridProps) {
+export function ChannelGuideGrid({ streams, shows, hosts }: ChannelGuideGridProps) {
   const [selectedCategory, setSelectedCategory] = useState("All");
 
   const filteredStreams =
@@ -424,7 +429,7 @@ export function ChannelGuideGrid({ streams }: ChannelGuideGridProps) {
       {filteredStreams.length > 0 ? (
         <div className="flex flex-col gap-4">
           {filteredStreams.map((stream) => (
-            <ChannelTile key={stream.id} stream={stream} />
+            <ChannelTile key={stream.id} stream={stream} shows={shows} hosts={hosts} />
           ))}
         </div>
       ) : (

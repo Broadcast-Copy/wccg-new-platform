@@ -33,6 +33,7 @@ import { promises as fs } from 'node:fs';
 import { join, basename, extname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { STATION_ID } from '../station.js';
 
 const FILE_CODE_RE = /^(DJB_\d{5})\.(mp3|wav|flac)$/i;
 const DEFAULT_POLL_MS = 10_000;
@@ -130,6 +131,7 @@ async function ingestFile(opts: {
   const stat = await fs.stat(srcPath);
   await db().from('dj_drops').upsert(
     {
+      station_id: STATION_ID,
       dj_id: djId,
       slot_id: slot.id,
       file_code: fileCode,
@@ -148,6 +150,7 @@ async function ingestFile(opts: {
 
   // 5. Audit log.
   await db().from('dj_ftp_log').insert({
+    station_id: STATION_ID,
     username: `wccg-${djSlug}`,
     action: 'put',
     path: srcPath,
@@ -160,6 +163,7 @@ async function ingestFile(opts: {
 
 async function logFailure(djSlug: string, srcPath: string, error: string) {
   await db().from('dj_ftp_log').insert({
+    station_id: STATION_ID,
     username: `wccg-${djSlug}`,
     action: 'put',
     path: srcPath,

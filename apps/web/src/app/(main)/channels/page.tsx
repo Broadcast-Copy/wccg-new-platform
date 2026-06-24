@@ -1,5 +1,6 @@
 import { ChannelGuideGrid } from "@/components/streams/channel-guide-grid";
 import { STATIONS } from "@/lib/stations";
+import { getShowsFromDb, getHostsFromDb } from "@/lib/content-db";
 import { Radio } from "lucide-react";
 
 export const metadata = {
@@ -8,7 +9,12 @@ export const metadata = {
     "Browse all WCCG 104.5 FM streaming channels. Hip Hop, Gospel, R&B, Jazz, Talk, and more — tap play to start listening.",
 };
 
-export default function ChannelsPage() {
+export default async function ChannelsPage() {
+  // Shows + hosts come from the DB at build time (content-db falls back to the
+  // hardcoded TS data on error/empty). The grid uses them to resolve the
+  // on-air show + host avatars for each stream.
+  const [shows, hosts] = await Promise.all([getShowsFromDb(), getHostsFromDb()]);
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -25,7 +31,7 @@ export default function ChannelsPage() {
       </div>
 
       {/* Channel Tiles — self-hosted WCCG stations (lib/stations.ts) */}
-      <ChannelGuideGrid streams={STATIONS} />
+      <ChannelGuideGrid streams={STATIONS} shows={shows} hosts={hosts} />
     </div>
   );
 }

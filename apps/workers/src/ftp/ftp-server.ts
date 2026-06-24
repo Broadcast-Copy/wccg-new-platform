@@ -34,6 +34,7 @@ import { FtpSrv, FileSystem } from 'ftp-srv';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { createHash, scryptSync, timingSafeEqual } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { STATION_ID } from '../station.js';
 
 const STORAGE_BUCKET = 'dj-drops';
 const READY_PREFIX = '_ready/';                 // namespace inside the same bucket
@@ -80,6 +81,7 @@ function logFtp(action: string, ctx: {
   error?: string;
 }) {
   void db().from('dj_ftp_log').insert({
+    station_id: STATION_ID,
     username: ctx.username ?? null,
     ip: ctx.ip ?? null,
     action,
@@ -203,6 +205,7 @@ async write(filename: string, options?: { append?: boolean; start?: number }) {
 
         await db().from('dj_drops').upsert(
           {
+            station_id: STATION_ID,
             dj_id: this.user.djId,
             slot_id: slot?.id,
             file_code: fileCode,

@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
+import { STATION_ID } from '../../common/supabase/station.js';
 
 @Injectable()
 export class CmsService {
@@ -54,6 +55,7 @@ export class CmsService {
     await this.requireAdmin(userId);
 
     const payload = {
+      station_id: STATION_ID,
       slug,
       title: dto.title as string,
       content_type: dto.content_type as string,

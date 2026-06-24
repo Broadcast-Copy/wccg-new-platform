@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'node:crypto';
 import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
+import { STATION_ID } from '../../common/supabase/station.js';
 import { PointsService } from '../points/points.service.js';
 
 interface CheckoutDto {
@@ -188,6 +189,7 @@ export class MarketplaceService {
     // Debit WP immediately for points portion (idempotency key = order id + 'spend').
     if (totalPoints > 0) {
       await this.db.from('points_ledger').insert({
+        station_id: STATION_ID,
         user_id: userId,
         amount: -totalPoints,
         reason: 'MARKETPLACE_SPEND',

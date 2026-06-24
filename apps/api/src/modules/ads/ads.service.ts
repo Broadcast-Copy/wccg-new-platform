@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
+import { STATION_ID } from '../../common/supabase/station.js';
 
 @Injectable()
 export class AdsService {
@@ -55,6 +56,7 @@ export class AdsService {
 
     const { data, error } = await this.db.from('site_ad_placements')
       .insert({
+        station_id: STATION_ID,
         slot: dto.slot as string,
         title: dto.title as string,
         ad_type: dto.ad_type as string,

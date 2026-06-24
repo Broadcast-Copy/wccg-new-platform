@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
 import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
+import { STATION_ID } from '../../common/supabase/station.js';
 
 const STORAGE_BUCKET = 'record-pool';
 const VALID_EXTS = ['.mp3', '.wav', '.flac', '.aiff', '.aif', '.m4a'] as const;
@@ -137,6 +138,7 @@ export class RecordPoolService {
       .eq('user_id', userId)
       .maybeSingle();
     await this.db.from('record_pool_downloads').insert({
+      station_id: STATION_ID,
       track_id: trackId,
       user_id: userId,
       dj_id: djForUser?.id ?? null,
@@ -252,6 +254,7 @@ export class RecordPoolService {
 
     const row = {
       id: trackId,
+      station_id: STATION_ID,
       uploaded_by: userId,
       uploader_type: uploaderType,
       dj_id: djId,

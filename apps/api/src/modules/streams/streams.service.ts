@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
+import { STATION_ID } from '../../common/supabase/station.js';
 
 @Injectable()
 export class StreamsService {
@@ -65,6 +66,7 @@ export class StreamsService {
     const { data: stream, error } = await this.db.from('streams')
       .insert({
         ...(dto.id ? { id: dto.id as string } : {}),
+        station_id: STATION_ID,
         name,
         slug,
         description: (dto.description as string) ?? null,
@@ -89,6 +91,7 @@ export class StreamsService {
     if (dto.primaryUrl) {
       await this.db.from('stream_sources')
         .insert({
+          station_id: STATION_ID,
           stream_id: stream.id,
           primary_url: (dto.primaryUrl as string) ?? null,
           fallback_url: (dto.fallbackUrl as string) ?? null,
@@ -101,6 +104,7 @@ export class StreamsService {
     // Always initialize metadata row
     await this.db.from('stream_metadata')
       .insert({
+        station_id: STATION_ID,
         stream_id: stream.id,
         listener_count: 0,
         is_live: false,
@@ -165,6 +169,7 @@ export class StreamsService {
       await this.db.from('stream_sources')
         .upsert(
           {
+            station_id: STATION_ID,
             stream_id: id,
             primary_url: (dto.primaryUrl as string) ?? null,
             fallback_url: (dto.fallbackUrl as string) ?? null,

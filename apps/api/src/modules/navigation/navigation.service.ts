@@ -4,6 +4,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
+import { STATION_ID } from '../../common/supabase/station.js';
 
 @Injectable()
 export class NavigationService {
@@ -35,6 +36,7 @@ export class NavigationService {
 
     const { data, error } = await this.db.from('site_navigation')
       .insert({
+        station_id: STATION_ID,
         location: dto.location as string,
         label: dto.label as string,
         href: dto.href as string,
@@ -66,6 +68,7 @@ export class NavigationService {
     if (items.length > 0) {
       const rows = items.map((item, index) => ({
         id: (item.id as string) || undefined,
+        station_id: STATION_ID,
         location: item.location as string,
         label: item.label as string,
         href: item.href as string,

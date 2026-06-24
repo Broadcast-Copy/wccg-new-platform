@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
+import { STATION_ID } from '../../common/supabase/station.js';
 
 interface MetadataUpdate {
   title?: string | null;
@@ -136,6 +137,7 @@ export class MasterControlService {
     // Mirror to song_history (FCC playlist log) when title+artist present.
     if (dto.title && dto.artist) {
       await this.db.from('song_history').insert({
+        station_id: STATION_ID,
         title: dto.title,
         artist: dto.artist,
         album: dto.album ?? null,
@@ -199,6 +201,7 @@ export class MasterControlService {
     }
     const { data, error } = await this.db.from('eas_alerts')
       .insert({
+        station_id:        STATION_ID,
         direction:         dto.direction,
         same_code:         dto.sameCode ?? null,
         event_label:       dto.eventLabel,

@@ -15,6 +15,11 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const CIRST_BASE = "https://r.cir.st/dx/remote_data_request.cfm";
 const STATION = "WCCG";
+// Tenancy: station_id for STATION-SCOPED writes (stream_log_entries,
+// stream_log_daily_stats). Set explicitly per Phase 1c so we no longer rely on
+// the temporary DB DEFAULT 'station_wccg' (migration 087); the default remains
+// as a backstop. Single place to make this dynamic later.
+const STATION_ID = "station_wccg";
 const AUTH_TOKEN = Deno.env.get("CIRST_AUTH_TOKEN") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -103,6 +108,7 @@ async function ingestEntries(
 
   for (let i = 0; i < entries.length; i += BATCH_SIZE) {
     const batch = entries.slice(i, i + BATCH_SIZE).map((e) => ({
+      station_id: STATION_ID,
       log_date: logDate,
       ip_address: e.ip,
       timestamp: e.timestamp.toISOString(),
@@ -182,6 +188,7 @@ async function updateDailyStats(
     .from("stream_log_daily_stats")
     .upsert(
       {
+        station_id: STATION_ID,
         log_date: logDate,
         unique_listeners: uniqueIps.size,
         total_requests: entries.length,

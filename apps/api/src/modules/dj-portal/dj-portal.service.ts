@@ -10,6 +10,7 @@ import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypt
 import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
 import { SupabaseDbService } from '../../common/supabase/supabase-db.service.js';
+import { STATION_ID } from '../../common/supabase/station.js';
 
 /**
  * DJ Portal service. Owns the scheduled-drop upload pipeline:
@@ -181,6 +182,7 @@ export class DjPortalService {
     const { data: drop, error: dropErr } = await this.db.from('dj_drops')
       .upsert(
         {
+          station_id: STATION_ID,
           dj_id: djId,
           slot_id: slot.id,
           file_code: dto.fileCode,
@@ -236,6 +238,7 @@ export class DjPortalService {
       } else {
         await this.db.from('dj_ftp_accounts')
           .insert({
+            station_id: STATION_ID,
             username,
             password_hash: stored,
             role: 'dj',
