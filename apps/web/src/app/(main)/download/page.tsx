@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ShareCard } from "@/components/social/share-card";
 import { getShareUrl, generateShareText } from "@/lib/share";
+import { SITE_URL } from "@/lib/site";
 import Link from "next/link";
 
 /* ------------------------------------------------------------------ */
@@ -43,8 +44,9 @@ const FEATURES = [
   },
 ];
 
-const QR_URL =
-  "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://app.wccg1045fm.com/download";
+const QR_URL = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+  `${SITE_URL}/download`,
+)}`;
 
 /* ------------------------------------------------------------------ */
 /*  Page                                                               */

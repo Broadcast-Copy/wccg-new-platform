@@ -1,4 +1,6 @@
+import type { Metadata } from "next";
 import WatchClient from "./watch-client";
+import { SITE_URL } from "@/lib/site";
 
 // Public-by-design fallbacks (mirror src/lib/supabase/client.ts). The project URL
 // + sb_publishable_* key ship in every client bundle and are RLS-protected, so
@@ -50,6 +52,68 @@ export async function generateStaticParams(): Promise<{ id: string }[]> {
   }
 
   return params;
+}
+
+/**
+ * Per-video social metadata. Fetches the single video at build time (same
+ * public REST pattern as generateStaticParams) so a shared `/videos/<id>` link
+ * shows the video's title + thumbnail in social previews instead of the generic
+ * station card. Videos published after the last build fall back to the generic
+ * title (they resolve client-side via the SPA fallback).
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  if (id === "_placeholder") return { title: "Watch | WCCG 104.5 FM" };
+
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || FALLBACK_SUPABASE_URL;
+    const key =
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || FALLBACK_SUPABASE_ANON_KEY;
+    const res = await fetch(
+      `${url}/rest/v1/videos?id=eq.${id}&select=title,description,thumbnail_url&limit=1`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` } },
+    );
+    if (res.ok) {
+      const rows: unknown = await res.json();
+      const row = Array.isArray(rows) ? rows[0] : undefined;
+      if (row && typeof row === "object") {
+        const v = row as {
+          title?: string;
+          description?: string;
+          thumbnail_url?: string;
+        };
+        const title = v.title
+          ? `${v.title} | WCCG 104.5 FM`
+          : "Watch | WCCG 104.5 FM";
+        const description = v.description?.slice(0, 200) || "Watch on WCCG 104.5 FM.";
+        const images = v.thumbnail_url ? [v.thumbnail_url] : undefined;
+        return {
+          title,
+          description,
+          openGraph: {
+            title,
+            description,
+            type: "video.other",
+            url: `${SITE_URL}/videos/${id}`,
+            ...(images ? { images } : {}),
+          },
+          twitter: {
+            card: "summary_large_image",
+            title,
+            description,
+            ...(images ? { images } : {}),
+          },
+        };
+      }
+    }
+  } catch {
+    // Build-time fetch failed — fall back to the generic station card.
+  }
+  return { title: "Watch | WCCG 104.5 FM" };
 }
 
 export default function Page() {

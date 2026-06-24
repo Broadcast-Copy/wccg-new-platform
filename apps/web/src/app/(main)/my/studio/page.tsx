@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StudioProjects } from "@/components/studio/studio-projects";
+import { SITE_URL } from "@/lib/site";
 
 // ---------------------------------------------------------------------------
 // Tools (used in New Project modal for tool selection)
@@ -255,7 +256,7 @@ function InviteGuestDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const [inviteLink] = useState(() =>
     typeof window !== "undefined"
       ? `${window.location.origin}/studio/booking?invite=${Date.now().toString(36)}`
-      : "https://app.wccg1045fm.com/studio/booking",
+      : `${SITE_URL}/studio/booking`,
   );
 
   function handleCopy() {

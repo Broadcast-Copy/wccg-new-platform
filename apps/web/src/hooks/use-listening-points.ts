@@ -612,21 +612,11 @@ export function getListeningPoints(): number {
       }
     } catch { /* ignore */ }
   }
-  // Fallback: if _currentEmail is null, check all wccg_listening_points_* keys
-  if (!_currentEmail) {
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith("wccg_listening_points_") && key !== "wccg_listening_points") {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (parsed.totalPoints > 0) return parsed.totalPoints;
-          }
-        }
-      }
-    } catch { /* ignore */ }
-  }
+  // When logged out (_currentEmail === null) we deliberately DO NOT scan other
+  // `wccg_listening_points_<email>` keys. Returning the first non-zero balance
+  // there leaked one user's points to the next person who opened the same
+  // browser before logging in. Anonymous reads only ever see the default key
+  // (loaded above as `data`); a fresh visitor correctly sees 0.
   return data.totalPoints;
 }
 

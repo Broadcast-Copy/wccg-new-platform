@@ -36,6 +36,7 @@ import { MultiplierBanner } from "@/components/player/multiplier-banner";
 import { GameRibbon } from "@/components/player/game-ribbon";
 import { StationSwitcher } from "@/components/player/station-switcher";
 import { useAuth } from "@/hooks/use-auth";
+import { SITE_URL } from "@/lib/site";
 import Link from "next/link";
 
 /** localStorage key for the continuous play preference. */
@@ -187,7 +188,7 @@ export function GlobalPlayer() {
       text: currentShow
         ? `Tune in to ${currentShow} on WCCG 104.5 FM!`
         : `Tune in to WCCG 104.5 FM!`,
-      url: "https://wccg1045fm.com",
+      url: SITE_URL,
     };
 
     try {

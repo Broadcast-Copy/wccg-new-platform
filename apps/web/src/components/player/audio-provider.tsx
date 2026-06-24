@@ -56,6 +56,10 @@ export const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(
 const STREAM_STORAGE_KEY = "wccg_active_stream";
 const VOLUME_STORAGE_KEY = "wccg_player_volume";
 
+/** Max consecutive auto-reconnect attempts after a live-stream drop before we
+ *  stop and ask the listener to tap play again. */
+const MAX_RECONNECT_ATTEMPTS = 6;
+
 interface SavedStreamState {
   url: string;
   metadata: StreamMetadata;
@@ -135,6 +139,12 @@ function saveSavedVolume(v: number): void {
 export function AudioProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentStreamRef = useRef<string | null>(null);
+  // Drives explicit backoff reconnects on stream drop — the HTMLAudioElement
+  // does not auto-retry network errors on its own.
+  const reconnectRef = useRef<{
+    attempts: number;
+    timer: ReturnType<typeof setTimeout> | null;
+  }>({ attempts: 0, timer: null });
   const [currentStream, setCurrentStream] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   // Initialize volume synchronously from localStorage (guarded for static export).
@@ -154,22 +164,68 @@ export function AudioProvider({ children }: { children: ReactNode }) {
 
     const audio = audioRef.current;
 
+    const clearReconnect = () => {
+      if (reconnectRef.current.timer) {
+        clearTimeout(reconnectRef.current.timer);
+        reconnectRef.current.timer = null;
+      }
+    };
+
+    // A live stream dropped. HTMLAudioElement does NOT auto-retry network
+    // errors, so drive an explicit exponential-backoff reconnect (1s, 2s, 4s …
+    // capped at 30s) until it recovers or we hit MAX_RECONNECT_ATTEMPTS.
+    const scheduleReconnect = () => {
+      const streamUrl = currentStreamRef.current;
+      if (!streamUrl) return; // user stopped — nothing to reconnect to
+      if (reconnectRef.current.attempts >= MAX_RECONNECT_ATTEMPTS) {
+        setConnectionError("Couldn't reconnect. Tap play to try again.");
+        return;
+      }
+      const attempt = reconnectRef.current.attempts + 1;
+      reconnectRef.current.attempts = attempt;
+      const delay = Math.min(30000, 1000 * 2 ** (attempt - 1));
+      setConnectionError(
+        `Connection lost — reconnecting (${attempt}/${MAX_RECONNECT_ATTEMPTS})…`,
+      );
+      clearReconnect();
+      reconnectRef.current.timer = setTimeout(() => {
+        const a = audioRef.current;
+        // Bail if the user switched/stopped the stream while we waited.
+        if (!a || currentStreamRef.current !== streamUrl) return;
+        const sessionId = crypto
+          .randomUUID()
+          .replace(/-/g, "")
+          .substring(0, 32)
+          .toUpperCase();
+        const separator = streamUrl.includes("?") ? "&" : "?";
+        a.src = `${streamUrl}${separator}playSessionID=${sessionId}`;
+        a.load();
+        // If this attempt also fails, the 'error' event fires again and
+        // schedules the next backoff step.
+        a.play().catch(() => {});
+      }, delay);
+    };
+
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
     const handleEnded = () => setIsPlaying(false);
     const handleError = () => {
       setIsPlaying(false);
       setIsBuffering(false);
-      setConnectionError("Connection lost — retrying...");
+      scheduleReconnect();
     };
     const handleWaiting = () => setIsBuffering(true);
     const handleCanPlay = () => {
       setIsBuffering(false);
       setConnectionError(null);
+      reconnectRef.current.attempts = 0;
+      clearReconnect();
     };
     const handlePlaying = () => {
       setIsBuffering(false);
       setConnectionError(null);
+      reconnectRef.current.attempts = 0;
+      clearReconnect();
     };
     const handleStalled = () => setIsBuffering(true);
 
@@ -208,6 +264,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
 
     return () => {
+      clearReconnect();
       audio.removeEventListener("play", handlePlay);
       audio.removeEventListener("pause", handlePause);
       audio.removeEventListener("ended", handleEnded);
@@ -226,6 +283,13 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     (streamUrl: string, newMetadata?: StreamMetadata) => {
       const audio = audioRef.current;
       if (!audio) return;
+
+      // Manual play cancels any pending auto-reconnect from a prior drop.
+      if (reconnectRef.current.timer) {
+        clearTimeout(reconnectRef.current.timer);
+        reconnectRef.current.timer = null;
+      }
+      reconnectRef.current.attempts = 0;
 
       // If the same base stream is requested and it's paused, just resume
       if (currentStreamRef.current === streamUrl && audio.paused) {
@@ -267,6 +331,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
 
   /** Stop the stream entirely — clears audio, state, and localStorage. */
   const stop = useCallback(() => {
+    if (reconnectRef.current.timer) {
+      clearTimeout(reconnectRef.current.timer);
+      reconnectRef.current.timer = null;
+    }
+    reconnectRef.current.attempts = 0;
     const audio = audioRef.current;
     if (audio) {
       audio.pause();
