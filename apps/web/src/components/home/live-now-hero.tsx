@@ -32,6 +32,7 @@ import {
   usePointsSync,
 } from "@/hooks/use-listening-points";
 import { resolveNowPlaying, getUpNext } from "@/data/schedule";
+import { resolveAirTalent } from "@/data/air-talent";
 import { track } from "@/lib/analytics";
 
 const POINTS_INTERVAL_SECONDS = 90;
@@ -81,6 +82,8 @@ export function LiveNowHero() {
   // On-air show context for the secondary line under the title.
   const onAir = useMemo(() => resolveNowPlaying(), []);
   const upNext = useMemo(() => getUpNext(1)[0], []);
+  // On-air talent imagery (DJ headshot / program art) for the current show.
+  const air = useMemo(() => resolveAirTalent(onAir), [onAir]);
 
   // Track + artist + art prefer MCR (operator-authored), then Cirrus
   // (live metadata aggregator), then the on-air show metadata, finally
@@ -99,6 +102,7 @@ export function LiveNowHero() {
   const albumArt =
     mcrFresh?.artUrl ||
     nowPlaying?.albumArt ||
+    air?.showImage ||
     "/images/logos/wccg-logo.png";
 
   // Real listener count when MCR has one — replaces the old TODO(Phase D)
@@ -260,7 +264,16 @@ export function LiveNowHero() {
 
           {/* On-air strip — show + host with link */}
           {onAir && (
-            <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-white/10 pt-4 text-sm">
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-white/10 pt-4 text-sm">
+              {air?.hostImage && (
+                <Image
+                  src={air.hostImage}
+                  alt={air.hostName ?? onAir.hostNames}
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 rounded-full object-cover ring-1 ring-white/20"
+                />
+              )}
               <Link
                 href={`/shows/${onAir.showId}`}
                 className="font-semibold text-white/90 transition-colors hover:text-[#74ddc7]"

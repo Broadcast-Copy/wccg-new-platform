@@ -9,6 +9,7 @@ import { ALL_SHOWS } from "@/data/shows";
 import type { ShowData } from "@/data/shows";
 import { getHostsByShowId } from "@/data/hosts";
 import { parseTime12h } from "@/lib/time-utils";
+import { useNowPlaying } from "@/hooks/use-now-playing";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -148,6 +149,13 @@ function ChannelTile({ stream }: { stream: Stream }) {
   const isLive = stream.status === "ACTIVE";
   const isThisPlaying = isPlaying && currentStream === stream.streamUrl;
 
+  // Live now-playing song for this station's card (polls that station's
+  // now-playing feed — CORS-enabled IceCast status-json / SecureNet).
+  const { data: np } = useNowPlaying(isLive && !!stream.streamUrl, stream.streamUrl);
+  const nowSong = np?.title
+    ? (np.artist ? `${np.artist} — ${np.title}` : np.title)
+    : null;
+
   // Tick every minute so currentShow updates in real-time
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -222,6 +230,14 @@ function ChannelTile({ stream }: { stream: Stream }) {
           {subtitle && (
             <p className="text-xs sm:text-sm text-amber-600 dark:text-amber-400 font-medium">
               {subtitle}
+            </p>
+          )}
+
+          {/* Live now-playing song on this station */}
+          {nowSong && (
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+              <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-red-600 animate-pulse" />
+              <span className="truncate">{nowSong}</span>
             </p>
           )}
 
@@ -336,8 +352,8 @@ function ChannelTile({ stream }: { stream: Stream }) {
                   <Radio className="h-5 w-5 text-muted-foreground" />
                 </button>
               )}
-              <span className="text-[10px] sm:text-[11px] font-semibold text-foreground uppercase tracking-wider text-center leading-tight max-w-[140px]">
-                {currentShow ? currentShow.name : "Live Now"}
+              <span className="text-[10px] sm:text-[11px] font-semibold text-foreground uppercase tracking-wider text-center leading-tight max-w-[140px] line-clamp-2">
+                {nowSong ?? (currentShow ? currentShow.name : "Live Now")}
               </span>
             </>
           ) : (

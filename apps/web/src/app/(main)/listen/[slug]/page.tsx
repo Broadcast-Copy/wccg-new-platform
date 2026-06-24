@@ -1,4 +1,5 @@
-import { STATIONS } from "@/lib/stations";
+import type { Metadata } from "next";
+import { STATIONS, stationBySlug } from "@/lib/stations";
 import StationPlayerClient from "./station-player-client";
 
 /**
@@ -9,6 +10,20 @@ import StationPlayerClient from "./station-player-client";
  */
 export function generateStaticParams(): { slug: string }[] {
   return STATIONS.map((s) => ({ slug: s.slug }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const station = stationBySlug(slug);
+  if (!station) return { title: "Listen Live | WCCG 104.5 FM" };
+  return {
+    title: `${station.name} — Listen Live | WCCG 104.5 FM`,
+    description: station.description,
+  };
 }
 
 export default function Page() {
