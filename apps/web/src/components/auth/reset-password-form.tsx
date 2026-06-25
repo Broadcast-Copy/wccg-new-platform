@@ -73,7 +73,7 @@ export function ResetPasswordForm() {
     const email = codeEmail.trim();
     const token = code.trim();
     if (!email || token.length < 6) {
-      toast.error("Enter your email and the 6-digit code from your email.");
+      toast.error("Enter your email and the code from your email.");
       return;
     }
     setVerifying(true);
@@ -144,9 +144,9 @@ export function ResetPasswordForm() {
           </div>
           <CardTitle className="text-2xl font-bold">Enter your reset code</CardTitle>
           <CardDescription>
-            Enter your email and the 6-digit code from your WCCG email. (Use this
-            if your reset link didn&apos;t work — some email apps open links
-            early, which can expire them.)
+            Enter your email and the code from your WCCG email. (Use this if your
+            reset link didn&apos;t work — some email apps open links early, which
+            can expire them.)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -164,14 +164,14 @@ export function ResetPasswordForm() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="code">6-digit code</Label>
+              <Label htmlFor="code">Code from your email</Label>
               <Input
                 id="code"
                 inputMode="numeric"
                 autoComplete="one-time-code"
-                placeholder="123456"
+                placeholder="Enter your code"
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
                 disabled={verifying}
               />
             </div>
