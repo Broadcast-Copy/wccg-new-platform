@@ -56,7 +56,15 @@ export function LoginForm() {
       }
 
       toast.success("Welcome back!");
-      router.push("/");
+      // Honor a ?next= return path (e.g. RequireRole or the DJ portal sends the
+      // user here to sign in, then back). Only internal paths — never an
+      // external open-redirect.
+      const params =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search)
+          : null;
+      const next = params?.get("next");
+      router.push(next && next.startsWith("/") ? next : "/");
       router.refresh();
     } catch (error) {
       toast.error("An unexpected error occurred. Please try again.");

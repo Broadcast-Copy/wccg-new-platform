@@ -12,6 +12,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { isoMondayOfNow } from "@/lib/broadcast-week";
 import {
@@ -74,6 +75,7 @@ interface MeResponse {
 }
 
 export default function DjPortalPage() {
+  const router = useRouter();
   const [me, setMe] = useState<MeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -91,7 +93,13 @@ export default function DjPortalPage() {
       try {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Please sign in to use the DJ portal.");
+        if (!user) {
+          // Onboarding: a DJ who isn't signed in (e.g. arriving from the
+          // "upload your mix" email) is routed to sign in, then bounced back
+          // here to upload. Avoids the old dead-end "please sign in" error.
+          router.replace(`/login?next=${encodeURIComponent("/my/dj")}`);
+          return;
+        }
 
         const { data: dj } = await supabase
           .from("djs")
@@ -151,7 +159,7 @@ export default function DjPortalPage() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [router]);
 
   useEffect(reload, [reload]);
 
