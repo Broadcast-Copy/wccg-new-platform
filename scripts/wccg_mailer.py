@@ -58,9 +58,36 @@ def _context() -> ssl.SSLContext:
     return ssl.create_default_context()
 
 
+def _send_via_gmail(msg) -> str:
+    """Fallback when the support@ SMTP password isn't placed yet: send via the
+    gmail-watcher OAuth token (from biggleem@gmail.com) so DJ mail still goes out.
+    Auto-stops being used the moment smtp-pass.txt is filled."""
+    import base64
+    from google.auth.transport.requests import Request
+    from google.oauth2.credentials import Credentials
+    from googleapiclient.discovery import build
+    tokfile = os.path.join(
+        os.environ.get("WCCG_GMAIL_DIR", r"C:\Users\wccg1\.wccg-gmail-watcher"), "token.json")
+    scopes = ["https://www.googleapis.com/auth/gmail.readonly",
+              "https://www.googleapis.com/auth/gmail.send",
+              "https://www.googleapis.com/auth/drive.readonly"]
+    creds = Credentials.from_authorized_user_file(tokfile, scopes)
+    if creds and creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+        with open(tokfile, "w") as fh:
+            fh.write(creds.to_json())
+    del msg["From"]
+    msg["From"] = "WCCG 104.5 FM <biggleem@gmail.com>"
+    svc = build("gmail", "v1", credentials=creds)
+    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+    svc.users().messages().send(userId="me", body={"raw": raw}).execute()
+    return "gmail-fallback"
+
+
 def send_mail(to: str, subject: str, html: str, text: str, inline_images=None) -> str:
     """Send one HTML+text email with optional inline CID images
-    (list of (cid, filepath)). From = support@wccg1045fm.com via station SMTP."""
+    (list of (cid, filepath)). From = support@wccg1045fm.com via station SMTP;
+    falls back to the gmail-watcher token if the support@ password isn't set."""
     msg = MIMEMultipart("related")
     msg["From"] = MAIL_FROM
     msg["To"] = to
@@ -76,16 +103,23 @@ def send_mail(to: str, subject: str, html: str, text: str, inline_images=None) -
         img.add_header("Content-Disposition", "inline", filename=f"{cid}.png")
         msg.attach(img)
 
+    try:
+        pw = _password()
+    except RuntimeError:
+        if os.environ.get("WCCG_NO_GMAIL_FALLBACK") == "1":
+            raise
+        return _send_via_gmail(msg)
+
     ctx = _context()
     if SMTP_PORT == 465:
         with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=ctx, timeout=60) as s:
-            s.login(SMTP_USER, _password())
+            s.login(SMTP_USER, pw)
             s.sendmail(SMTP_USER, [to], msg.as_string())
     else:  # 587 / STARTTLS
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=60) as s:
             s.ehlo()
             s.starttls(context=ctx)
-            s.login(SMTP_USER, _password())
+            s.login(SMTP_USER, pw)
             s.sendmail(SMTP_USER, [to], msg.as_string())
     return "smtp-ok"
 
