@@ -18,7 +18,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { toast } from "sonner";
-import { Lock, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Lock, CheckCircle2, ArrowLeft, KeyRound } from "lucide-react";
 
 const resetPasswordSchema = z
   .object({
@@ -37,6 +37,12 @@ export function ResetPasswordForm() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [hasSession, setHasSession] = useState(false);
   const [checking, setChecking] = useState(true);
+  // Code-entry fallback: many email providers (Yahoo/iCloud/corporate) pre-scan
+  // links, which consumes a one-time recovery link before the user clicks it.
+  // A 6-digit code can't be "used up" by a scanner, so we always offer it.
+  const [codeEmail, setCodeEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
   const { supabase } = useSupabase();
   const router = useRouter();
 
@@ -48,13 +54,50 @@ export function ResetPasswordForm() {
     resolver: zodResolver(resetPasswordSchema),
   });
 
-  // Check if there's an active session (user arrived via reset link)
+  // If the recovery link succeeded, a session exists and we go straight to the
+  // set-password form. Otherwise we fall back to code entry. Prefill the email
+  // from ?email= (the setup email links here with it) so DJs only type the code.
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const qpEmail = new URLSearchParams(window.location.search).get("email");
+      if (qpEmail) setCodeEmail(qpEmail);
+    }
     supabase.auth.getSession().then(({ data: { session } }) => {
       setHasSession(!!session);
       setChecking(false);
     });
   }, [supabase]);
+
+  async function verifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    const email = codeEmail.trim();
+    const token = code.trim();
+    if (!email || token.length < 6) {
+      toast.error("Enter your email and the 6-digit code from your email.");
+      return;
+    }
+    setVerifying(true);
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: "recovery",
+      });
+      if (error) {
+        toast.error(error.message || "That code is invalid or expired.");
+        return;
+      }
+      if (data.session) {
+        setHasSession(true); // -> set-password form
+      } else {
+        toast.error("Could not verify that code. Request a new one.");
+      }
+    } catch {
+      toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      setVerifying(false);
+    }
+  }
 
   async function onSubmit(data: ResetPasswordFormValues) {
     setIsLoading(true);
@@ -90,28 +133,63 @@ export function ResetPasswordForm() {
     );
   }
 
+  // No session (no link, or the link was already consumed/expired by an email
+  // scanner). Offer the code path instead of a dead end.
   if (!hasSession) {
     return (
       <Card>
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">
-            Invalid or expired link
-          </CardTitle>
+          <div className="flex justify-center mb-2">
+            <KeyRound className="h-10 w-10 text-[#74ddc7]" />
+          </div>
+          <CardTitle className="text-2xl font-bold">Enter your reset code</CardTitle>
           <CardDescription>
-            This password reset link has expired or is invalid. Please request a
-            new one.
+            Enter your email and the 6-digit code from your WCCG email. (Use this
+            if your reset link didn&apos;t work — some email apps open links
+            early, which can expire them.)
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          <Link href="/forgot-password" className="w-full">
-            <Button className="w-full">Request New Reset Link</Button>
-          </Link>
-          <Link href="/login" className="w-full">
-            <Button variant="ghost" className="w-full">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Sign In
+        <CardContent>
+          <form onSubmit={verifyCode} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="code-email">Email</Label>
+              <Input
+                id="code-email"
+                type="email"
+                placeholder="you@example.com"
+                autoComplete="email"
+                value={codeEmail}
+                onChange={(e) => setCodeEmail(e.target.value)}
+                disabled={verifying}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="code">6-digit code</Label>
+              <Input
+                id="code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="123456"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                disabled={verifying}
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={verifying}>
+              {verifying ? "Verifying..." : (<><KeyRound className="mr-2 h-4 w-4" />Verify code</>)}
             </Button>
-          </Link>
+            <div className="flex flex-col gap-2 pt-1">
+              <Link href="/forgot-password" className="w-full">
+                <Button variant="ghost" className="w-full">Email me a new code</Button>
+              </Link>
+              <Link href="/login" className="w-full">
+                <Button variant="ghost" className="w-full">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to Sign In
+                </Button>
+              </Link>
+            </div>
+          </form>
         </CardContent>
       </Card>
     );
@@ -132,8 +210,11 @@ export function ResetPasswordForm() {
             your new password.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Button className="w-full" onClick={() => router.push("/")}>
+        <CardContent className="flex flex-col gap-2">
+          <Button className="w-full" onClick={() => router.push("/my/dj")}>
+            Go to my DJ Portal
+          </Button>
+          <Button variant="ghost" className="w-full" onClick={() => router.push("/")}>
             Go to Homepage
           </Button>
         </CardContent>
