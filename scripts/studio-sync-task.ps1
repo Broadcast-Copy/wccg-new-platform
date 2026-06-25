@@ -1,18 +1,18 @@
-# WCCG Studio-Sync — scheduled-task wrapper.
-# Reads the DPAPI-encrypted admin credential (created once, interactively, by
-# the station owner — see STUDIO-SYNC-RUNBOOK.md), runs one watcher pass, and
-# appends output to a dated log under D:\WCCG\sync-logs.
+# WCCG Studio-Sync — scheduled-task wrapper (credential-free).
 #
-# One-time credential setup (run yourself; the password is encrypted to YOUR
-# Windows account and never leaves this PC):
-#   New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\WCCG" | Out-Null
-#   Get-Credential -UserName biggleem@gmail.com -Message "WCCG studio-sync" |
-#     Export-CliXml "$env:LOCALAPPDATA\WCCG\studio-sync-cred.xml"
+# Runs sync-dj-drops.py, which pulls DJ portal uploads from the PUBLIC dj-drops
+# bucket to the broadcast carts (M:\JBMusic) + dated archive (D:\WCCG\b-mixshows)
+# and marks each published via the secret-gated studio-sync edge function. No
+# admin password / DPAPI credential needed — the old studio-sync-watcher.py path
+# (which logged into the platform with the owner's password) is retired because
+# it failed unattended whenever that credential was missing/expired.
+#
+# Wired to Task Scheduler job "WCCG Studio Sync" (every ~5 min). Output is
+# appended to a dated log; sync-dj-drops.py also keeps its own dj-drops-sync.log.
 
 $ErrorActionPreference = "Stop"
-$credPath = Join-Path $env:LOCALAPPDATA "WCCG\studio-sync-cred.xml"
 $logDir = "D:\WCCG\sync-logs"
-$script = Join-Path $PSScriptRoot "studio-sync-watcher.py"
+$script = Join-Path $PSScriptRoot "sync-dj-drops.py"
 New-Item -ItemType Directory -Force $logDir | Out-Null
 $log = Join-Path $logDir ("studio-sync-" + (Get-Date -Format "yyyyMMdd") + ".log")
 
@@ -20,21 +20,15 @@ function Write-Log($msg) {
   ("[" + (Get-Date -Format "HH:mm:ss") + "] " + $msg) | Out-File -FilePath $log -Append -Encoding utf8
 }
 
-if (-not (Test-Path $credPath)) {
-  Write-Log "NO CREDENTIAL at $credPath - run the one-time setup from the runbook."
-  exit 2
-}
-
 try {
-  $cred = Import-CliXml $credPath
-  $env:WCCG_ADMIN_EMAIL = $cred.UserName
-  $env:WCCG_ADMIN_PASSWORD = $cred.GetNetworkCredential().Password
-  & py -3 $script --once -v 2>&1 | Out-File -FilePath $log -Append -Encoding utf8
-  Write-Log ("watcher exit code " + $LASTEXITCODE)
+  if (Get-Command py -ErrorAction SilentlyContinue) {
+    & py -3 $script 2>&1 | Out-File -FilePath $log -Append -Encoding utf8
+  } else {
+    & python $script 2>&1 | Out-File -FilePath $log -Append -Encoding utf8
+  }
+  Write-Log ("sync exit code " + $LASTEXITCODE)
   exit $LASTEXITCODE
 } catch {
   Write-Log ("wrapper error: " + $_.Exception.Message)
   exit 1
-} finally {
-  $env:WCCG_ADMIN_PASSWORD = $null
 }
