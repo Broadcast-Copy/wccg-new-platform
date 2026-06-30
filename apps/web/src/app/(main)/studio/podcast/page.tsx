@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -53,6 +53,10 @@ import {
   MonitorPlay,
 } from "lucide-react";
 import { LoginRequired } from "@/components/auth/login-required";
+import { useSearchParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { useLiveKitRoom } from "@/hooks/use-livekit-room";
+import { LiveKitGrid } from "@/components/studio/livekit-grid";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -525,6 +529,60 @@ function PodcastStudioContent() {
     },
   ]);
 
+  // ------ Multi-user (LiveKit) ------
+  // Feature-flagged: only active when NEXT_PUBLIC_LIVEKIT_URL is set. The host's
+  // room is stable (studio-<userId>); a guest opens ?room=<id> to join the same
+  // one. With no LiveKit configured, everything below stays inert and the studio
+  // behaves exactly as the original solo recorder.
+  const searchParams = useSearchParams();
+  const [userId, setUserId] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    createClient()
+      .auth.getUser()
+      .then(({ data }) => {
+        if (!active) return;
+        setUserId(data.user?.id ?? null);
+        setDisplayName(
+          (data.user?.user_metadata?.display_name as string | undefined) ??
+            data.user?.email ??
+            null,
+        );
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const roomParam = searchParams?.get("room") ?? null;
+  const roomId = roomParam || (userId ? `studio-${userId}` : null);
+  const liveKitEnabled = !!process.env.NEXT_PUBLIC_LIVEKIT_URL && !!roomId;
+  const joinQuery = `?room=${encodeURIComponent(roomId ?? "")}`;
+  const inviteHref =
+    (typeof window !== "undefined" ? window.location.origin : "") +
+    "/studio/podcast" +
+    joinQuery;
+
+  const {
+    participants: lkParticipants,
+    state: lkState,
+    error: lkError,
+    localStream: lkLocalStream,
+    setMicrophoneEnabled: lkSetMic,
+    setCameraEnabled: lkSetCam,
+  } = useLiveKitRoom(roomId, liveKitEnabled, displayName);
+
+  // Feed LiveKit's local camera+mic stream into the existing recorder/preview/
+  // meter pipeline so recording and audio levels keep working in multi-user mode.
+  useEffect(() => {
+    if (!liveKitEnabled || !lkLocalStream) return;
+    streamRef.current = lkLocalStream;
+    setHasCamera(true);
+  }, [liveKitEnabled, lkLocalStream]);
+
   // ------ Device enumeration ------
   const enumerateDevices = useCallback(async () => {
     try {
@@ -539,6 +597,9 @@ function PodcastStudioContent() {
 
   // ------ Camera init ------
   useEffect(() => {
+    // In multi-user mode LiveKit owns local capture (and feeds streamRef via the
+    // effect above); a second getUserMedia here would fight for the camera.
+    if (liveKitEnabled) return;
     let stream: MediaStream | null = null;
     let cancelled = false;
 
@@ -597,10 +658,11 @@ function PodcastStudioContent() {
       if (stream) stream.getTracks().forEach((t) => t.stop());
       navigator.mediaDevices?.removeEventListener("devicechange", handler);
     };
-  }, [enumerateDevices]);
+  }, [enumerateDevices, liveKitEnabled]);
 
   // ------ Mic toggle ------
   useEffect(() => {
+    if (liveKitEnabled) lkSetMic(micEnabled);
     if (!streamRef.current) return;
     streamRef.current.getAudioTracks().forEach((t) => {
       t.enabled = micEnabled;
@@ -608,10 +670,11 @@ function PodcastStudioContent() {
     setParticipants((prev) =>
       prev.map((p) => (p.id === "host" ? { ...p, isMuted: !micEnabled } : p))
     );
-  }, [micEnabled]);
+  }, [micEnabled, liveKitEnabled, lkSetMic]);
 
   // ------ Camera toggle ------
   useEffect(() => {
+    if (liveKitEnabled) lkSetCam(cameraEnabled);
     if (!streamRef.current) return;
     streamRef.current.getVideoTracks().forEach((t) => {
       t.enabled = cameraEnabled;
@@ -619,7 +682,7 @@ function PodcastStudioContent() {
     setParticipants((prev) =>
       prev.map((p) => (p.id === "host" ? { ...p, hasVideo: cameraEnabled } : p))
     );
-  }, [cameraEnabled]);
+  }, [cameraEnabled, liveKitEnabled, lkSetCam]);
 
   // ------ Audio level monitoring ------
   useEffect(() => {
@@ -836,7 +899,7 @@ function PodcastStudioContent() {
   const handleCopyLink = () => {
     const link =
       typeof window !== "undefined"
-        ? `${window.location.origin}/studio/podcast?join=true`
+        ? `${window.location.origin}/studio/podcast${joinQuery}`
         : "";
     navigator.clipboard.writeText(link).catch(() => {});
     setCopied(true);
@@ -1163,7 +1226,7 @@ function PodcastStudioContent() {
             <img
               src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(
                 typeof window !== "undefined"
-                  ? `${window.location.origin}/studio/podcast?join=true`
+                  ? `${window.location.origin}/studio/podcast${joinQuery}`
                   : ""
               )}`}
               alt="QR code to join studio"
@@ -1182,7 +1245,7 @@ function PodcastStudioContent() {
               {copied ? "Copied!" : "Copy Link"}
             </button>
             <a
-              href={`mailto:?subject=${encodeURIComponent("Join my podcast on WCCG Studio")}&body=${encodeURIComponent(`Join my podcast recording session:\n\n${typeof window !== "undefined" ? `${window.location.origin}/studio/podcast?join=true` : ""}\n\nPowered by WCCG 104.5 FM Studio`)}`}
+              href={`mailto:?subject=${encodeURIComponent("Join my podcast on WCCG Studio")}&body=${encodeURIComponent(`Join my podcast recording session:\n\n${typeof window !== "undefined" ? `${window.location.origin}/studio/podcast${joinQuery}` : ""}\n\nPowered by WCCG 104.5 FM Studio`)}`}
               className="text-xs bg-muted text-foreground/70 px-4 py-2 rounded-lg hover:bg-muted/80 transition-colors font-medium flex items-center gap-1.5 border border-border"
             >
               <Mail className="h-3 w-3" />
@@ -1307,7 +1370,7 @@ function PodcastStudioContent() {
           <div className="flex items-center gap-1.5 bg-muted border border-border rounded-lg px-2 py-1">
             <Users className="h-3 w-3 text-muted-foreground" />
             <span className="text-xs text-foreground/70 font-medium">
-              {participants.length}
+              {liveKitEnabled ? Math.max(1, lkParticipants.length) : participants.length}
             </span>
           </div>
 
@@ -1374,7 +1437,16 @@ function PodcastStudioContent() {
       <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* ── Video Grid ── */}
         <div className="flex-1 min-w-0 bg-background overflow-hidden">
-          {renderVideoGrid()}
+          {liveKitEnabled ? (
+            <LiveKitGrid
+              participants={lkParticipants}
+              connecting={lkState === "connecting"}
+              error={lkError}
+              inviteUrl={inviteHref}
+            />
+          ) : (
+            renderVideoGrid()
+          )}
         </div>
 
         {/* ── Right Sidebar ── */}
@@ -1599,7 +1671,7 @@ function PodcastStudioContent() {
                       )}&body=${encodeURIComponent(
                         `Hey! Join my podcast recording session:\n\n${
                           typeof window !== "undefined"
-                            ? `${window.location.origin}/studio/podcast?join=true`
+                            ? `${window.location.origin}/studio/podcast${joinQuery}`
                             : ""
                         }\n\nPowered by WCCG 104.5 FM Studio`
                       )}`}
@@ -1625,7 +1697,7 @@ function PodcastStudioContent() {
                         <img
                           src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(
                             typeof window !== "undefined"
-                              ? `${window.location.origin}/studio/podcast?join=true`
+                              ? `${window.location.origin}/studio/podcast${joinQuery}`
                               : ""
                           )}`}
                           alt="QR code to join studio"
@@ -2672,7 +2744,10 @@ export default function PodcastStudioPage() {
       fullPage
       message="Sign in to access the Podcast Studio. Record, edit, and publish your podcast episodes."
     >
-      <PodcastStudioContent />
+      {/* useSearchParams (room id) requires a Suspense boundary under output:export */}
+      <Suspense fallback={null}>
+        <PodcastStudioContent />
+      </Suspense>
     </LoginRequired>
   );
 }

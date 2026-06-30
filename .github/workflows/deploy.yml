@@ -53,6 +53,10 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://irjiqbmoohklagdegezz.supabase.co' }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_w9EytFGBM7mEvefmGhsZ9w_bXbmNjQ4' }}
           NEXT_PUBLIC_API_URL: 'https://api.wccg1045fm.com/api/v1'
+          # Public LiveKit websocket URL (wss://<project>.livekit.cloud). Empty =
+          # Podcast Studio multi-user mode OFF (solo recorder). Set the GitHub
+          # secret to turn it on. The API key/secret live in Supabase, not here.
+          NEXT_PUBLIC_LIVEKIT_URL: ${{ secrets.NEXT_PUBLIC_LIVEKIT_URL || '' }}
         run: pnpm --filter web build
 
       # Static export needs <route>/index.html for sub-routes so deep links
