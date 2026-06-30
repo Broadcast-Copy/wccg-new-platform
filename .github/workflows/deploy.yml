@@ -56,7 +56,7 @@ jobs:
           # Public LiveKit websocket URL (wss://<project>.livekit.cloud). Empty =
           # Podcast Studio multi-user mode OFF (solo recorder). Set the GitHub
           # secret to turn it on. The API key/secret live in Supabase, not here.
-          NEXT_PUBLIC_LIVEKIT_URL: ${{ secrets.NEXT_PUBLIC_LIVEKIT_URL || '' }}
+          NEXT_PUBLIC_LIVEKIT_URL: ${{ secrets.NEXT_PUBLIC_LIVEKIT_URL || 'wss://wccg1045fm-live-1zk000qq.livekit.cloud' }}
         run: pnpm --filter web build
 
       # Static export needs <route>/index.html for sub-routes so deep links
