@@ -1,8 +1,9 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getHostById, type HostData } from "@/data/hosts";
+import { getHostById, getHostDjSlug, type HostData } from "@/data/hosts";
 import { getShowById } from "@/data/shows";
 import { getHostMixes } from "@/data/mixes";
 import { YouTubeGrid } from "@/components/youtube/youtube-grid";
@@ -164,6 +165,23 @@ export default function HostBioPage({
   // Get local data from constants — there is no API server, so static data
   // is the only source. The view model resolves synchronously.
   const hostData = hostId ? getHostById(hostId) : null;
+
+  // DJ hosts have a real, DB-driven profile at /djs/[slug] that shows their
+  // actual uploaded mixes (this static page only ever had mock mixes). Bounce
+  // any already-shared /hosts/<dj> link to the real profile.
+  const router = useRouter();
+  const djSlug = hostId ? getHostDjSlug(hostId) : undefined;
+  useEffect(() => {
+    if (djSlug) router.replace(`/djs/${djSlug}`);
+  }, [djSlug, router]);
+
+  if (djSlug) {
+    return (
+      <div className="py-12 text-sm text-muted-foreground">
+        Redirecting to the DJ profile…
+      </div>
+    );
+  }
 
   const host: Host | null = hostData
     ? {

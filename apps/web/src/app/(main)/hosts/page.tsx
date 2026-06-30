@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { getHostsFromDb } from "@/lib/content-db";
+import { hostProfileHref } from "@/data/hosts";
 
 export const metadata = {
   title: "Hosts & DJs | WCCG 104.5 FM",
@@ -55,7 +56,7 @@ function categorizeHosts(hosts: Host[]) {
 
 function HostCard({ host }: { host: Host }) {
   return (
-    <Link href={`/hosts/${host.id}`}>
+    <Link href={hostProfileHref(host.id)}>
       <Card className="group h-full overflow-hidden rounded-2xl border border-border/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 hover:-translate-y-0.5">
         <CardContent className="flex items-center gap-4 p-5">
           <Avatar className="h-14 w-14 shrink-0 ring-2 ring-border/50 group-hover:ring-primary/30 transition-all">

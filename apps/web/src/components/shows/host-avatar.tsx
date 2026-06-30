@@ -1,5 +1,6 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
+import { hostProfileHref } from "@/data/hosts";
 
 interface HostAvatarProps {
   hostId: string;
@@ -28,7 +29,7 @@ export function HostAvatar({
 
   return (
     <Link
-      href={`/hosts/${hostId}`}
+      href={hostProfileHref(hostId)}
       className="flex items-center gap-2 transition-opacity hover:opacity-80"
     >
       <Avatar className={sizeClasses[size]}>

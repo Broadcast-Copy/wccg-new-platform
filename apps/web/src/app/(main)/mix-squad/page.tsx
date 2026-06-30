@@ -12,6 +12,7 @@ import {
   MIXSQUAD_HOSTS,
   WEEKEND_HOSTS,
   SUNDAY_HOSTS,
+  hostProfileHref,
   type HostData,
 } from "@/data/hosts";
 import { MixSquadLiveStrip } from "@/components/mix-squad/live-strip";
@@ -42,7 +43,7 @@ function getInitials(name: string): string {
 function DJCard({ dj }: { dj: HostData }) {
   return (
     <Link
-      href={`/hosts/${dj.id}`}
+      href={hostProfileHref(dj.id)}
       className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:border-[#74ddc7]/40 hover:shadow-xl hover:shadow-purple-500/5 hover:-translate-y-1"
     >
       {/* DJ Photo */}

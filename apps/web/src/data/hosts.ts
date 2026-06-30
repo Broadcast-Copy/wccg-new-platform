@@ -647,6 +647,65 @@ export const MIXSQUAD_HOSTS = ALL_HOSTS.filter((h) => h.category === "mixsquad")
 export const WEEKEND_HOSTS = ALL_HOSTS.filter((h) => h.category === "weekend");
 export const SUNDAY_HOSTS = ALL_HOSTS.filter((h) => h.category === "sunday");
 
+/**
+ * Static host id → live `djs.slug`, for hosts that have a real DB DJ record.
+ *
+ * The static `/hosts/[id]` pages render a hardcoded MOCK mixes file
+ * (`src/data/mixes.ts`), so a DJ's actual uploaded mixes never show there. The
+ * `/djs/[slug]` profile, by contrast, reads each DJ's PUBLISHED `dj_drops`
+ * straight from Supabase. So for every host that maps to a DB DJ we link to (and
+ * redirect to) `/djs/[slug]` instead — that's where the real mixes live.
+ *
+ * Hosts NOT listed here (syndicated talent, pastors, and DJs with no DB record
+ * like DJ Swin / Carolina Trendsetter) have no `/djs` profile and keep their
+ * static `/hosts/[id]` bio page.
+ */
+const HOST_TO_DJ_SLUG: Record<string, string> = {
+  host_shorty_corleone: "dj-corleone",
+  host_dj_ricovelli: "dj-ricoveli",
+  host_dj_tony_neal: "dj-tony-neal",
+  host_dj_ike_gda: "dj-ike-gda",
+  host_dj_izzynice: "dj-izzy-nice",
+  host_dj_spinwiz: "dj-spin-wiz",
+  host_dj_rayn: "dj-rayn",
+  host_dj_tommygee: "dj-tommy-gee",
+  host_dj_yodo: "dj-yodo",
+  host_dj_chuck_t: "dj-chuck-t",
+  host_dj_daddyblack: "dj-daddy-black",
+  host_dj_daffie: "dj-daffie",
+  host_dj_dane_dinero: "dj-dane-dinero",
+  host_dj_itanist: "dj-itanist",
+  host_dj_jay_b: "dj-jay-b",
+  host_dj_juice: "dj-juice",
+  host_dj_killako: "dj-killako",
+  host_dj_kingviv: "dj-kingviv",
+  host_dj_lj: "dj-ljay",
+  host_dj_loudiamonds: "dj-lou-diamonds",
+  host_dj_official: "dj-official",
+  host_dj_swazzey: "dj-swayzee",
+  host_dj_t_money: "dj-t-money",
+  host_dj_tonelo: "dj-tone-lo",
+  host_dj_weezy: "dj-weezy",
+  host_dj_whosane: "dj-whosane",
+  host_dj_wolf: "dj-wolf",
+  host_dj_yafeelme: "dj-yafeelme",
+};
+
+/** The live `/djs` slug for a host, or undefined if the host has no DB DJ. */
+export function getHostDjSlug(hostId: string): string | undefined {
+  return HOST_TO_DJ_SLUG[hostId];
+}
+
+/**
+ * Canonical profile link for a host: the live DB DJ profile (`/djs/[slug]`,
+ * which shows real uploaded mixes) when one exists, else the static host bio
+ * page (`/hosts/[id]`).
+ */
+export function hostProfileHref(hostId: string): string {
+  const slug = HOST_TO_DJ_SLUG[hostId];
+  return slug ? `/djs/${slug}` : `/hosts/${hostId}`;
+}
+
 /** Lookup host by ID */
 export function getHostById(id: string): HostData | undefined {
   return ALL_HOSTS.find((h) => h.id === id);

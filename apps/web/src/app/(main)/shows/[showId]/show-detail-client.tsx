@@ -76,6 +76,7 @@ interface Show {
 
 import type { ShowData } from "@/data/shows";
 import type { HostData } from "@/data/hosts";
+import { hostProfileHref } from "@/data/hosts";
 import { YouTubeGrid } from "@/components/youtube/youtube-grid";
 import type { YouTubeVideo } from "@/lib/youtube-rss";
 
@@ -731,7 +732,7 @@ export default function ShowDetailPage({
                   </h3>
                   <div className="space-y-2">
                     {show.hosts.map((host) => (
-                      <Link key={host.id} href={`/hosts/${host.id}`} className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-muted/50">
+                      <Link key={host.id} href={hostProfileHref(host.id)} className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-muted/50">
                         <Avatar className="h-10 w-10 border border-border">
                           {host.avatarUrl && <AvatarImage src={host.avatarUrl} alt={host.name} />}
                           <AvatarFallback className="text-xs bg-[#74ddc7]/20 text-[#74ddc7]">{getInitials(host.name)}</AvatarFallback>
@@ -753,7 +754,7 @@ export default function ShowDetailPage({
         <TabsContent value="hosts">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {show.hosts.length > 0 ? show.hosts.map((host) => (
-              <Link key={host.id} href={`/hosts/${host.id}`}>
+              <Link key={host.id} href={hostProfileHref(host.id)}>
                 <div className="h-full rounded-xl border border-border bg-card p-6 text-center space-y-4 transition-all hover:bg-muted hover:border-[#74ddc7]/30">
                   <Avatar className="h-24 w-24 mx-auto border-2 border-[#74ddc7]/30">
                     {host.avatarUrl && <AvatarImage src={host.avatarUrl} alt={host.name} />}
