@@ -583,6 +583,49 @@ function PodcastStudioContent() {
     setHasCamera(true);
   }, [liveKitEnabled, lkLocalStream]);
 
+  // ── Whole-room recording (LiveKit Egress -> private My Studio recordings) ──
+  // In multi-user mode the Record button captures the ENTIRE room server-side
+  // (everyone), not just the local track. The file lands in the user's My Studio.
+  const [egressId, setEgressId] = useState<string | null>(null);
+  const [roomRecError, setRoomRecError] = useState<string | null>(null);
+  const [roomRecNote, setRoomRecNote] = useState<string | null>(null);
+
+  const toggleRoomRecording = useCallback(async () => {
+    const supabase = createClient();
+    if (isRecording) {
+      setIsRecording(false);
+      setParticipants((prev) =>
+        prev.map((p) => (p.id === "host" ? { ...p, isRecording: false } : p)),
+      );
+      try {
+        await supabase.functions.invoke("livekit-egress", { body: { action: "stop", egressId } });
+      } catch { /* */ }
+      setEgressId(null);
+      setRoomRecNote("Recording stopped — it's processing and will appear in My Studio → Recordings shortly.");
+    } else {
+      if (!roomId) return;
+      setRoomRecError(null);
+      setRoomRecNote(null);
+      try {
+        const { data, error } = await supabase.functions.invoke("livekit-egress", {
+          body: { action: "start", room: roomId, title: episodeName },
+        });
+        if (error) throw new Error(error.message);
+        const eid = (data as { egressId?: string } | null)?.egressId;
+        if (!eid) throw new Error((data as { error?: string } | null)?.error || "Could not start recording");
+        setEgressId(eid);
+        setRecordingTime(0);
+        recordingTimeRef.current = 0;
+        setIsRecording(true);
+        setParticipants((prev) =>
+          prev.map((p) => (p.id === "host" ? { ...p, isRecording: true } : p)),
+        );
+      } catch (e) {
+        setRoomRecError((e as Error).message);
+      }
+    }
+  }, [isRecording, egressId, roomId, episodeName]);
+
   // ------ Device enumeration ------
   const enumerateDevices = useCallback(async () => {
     try {
@@ -1430,6 +1473,17 @@ function PodcastStudioContent() {
           </button>
         </div>
       </div>
+
+      {/* Recording status banner (multi-user egress) */}
+      {liveKitEnabled && (roomRecError || roomRecNote) && (
+        <div
+          className={`shrink-0 px-4 py-1.5 text-xs border-b border-border ${
+            roomRecError ? "bg-red-600/10 text-red-300" : "bg-emerald-600/10 text-emerald-300"
+          }`}
+        >
+          {roomRecError || roomRecNote}
+        </div>
+      )}
 
       {/* ================================================================= */}
       {/* Main Content Area                                                 */}
@@ -2449,13 +2503,20 @@ function PodcastStudioContent() {
 
           {/* Record */}
           <button
-            onClick={toggleRecording}
-            className={`p-3 rounded-full transition-all ${
+            onClick={liveKitEnabled ? toggleRoomRecording : toggleRecording}
+            disabled={liveKitEnabled && !roomId}
+            className={`p-3 rounded-full transition-all disabled:opacity-50 ${
               isRecording
                 ? "bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-600/30 animate-pulse"
                 : "bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-600/20"
             }`}
-            title={isRecording ? "Stop recording" : "Start recording"}
+            title={
+              isRecording
+                ? "Stop recording"
+                : liveKitEnabled
+                  ? "Record the whole room"
+                  : "Start recording"
+            }
           >
             {isRecording ? (
               <Square className="h-5 w-5 fill-current" />

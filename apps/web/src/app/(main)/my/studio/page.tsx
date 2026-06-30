@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StudioProjects } from "@/components/studio/studio-projects";
+import { StudioRecordings } from "@/components/studio/studio-recordings";
 import { SITE_URL } from "@/lib/site";
 
 // ---------------------------------------------------------------------------
@@ -389,6 +390,9 @@ export default function MyStudioPage() {
 
       {/* My Projects */}
       <StudioProjects />
+
+      {/* Recordings (private studio session captures) */}
+      <StudioRecordings />
 
       {/* CTA to full services */}
       <div className="rounded-xl border border-border bg-gradient-to-r from-[#7401df]/5 to-[#74ddc7]/5 p-6 flex flex-col sm:flex-row items-center gap-4">

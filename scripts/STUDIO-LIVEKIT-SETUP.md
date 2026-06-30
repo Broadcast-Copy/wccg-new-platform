@@ -66,8 +66,33 @@ build (empty by default = feature off). Re-run the deploy (push or the manual
   records the local user (single-party). Multi-party recording is a later step
   (LiveKit **Egress** records the whole room server-side).
 
+## Recording whole sessions (egress → My Studio)
+
+The **Record** button in a multi-user session captures the WHOLE room
+server-side (LiveKit Egress) and uploads the MP4 to a private Supabase bucket;
+it appears in **My Studio → Recordings** (owner-only). Already built and
+deployed: the `studio_recordings` table + RLS, the private `studio-recordings`
+bucket, the `livekit-egress` edge function, and the My Studio UI.
+
+One credential is still needed — Egress must upload to storage you own, via
+Supabase's S3-compatible endpoint:
+
+1. Supabase dashboard → **Storage → S3 Access Keys** (Storage settings) → **New
+   access key**. Copy the **Access key ID** and **Secret access key**.
+   (Endpoint `https://irjiqbmoohklagdegezz.supabase.co/storage/v1/s3`, region
+   `us-east-1`, bucket `studio-recordings` are all hardcoded in the function.)
+2. Add two more Edge Function secrets (same page as the LiveKit ones):
+   - `SUPABASE_S3_ACCESS_KEY` = the Access key ID
+   - `SUPABASE_S3_SECRET_KEY` = the Secret access key
+3. No redeploy needed — `livekit-egress` reads them at runtime. Until they're
+   set it returns 503 and the Record button shows "recording storage not
+   configured."
+
+Recordings finalize a few seconds after you hit Stop; the My Studio list polls
+LiveKit (the `status` action) to flip them from "Processing" → "Ready".
+
 ## Notes / future
-- Free tier has monthly minute limits; check LiveKit usage if it grows.
+- Free tier has monthly minute limits (incl. egress); check LiveKit usage if it grows.
 - For self-hosting later (broadcastcopy.ai multi-tenant), LiveKit is open-source;
   only `LIVEKIT_URL` + keys change.
 - Multi-party recording → add a LiveKit Egress call (room composite) triggered
