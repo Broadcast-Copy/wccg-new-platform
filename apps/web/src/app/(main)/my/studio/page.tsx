@@ -8,6 +8,7 @@ import {
   Podcast,
   Film,
   AudioLines,
+  Radio,
   ArrowRight,
   Calendar,
   Plus,
@@ -57,6 +58,14 @@ const TOOLS = [
     href: "/studio/audio-editor",
     color: "from-[#3b82f6] to-[#1d4ed8]",
     version: "v2.0",
+  },
+  {
+    icon: Radio,
+    title: "Production Studio",
+    description: "Script → voiceover (choose voice, accent & tone) + music bed → finished, downloadable spot.",
+    href: "/studio/production-studio",
+    color: "from-[#74ddc7] to-[#0f9b83]",
+    version: "v1.0",
   },
 ];
 
