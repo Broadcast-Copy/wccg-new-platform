@@ -28,23 +28,33 @@ export async function generateStaticParams(): Promise<{ id: string }[]> {
     const key =
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || FALLBACK_SUPABASE_ANON_KEY;
 
-    const res = await fetch(
-      `${url}/rest/v1/videos?select=id&status=eq.published&visibility=eq.public`,
-      {
-        headers: { apikey: key, Authorization: `Bearer ${key}` },
-      },
-    );
+    // PostgREST caps a single response at ~1000 rows, so an UNPAGINATED fetch
+    // silently strands every video past the first page. That left 549 of 1549
+    // published videos with no static page — a hard 404 on any shared
+    // /videos/<id> link. Page explicitly until a short page comes back.
+    const PAGE = 1000;
+    const MAX_PAGES = 50; // hard stop so a misbehaving response can't spin forever
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const res = await fetch(
+        `${url}/rest/v1/videos?select=id&status=eq.published&visibility=eq.public` +
+          `&order=id.asc&limit=${PAGE}&offset=${page * PAGE}`,
+        {
+          headers: { apikey: key, Authorization: `Bearer ${key}` },
+        },
+      );
+      if (!res.ok) break;
 
-    if (res.ok) {
       const rows: unknown = await res.json();
-      if (Array.isArray(rows)) {
-        for (const row of rows) {
-          const id = (row as { id?: unknown }).id;
-          if (typeof id === "string" && id.length > 0) {
-            params.push({ id });
-          }
+      if (!Array.isArray(rows) || rows.length === 0) break;
+
+      for (const row of rows) {
+        const id = (row as { id?: unknown }).id;
+        if (typeof id === "string" && id.length > 0) {
+          params.push({ id });
         }
       }
+
+      if (rows.length < PAGE) break; // last page
     }
   } catch {
     // Build-time fetch failed (network/env). Fall back to just the placeholder;
