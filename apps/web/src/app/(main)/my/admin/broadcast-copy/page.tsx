@@ -17,6 +17,7 @@ import {
   Inbox,
 } from "lucide-react";
 import { toast } from "sonner";
+import { AirSuiteFleet } from "./airsuite-fleet";
 
 // ---------------------------------------------------------------------------
 // Types — statuses mirror the bc_leads_status_valid CHECK constraint (mig 094)
@@ -180,6 +181,8 @@ export default function BroadcastCopyLeadsPage() {
           ))}
         </div>
       )}
+
+      <AirSuiteFleet />
 
       {rows.length === 0 && (
         <div className="mt-8 rounded-xl border bg-card p-10 text-center">
