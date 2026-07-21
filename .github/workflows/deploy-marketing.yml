@@ -1,0 +1,164 @@
+name: Deploy Broadcast Copy (marketing)
+
+# broadcastcopy.ai — the Broadcast Copy marketing site (apps/marketing).
+# Separate from deploy.yml on purpose: its own concurrency group so a marketing
+# push never cancels an in-flight WCCG station deploy, and a path filter so the
+# station site isn't rebuilt when only marketing copy changes.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/marketing/**'
+      - '.github/workflows/deploy-marketing.yml'
+      - 'pnpm-lock.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: 'deploy-marketing'
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build marketing site
+        env:
+          # PUBLIC by design — the project URL ships in every page and
+          # sb_publishable_* is Supabase's publishable client key (RLS-protected).
+          # anon can only INSERT into bc_leads; it cannot read leads back.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://irjiqbmoohklagdegezz.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_w9EytFGBM7mEvefmGhsZ9w_bXbmNjQ4' }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.MARKETING_SITE_URL || 'https://broadcastcopy.ai' }}
+        run: pnpm --filter marketing build
+
+      # Static export needs <route>/index.html so deep links don't 404 on Apache.
+      - name: Generate index.html for directories
+        run: |
+          cd apps/marketing/out
+          find . -maxdepth 5 -name "*.html" \
+            -not -name "index.html" \
+            -not -name "404.html" \
+            -not -name "_not-found.html" | while read html; do
+            dir="${html%.html}"
+            if [ -d "$dir" ] && [ ! -f "$dir/index.html" ]; then
+              cp "$html" "$dir/index.html"
+            fi
+          done
+
+      - name: Upload marketing artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketing-build
+          path: apps/marketing/out
+          # v4 drops dotfiles by default — without this .htaccess never ships.
+          include-hidden-files: true
+
+  deploy-knownhost:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Preflight — required secrets + docroot safety
+        id: preflight
+        env:
+          KH_HOST: ${{ secrets.KNOWNHOST_SSH_HOST }}
+          KH_USER: ${{ secrets.KNOWNHOST_SSH_USER }}
+          KH_PASS: ${{ secrets.KNOWNHOST_SSH_PASSWORD }}
+          KH_PATH: ${{ secrets.KNOWNHOST_MARKETING_PATH }}
+        run: |
+          missing=()
+          [ -z "$KH_HOST" ] && missing+=("KNOWNHOST_SSH_HOST")
+          [ -z "$KH_USER" ] && missing+=("KNOWNHOST_SSH_USER")
+          [ -z "$KH_PASS" ] && missing+=("KNOWNHOST_SSH_PASSWORD")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::warning::Marketing deploy skipped — secrets missing: ${missing[*]}"
+            echo "can_deploy=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Default to the conventional cPanel addon-domain docroot.
+          TARGET="${KH_PATH:-broadcastcopy.ai}"
+          TARGET="${TARGET%/}"
+
+          # SAFETY: this job runs `mirror --reverse --delete`. Pointed at the
+          # station docroot it would DELETE the live WCCG site. Refuse any
+          # target that is empty, root, home, or public_html.
+          case "$TARGET" in
+            ""|"/"|"~"|"."|"public_html"|"/public_html"|"~/public_html"|"public_html/"*)
+              echo "::error::Refusing to deploy — KNOWNHOST_MARKETING_PATH ('$TARGET') points at the station docroot or filesystem root."
+              echo "can_deploy=false" >> "$GITHUB_OUTPUT"
+              exit 1
+              ;;
+          esac
+
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "can_deploy=true" >> "$GITHUB_OUTPUT"
+          echo "Deploy target: $TARGET"
+
+      - name: Download build artifact
+        if: steps.preflight.outputs.can_deploy == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: marketing-build
+          path: out
+
+      - name: Install lftp + sshpass
+        if: steps.preflight.outputs.can_deploy == 'true'
+        run: sudo apt-get install -y lftp sshpass
+
+      - name: Probe SSH + ensure docroot exists
+        if: steps.preflight.outputs.can_deploy == 'true'
+        env:
+          SSHPASS: ${{ secrets.KNOWNHOST_SSH_PASSWORD }}
+          TARGET: ${{ steps.preflight.outputs.target }}
+        run: |
+          set +e
+          PORT="${{ secrets.KNOWNHOST_SSH_PORT }}"
+          PORT="${PORT:-22}"
+          USER="${{ secrets.KNOWNHOST_SSH_USER }}"
+          HOST="${{ secrets.KNOWNHOST_SSH_HOST }}"
+          sshpass -e ssh -p "$PORT" -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 "$USER@$HOST" \
+            "mkdir -p '$TARGET' && echo SSH_OK && ls -ld '$TARGET'"
+          rc=$?
+          if [ $rc -ne 0 ]; then
+            echo "::warning::SSH probe failed — skipping marketing deploy."
+            echo "DEPLOY_SAFE=false" >> "$GITHUB_ENV"
+          else
+            echo "DEPLOY_SAFE=true" >> "$GITHUB_ENV"
+          fi
+          echo "=== Local artifact ==="
+          du -sh out && find out -type f | wc -l
+
+      - name: Deploy to KnownHost via lftp (SFTP)
+        if: steps.preflight.outputs.can_deploy == 'true' && env.DEPLOY_SAFE == 'true'
+        env:
+          KH_PASS: ${{ secrets.KNOWNHOST_SSH_PASSWORD }}
+          KH_USER: ${{ secrets.KNOWNHOST_SSH_USER }}
+          KH_HOST: ${{ secrets.KNOWNHOST_SSH_HOST }}
+          KH_PORT: ${{ secrets.KNOWNHOST_SSH_PORT }}
+          TARGET: ${{ steps.preflight.outputs.target }}
+        run: |
+          set -x
+          PORT="${KH_PORT:-22}"
+          lftp -u "$KH_USER,$KH_PASS" -p "$PORT" "sftp://$KH_HOST" -e "set sftp:auto-confirm yes; set net:max-retries 2; set net:timeout 30; set mirror:parallel-transfer-count 4; mirror --reverse --delete --verbose=1 --exclude-glob cgi-bin/ --exclude-glob .well-known/ out/ $TARGET/; cls -l $TARGET/index.html; bye"
+          echo "=== Sanity-check the upload ==="
+          SSHPASS="$KH_PASS" sshpass -e ssh -p "$PORT" -o StrictHostKeyChecking=no "$KH_USER@$KH_HOST" "for f in '$TARGET/index.html' '$TARGET/.htaccess'; do if [ -f \"\$f\" ]; then echo \"OK   \$f\"; else echo \"MISS \$f\"; fi; done"
