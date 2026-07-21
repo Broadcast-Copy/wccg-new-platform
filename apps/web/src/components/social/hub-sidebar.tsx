@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles, type UserRole } from "@/hooks/use-user-roles";
 import { useRouter } from "next/navigation";
 import {
   Menu, X, User, Lock, Shield,
 } from "lucide-react";
-import { listenerNav, creatorNav, vendorNav, type RoleNavItem } from "@/lib/role-nav";
+import { listenerNav, creatorNav, vendorNav, groupNav, type RoleNavItem } from "@/lib/role-nav";
 
 // Shared nav (single source of truth) keeps this sidebar identical to the
 // /my dashboard sidebar — see apps/web/src/lib/role-nav.ts.
@@ -119,8 +119,17 @@ function SidebarContent({
         <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
           {hubLabel}
         </p>
-        {items.map((item) => (
-          <NavLink key={item.href} item={item} pathname={pathname} color={color} />
+        {groupNav(items).map((group) => (
+          <Fragment key={group.section ?? "_pinned"}>
+            {group.section && (
+              <p className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+                {group.section}
+              </p>
+            )}
+            {group.items.map((item) => (
+              <NavLink key={item.href} item={item} pathname={pathname} color={color} />
+            ))}
+          </Fragment>
         ))}
       </nav>
 

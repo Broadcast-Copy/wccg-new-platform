@@ -54,6 +54,29 @@ export interface RoleNavItem {
   icon: LucideIcon;
   /** Match the pathname exactly (used for the /my Dashboard link). */
   exact?: boolean;
+  /**
+   * Optional group heading. Items sharing a section must be CONTIGUOUS in the
+   * array — groupNav() walks the list in order and starts a new group whenever
+   * the section changes. Leading items with no section render un-headed (the
+   * "pinned" links at the top of the menu).
+   */
+  section?: string;
+}
+
+/**
+ * Split a flat nav list into ordered groups for rendering section headings.
+ * A list with no `section` values yields a single unlabeled group, so menus
+ * that haven't been grouped yet render exactly as before.
+ */
+export function groupNav(items: RoleNavItem[]): { section: string | null; items: RoleNavItem[] }[] {
+  const groups: { section: string | null; items: RoleNavItem[] }[] = [];
+  for (const item of items) {
+    const key = item.section ?? null;
+    const last = groups[groups.length - 1];
+    if (last && last.section === key) last.items.push(item);
+    else groups.push({ section: key, items: [item] });
+  }
+  return groups;
 }
 
 export const listenerNav: RoleNavItem[] = [
@@ -69,22 +92,40 @@ export const listenerNav: RoleNavItem[] = [
   { href: "/my/settings", label: "Settings", icon: Settings },
 ];
 
+/**
+ * Grouped by what the creator is trying to DO, in workflow order:
+ * pinned (constant use) → make something → put it out → assets → audience →
+ * account. Previously this was 15 undifferentiated links, which gave the eye
+ * nothing to anchor on and hid the fact that Image Generator / Hyperframes are
+ * tools that live INSIDE Broadcast Studio rather than peers of it.
+ */
 export const creatorNav: RoleNavItem[] = [
+  // Pinned — highest-frequency destinations, no heading.
   { href: "/my", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/creators", label: "Creator Hub", icon: Palette },
   { href: "/my/messages", label: "Messages", icon: MessageCircle },
-  { href: "/my/studio", label: "Broadcast Studio", icon: Mic },
-  { href: "/my/dj", label: "DJ Portal", icon: Disc3 },
-  { href: "/videos", label: "Video Wall", icon: Film },
-  { href: "/studio/image-generator", label: "Image Generator", icon: Wand2 },
-  { href: "/studio/hyperframes", label: "Hyperframes", icon: Frame },
-  { href: "/my/mixes", label: "Media Manager", icon: FolderOpen },
-  { href: "/my/blog", label: "Blog Manager", icon: FileText },
-  { href: "/my/events", label: "Events Manager", icon: CalendarDays },
-  { href: "/my/podcast-rss", label: "Podcast RSS", icon: Radio },
-  { href: "/my/vendor/media", label: "Creator Marketing", icon: BarChart3 },
-  { href: "/brand", label: "Brand Kit", icon: BookOpen },
-  { href: "/my/settings", label: "Settings", icon: Settings },
+
+  // Create — the production tools.
+  { href: "/my/studio", label: "Broadcast Studio", icon: Mic, section: "Create" },
+  { href: "/studio/image-generator", label: "Image Generator", icon: Wand2, section: "Create" },
+  { href: "/studio/hyperframes", label: "Hyperframes", icon: Frame, section: "Create" },
+
+  // Publish — the channels finished work goes out on.
+  { href: "/my/dj", label: "DJ Portal", icon: Disc3, section: "Publish" },
+  { href: "/videos", label: "Video Wall", icon: Film, section: "Publish" },
+  { href: "/my/podcast-rss", label: "Podcast RSS", icon: Radio, section: "Publish" },
+  { href: "/my/blog", label: "Blog Manager", icon: FileText, section: "Publish" },
+  { href: "/my/events", label: "Events Manager", icon: CalendarDays, section: "Publish" },
+
+  // Library — files and brand assets you pull from.
+  { href: "/my/mixes", label: "Media Manager", icon: FolderOpen, section: "Library" },
+  { href: "/brand", label: "Brand Kit", icon: BookOpen, section: "Library" },
+
+  // Grow — audience and promotion.
+  { href: "/creators", label: "Creator Hub", icon: Palette, section: "Grow" },
+  { href: "/my/vendor/media", label: "Creator Marketing", icon: BarChart3, section: "Grow" },
+
+  // Account
+  { href: "/my/settings", label: "Settings", icon: Settings, section: "Account" },
 ];
 
 export const vendorNav: RoleNavItem[] = [
