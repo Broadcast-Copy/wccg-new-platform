@@ -1,5 +1,6 @@
 import { ArrowRight, Check, Radio } from "lucide-react";
 import { EarlyAccessForm } from "@/components/early-access-form";
+import { LiveOnAir } from "@/components/live-on-air";
 import {
   ADD_ONS,
   FAQS,
@@ -44,6 +45,7 @@ export default function Page() {
             <a className="transition hover:text-fg" href="#platform">Platform</a>
             <a className="transition hover:text-fg" href="#pricing">Pricing</a>
             <a className="transition hover:text-fg" href="#faq">FAQ</a>
+            <a className="transition hover:text-fg" href="/changelog">Changelog</a>
             <a
               className="transition hover:text-fg"
               href={FLAGSHIP_URL}
@@ -101,6 +103,8 @@ export default function Page() {
           <p className="mt-6 text-sm text-faint">
             $49.99/mo per licensed station · free to create an account
           </p>
+
+          <LiveOnAir />
         </div>
       </section>
 
@@ -304,6 +308,9 @@ export default function Page() {
             <Radio className="h-4 w-4 text-signal" aria-hidden />
             Broadcast Copy
           </p>
+          <a href="/changelog" className="transition hover:text-fg">
+            Changelog
+          </a>
           <p>
             Flagship:{" "}
             <a

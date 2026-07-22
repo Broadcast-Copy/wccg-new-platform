@@ -5,3 +5,6 @@ export const SITE_URL = (
 
 /** The live flagship station running on Broadcast Copy — our proof. */
 export const FLAGSHIP_URL = "https://wccg1045fm.com";
+
+/** Flagship station id — the tenant whose live now-playing we show as proof. */
+export const FLAGSHIP_STATION_ID = "station_wccg";
