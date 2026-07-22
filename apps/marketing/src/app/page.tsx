@@ -1,17 +1,9 @@
 import { ArrowRight, Check, Radio } from "lucide-react";
 import { EarlyAccessForm } from "@/components/early-access-form";
+import { Features } from "@/components/features";
 import { LiveOnAir } from "@/components/live-on-air";
-import {
-  ADD_ONS,
-  FAQS,
-  FEATURES,
-  ON_DEMAND_FEATURE,
-  PLANS,
-  STATS,
-} from "@/content";
+import { ADD_ONS, FAQS, PLANS, STATS } from "@/content";
 import { FLAGSHIP_URL } from "@/lib/site";
-
-const ALL_FEATURES = [...FEATURES, ON_DEMAND_FEATURE];
 
 const STEPS = [
   {
@@ -142,23 +134,7 @@ export default function Page() {
           </p>
         </div>
 
-        <div className="mt-12 flex flex-wrap justify-center gap-5">
-          {ALL_FEATURES.map((feature) => {
-            const Icon = feature.icon;
-            return (
-              <article
-                key={feature.name}
-                className="w-full rounded-2xl border border-line bg-surface p-6 transition hover:border-signal/30 sm:w-[calc(50%-0.625rem)] lg:w-[calc(33.333%-0.834rem)]"
-              >
-                <Icon className="h-6 w-6 text-signal" aria-hidden />
-                <h3 className="mt-4 font-semibold">{feature.name}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-dim">
-                  {feature.blurb}
-                </p>
-              </article>
-            );
-          })}
-        </div>
+        <Features />
       </section>
 
       {/* ------------------------------------------------------- steps */}
