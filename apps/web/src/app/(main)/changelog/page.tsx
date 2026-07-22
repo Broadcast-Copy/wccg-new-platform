@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { FileText, Tag, Calendar } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 // ---------------------------------------------------------------------------
 // Changelog Data — update after every push
@@ -153,6 +155,38 @@ const CHANGELOG: ChangelogEntry[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// DB row -> the ChangelogEntry shape above. bc_changelog (migration 096) is the
+// shared Broadcast Copy changelog — the SAME table broadcastcopy.ai reads — so
+// this page shows new releases in real time, with CHANGELOG above as the
+// build-time fallback if the fetch errors or returns nothing.
+// ---------------------------------------------------------------------------
+type ChangelogRow = {
+  version: string;
+  released_on: string;
+  channel: ChangelogEntry["tag"];
+  title: string | null;
+  changes: string[];
+  sort_order: number;
+};
+
+function rowToEntry(row: ChangelogRow): ChangelogEntry {
+  const parsed = new Date(`${row.released_on}T12:00:00`);
+  const date = Number.isNaN(parsed.getTime())
+    ? row.released_on
+    : parsed.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+  return {
+    version: row.version,
+    date,
+    tag: row.channel,
+    changes: Array.isArray(row.changes) ? row.changes : [],
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Tag Badge
 // ---------------------------------------------------------------------------
 function TagBadge({ tag }: { tag: ChangelogEntry["tag"] }) {
@@ -175,6 +209,24 @@ function TagBadge({ tag }: { tag: ChangelogEntry["tag"] }) {
 // Page
 // ---------------------------------------------------------------------------
 export default function ChangelogPage() {
+  const [entries, setEntries] = useState<ChangelogEntry[]>(CHANGELOG);
+
+  useEffect(() => {
+    const supabase = createClient();
+    let cancelled = false;
+    void (async () => {
+      const { data, error } = await supabase
+        .from("bc_changelog")
+        .select("version, released_on, channel, title, changes, sort_order")
+        .order("sort_order", { ascending: false });
+      if (cancelled || error || !data || data.length === 0) return;
+      setEntries((data as ChangelogRow[]).map(rowToEntry));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       {/* Header */}
@@ -195,7 +247,7 @@ export default function ChangelogPage() {
         {/* Timeline line */}
         <div className="absolute left-[15px] top-0 bottom-0 w-px bg-border" />
 
-        {CHANGELOG.map((entry, idx) => (
+        {entries.map((entry, idx) => (
           <div key={entry.version} className="relative pl-10">
             {/* Timeline dot */}
             <div className={`absolute left-0 top-1 flex h-[31px] w-[31px] items-center justify-center rounded-full border-2 bg-card ${
