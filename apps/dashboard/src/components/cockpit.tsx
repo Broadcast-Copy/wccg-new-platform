@@ -193,7 +193,7 @@ function StationCard({
         </div>
       )}
 
-      <div className="mt-auto pt-1">
+      <div className="mt-auto flex items-center justify-between gap-2 pt-1">
         {primaryDomain !== undefined ? (
           <a
             href={`https://${primaryDomain.hostname}`}
@@ -207,6 +207,12 @@ function StationCard({
         ) : (
           <span className="text-sm text-faint">No domain yet</span>
         )}
+        <Link
+          href={`/station?id=${station.id}`}
+          className="shrink-0 text-sm text-dim transition-colors hover:text-fg"
+        >
+          Settings →
+        </Link>
       </div>
     </article>
   );
@@ -311,12 +317,25 @@ export function Cockpit() {
 
   return (
     <div className="space-y-10">
-      {organizations.length > 0 && (
+      {organizations.length > 0 ? (
         <section className="space-y-4">
           {organizations.map((org) => (
             <OrgHeader key={org.id} org={org} />
           ))}
         </section>
+      ) : (
+        <div className="rounded-xl border border-dashed border-line bg-surface/50 px-6 py-10 text-center">
+          <Building2 className="mx-auto h-8 w-8 text-faint" aria-hidden />
+          <p className="mt-3 text-sm text-dim">Finish setting up your account.</p>
+          <div className="mt-4 flex justify-center">
+            <Link
+              href="/welcome"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-signal px-3 py-1.5 text-sm font-medium text-fg transition-colors hover:bg-signal-soft"
+            >
+              Create your organization
+            </Link>
+          </div>
+        </div>
       )}
 
       <section className="space-y-4">

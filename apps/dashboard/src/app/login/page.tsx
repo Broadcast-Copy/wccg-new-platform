@@ -130,6 +130,13 @@ export default function LoginPage() {
           </button>
         </form>
 
+        <p className="mt-5 text-center text-sm text-dim">
+          New to Broadcast Copy?{" "}
+          <a href="/signup" className="text-signal-soft transition hover:text-signal">
+            Create an account
+          </a>
+        </p>
+
         <p className="mt-6 text-center">
           <a
             href="https://broadcastcopy.ai"

@@ -26,6 +26,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               Control
             </span>
           </Link>
+          <nav className="hidden items-center gap-5 text-sm text-dim sm:flex">
+            <Link href="/" className="transition-colors hover:text-fg">
+              Stations
+            </Link>
+            <Link href="/team" className="transition-colors hover:text-fg">
+              Team
+            </Link>
+          </nav>
           <div className="flex items-center gap-4 text-sm">
             {email && <span className="hidden text-dim sm:inline">{email}</span>}
             <button
