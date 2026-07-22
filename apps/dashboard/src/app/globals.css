@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+/**
+ * Broadcast Copy control-plane brand. Shares the dark "ON AIR" palette with the
+ * marketing site (apps/marketing) so the product feels like one system.
+ */
+@theme {
+  --color-ink: #08080a;
+  --color-surface: #0e0f13;
+  --color-elevated: #15171d;
+  --color-line: #23262e;
+  --color-fg: #f5f5f7;
+  --color-dim: #a1a6b0;
+  --color-faint: #6b7280;
+  --color-signal: #ff4a1c;
+  --color-signal-soft: #ff8462;
+  --color-amber: #f5a524;
+  --color-ok: #10b981;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-ink);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
