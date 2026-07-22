@@ -95,6 +95,7 @@ const defaultModules: AdminModule[] = [
   { icon: Users, title: "User Management", description: "View and manage listeners, hosts, and admin accounts.", href: "/my/admin", color: "from-[#3b82f6] to-[#1d4ed8]" },
   { icon: UserCheck, title: "Access Requests", description: "Approve creator, vendor & employee access requests from new signups.", href: "/my/admin/access-requests", color: "from-[#7401df] to-[#4c1d95]" },
   { icon: Rocket, title: "Broadcast Copy — Pipeline", description: "Early-access requests from broadcastcopy.ai — work the SaaS sales pipeline.", href: "/my/admin/broadcast-copy", color: "from-[#ff4a1c] to-[#b91c1c]" },
+  { icon: ScrollText, title: "Broadcast Copy — Publish", description: "Publish changelog releases + feature cards to broadcastcopy.ai in real time.", href: "/my/admin/broadcast-copy/publish", color: "from-[#74ddc7] to-[#0d9488]" },
   { icon: CalendarDays, title: "Events & Tickets", description: "Create events, manage ticket sales, and check-ins.", href: "/events/create", color: "from-[#ec4899] to-[#be185d]" },
   { icon: Megaphone, title: "Advertising", description: "Manage ad campaigns, clients, creatives, and billing.", href: "/advertise/portal", color: "from-[#dc2626] to-[#b91c1c]" },
   { icon: Music, title: "Shows & Programming", description: "Manage show listings, host assignments, and schedules.", href: "/shows", color: "from-[#7401df] to-[#4c1d95]" },
