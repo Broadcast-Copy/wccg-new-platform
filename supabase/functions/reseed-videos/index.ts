@@ -80,6 +80,11 @@ const CHANNELS: ChannelConfig[] = [
   { program: "Gospel", creator: "Family Fellowship Worship Center", category: "Gospel", rating: "G", channelId: "UCxTzK_2da5bZag5WTAbiVzQ" }, // Family Fellowship Worship Center
   { program: "Gospel", creator: "Progressive MBC", category: "Gospel", rating: "G", channelId: "UCavo4QHyzuMM2FED2W6PwEg" }, // Progressive MBC
   { program: "Gospel", creator: "Lewis Chapel Missionary Baptist Church", category: "Gospel", rating: "G", channelId: "UCOe1fQxFPHNf3N7Rb55ySTA" }, // Lewis Chapel Missionary Baptist Church
+
+  // Local youth gamer. Source channel is titled "Mel" (@melaniereil5704, the
+  // parent's account) but the content is Jaxson's gameplay, so it's displayed
+  // as "Jaxson Gaming" with its own program row + /videos?program=Jaxson Gaming.
+  { program: "Jaxson Gaming", creator: "Jaxson Gaming", category: "Gaming", rating: "G", channelId: "UCECTY-Q2XzJdqkd40ZKCanA" },
 ];
 
 const CORS = {
