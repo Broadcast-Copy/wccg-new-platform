@@ -128,22 +128,35 @@ export const creatorNav: RoleNavItem[] = [
   { href: "/my/settings", label: "Settings", icon: Settings, section: "Account" },
 ];
 
+/**
+ * Grouped by the vendor workflow: pinned → set up shop → take & fulfill orders
+ * → grow the audience → account. Previously 15 flat links with no anchor.
+ */
 export const vendorNav: RoleNavItem[] = [
+  // Pinned — constant-use.
   { href: "/my", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/vendors/hub", label: "Vendor Hub", icon: Store },
   { href: "/my/messages", label: "Messages", icon: MessageCircle },
-  { href: "/my/vendor/storefront", label: "Storefront Manager", icon: Store },
-  { href: "/my/vendor/orders", label: "Orders", icon: Receipt },
-  { href: "/my/vendor/products", label: "Products", icon: Package },
-  { href: "/my/vendor/bookings", label: "Bookings", icon: CalendarDays },
-  { href: "/my/vendor/events", label: "Events Manager", icon: Megaphone },
-  { href: "/my/vendor/customers", label: "Customer Manager", icon: Users },
-  { href: "/my/vendor/payouts", label: "Payouts", icon: DollarSign },
-  { href: "/my/vendor/shipping", label: "Shipping", icon: Package },
-  { href: "/my/vendor/tracking", label: "Tracking", icon: MapPin },
-  { href: "/my/vendor/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/my/vendor/media", label: "Marketing", icon: Megaphone },
-  { href: "/my/settings", label: "Settings", icon: Settings },
+
+  // Storefront — set up shop and list what you sell.
+  { href: "/vendors/hub", label: "Vendor Hub", icon: Store, section: "Storefront" },
+  { href: "/my/vendor/storefront", label: "Storefront Manager", icon: Store, section: "Storefront" },
+  { href: "/my/vendor/products", label: "Products", icon: Package, section: "Storefront" },
+
+  // Orders — the money-in and fulfillment lifecycle.
+  { href: "/my/vendor/orders", label: "Orders", icon: Receipt, section: "Orders" },
+  { href: "/my/vendor/bookings", label: "Bookings", icon: CalendarDays, section: "Orders" },
+  { href: "/my/vendor/payouts", label: "Payouts", icon: DollarSign, section: "Orders" },
+  { href: "/my/vendor/shipping", label: "Shipping", icon: Package, section: "Orders" },
+  { href: "/my/vendor/tracking", label: "Tracking", icon: MapPin, section: "Orders" },
+
+  // Grow — audience, promotion, and insight.
+  { href: "/my/vendor/customers", label: "Customer Manager", icon: Users, section: "Grow" },
+  { href: "/my/vendor/events", label: "Events Manager", icon: Megaphone, section: "Grow" },
+  { href: "/my/vendor/media", label: "Marketing", icon: Megaphone, section: "Grow" },
+  { href: "/my/vendor/analytics", label: "Analytics", icon: BarChart3, section: "Grow" },
+
+  // Account
+  { href: "/my/settings", label: "Settings", icon: Settings, section: "Account" },
 ];
 
 /** Pick the nav list for the active role-toggle mode. */

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useRef, useEffect, Fragment } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles, type UserRole } from "@/hooks/use-user-roles";
 import {
@@ -34,7 +34,8 @@ import {
   Lock,
   type LucideIcon,
 } from "lucide-react";
-import { listenerNav, creatorNav, vendorNav, groupNav } from "@/lib/role-nav";
+import { listenerNav, creatorNav, vendorNav } from "@/lib/role-nav";
+import { CollapsibleNavGroups } from "@/components/nav/collapsible-nav-groups";
 
 // ---------------------------------------------------------------------------
 // Navigation item type
@@ -397,27 +398,24 @@ function SidebarContent({ pathname }: { pathname: string }) {
             <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
               Creator
             </p>
-            {groupNav(creatorItems).map((group) => (
-              <Fragment key={group.section ?? "_pinned"}>
-                {group.section && (
-                  <p className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
-                    {group.section}
-                  </p>
-                )}
-                {group.items.map((item) => (
-                  <NavLink key={item.href + item.label} item={item} pathname={pathname} color="#7401df" />
-                ))}
-              </Fragment>
-            ))}
+            <CollapsibleNavGroups
+              items={creatorItems}
+              renderItem={(item) => (
+                <NavLink key={item.href + item.label} item={item} pathname={pathname} color="#7401df" />
+              )}
+            />
           </>
         ) : isVendorToggleActive ? (
           <>
             <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
               Vendor
             </p>
-            {vendorItems.map((item) => (
-              <NavLink key={item.href + item.label} item={item} pathname={pathname} color="#f59e0b" />
-            ))}
+            <CollapsibleNavGroups
+              items={vendorItems}
+              renderItem={(item) => (
+                <NavLink key={item.href + item.label} item={item} pathname={pathname} color="#f59e0b" />
+              )}
+            />
           </>
         ) : (
           <>
