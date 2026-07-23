@@ -148,19 +148,34 @@ export interface ContinueItem {
 /**
  * Most-watched published videos, by `views` desc.
  * Falls back to recency for ties via a secondary order.
+ *
+ * `exclude` drops whole categories / creators BEFORE ranking (not after) so the
+ * result is the top N of what's left. This matters for the Watch wall's "Most
+ * Watched" row: ABC News and Duke pull national-scale view counts and otherwise
+ * fill nearly the entire top 50, leaving ~1 local video once they're removed.
+ * Excluding them in the query ranks among eligible videos instead.
  */
-export async function topVideos(limit = 10): Promise<VideoRecord[]> {
+export async function topVideos(
+  limit = 10,
+  exclude: { categories?: string[]; creators?: string[] } = {},
+): Promise<VideoRecord[]> {
   const supabase = createClient();
-  const { data } = await supabase
+  // Over-fetch so category/creator exclusion + dedupe still leave a full row.
+  const fetchN = Math.min(Math.max(limit, 1) * 4, 200);
+  const inList = (vals: string[]) => `(${vals.map((v) => `"${v.replace(/"/g, '""')}"`).join(",")})`;
+  let q = supabase
     .from("videos")
     .select(SELECT_COLS)
     .eq("status", "published")
     .eq("visibility", "public")
-    .not("is_portrait", "is", true)
+    .not("is_portrait", "is", true);
+  if (exclude.categories?.length) q = q.not("category", "in", inList(exclude.categories));
+  if (exclude.creators?.length) q = q.not("creator_name", "in", inList(exclude.creators));
+  const { data } = await q
     .order("views", { ascending: false })
     .order("published_at", { ascending: false })
-    .limit(Math.min(Math.max(limit, 1), 50));
-  return dedupeByCreatorTitle((data ?? []) as VideoRecord[]);
+    .limit(fetchN);
+  return dedupeByCreatorTitle((data ?? []) as VideoRecord[]).slice(0, Math.max(limit, 1));
 }
 
 /**
