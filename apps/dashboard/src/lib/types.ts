@@ -46,3 +46,15 @@ export type StationDomain = {
   is_primary: boolean;
   verified_at: string | null;
 };
+
+/**
+ * AirSuite engine heartbeat for a station (read via the bc_station_engines RPC,
+ * migration 100). `status` is the engine's own JSON — shape owned by AirSuite
+ * and still evolving, so read it defensively (see src/lib/engine.ts).
+ */
+export type EngineStatus = {
+  station_id: string;
+  updated_at: string;
+  engine_version: string | null;
+  status: Record<string, unknown> | null;
+};

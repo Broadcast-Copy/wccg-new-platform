@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  Activity,
   AlertTriangle,
   Building2,
   ExternalLink,
@@ -16,18 +17,22 @@ import {
   getMyOrganizations,
   getMyStations,
   getStationDomains,
+  getStationEngines,
 } from "@/lib/data";
 import type {
+  EngineStatus,
   Entitlement,
   Organization,
   Station,
   StationDomain,
 } from "@/lib/types";
+import { isEngineOnline, summarizeEngine } from "@/lib/engine";
 
 /**
- * Authenticated cockpit. Loads the four control-plane reads on mount and joins
- * entitlements + domains onto stations by station_id, in memory. RLS already
- * scopes every read to the logged-in member (see src/lib/data.ts).
+ * Authenticated cockpit. Loads the control-plane reads on mount and joins
+ * entitlements + domains + engine status onto stations by station_id, in
+ * memory. RLS scopes every read to the logged-in member (see src/lib/data.ts);
+ * engine status comes through the member-authorized bc_station_engines RPC.
  */
 
 type CockpitData = {
@@ -35,6 +40,7 @@ type CockpitData = {
   stations: Station[];
   entitlements: Entitlement[];
   domains: StationDomain[];
+  engines: EngineStatus[];
 };
 
 /** Load state as a discriminated union — no isLoading/hasError boolean soup. */
@@ -43,7 +49,6 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; data: CockpitData };
 
-/** Known feature-flag labels; anything else is title-cased at render time. */
 const FEATURE_LABELS = new Map<string, string>([
   ["record_pool", "Record pool"],
   ["eas", "EAS"],
@@ -65,7 +70,6 @@ function prettyFeature(key: string): string {
     .join(" ");
 }
 
-/** "FM · 104.5" — drops either half if the station lacks it. */
 function bandFrequency(station: Station): string | null {
   const parts = [station.band, station.frequency].filter(
     (part): part is string => part !== null && part.length > 0,
@@ -73,14 +77,10 @@ function bandFrequency(station: Station): string | null {
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
-/** is_primary wins; otherwise the first domain, if any. */
-function pickPrimaryDomain(
-  domains: StationDomain[],
-): StationDomain | undefined {
+function pickPrimaryDomain(domains: StationDomain[]): StationDomain | undefined {
   return domains.find((domain) => domain.is_primary) ?? domains[0];
 }
 
-/** Feature keys whose flag is true, in declared order. */
 function activeFeatures(entitlement: Entitlement | undefined): string[] {
   if (entitlement === undefined) return [];
   return Object.entries(entitlement.features)
@@ -106,15 +106,37 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+/** Compact "is the engine live" line, from the AirSuite heartbeat. */
+function EngineLine({ engine }: { engine: EngineStatus | undefined }) {
+  if (engine === undefined) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-faint">
+        <Activity className="h-3.5 w-3.5" aria-hidden />
+        No engine paired
+      </span>
+    );
+  }
+  const online = isEngineOnline(engine.updated_at);
+  const { currentTitle } = summarizeEngine(engine.status);
+  return (
+    <span className={cx("inline-flex items-center gap-1.5 text-xs", online ? "text-ok" : "text-faint")}>
+      <span className={cx("h-1.5 w-1.5 rounded-full", online ? "bg-ok" : "bg-faint")} aria-hidden />
+      {online ? "Engine live" : "Engine offline"}
+      {engine.engine_version !== null && <span className="text-faint">· v{engine.engine_version}</span>}
+      {online && currentTitle !== null && (
+        <span className="truncate text-dim">· ♪ {currentTitle}</span>
+      )}
+    </span>
+  );
+}
+
 function OrgHeader({ org }: { org: Organization }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-elevated text-dim">
         <Building2 className="h-4 w-4" aria-hidden />
       </span>
-      <h1 className="text-2xl font-semibold tracking-tight text-fg">
-        {org.name}
-      </h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-fg">{org.name}</h1>
       <StatusBadge status={org.status} />
       <span className="font-mono text-sm text-faint">{org.slug}</span>
     </div>
@@ -126,6 +148,7 @@ type StationCardProps = {
   entitlement: Entitlement | undefined;
   primaryDomain: StationDomain | undefined;
   features: string[];
+  engine: EngineStatus | undefined;
 };
 
 function StationCard({
@@ -133,6 +156,7 @@ function StationCard({
   entitlement,
   primaryDomain,
   features,
+  engine,
 }: StationCardProps) {
   const freq = bandFrequency(station);
   const hasCallSign = station.call_sign !== null && station.call_sign.length > 0;
@@ -148,9 +172,7 @@ function StationCard({
             <div className="font-semibold leading-tight text-fg">
               {hasCallSign ? station.call_sign : station.name}
             </div>
-            {hasCallSign && (
-              <div className="text-sm text-dim">{station.name}</div>
-            )}
+            {hasCallSign && <div className="text-sm text-dim">{station.name}</div>}
           </div>
         </div>
         <StatusBadge status={station.status} />
@@ -172,6 +194,8 @@ function StationCard({
           )}
         </div>
       )}
+
+      <EngineLine engine={engine} />
 
       <div className="flex items-center gap-2 text-sm">
         <span className="text-faint">Plan</span>
@@ -234,9 +258,7 @@ function EmptyStations() {
   return (
     <div className="rounded-xl border border-dashed border-line bg-surface/50 px-6 py-14 text-center">
       <RadioTower className="mx-auto h-8 w-8 text-faint" aria-hidden />
-      <p className="mt-3 text-sm text-dim">
-        No stations yet — request your first station.
-      </p>
+      <p className="mt-3 text-sm text-dim">No stations yet — request your first station.</p>
       <div className="mt-4 flex justify-center">
         <RequestStationLink label="Request a station" />
       </div>
@@ -251,24 +273,23 @@ export function Cockpit() {
     let cancelled = false;
     void (async () => {
       try {
-        const [organizations, stations, entitlements, domains] =
+        const [organizations, stations, entitlements, domains, engines] =
           await Promise.all([
             getMyOrganizations(),
             getMyStations(),
             getMyEntitlements(),
             getStationDomains(),
+            getStationEngines(),
           ]);
         if (cancelled) return;
         setState({
           status: "ready",
-          data: { organizations, stations, entitlements, domains },
+          data: { organizations, stations, entitlements, domains, engines },
         });
       } catch (error: unknown) {
         if (cancelled) return;
         const message =
-          error instanceof Error
-            ? error.message
-            : "Could not load your control plane.";
+          error instanceof Error ? error.message : "Could not load your control plane.";
         setState({ status: "error", message });
       }
     })();
@@ -298,9 +319,9 @@ export function Cockpit() {
     );
   }
 
-  const { organizations, stations, entitlements, domains } = state.data;
+  const { organizations, stations, entitlements, domains, engines } = state.data;
 
-  // Join entitlements + domains onto stations in memory, keyed by station_id.
+  // Join entitlements + domains + engines onto stations in memory by station_id.
   const entitlementByStation = new Map<string, Entitlement>();
   for (const entitlement of entitlements) {
     if (!entitlementByStation.has(entitlement.station_id)) {
@@ -313,6 +334,13 @@ export function Cockpit() {
     const existing = domainsByStation.get(domain.station_id);
     if (existing !== undefined) existing.push(domain);
     else domainsByStation.set(domain.station_id, [domain]);
+  }
+
+  const engineByStation = new Map<string, EngineStatus>();
+  for (const engine of engines) {
+    if (!engineByStation.has(engine.station_id)) {
+      engineByStation.set(engine.station_id, engine);
+    }
   }
 
   return (
@@ -343,9 +371,7 @@ export function Cockpit() {
           <h2 className="text-sm font-medium uppercase tracking-wider text-faint">
             Your stations
           </h2>
-          {stations.length > 0 && (
-            <RequestStationLink label="Request another station" />
-          )}
+          {stations.length > 0 && <RequestStationLink label="Request another station" />}
         </div>
 
         {stations.length === 0 ? (
@@ -362,6 +388,7 @@ export function Cockpit() {
                   entitlement={entitlement}
                   primaryDomain={pickPrimaryDomain(stationDomains)}
                   features={activeFeatures(entitlement)}
+                  engine={engineByStation.get(station.id)}
                 />
               );
             })}

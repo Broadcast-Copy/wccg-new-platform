@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
+  Activity,
   AlertCircle,
   AlertTriangle,
   ArrowLeft,
@@ -19,10 +20,12 @@ import {
   getMyEntitlements,
   getMyStations,
   getStationDomains,
+  getStationEngines,
 } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
-import type { Entitlement, Station, StationDomain } from "@/lib/types";
+import type { EngineStatus, Entitlement, Station, StationDomain } from "@/lib/types";
 import { activeFeatures, bandFrequency, cx, prettyFeature } from "@/lib/format";
+import { formatUptime, isEngineOnline, lastSeen, summarizeEngine } from "@/lib/engine";
 
 const FIELD =
   "w-full rounded-lg border border-line bg-ink px-3 py-2.5 text-sm text-fg placeholder:text-faint outline-none transition focus:border-signal/60 focus:ring-2 focus:ring-signal/20";
@@ -32,6 +35,7 @@ type Detail = {
   station: Station;
   entitlement: Entitlement | undefined;
   domains: StationDomain[];
+  engine: EngineStatus | undefined;
 };
 
 type LoadState =
@@ -65,6 +69,70 @@ function Field({ label, value }: { label: string; value: string | null }) {
       <dd className="mt-0.5 text-sm text-fg">
         {value !== null && value.length > 0 ? value : "—"}
       </dd>
+    </div>
+  );
+}
+
+function EngineCard({ engine }: { engine: EngineStatus | undefined }) {
+  if (engine === undefined) {
+    return (
+      <div className="rounded-xl border border-line bg-surface p-5">
+        <h2 className="text-sm font-medium tracking-wider text-faint uppercase">Engine</h2>
+        <p className="mt-3 flex items-center gap-2 text-sm text-dim">
+          <Activity className="h-4 w-4 text-faint" aria-hidden />
+          No AirSuite engine is paired with this station yet.
+        </p>
+      </div>
+    );
+  }
+  const online = isEngineOnline(engine.updated_at);
+  const summary = summarizeEngine(engine.status);
+  const uptime = formatUptime(summary.uptimeSec);
+  return (
+    <div className="rounded-xl border border-line bg-surface p-5">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-medium tracking-wider text-faint uppercase">Engine</h2>
+        <span
+          className={cx(
+            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
+            online ? "bg-ok/15 text-ok" : "bg-elevated text-faint",
+          )}
+        >
+          <span className={cx("h-1.5 w-1.5 rounded-full", online ? "bg-ok" : "bg-faint")} aria-hidden />
+          {online ? "Live" : "Offline"}
+        </span>
+      </div>
+      <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <Field label="Version" value={engine.engine_version} />
+        <Field label="Last heartbeat" value={lastSeen(engine.updated_at)} />
+        <Field label="Mode" value={summary.mode} />
+        <Field label="Now playing" value={summary.currentTitle} />
+        <Field label="Uptime" value={uptime} />
+        <Field
+          label="Renderer"
+          value={summary.rendererAlive === null ? null : summary.rendererAlive ? "Alive" : "Down"}
+        />
+      </dl>
+      {summary.alerts.length > 0 && (
+        <ul className="mt-4 space-y-1.5">
+          {summary.alerts.map((alert) => (
+            <li
+              key={`${alert.level}-${alert.text}`}
+              className={cx(
+                "flex items-start gap-2 text-sm",
+                alert.level === "critical"
+                  ? "text-signal-soft"
+                  : alert.level === "warning"
+                    ? "text-amber"
+                    : "text-dim",
+              )}
+            >
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+              {alert.text}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -205,10 +273,11 @@ function StationDetail() {
         if (!cancelled) setState({ status: "notfound" });
         return;
       }
-      const [stations, entitlements, domains] = await Promise.all([
+      const [stations, entitlements, domains, engines] = await Promise.all([
         getMyStations(),
         getMyEntitlements(),
         getStationDomains(),
+        getStationEngines(),
       ]);
       if (cancelled) return;
       const station = stations.find((candidate) => candidate.id === id);
@@ -222,6 +291,7 @@ function StationDetail() {
           station,
           entitlement: entitlements.find((e) => e.station_id === id),
           domains: domains.filter((d) => d.station_id === id),
+          engine: engines.find((e) => e.station_id === id),
         },
       });
     })();
@@ -265,7 +335,7 @@ function StationDetail() {
     );
   }
 
-  const { station, entitlement, domains } = state.detail;
+  const { station, entitlement, domains, engine } = state.detail;
   const features = activeFeatures(entitlement?.features);
   const freq = bandFrequency(station.band, station.frequency);
 
@@ -352,6 +422,8 @@ function StationDetail() {
           )}
         </div>
       </div>
+
+      <EngineCard engine={engine} />
 
       <SettingsForm
         station={station}

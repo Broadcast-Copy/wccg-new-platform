@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import type {
+  EngineStatus,
   Entitlement,
   Organization,
   Station,
@@ -56,4 +57,18 @@ export function getStationDomains(): Promise<StationDomain[]> {
     "station_domains",
     "id, station_id, hostname, is_primary, verified_at",
   );
+}
+
+/**
+ * AirSuite engine status per station, via the member-authorized RPC (mig 100).
+ * airsuite_station_status is platform-admin-read-only directly, so this goes
+ * through bc_station_engines(), which scopes to the caller's org stations.
+ */
+export async function getStationEngines(): Promise<EngineStatus[]> {
+  const { data, error } = await supabase.rpc("bc_station_engines");
+  if (error) {
+    console.error("[control-plane] failed to read engines:", error.message);
+    return [];
+  }
+  return (data ?? []) as EngineStatus[];
 }
