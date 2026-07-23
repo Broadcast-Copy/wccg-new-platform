@@ -53,6 +53,9 @@ const CHANNELS: ChannelConfig[] = [
   { program: "Local Content Creators", creator: "Big Cas", category: "Talk & Culture", rating: "R", channelId: "UCQmsI0AAbXvTevWkqMIBU-Q" },
   { program: "Local Content Creators", creator: "Drect Williams", category: "Talk & Culture", rating: "PG-13", channelId: "UCPwUv_AYzOlK8VZP-dUM6ew" }, // Drect Media
   { program: "Local Content Creators", creator: "Put Me On Game", category: "Talk & Culture", rating: "PG-13", channelId: "UCMZlwNcYLu5eV2Zm2lLmF-Q" },
+  // Director Mark Mayr — Fayetteville cyphers/music videos. Explicit language,
+  // so rated R (thumbnail shows, playback is parental-gated + warned like Big Cas).
+  { program: "Local Content Creators", creator: "Director Mark Mayr", category: "Talk & Culture", rating: "R", channelId: "UCkjKdYGTzx-C9tEfwwXt0pA" },
 
   // Sports — Duke + Pick'em Pros. Duke rows are curated as "Duke Blue Devils".
   { program: "Sports", creator: "Duke Blue Devils", category: "Sports", rating: "G", channelId: "UC9KCzNMmf0IRcEIsFDgt2bg" }, // Duke Basketball
