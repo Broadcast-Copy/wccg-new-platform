@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import type {
+  ComplianceDeadline,
   EngineStatus,
   Entitlement,
   Organization,
@@ -71,4 +72,13 @@ export async function getStationEngines(): Promise<EngineStatus[]> {
     return [];
   }
   return (data ?? []) as EngineStatus[];
+}
+
+/** FCC filing deadlines for the caller's stations (RLS: station staff; mig 104). */
+export function getComplianceDeadlines(): Promise<ComplianceDeadline[]> {
+  return readList<ComplianceDeadline>(
+    "compliance_deadlines",
+    "id, station_id, title, category, cadence, due_date, status, description, filed_at",
+    { column: "due_date" },
+  );
 }

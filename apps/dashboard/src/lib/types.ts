@@ -58,3 +58,18 @@ export type EngineStatus = {
   engine_version: string | null;
   status: Record<string, unknown> | null;
 };
+
+export type ComplianceStatus = "upcoming" | "filed" | "waived";
+
+/** An FCC filing deadline for a station (internal ops; migration 104). */
+export type ComplianceDeadline = {
+  id: string;
+  station_id: string;
+  title: string;
+  category: string | null;
+  cadence: string;
+  due_date: string;
+  status: ComplianceStatus;
+  description: string | null;
+  filed_at: string | null;
+};
