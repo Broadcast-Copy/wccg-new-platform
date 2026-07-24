@@ -73,3 +73,16 @@ export type ComplianceDeadline = {
   description: string | null;
   filed_at: string | null;
 };
+
+/** A Public Inspection File document (migration 103). */
+export type PublicFileDoc = {
+  id: string;
+  station_id: string;
+  category: string;
+  title: string;
+  description: string | null;
+  url: string | null;
+  period_label: string | null;
+  is_published: boolean;
+  sort_order: number;
+};

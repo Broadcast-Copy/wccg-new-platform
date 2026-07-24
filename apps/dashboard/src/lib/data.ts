@@ -4,6 +4,7 @@ import type {
   EngineStatus,
   Entitlement,
   Organization,
+  PublicFileDoc,
   Station,
   StationDomain,
 } from "@/lib/types";
@@ -80,5 +81,17 @@ export function getComplianceDeadlines(): Promise<ComplianceDeadline[]> {
     "compliance_deadlines",
     "id, station_id, title, category, cadence, due_date, status, description, filed_at",
     { column: "due_date" },
+  );
+}
+
+/**
+ * Public Inspection File documents for the caller's stations. Staff see all
+ * their docs (published or not) via the is_station_staff policy; mig 103.
+ */
+export function getStationPublicFileDocs(): Promise<PublicFileDoc[]> {
+  return readList<PublicFileDoc>(
+    "public_file_documents",
+    "id, station_id, category, title, description, url, period_label, is_published, sort_order",
+    { column: "sort_order" },
   );
 }

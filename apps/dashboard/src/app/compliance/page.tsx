@@ -8,6 +8,7 @@ import { getComplianceDeadlines, getMyStations } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
 import type { ComplianceDeadline } from "@/lib/types";
 import { cx } from "@/lib/format";
+import { PublicFileDocs } from "./public-file-docs";
 
 /**
  * FCC filing-deadline tracker. Reads compliance_deadlines as the logged-in
@@ -198,7 +199,10 @@ export default function Page() {
   return (
     <AuthGuard>
       <AppShell>
-        <Compliance />
+        <div className="space-y-12">
+          <Compliance />
+          <PublicFileDocs />
+        </div>
       </AppShell>
     </AuthGuard>
   );
