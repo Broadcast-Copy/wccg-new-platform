@@ -1,6 +1,6 @@
 name: Deploy Broadcast Copy (control plane)
 
-# app.broadcastcopy.ai — the GM/OM control plane (apps/dashboard). Own
+# platform.broadcastcopy.ai — the GM/OM control plane (apps/dashboard). Own
 # concurrency group + path filter so it never cancels a station or marketing
 # deploy, and isn't rebuilt for unrelated changes.
 
@@ -90,7 +90,7 @@ jobs:
             exit 0
           fi
 
-          TARGET="${KH_PATH:-app.broadcastcopy.ai}"
+          TARGET="${KH_PATH:-platform.broadcastcopy.ai}"
           TARGET="${TARGET%/}"
 
           # SAFETY: this job runs `mirror --reverse --delete`. Refuse any target
