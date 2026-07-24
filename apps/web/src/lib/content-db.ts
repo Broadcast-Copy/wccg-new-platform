@@ -484,6 +484,85 @@ export async function getCheckInLocationsFromDb(): Promise<CheckInLocation[]> {
   }
 }
 
+// ─── Public inspection file (FCC compliance pack) ───────────────────────────
+
+export type PublicFileCategoryKey =
+  | "authorizations"
+  | "applications"
+  | "contour_maps"
+  | "ownership"
+  | "political"
+  | "eeo"
+  | "issues_programs"
+  | "public_and_broadcasting";
+
+export type PublicFileDoc = {
+  title: string;
+  description: string | null;
+  url: string | null;
+  periodLabel: string | null;
+};
+
+export type PublicFileCategory = {
+  key: PublicFileCategoryKey;
+  label: string;
+  docs: PublicFileDoc[];
+};
+
+type PublicFileRow = {
+  category: string;
+  title: string;
+  description: string | null;
+  url: string | null;
+  period_label: string | null;
+  sort_order: number | null;
+};
+
+const PUBLIC_FILE_CATEGORY_ORDER = [
+  { key: "authorizations", label: "Authorizations" },
+  { key: "applications", label: "Applications & related materials" },
+  { key: "contour_maps", label: "Contour maps" },
+  { key: "ownership", label: "Ownership reports" },
+  { key: "political", label: "Political file" },
+  { key: "eeo", label: "EEO records" },
+  { key: "issues_programs", label: "Issues & programs lists" },
+  { key: "public_and_broadcasting", label: "The public & broadcasting" },
+] as const satisfies ReadonlyArray<{ key: PublicFileCategoryKey; label: string }>;
+
+/**
+ * The station's Public Inspection File, grouped into the FCC categories in a
+ * fixed order (empty categories dropped). Public-read via RLS (migration 103).
+ * Returns [] on error/empty so the page can fall back to its static content.
+ */
+export async function getPublicFileFromDb(
+  stationId: string = STATION_ID,
+): Promise<PublicFileCategory[]> {
+  try {
+    const { data, error } = await getClient()
+      .from("public_file_documents")
+      .select("category,title,description,url,period_label,sort_order")
+      .eq("station_id", stationId)
+      .eq("is_published", true)
+      .order("sort_order", { ascending: true });
+    if (error || !data) return [];
+    const rows = data as PublicFileRow[];
+    return PUBLIC_FILE_CATEGORY_ORDER.map(({ key, label }) => ({
+      key,
+      label,
+      docs: rows
+        .filter((r) => r.category === key)
+        .map((r): PublicFileDoc => ({
+          title: r.title,
+          description: r.description,
+          url: r.url,
+          periodLabel: r.period_label,
+        })),
+    })).filter((c) => c.docs.length > 0);
+  } catch {
+    return [];
+  }
+}
+
 // ─── Data-driven equivalents of the TS helper functions ─────────────────────
 // Pure functions over already-fetched data (logic copied from schedule.ts /
 // hosts.ts but parameterized so build-time consumers don't re-query).
