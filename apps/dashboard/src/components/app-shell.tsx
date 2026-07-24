@@ -33,6 +33,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link href="/team" className="transition-colors hover:text-fg">
               Team
             </Link>
+            <Link href="/settings" className="transition-colors hover:text-fg">
+              Settings
+            </Link>
           </nav>
           <div className="flex items-center gap-4 text-sm">
             {email && <span className="hidden text-dim sm:inline">{email}</span>}
