@@ -15,7 +15,9 @@ import {
   Square,
   Trash2,
   AudioLines,
+  Scissors,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -23,6 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { LoginRequired } from "@/components/auth/login-required";
 import { createClient } from "@/lib/supabase/client";
+import { saveAudioFile } from "@/lib/audio-store";
 
 const ACCENT = "#74ddc7";
 
@@ -186,9 +189,47 @@ export default function ProductionStudioPage() {
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [resultLen, setResultLen] = useState<number | null>(null);
   const [voiceOnlyUrl, setVoiceOnlyUrl] = useState<string | null>(null);
+  const [handoff, setHandoff] = useState(false);
 
   const uploadBufRef = useRef<ArrayBuffer | null>(null);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
+  const resultBufRef = useRef<AudioBuffer | null>(null);
+  const router = useRouter();
+
+  // Hand audio off to the full Audio Editor (waveform, trim, non-destructive
+  // undo/redo). Saves a clean WAV to the shared audio-store, then opens the
+  // editor with ?open=<id> so it loads straight into the waveform.
+  const sendToEditor = useCallback(
+    async (buf: AudioBuffer, name: string) => {
+      setError(null);
+      setHandoff(true);
+      try {
+        const wav = encodeWav(buf);
+        const id = `ps-${Date.now()}`;
+        const sizeStr = wav.size > 1048576 ? `${(wav.size / 1048576).toFixed(1)} MB` : `${(wav.size / 1024).toFixed(0)} KB`;
+        const dur = `${Math.floor(buf.duration / 60)}:${String(Math.floor(buf.duration % 60)).padStart(2, "0")}`;
+        await saveAudioFile({ id, name, duration: dur, size: sizeStr, blob: wav, createdAt: Date.now() });
+        router.push(`/studio/audio-editor?open=${id}`);
+      } catch (e) {
+        setError((e as Error).message);
+        setHandoff(false);
+      }
+    },
+    [router],
+  );
+
+  const editRecording = useCallback(async () => {
+    if (!ownVoiceBufRef.current) { setError("Record or upload your voice first."); return; }
+    const ctx = newAudioCtx();
+    const buf = await ctx.decodeAudioData(ownVoiceBufRef.current.slice(0));
+    await ctx.close();
+    await sendToEditor(buf, "Voice-over recording");
+  }, [sendToEditor]);
+
+  const editResult = useCallback(async () => {
+    if (!resultBufRef.current) return;
+    await sendToEditor(resultBufRef.current, "Produced spot");
+  }, [sendToEditor]);
 
   const charCount = script.trim().length;
   const tooLong = charCount > 2800;
@@ -390,6 +431,7 @@ export default function ProductionStudioPage() {
       vSrc.start(leadIn);
 
       const rendered = await off.startRendering();
+      resultBufRef.current = rendered;
       const url = URL.createObjectURL(encodeWav(rendered));
       setResultUrl(url); setResultLen(total); setStatusMsg(null);
       setTimeout(() => audioElRef.current && (audioElRef.current.src = url, audioElRef.current.play().catch(() => {})), 120);
@@ -476,11 +518,17 @@ export default function ProductionStudioPage() {
                       )}
                     </div>
                     {ownVoiceUrl && (
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         <audio src={ownVoiceUrl} controls className="w-full" />
                         <p className="text-[11px] text-muted-foreground">
                           {ownVoiceName}{ownVoiceDur != null ? ` · ${ownVoiceDur.toFixed(1)}s` : ""}
                         </p>
+                        {!recording && (
+                          <Button type="button" variant="outline" size="sm" onClick={editRecording} disabled={handoff}>
+                            {handoff ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Scissors className="mr-2 h-4 w-4" />}
+                            Edit in Audio Editor
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -603,9 +651,15 @@ export default function ProductionStudioPage() {
                   <div className="mt-4 space-y-3">
                     <audio ref={audioElRef} controls className="w-full" />
                     {resultUrl && (
-                      <a href={resultUrl} download="wccg-production.wav" className="block">
-                        <Button className="w-full" style={{ backgroundColor: ACCENT, color: "#06251f" }}><Download className="mr-2 h-4 w-4" /> Download WAV</Button>
-                      </a>
+                      <div className="space-y-2">
+                        <a href={resultUrl} download="wccg-production.wav" className="block">
+                          <Button className="w-full" style={{ backgroundColor: ACCENT, color: "#06251f" }}><Download className="mr-2 h-4 w-4" /> Download WAV</Button>
+                        </a>
+                        <Button variant="outline" className="w-full" onClick={editResult} disabled={handoff}>
+                          {handoff ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Scissors className="mr-2 h-4 w-4" />}
+                          Edit in Audio Editor
+                        </Button>
+                      </div>
                     )}
                     {!resultUrl && voiceOnlyUrl && <p className="text-xs text-muted-foreground">Voice-only preview. Hit <b>Produce</b> to add the music bed and get the downloadable spot.</p>}
                     {resultUrl && <p className="text-xs text-muted-foreground">Broadcast-ready 44.1 kHz stereo WAV. Rename to a cart (e.g. <span className="font-mono">DJB_803.wav</span>) and drop it in your Convert folder to air it.</p>}

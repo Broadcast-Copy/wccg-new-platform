@@ -686,10 +686,15 @@ export default function AudioEditorPage() {
   // ── Restore persisted files from IndexedDB on mount ──
   useEffect(() => {
     let cancelled = false;
+    // A file handed off from Production Studio via ?open=<id> is loaded straight
+    // into the waveform by a separate effect below, so exclude it here to avoid
+    // listing it twice in the library.
+    const handoffId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("open") : null;
     dbLoadAll()
       .then((stored) => {
-        if (cancelled || stored.length === 0) return;
-        const restored: AudioFile[] = stored.map((s) => ({
+        const usable = handoffId ? stored.filter((s) => s.id !== handoffId) : stored;
+        if (cancelled || usable.length === 0) return;
+        const restored: AudioFile[] = usable.map((s) => ({
           id: s.id,
           name: s.name,
           duration: s.duration,
@@ -813,6 +818,31 @@ export default function AudioEditorPage() {
       setWaveformData(Array.from({ length: 200 }, () => 0.15));
     }
   }, [showStatus]);
+
+  // Auto-open a recording handed off from Production Studio via ?open=<id>.
+  // Loads it straight into the waveform; the mount-restore effect skips this id
+  // so it isn't listed twice, and we drop the handoff copy once it's re-persisted
+  // fresh by loadAudioFile under its own id.
+  useEffect(() => {
+    const handoffId = new URLSearchParams(window.location.search).get("open");
+    if (!handoffId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const all = await dbLoadAll();
+        const match = all.find((s) => s.id === handoffId);
+        if (cancelled || !match) return;
+        const file = new File([match.blob], match.name || "recording.wav", {
+          type: match.blob.type || "audio/wav",
+        });
+        loadAudioFile(file);
+        await dbDelete(handoffId);
+      } catch (err) {
+        console.warn("[AudioEditor] handoff open failed:", err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [loadAudioFile]);
 
   // Handle file input change
   const handleFileSelect = useCallback(
