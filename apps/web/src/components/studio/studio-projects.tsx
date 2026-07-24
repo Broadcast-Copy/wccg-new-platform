@@ -141,7 +141,7 @@ export function StudioProjects() {
         setProjects(data.map((row: Record<string, unknown>) => ({
           id: row.id as string,
           title: (row.title as string) || "Untitled",
-          type: (row.tool as ProjectType) || "podcast",
+          type: (row.type as ProjectType) || "podcast",
           createdAt: row.created_at as string,
           updatedAt: row.updated_at as string,
         })));

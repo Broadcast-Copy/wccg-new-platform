@@ -100,22 +100,31 @@ function NewProjectModal({ open, onClose }: { open: boolean; onClose: () => void
       "Audio Editor": "audio",
     };
 
-    // Save to Supabase if user is authenticated
+    // Persist the project. The studio_projects column is `type` (NOT NULL) — an
+    // earlier version inserted `tool` instead, which failed the NOT NULL check;
+    // because supabase insert returns { error } (never throws) and the code
+    // didn't check it, the project silently vanished. Now we check the error and
+    // ALWAYS fall back to localStorage so a created project is never lost.
+    let savedToDb = false;
     try {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-
       if (user) {
-        await supabase.from("studio_projects").insert({
+        const { error } = await supabase.from("studio_projects").insert({
           user_id: user.id,
           title: projectName.trim(),
-          tool: toolTypeMap[tool.title] || "podcast",
+          type: toolTypeMap[tool.title] || "podcast",
           data: { toolHref: tool.href },
         });
+        if (!error) savedToDb = true;
+        else console.warn("[studio] project insert failed, using localStorage:", error.message);
       }
-    } catch {
-      // Fallback: save to localStorage
+    } catch (e) {
+      console.warn("[studio] project save error, using localStorage:", e);
+    }
+
+    if (!savedToDb) {
       const key = "wccg_studio_projects";
       const existing = JSON.parse(localStorage.getItem(key) || "[]");
       const newProject = {
