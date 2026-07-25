@@ -94,16 +94,21 @@ jobs:
             exit 0
           fi
 
-          # Default to the conventional cPanel addon-domain docroot.
-          TARGET="${KH_PATH:-broadcastcopy.ai}"
+          # cPanel addon domains live UNDER public_html (the Apache vhost for
+          # broadcastcopy.ai has DocumentRoot public_html/broadcastcopy.ai).
+          # The SFTP session starts in the user's home, so a bare
+          # "broadcastcopy.ai" would create a sibling of public_html that
+          # Apache never serves — the path must include public_html/.
+          TARGET="${KH_PATH:-public_html/broadcastcopy.ai}"
           TARGET="${TARGET%/}"
 
           # SAFETY: this job runs `mirror --reverse --delete`. Pointed at the
-          # station docroot it would DELETE the live WCCG site. Refuse any
-          # target that is empty, root, home, or public_html.
+          # station docroot it would DELETE the live WCCG site. Refuse empty,
+          # root, home, and public_html ITSELF — but allow subdirectories of
+          # public_html, which is where addon-domain docroots legitimately live.
           case "$TARGET" in
-            ""|"/"|"~"|"."|"public_html"|"/public_html"|"~/public_html"|"public_html/"*)
-              echo "::error::Refusing to deploy — KNOWNHOST_MARKETING_PATH ('$TARGET') points at the station docroot or filesystem root."
+            ""|"/"|"~"|"."|"public_html"|"/public_html"|"~/public_html")
+              echo "::error::Refusing to deploy — KNOWNHOST_MARKETING_PATH ('$TARGET') is the station docroot or filesystem root."
               echo "can_deploy=false" >> "$GITHUB_OUTPUT"
               exit 1
               ;;

@@ -90,15 +90,20 @@ jobs:
             exit 0
           fi
 
-          TARGET="${KH_PATH:-platform.broadcastcopy.ai}"
+          # cPanel addon domains live UNDER public_html (the Apache vhost for
+          # platform.broadcastcopy.ai has DocumentRoot
+          # public_html/platform.broadcastcopy.ai). The SFTP session starts in
+          # the user's home, so the path must include public_html/ or the upload
+          # lands in a sibling directory Apache never serves.
+          TARGET="${KH_PATH:-public_html/platform.broadcastcopy.ai}"
           TARGET="${TARGET%/}"
 
-          # SAFETY: this job runs `mirror --reverse --delete`. Refuse any target
-          # that would wipe the filesystem root, home, the station docroot, or
-          # the MARKETING docroot (broadcastcopy.ai).
+          # SAFETY: this job runs `mirror --reverse --delete`. Refuse the
+          # filesystem root, home, public_html itself (the station docroot), and
+          # the MARKETING docroot — but allow other public_html subdirectories.
           case "$TARGET" in
-            ""|"/"|"~"|"."|"public_html"|"/public_html"|"~/public_html"|"public_html/"*|"broadcastcopy.ai")
-              echo "::error::Refusing to deploy — KNOWNHOST_DASHBOARD_PATH ('$TARGET') points at the filesystem root, station docroot, or the marketing docroot."
+            ""|"/"|"~"|"."|"public_html"|"/public_html"|"~/public_html"|"broadcastcopy.ai"|"public_html/broadcastcopy.ai")
+              echo "::error::Refusing to deploy — KNOWNHOST_DASHBOARD_PATH ('$TARGET') is the filesystem root, station docroot, or the marketing docroot."
               echo "can_deploy=false" >> "$GITHUB_OUTPUT"
               exit 1
               ;;
