@@ -4,6 +4,11 @@ name: Deploy Broadcast Copy (marketing)
 # Separate from deploy.yml on purpose: its own concurrency group so a marketing
 # push never cancels an in-flight WCCG station deploy, and a path filter so the
 # station site isn't rebuilt when only marketing copy changes.
+#
+# COUPLING WARNING: this docroot (public_html/broadcastcopy.ai) sits inside the
+# WCCG docroot, so deploy.yml's `mirror --delete` into public_html/ MUST keep its
+# `--exclude-glob broadcastcopy.ai/`. Without it, the WCCG deploy (which also
+# runs on a 4x/day cron) silently deletes this whole site.
 
 on:
   push:

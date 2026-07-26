@@ -157,6 +157,13 @@ jobs:
           # deploy idempotent; cgi-bin/.well-known are excluded so --delete can't
           # remove server-managed paths. Commands go through lftp -e (NOT a heredoc)
           # so the workflow YAML and the shell both parse cleanly.
-          lftp -u "$KH_USER,$KH_PASS" -p "$PORT" "sftp://$KH_HOST" -e "set sftp:auto-confirm yes; set net:max-retries 2; set net:timeout 30; set mirror:parallel-transfer-count 4; mirror --reverse --delete --verbose=1 --exclude-glob cgi-bin/ --exclude-glob .well-known/ out/ public_html/; cls -l public_html/index.html; bye"
+          #
+          # The broadcastcopy.ai / platform.broadcastcopy.ai excludes are LOAD
+          # BEARING: those are cPanel addon-domain docroots that live INSIDE
+          # public_html but are NOT part of this build, so --delete treated them
+          # as extraneous and wiped both Broadcast Copy sites (this job also runs
+          # on a 4x/day cron, so it happened unattended). Never remove them, and
+          # add an exclude here for every future addon domain on this account.
+          lftp -u "$KH_USER,$KH_PASS" -p "$PORT" "sftp://$KH_HOST" -e "set sftp:auto-confirm yes; set net:max-retries 2; set net:timeout 30; set mirror:parallel-transfer-count 4; mirror --reverse --delete --verbose=1 --exclude-glob cgi-bin/ --exclude-glob .well-known/ --exclude-glob broadcastcopy.ai/ --exclude-glob platform.broadcastcopy.ai/ out/ public_html/; cls -l public_html/index.html; bye"
           echo "=== Sanity-check the upload via SSH ==="
           SSHPASS="$KH_PASS" sshpass -e ssh -p "$PORT" -o StrictHostKeyChecking=no "$KH_USER@$KH_HOST" 'for f in public_html/index.html public_html/videos/index.html public_html/my/points/index.html; do if [ -f "$f" ]; then echo "OK   $f"; else echo "MISS $f"; fi; done'

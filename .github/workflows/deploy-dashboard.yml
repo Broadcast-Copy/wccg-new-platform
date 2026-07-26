@@ -3,6 +3,11 @@ name: Deploy Broadcast Copy (control plane)
 # platform.broadcastcopy.ai — the GM/OM control plane (apps/dashboard). Own
 # concurrency group + path filter so it never cancels a station or marketing
 # deploy, and isn't rebuilt for unrelated changes.
+#
+# COUPLING WARNING: this docroot (public_html/platform.broadcastcopy.ai) sits
+# inside the WCCG docroot, so deploy.yml's `mirror --delete` into public_html/
+# MUST keep its `--exclude-glob platform.broadcastcopy.ai/`. Without it, the
+# WCCG deploy (which also runs on a 4x/day cron) silently deletes this site.
 
 on:
   push:
