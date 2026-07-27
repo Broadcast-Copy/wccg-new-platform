@@ -173,9 +173,9 @@ const ROOMS = [
    gear:[["Digital billboard","Campaigns flighted to the roadside screen straight from the traffic log."],
          ["In-store reels","Sponsor loops for partner shops, exported to every screen size automatically."],
          ["Proof of play","Every rotation logged toward the affidavit — no phone calls, no photos."]]},
-  {id:"biz", name:"Connected Businesses", group:"Audience", ext:{cx:45.5, cy:2.4, cz:51, w:27, h:7, d:13},
+  {id:"biz", name:"Connected Businesses", group:"Audience", ext:{cx:45.5, cy:2.4, cz:62, w:29, h:7, d:38},
    control:"Broadcast Copy Storefront",
-   promise:"The shops on the strip run on the station too — in-store audio, window screens and spot schedules fed by the same engine as the air chain.",
+   promise:"The whole commercial district runs on the station too — in-store audio, window screens and spot schedules fed by the same engine as the air chain.",
    gear:[["In-store audio","The station feed with storefront-safe breaks — overhead music and live reads, licensed per location."],
          ["Window screens","Menu boards and promo reels synced to the campaign calendar — one update hits every shopfront."],
          ["Local spot pipeline","Commercials produced upstairs flow straight to the strip — booked, aired and screened from one log."]]}
@@ -552,6 +552,7 @@ const ROAD_SAMPLES = [];
 for(let s=0; s<ROAD.L; s+=2) ROAD_SAMPLES.push(ROAD.at(s));
 
 let groundH = () => 0;      // set by the terrain build below
+let tickClouds = () => {};  // set by the cloud build below
 function markNoBounds(g){ g.traverse(o=>{ if(o.isMesh) o.userData.noBounds = true; }); }
 
 /* =====================================================================
@@ -603,9 +604,10 @@ scene.add(shellG);
         rectMask(x, z, -27, -5, 26, 36, 4),         // concert lawn by the road
         rectMask(x, z, -8.2, -3.8, 38, 114, 3),     // Maple Ave, running off the frame
         rectMask(x, z, -42, 58.5, 53.8, 58.2, 3),   // Signal St (east-west, runs to the strip)
-        rectMask(x, z, 33, 59, 44, 58.5, 4),        // business strip lot (east field)
+        rectMask(x, z, 33, 59, 44, 70, 4),          // business strip, both sides of Signal St
         rectMask(x, z, 19.8, 24.2, 38, 90, 3),      // Second Ave
-        rectMask(x, z, -38, 28, 85.8, 90.2, 3),     // Third St (east-west, far)
+        rectMask(x, z, -38, 58, 85.8, 90.2, 3),     // Third St (east-west, far)
+        rectMask(x, z, 29, 58, 73, 85, 4),          // third commercial row, off Third St
         rectMask(x, z, -32, -11, 43, 53, 4),        // house lots, north row
         rectMask(x, z, -1, 32, 42.5, 52, 4),        //   "      east row
         rectMask(x, z, -22, -9, 58, 68, 4),         //   "      south lot
@@ -704,14 +706,14 @@ scene.add(shellG);
     strip(3.6, 76, -6, 76);        // Maple Ave, running off the bottom of the frame
     strip(98, 3.6, 9, 56);         // Signal St, running east to the business strip
     strip(3.6, 50, 22, 64);        // Second Ave
-    strip(64, 3.6, -5, 88);        // Third St
+    strip(95, 3.6, 10.5, 88);      // Third St, carried east under the shops
     for(let z2=41.5; z2<113; z2+=5) if(Math.abs(z2-56) > 3.4 && Math.abs(z2-88) > 3.4)
       strip(0.14, 1.5, -6, z2, dashMat());
     for(let x2=-38; x2<56; x2+=5) if(Math.abs(x2+6) > 3.4 && Math.abs(x2-22) > 3.4)
       strip(1.5, 0.14, x2, 56, dashMat());
     for(let z2=41.5; z2<87; z2+=5) if(Math.abs(z2-56) > 3.4)
       strip(0.14, 1.5, 22, z2, dashMat());
-    for(let x2=-34; x2<27; x2+=5) if(Math.abs(x2+6) > 3.4 && Math.abs(x2-22) > 3.4)
+    for(let x2=-34; x2<56; x2+=5) if(Math.abs(x2+6) > 3.4 && Math.abs(x2-22) > 3.4)
       strip(1.5, 0.14, x2, 88, dashMat());
     streets.traverse(o=>{ if(o.material) o.material.userData.noDim = true; });
     markNoBounds(streets);
@@ -731,9 +733,11 @@ scene.add(shellG);
       Bo(h, 0.55, 1.4, 0.55, std(0x9a8d79), -1.6, 2.9, -0.5);
       markNoBounds(h);
     };
-    farHouse(-22, 77, 0.1);  farHouse(-13, 78.5, -0.06); farHouse(9, 75.5, 0.12);
-    farHouse(20, 77, -0.1);  farHouse(-19, 99, 0.05);   farHouse(-8.5, 101, -0.12);
-    farHouse(13, 98, 0.08);  farHouse(24, 100.5, -0.05);
+    // lots sit between the streets — a 5.5-wide roof on a 3.6-wide street
+    // reads as a house in the road, so keep centers clear of the asphalt
+    farHouse(-22, 77, 0.1);   farHouse(-13, 78.5, -0.06); farHouse(9, 75.5, 0.12);
+    farHouse(16.5, 77, -0.1); farHouse(-19, 99, 0.05);    farHouse(-12, 101, -0.12);
+    farHouse(13, 98, 0.08);   farHouse(24, 100.5, -0.05);
 
     // trees on the hills
     const tree = (x, z, s, blob) => {
@@ -883,7 +887,7 @@ const shellRec = reg(shellG);
       sp.userData.noBounds = true; c.add(sp);
     });
     c.scale.setScalar(s);
-    clouds.push({c, sp: 0.5 + Math.abs(cx % 5)/8, y0: cy, ph: cx});
+    clouds.push({c, m, sp: 0.5 + Math.abs(cx % 5)/8, y0: cy, ph: cx});
     return c;
   };
   // sky only — nothing floats below the island
@@ -906,6 +910,18 @@ const shellRec = reg(shellG);
     if(cl.c.position.x > 100) cl.c.position.x = -100;
     cl.c.position.y = cl.y0 + Math.sin(t*0.14 + cl.ph)*0.6;
   }));
+  /* The clouds live in world space high over the campus, so once the camera
+     drops into a room on an upper plate they drift between it and the lens.
+     Fade them out for the length of the zoom and bring them back at overview. */
+  let op = 0.94;
+  tickClouds = dt => {
+    const goal = active >= 0 ? 0 : 0.94;
+    if(Math.abs(op - goal) < 0.004) return;
+    // REDUCED cuts instead of fading — headless and reduced-motion starve rAF,
+    // so a tween here would never settle and the clouds would stay put
+    op = REDUCED ? goal : op + (goal - op) * Math.min(1, dt * 4);
+    clouds.forEach(cl=>{ cl.m.opacity = op; cl.c.visible = op > 0.02; });
+  };
 }
 
 /* ---- horizon: far ridgelines and a sky band closing the backdrop ------ */
@@ -1941,7 +1957,7 @@ const RIGHTW = PX1 - WT - 0.03;
   const locals = [
     {A:[-6.9, 41.5], B:[-6.9, 111],  sp:4.2, ph:0.0,  col:0xffffff},
     {A:[-37.5, 56.9],B:[29.5, 56.9], sp:4.8, ph:0.5,  col:0xe8e4dc},
-    {A:[-33.5, 88.9],B:[25.5, 88.9], sp:4.0, ph:0.25, col:0xd8d3c9},
+    {A:[-33.5, 88.9],B:[54, 88.9],   sp:4.0, ph:0.25, col:0xd8d3c9},
     {A:[34, 55.1],   B:[56, 55.1],   sp:4.3, ph:0.35, col:0xf0ede6},
   ].map(L => ({...L, car: mkCar(L.col), len: Math.hypot(L.B[0]-L.A[0], L.B[1]-L.A[1])}));
   const placeLocal = (L, t) => {
@@ -1980,7 +1996,7 @@ const RIGHTW = PX1 - WT - 0.03;
     }));
   const rushLocals = [
     {A:[-6.9, 41.5], B:[-6.9, 111],  sp:4.6, ph:0.62, col:0xf0ede6, th:0.6},
-    {A:[-33.5, 88.9],B:[25.5, 88.9], sp:4.4, ph:0.8,  col:0xffffff, th:0.72},
+    {A:[54, 87.1],   B:[-33.5, 87.1], sp:4.4, ph:0.8, col:0xffffff, th:0.72},
     {A:[56, 56.9],   B:[34, 56.9],   sp:4.7, ph:0.1,  col:0xd8d3c9, th:0.65},
   ].map(L => ({...L, car: mkCar(L.col), len: Math.hypot(L.B[0]-L.A[0], L.B[1]-L.A[1])}));
   const clockEl = document.getElementById("dayclock");
@@ -2201,7 +2217,7 @@ const RIGHTW = PX1 - WT - 0.03;
   house(-18, 48.5, 0.08, false, false);      // Signal St, north side
   house(-27.5, 49.2, 0.2, true, true);
   house(4, 47.6, -0.08, true, false);
-  house(27, 47.2, -0.18, false, true);
+  house(28.6, 47.2, -0.18, false, true);   // clear of the Second Ave curb
   house(-15.5, 62.5, 0.1, true, false);      // below Signal St
   mkPlant(g, -21.6, 0, 51.4, 1.15);
   mkPlant(g, 0.4, 0, 50.2, 0.95);
@@ -2246,8 +2262,8 @@ const RIGHTW = PX1 - WT - 0.03;
     x.textAlign = "center"; x.textBaseline = "middle";
     x.fillText(label.split("").join(" "), w/2, h/2+1);
   });
-  const shop = (x0, name, awnMat) => {
-    const s = new THREE.Group(); s.position.set(x0, 0, 48.5); g.add(s);
+  const shop = (x0, name, awnMat, z0 = 48.5) => {
+    const s = new THREE.Group(); s.position.set(x0, 0, z0); g.add(s);
     Bo(s, 6.6, 3.2, 5.0, MAT.wall(), 0, 0, 0);
     Bo(s, 6.9, 0.26, 5.3, MAT.slab(), 0, 3.2, 0);                 // parapet
     Bo(s, 0.95, 0.5, 0.7, std(0xe4e0d6), -1.6, 3.46, -0.9);       // rooftop unit
@@ -2266,6 +2282,51 @@ const RIGHTW = PX1 - WT - 0.03;
   shop(37.5, "CAFE", MAT.accent());
   shop(45.5, "MARKET", std(0x2f2a23, {roughness:0.9}));
   shop(53.5, "GYM", std(0xbdb8ae, {roughness:0.9}));
+
+  /* Second row, across Signal St. These front NORTH onto the street, which
+     the camera never sees — so they're double-fronted: a proper storefront on
+     the street side and a rear entrance, patio and sign band on the side that
+     faces the lens. Same trick a real corner block uses. */
+  const shopAcross = (x0, name, awnMat) => {
+    const s = new THREE.Group(); s.position.set(x0, 0, 63.5); g.add(s);
+    Bo(s, 6.6, 3.4, 5.2, MAT.wall(), 0, 0, 0);
+    Bo(s, 6.9, 0.28, 5.5, MAT.slab(), 0, 3.4, 0);                 // parapet
+    Bo(s, 0.9, 0.55, 0.75, std(0xe4e0d6), 1.7, 3.68, 0.4);        // rooftop unit
+    // street frontage (north)
+    Bo(s, 5.9, 1.85, 0.1, MAT.inkFlat(), 0.35, 0.4, -2.61);
+    Bo(s, 5.6, 1.6, 0.06, MAT.glass(), 0.35, 0.52, -2.67);
+    Bo(s, 1.12, 2.3, 0.1, std(0xdcd7cc), -2.45, 0, -2.63);
+    const awnN = Bo(s, 6.0, 0.07, 1.3, awnMat, 0.3, 2.5, -3.18);
+    awnN.rotation.x = -0.42;
+    // camera side: rear entrance, window reel and the name
+    Bo(s, 4.4, 1.6, 0.1, MAT.inkFlat(), -0.7, 0.35, 2.66);
+    Bo(s, 4.1, 1.35, 0.06, MAT.glass(), -0.7, 0.47, 2.72);
+    Pl(s, 1.9, 1.0, signMat(TX.siteScreen), -0.7, 1.15, 2.76);
+    Bo(s, 1.05, 2.2, 0.1, std(0xdcd7cc), 2.3, 0, 2.68);
+    Pl(s, 3.5, 0.58, signMat(shopSign(name)), -0.2, 3.0, 2.79);
+    Cy(s, 0.1, 0.12, 0.32, MAT.inkFlat(), 2.9, 2.3, 2.62, 10);    // wall speaker
+    Sp(s, 0.045, emissive(0xff4a1c), 2.9, 2.54, 2.7);             //   live ring
+    markNoBounds(s);
+    return s;
+  };
+  shopAcross(36.5, "DINER", std(0x2f2a23, {roughness:0.9}));
+  shopAcross(44.5, "SALON", MAT.accent());
+  shopAcross(52.5, "AUTO", std(0xbdb8ae, {roughness:0.9}));
+  // shared sidewalk along the shop fronts on the far side
+  const walk2 = Bo(g, 25.5, 0.05, 2.0, std(0xe9e5db, {roughness:0.96}), 44.5, 0.02, 59.9);
+  walk2.castShadow = false; markNoBounds(walk2);
+  // diner patio, on the side the camera reads
+  for(const px of [34.6, 38.4]){
+    Cy(g, 0.42, 0.46, 0.06, MAT.white(), px, 0.6, 67.4, 16);
+    Cy(g, 0.035, 0.045, 0.66, MAT.chrome(), px, 0, 67.4, 8);
+    for(const a of [0.9, 2.4]) Cy(g, 0.16, 0.18, 0.5,
+      std(0xdfd9cd, {roughness:0.9}), px+Math.cos(a)*0.85, 0, 67.4+Math.sin(a)*0.85, 10);
+  }
+  // salon planters and an auto bay stall marked out front
+  mkPlant(g, 47.9, 0, 67.2, 0.95);
+  Bo(g, 3.2, 0.03, 0.12, std(0xf2efe8, {roughness:0.9}), 52.5, 0.02, 67.6);
+  Bo(g, 0.12, 0.03, 2.6, std(0xf2efe8, {roughness:0.9}), 50.9, 0.02, 66.4);
+  Bo(g, 0.12, 0.03, 2.6, std(0xf2efe8, {roughness:0.9}), 54.1, 0.02, 66.4);
   // sidewalk connecting the strip to Signal St
   const walk = Bo(g, 24.5, 0.05, 2.1, std(0xe9e5db, {roughness:0.96}), 45.5, 0.02, 52.4);
   walk.castShadow = false; markNoBounds(walk);
@@ -2290,9 +2351,22 @@ const RIGHTW = PX1 - WT - 0.03;
   Sp(g, 0.16, MAT.inkFlat(), 53.2, 0.2, 52.5);
   mkPlant(g, 41.4, 0, 52.5, 0.9);
   mkPlant(g, 49.6, 0, 52.5, 0.9);
+
+  /* Third row, filling the block down at Third St — these front the street
+     and the camera at once, so they take the plain storefront treatment. */
+  shop(34, "BANK", std(0x2f2a23, {roughness:0.9}), 79);
+  shop(42, "PHARMACY", MAT.accent(), 79);
+  shop(50, "MOTORS", std(0xbdb8ae, {roughness:0.9}), 79);
+  const walk3 = Bo(g, 25.5, 0.05, 2.0, std(0xe9e5db, {roughness:0.96}), 42, 0.02, 83.0);
+  walk3.castShadow = false; markNoBounds(walk3);
+  mkPlant(g, 38.1, 0, 83.0, 0.95);
+  mkPlant(g, 46.1, 0, 83.0, 0.95);
+  // motors forecourt: a marked-out row of stalls
+  for(const sx of [47.4, 49.4, 51.4, 53.4])
+    Bo(g, 0.12, 0.03, 2.4, std(0xf2efe8, {roughness:0.9}), sx, 0.02, 84.6);
   pin(40.45, 2.6, 51.1);
-  pin(43.75, 1.35, 51.2);
-  pin(53.5, 3.0, 51.3);
+  pin(36.3, 3.4, 66.3);       // across the street — same log feeds both rows
+  pin(42.3, 3.0, 81.6);       // and again down on Third St
 }
 
 Object.values(roomRecs).forEach(r=> r.rec = reg(r.group));
@@ -2792,6 +2866,7 @@ let last = performance.now();
 function tick(now){
   const t = now/1000, dt = Math.min(0.05, (now-last)/1000); last = now;
   tickExpand(dt);
+  tickClouds(dt);
   if(homesState.parts.some(p=> p.k !== p.t)){
     homesState.parts.forEach(p=>{
       if(p.k !== p.t) p.k += Math.sign(p.t - p.k) * Math.min(dt*2.4, Math.abs(p.t - p.k));
