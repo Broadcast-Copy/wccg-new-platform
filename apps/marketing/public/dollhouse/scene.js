@@ -1043,15 +1043,16 @@ const shellRec = reg(shellG);
   // offshore in the south-east quadrant, working along the coast
   /* Close in, working north and south along the shore. The band of open water
      actually in shot is narrow — measured by projecting a grid of candidate
-     points through the camera, it runs x 70…100, z 0…80; anything further out
-     sails behind the sidebar and anything further south drops below the frame. */
+     points through the camera against the framing in overviewFrame, it runs
+     x 66…80, z 10…55. Anything further out sails behind the sidebar. Re-measure
+     these if HERO_BOX changes; the two are coupled. */
   const boats = [
-    {x:72, z:8,  ry:-1.55, s:1.4, sp:1.0},
-    {x:80, z:44, ry:1.58,  s:1.2, sp:0.85},
-    {x:74, z:76, ry:-1.5,  s:1.5, sp:1.1},
-    {x:90, z:26, ry:1.55,  s:1.3, sp:0.9},
-    {x:94, z:60, ry:-1.6,  s:1.4, sp:1.0},
-    {x:86, z:96, ry:1.52,  s:1.2, sp:0.8},
+    {x:70, z:10, ry:-1.55, s:1.3, sp:0.9},
+    {x:78, z:26, ry:1.58,  s:1.1, sp:0.8},
+    {x:68, z:42, ry:-1.5,  s:1.4, sp:1.0},
+    {x:82, z:16, ry:1.55,  s:1.2, sp:0.85},
+    {x:74, z:56, ry:-1.6,  s:1.3, sp:0.95},
+    {x:88, z:38, ry:1.52,  s:1.1, sp:0.8},
   ].map((b, i) => {
     const g0 = new THREE.Group(); g0.position.set(b.x, -1.35, b.z);
     g0.rotation.y = b.ry; g0.scale.setScalar(b.s); sea.add(g0);
@@ -1085,7 +1086,7 @@ const shellRec = reg(shellG);
     // hard-stop before any of them can drift onto dry land, and a reset once
     // they've reached well past the frame
     const p = b.g0.position;
-    if(p.x < 68 || p.x > 150 || p.z < -40 || p.z > 150) b.g0.position.copy(b.home);
+    if(p.x < 66 || p.x > 105 || p.z < -25 || p.z > 95) b.g0.position.copy(b.home);
     b.hull.position.y = Math.sin(t*0.75 + b.ph) * 0.14;
     b.hull.rotation.z = Math.sin(t*0.62 + b.ph) * 0.055;
     b.hull.rotation.x = Math.sin(t*0.9 + b.ph*1.4) * 0.03;
@@ -1093,7 +1094,7 @@ const shellRec = reg(shellG);
 }
 
 /* ---- aircraft: light planes crossing the sky off the north-west, one of
-   them towing a station banner. Their lane (x −190…−22 at y 33…38, z 44…58)
+   them towing a station banner. Their lane (x −134…−18 at y 34…39, z 18…34)
    was picked by projecting candidate points through the camera and keeping
    the ones that land in the upper-left of the frame, below the wordmark; it
    also clears the
@@ -1132,9 +1133,9 @@ const shellRec = reg(shellG);
     return g;
   }
   const planes = [
-    {x:-92,  y:35, z:52, ry:0.0,   s:1.0, sp:4.2, banner:true},
-    {x:-140, y:38, z:44, ry:-0.04, s:0.8, sp:5.2, banner:false},
-    {x:-190, y:33, z:58, ry:0.03,  s:0.9, sp:4.6, banner:false},
+    {x:-64,  y:36, z:26, ry:0.0,   s:1.0, sp:4.0, banner:true},
+    {x:-98,  y:39, z:18, ry:-0.04, s:0.8, sp:4.8, banner:false},
+    {x:-134, y:34, z:34, ry:0.03,  s:0.9, sp:4.4, banner:false},
   ].map((a, i) => {
     const g0 = new THREE.Group(); g0.position.set(a.x, a.y, a.z);
     g0.rotation.y = a.ry; g0.scale.setScalar(a.s); air.add(g0);
@@ -1159,7 +1160,7 @@ const shellRec = reg(shellG);
   if(ANIM) anims.push((t, dt)=> planes.forEach(a=>{
     a.g0.position.x += dt * a.vx;
     a.g0.position.z += dt * a.vz;
-    if(a.g0.position.x > -22) a.g0.position.copy(a.home);
+    if(a.g0.position.x > -18) a.g0.position.copy(a.home);
     a.body.position.y = Math.sin(t*0.5 + a.ph) * 0.5;
     a.body.rotation.z = Math.sin(t*0.37 + a.ph) * 0.045;
   }));
@@ -2764,11 +2765,21 @@ function levelBoxes(){
   }
   return BOX_LOCAL;
 }
+/* The campus outgrew the frame: every district added widened the bounds and
+   pushed the station further away, until the hero of the shot was a speck in
+   the middle of a map. The overview is clamped to the station block and its
+   ring road instead — the suburb, the shops, the park and the water are
+   context and are meant to run off the edges. */
+const HERO_BOX = new THREE.Box3(new THREE.Vector3(-56, -2, -52),
+                                new THREE.Vector3(74, 40, 76));
 function overviewFrame(){
   const u = new THREE.Box3();
   levelBoxes().forEach((b,i)=>
     u.union(b.clone().translate(expandedTarget ? OFF(i) : OFF_C(i))));
-  return fitBox(u, expandedTarget ? 1.05 : 1.06);
+  u.intersect(HERO_BOX);
+  // the open state needs headroom the closed one doesn't: the plates cascade
+  // up and back, and their labels sit above the topmost plate
+  return fitBox(u, expandedTarget ? 1.12 : 1.0);
 }
 function roomFrame(room){
   const b = room._box;
