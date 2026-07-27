@@ -161,9 +161,9 @@ const ROOMS = [
    gear:[["TV apps","Roku, Fire TV and Apple TV channels — video, streams and now-playing managed from one content library."],
          ["Smart speakers","“Play WCCG” on Alexa and Google — skills kept live and certified automatically."],
          ["Rooftop antenna","Over the air by antenna, everywhere else by app — the household never hears the switch."]]},
-  {id:"listeners", name:"Mobile Listeners", group:"Audience", ext:{cx:-9, cy:2.4, cz:25, w:32, h:8.5, d:26},
+  {id:"listeners", name:"Mobile Listeners", group:"Audience", ext:{cx:17, cy:2.6, cz:100, w:27, h:9, d:21},
    control:"Broadcast Copy Listener App",
-   promise:"The station in every pocket — stream, points and check-ins in one app, and a stage out front where the crowd checks in for double points.",
+   promise:"The station in every pocket — stream, points and check-ins in one app, and a stage in the park where the crowd checks in for double points.",
    gear:[["Live stream","Now playing, up next and the full schedule, everywhere they walk."],
          ["Points & check-ins","The loyalty economy that keeps 216,000+ listener events moving."],
          ["Show alerts","A push the moment their show, contest or remote goes live."]]},
@@ -614,7 +614,7 @@ scene.add(shellG);
         rectMask(x, z, -31, -12, 72, 84, 4),        // far blocks (scenery)
         rectMask(x, z, 1, 27, 70, 82, 4),
         rectMask(x, z, -27, -3, 94, 108, 4),
-        rectMask(x, z, 7, 31, 92, 106, 4),
+        rectMask(x, z, 6, 32, 90, 112, 4),          // the park: stage + crowd
         roadMask(x, z));
       return h * (1 - flat);
     };
@@ -737,7 +737,7 @@ scene.add(shellG);
     // reads as a house in the road, so keep centers clear of the asphalt
     farHouse(-22, 77, 0.1);   farHouse(-13, 78.5, -0.06); farHouse(9, 75.5, 0.12);
     farHouse(16.5, 77, -0.1); farHouse(-19, 99, 0.05);    farHouse(-12, 101, -0.12);
-    farHouse(13, 98, 0.08);   farHouse(24, 100.5, -0.05);
+    // the block east of Maple is the park — the concert stands there
 
     // trees on the hills
     const tree = (x, z, s, blob) => {
@@ -764,7 +764,10 @@ scene.add(shellG);
     tree(-34, 55.5, 1.1, true); tree(13, 53.4, 0.95, false); tree(-24.5, 67, 1.05, true);
     tree(16, 64, 1.2, false); tree(33, 53.5, 0.9, true);
     tree(-27, 80.5, 1.1, true); tree(16.5, 80.5, 1.0, false); tree(-24, 104, 1.15, false);
-    tree(19, 104.5, 0.9, true); tree(2, 116, 1.05, true); tree(-38, 96, 1.2, false);
+    tree(2, 116, 1.05, true); tree(-38, 96, 1.2, false);
+    // the park border — kept off the stage apron and out of the crowd
+    tree(6.5, 94, 1.1, true);   tree(6.5, 107, 0.95, false);
+    tree(30, 95.5, 1.0, false); tree(29.5, 108, 1.15, true);
   }
 
   const noCast = m => { m.castShadow = false; return m; };
@@ -2047,14 +2050,20 @@ const RIGHTW = PX1 - WT - 0.03;
     {A:[-16, 15.2], B:[5, 15.2],   c:0xf0ede6, phone:false, sp:1.2,  ph:0.85},
     {A:[8, 15.4],   B:[-9, 15.4],  c:0xffffff, phone:true,  sp:1.0,  ph:0.15},
     {A:[-9, 19.6],  B:[-13, 28.5], c:0xd8d3c9, phone:false, sp:0.8,  ph:0.55},
+    // walking in to the park off Third St
+    {A:[6.5, 92],   B:[12.5, 99],  c:0xffffff, phone:true,  sp:1.0,  ph:0.1},
+    {A:[29, 93],    B:[23.5, 100], c:0xf0ede6, phone:false, sp:0.95, ph:0.6},
+    {A:[17, 112],   B:[17, 105],   c:0xd8d3c9, phone:true,  sp:1.15, ph:0.35},
+    {A:[9, 106],    B:[25, 106],   c:0xbdb8ae, phone:false, sp:1.25, ph:0.8},
   ].map(w => ({...w, ped: mkPed(w.c, w.phone),
     len: Math.hypot(w.B[0]-w.A[0], w.B[1]-w.A[1])}));
   // a pair chatting by the entrance
   const chatA = mkPed(0xffffff, false); chatA.position.set(-3.4, 0.05, 14.6); chatA.rotation.y = 1.1;
   const chatB = mkPed(0xbdb8ae, true);  chatB.position.set(-2.2, 0.05, 15.1); chatB.rotation.y = -2.1;
 
-  /* ---- station stage: concert out front, crowd facing it ---- */
-  const stg = new THREE.Group(); stg.position.set(-16, 0, 29.5); g.add(stg);
+  /* ---- station stage: the concert in the park, crowd facing it ---- */
+  const CX = 17, CZ = 96;                    // stage center; the crowd fills +z of it
+  const stg = new THREE.Group(); stg.position.set(CX, 0, CZ); g.add(stg);
   Bo(stg, 10, 0.9, 4.6, MAT.white(), 0, 0, 0);
   Bo(stg, 10.06, 0.26, 4.66, MAT.inkFlat(), 0, 0.06, 0);            // skirt band
   Bo(stg, 9.6, 3.4, 0.22, MAT.wall(), 0, 0.9, -2.05);               // scrim
@@ -2088,24 +2097,35 @@ const RIGHTW = PX1 - WT - 0.03;
   mkPA(5.9, 1.6, -0.5);
   // performer, mid-set
   const perf = mkPed(0xff4a1c, false);
-  perf.position.set(-15.8, 0.95, 30.1); perf.scale.setScalar(1.12);
+  perf.position.set(CX + 0.2, 0.95, CZ + 0.6); perf.scale.setScalar(1.12);
   if(ANIM) anims.push(t=>{ perf.position.y = 0.95 + Math.abs(Math.sin(t*3.2))*0.14;
     perf.rotation.y = Math.sin(t*0.9)*0.4; });
 
   /* the crowd — bouncing, phones up */
   const crowd = [];
-  const spots = [
-    [-21.5,32.4],[-19.4,33.2],[-17.2,32.6],[-15,33.4],[-12.8,32.8],[-10.6,33.6],[-21,34.6],
-    [-18.6,35.1],[-16.2,34.4],[-13.6,35.2],[-11,34.8],[-9.2,33.0],[-20,32.6],[-14.2,32.7],[-11.8,32.4],[-16.8,35.8]
-  ];
+  // six ranks fanning back from the stage lip, staggered so no one hides behind
+  // the person in front; offsets are stage-relative, jitter is deterministic
+  const spots = [];
+  for(let r=0; r<6; r++){
+    const n = 7 + (r % 2);
+    for(let i=0; i<n; i++){
+      const jx = ((r*7 + i*13) % 5) * 0.24 - 0.48;
+      const jz = ((r*5 + i*11) % 4) * 0.28;
+      spots.push([CX - 7.4 + i * (14.8/(n-1)) + jx, CZ + 3.4 + r*1.85 + jz]);
+    }
+  }
   spots.forEach(([px,pz], i)=>{
     const col = i%7===0 ? 0xff4a1c : [0xffffff,0xd8d3c9,0xbdb8ae,0xf0ede6][i%4];
     const p = mkPed(col, i%3===0);
-    const ry = Math.atan2(-16 - px, 29.5 - pz);      // face the stage
+    const ry = Math.atan2(CX - px, CZ - pz);      // face the stage
     p.position.set(px, 0.05, pz); p.rotation.y = ry;
     p.scale.setScalar(0.88 + (i%4)*0.06);
     crowd.push({p, ry, ph: i*1.31, f: (i%5)*0.5});
   });
+  // stragglers arriving from the street and drifting along the back of the park
+  const chatC = mkPed(0xffffff, true);  chatC.position.set(CX+9.6, 0.05, CZ+6.4); chatC.rotation.y = -1.9;
+  const chatD = mkPed(0xd8d3c9, false); chatD.position.set(CX+10.4, 0.05, CZ+7.2); chatD.rotation.y = 1.3;
+  const chatE = mkPed(0xbdb8ae, true);  chatE.position.set(CX-10.2, 0.05, CZ+5.1); chatE.rotation.y = 2.2;
   if(ANIM) anims.push(t=> crowd.forEach(c=>{
     c.p.position.y = 0.05 + Math.max(0, Math.sin(t*(2.4 + c.f) + c.ph))*0.22;
     c.p.rotation.y = c.ry + Math.sin(t*1.2 + c.ph)*0.14;
@@ -2121,9 +2141,9 @@ const RIGHTW = PX1 - WT - 0.03;
   };
   walkers.forEach(w => placePed(w, 0.6));
   if(ANIM) anims.push(t => walkers.forEach(w => placePed(w, t)));
-  pin(-13, 2.0, 34.6);      // phones up in the crowd
-  pin(-6, 1.6, 17.6);
-  pin(-16, 2.6, 33.2);      // the crowd, checked in at the stage
+  pin(CX - 6.5, 2.0, CZ + 4.2);    // phones up in the front rank
+  pin(CX + 7.5, 1.9, CZ + 9.4);    // the crowd, checked in at the gate
+  pin(CX, 5.6, CZ + 2.6);          // the stage — clear of its own canopy
 }
 
 /* --- Connected Homes: TV apps + smart speakers across the road --- */
