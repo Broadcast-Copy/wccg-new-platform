@@ -554,6 +554,7 @@ for(let s=0; s<ROAD.L; s+=2) ROAD_SAMPLES.push(ROAD.at(s));
 let groundH = () => 0;      // set by the terrain build below
 let tickClouds = () => {};  // set by the cloud build below
 let tickSea = () => {};     // set by the sea build below
+let tickSky = () => {};     // set by the aircraft build below
 function markNoBounds(g){ g.traverse(o=>{ if(o.isMesh) o.userData.noBounds = true; }); }
 
 /* =====================================================================
@@ -1088,6 +1089,79 @@ const shellRec = reg(shellG);
     b.hull.position.y = Math.sin(t*0.75 + b.ph) * 0.14;
     b.hull.rotation.z = Math.sin(t*0.62 + b.ph) * 0.055;
     b.hull.rotation.x = Math.sin(t*0.9 + b.ph*1.4) * 0.03;
+  }));
+}
+
+/* ---- aircraft: light planes crossing the sky off the north-west, one of
+   them towing a station banner. Their lane (x −190…−22 at y 33…38, z 44…58)
+   was picked by projecting candidate points through the camera and keeping
+   the ones that land in the upper-left of the frame, below the wordmark; it
+   also clears the
+   exploded plates, which stack up and back toward z −49. -------------- */
+{
+  const air = new THREE.Group(); levelG[0].add(air);
+  const bannerTex = tex(384, 76, (x,w,h)=>{
+    x.fillStyle = "rgba(253,251,246,0.95)"; rr(x, 0, 0, w, h, 9); x.fill();
+    x.strokeStyle = "#ff4a1c"; x.lineWidth = 3.5; rr(x, 3, 3, w-6, h-6, 7); x.stroke();
+    x.fillStyle = "#26211a"; x.font = "800 29px "+F;
+    x.textAlign = "center"; x.textBaseline = "middle";
+    x.fillText("WCCG 104.5 · ALWAYS ON", w/2, h/2 + 1);
+  });
+  function mkPlane(banner){
+    const g = new THREE.Group();
+    const body = std(0xfbf9f4, {roughness:0.5, metalness:0.14, envMapIntensity:1.05});
+    Cy(g, 0.34, 0.4, 5.0, body, 0, -2.5, 0, 14, Math.PI/2);       // fuselage, nose at +x
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.34, 0.95, 14), body);
+    nose.position.set(2.95, 0, 0); nose.rotation.z = -Math.PI/2; g.add(nose);
+    Bo(g, 1.7, 0.13, 7.8, body, 0.15, -0.065, 0);                 // wing
+    Bo(g, 0.8, 0.1, 2.9, body, -2.1, -0.05, 0);                   // tailplane
+    Bo(g, 0.85, 1.25, 0.13, body, -2.15, 0.1, 0);                 // fin
+    Bo(g, 0.5, 0.24, 0.13, MAT.accent(), -2.15, 0.95, 0);         // fin flash
+    Bo(g, 1.15, 0.3, 0.64, MAT.glass(), 1.55, 0.16, 0);           // cockpit
+    for(const nz of [-2.1, 2.1]){
+      Cy(g, 0.2, 0.2, 1.5, MAT.inkFlat(), 0.3, -1.1, nz, 12, Math.PI/2);
+      Sp(g, 0.06, emissive(0xff4a1c), -0.5, -0.35, nz);           // nav light
+    }
+    if(banner){
+      Cy(g, 0.02, 0.02, 2.8, MAT.chrome(), -4.1, -1.4, 0, 6, Math.PI/2);
+      const bn = new THREE.Mesh(new THREE.PlaneGeometry(9.6, 1.9),
+        new THREE.MeshBasicMaterial({map:bannerTex, transparent:true,
+          side:THREE.DoubleSide, toneMapped:false}));
+      bn.position.set(-10.3, -0.1, 0); g.add(bn);
+    }
+    return g;
+  }
+  const planes = [
+    {x:-92,  y:35, z:52, ry:0.0,   s:1.0, sp:4.2, banner:true},
+    {x:-140, y:38, z:44, ry:-0.04, s:0.8, sp:5.2, banner:false},
+    {x:-190, y:33, z:58, ry:0.03,  s:0.9, sp:4.6, banner:false},
+  ].map((a, i) => {
+    const g0 = new THREE.Group(); g0.position.set(a.x, a.y, a.z);
+    g0.rotation.y = a.ry; g0.scale.setScalar(a.s); air.add(g0);
+    const body = mkPlane(a.banner); g0.add(body);
+    return {g0, body, home: new THREE.Vector3(a.x, a.y, a.z),
+            vx: Math.cos(a.ry) * a.sp, vz: -Math.sin(a.ry) * a.sp, ph: i * 2.1};
+  });
+  markNoBounds(air);
+  air.traverse(o=>{ if(o.isMesh){ o.castShadow = false; o.receiveShadow = false; } });
+  // same trap as the clouds and the boats: a plane is a long way off, but from
+  // a room on an upper plate it flies straight through the shot
+  const airMats = [];
+  air.traverse(o=>{ if(o.isMesh && o.material){ o.material.transparent = true; airMats.push(o.material); } });
+  let aop = 1;
+  tickSky = dt => {
+    const goal = active >= 0 ? 0 : 1;
+    if(Math.abs(aop - goal) < 0.004) return;
+    aop = REDUCED ? goal : aop + (goal - aop) * Math.min(1, dt * 4);
+    airMats.forEach(m=> m.opacity = aop);
+    planes.forEach(a=> a.g0.visible = aop > 0.02);
+  };
+  if(ANIM) anims.push((t, dt)=> planes.forEach(a=>{
+    a.g0.position.x += dt * a.vx;
+    a.g0.position.z += dt * a.vz;
+    if(a.g0.position.x > -22) a.g0.position.copy(a.home);
+    a.body.position.y = Math.sin(t*0.5 + a.ph) * 0.5;
+    a.body.rotation.z = Math.sin(t*0.37 + a.ph) * 0.045;
   }));
 }
 
@@ -3060,6 +3134,7 @@ function tick(now){
   tickExpand(dt);
   tickClouds(dt);
   tickSea(dt);
+  tickSky(dt);
   if(homesState.parts.some(p=> p.k !== p.t)){
     homesState.parts.forEach(p=>{
       if(p.k !== p.t) p.k += Math.sign(p.t - p.k) * Math.min(dt*2.4, Math.abs(p.t - p.k));
