@@ -35,6 +35,7 @@ export default function Page() {
           </a>
           <div className="hidden items-center gap-7 text-sm text-dim md:flex">
             <a className="transition hover:text-fg" href="#platform">Platform</a>
+            <a className="transition hover:text-fg" href="/tour">Tour</a>
             <a className="transition hover:text-fg" href="#pricing">Pricing</a>
             <a className="transition hover:text-fg" href="#faq">FAQ</a>
             <a className="transition hover:text-fg" href="/changelog">Changelog</a>
@@ -284,6 +285,9 @@ export default function Page() {
             <Radio className="h-4 w-4 text-signal" aria-hidden />
             Broadcast Copy
           </p>
+          <a href="/tour" className="transition hover:text-fg">
+            Station tour
+          </a>
           <a href="/changelog" className="transition hover:text-fg">
             Changelog
           </a>

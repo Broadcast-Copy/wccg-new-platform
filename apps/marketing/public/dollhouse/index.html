@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Broadcast Copy — The Station Dollhouse</title>
+<style>
+  :root{
+    --paper:#eceae5;
+    --card:#ffffff;
+    --ink:#17150f;
+    --muted:#8a857b;
+    --faint:#b9b4aa;
+    --line:#ddd8cf;
+    --accent:#ff4a1c;
+    --accent-soft:#ffe9e2;
+    --side-w:340px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    font-family:"Inter","Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,sans-serif;
+    background:var(--paper);color:var(--ink);overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{display:flex;height:100vh;width:100vw;}
+  #stage{flex:1;position:relative;min-width:0;background:var(--paper);}
+  #gl{position:absolute;inset:0;width:100%;height:100%;display:block;}
+  #overlay{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
+
+  /* sheet frame + title block */
+  #frame{position:absolute;inset:26px;border:1.5px solid rgba(23,21,15,.07);pointer-events:none;}
+  .tb{position:absolute;font-size:9.5px;letter-spacing:.26em;color:var(--faint);text-transform:uppercase;line-height:1.7;}
+  .tb b{color:var(--muted);font-weight:600;}
+  #tbl{left:56px;bottom:34px;}
+  #tbr{right:56px;bottom:34px;text-align:right;}
+
+  /* room labels + pins */
+  .rlabel{
+    position:absolute;transform:translate(-50%,-50%);
+    font-size:9.5px;letter-spacing:.16em;font-weight:700;color:#6f6a60;
+    text-transform:uppercase;white-space:nowrap;transition:opacity .35s ease;
+    background:rgba(255,255,255,.82);padding:3px 8px;border-radius:99px;
+    box-shadow:0 1px 3px rgba(23,21,15,.08);
+  }
+  body.zoomed .rlabel,body.compact .rlabel{opacity:0;}
+  .pin3{
+    position:absolute;transform:translate(-50%,-50%);
+    width:23px;height:23px;border-radius:50%;background:var(--ink);color:#fff;
+    font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 0 3px rgba(255,255,255,.9), 0 3px 10px rgba(23,21,15,.22);
+  }
+  #pins{position:absolute;inset:0;opacity:0;transition:opacity .4s ease;}
+  #pins.show{opacity:1;}
+
+  /* overlay chrome */
+  header{position:absolute;top:28px;left:36px;z-index:5;pointer-events:none;}
+  .brandrow{display:flex;align-items:center;gap:10px;pointer-events:auto;}
+  .mark{width:26px;height:26px;border-radius:8px;background:var(--ink);display:flex;align-items:center;justify-content:center;flex:none;}
+  .wordmark{font-size:14px;font-weight:800;letter-spacing:.22em;}
+  .wordmark span{font-weight:300;color:var(--muted);letter-spacing:.22em;}
+  .tagline{margin-top:10px;font-size:13px;color:var(--muted);letter-spacing:.02em;}
+  .tagline b{color:var(--ink);font-weight:600;}
+
+  #hint{
+    position:absolute;left:36px;bottom:96px;z-index:5;display:flex;align-items:center;gap:8px;
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+    transition:opacity .4s ease;
+  }
+  #hint .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite;}
+  body.zoomed #hint{opacity:0;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
+
+  #backBtn{
+    position:absolute;top:28px;right:24px;z-index:6;
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    background:var(--card);border:1px solid var(--line);border-radius:99px;
+    padding:9px 16px;cursor:pointer;color:var(--ink);
+    opacity:0;pointer-events:none;transition:opacity .3s ease;font-family:inherit;
+  }
+  #backBtn:hover{border-color:var(--ink);}
+  body.zoomed #backBtn,body.expanded #backBtn{opacity:1;pointer-events:auto;}
+
+  /* sidebar */
+  #side{width:var(--side-w);flex:none;background:var(--card);border-left:1px solid var(--line);display:flex;flex-direction:column;height:100%;}
+  #side .scroll{flex:1;overflow-y:auto;padding:30px 28px 20px;}
+  #side .scroll::-webkit-scrollbar{width:0;}
+  .side-eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  .side-title{font-size:21px;font-weight:800;letter-spacing:-.01em;line-height:1.2;}
+  .side-sub{font-size:12.5px;color:var(--muted);line-height:1.55;margin-top:8px;}
+  .group{margin-top:26px;}
+  .group h3{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+  .group h3::after{content:"";flex:1;height:1px;background:var(--line);}
+  .item{display:flex;align-items:center;gap:12px;width:100%;padding:8px 10px;margin:0 -10px;border:none;background:none;cursor:pointer;border-radius:9px;font-family:inherit;text-align:left;transition:background .15s ease;}
+  .item:hover{background:var(--paper);}
+  .item .num{font-size:9.5px;letter-spacing:.08em;color:var(--faint);width:20px;flex:none;font-variant-numeric:tabular-nums;}
+  .item .name{font-size:13.5px;font-weight:600;flex:1;}
+  .item .auto{font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent-soft);background:var(--accent-soft);padding:2.5px 7px;border-radius:99px;font-weight:700;}
+  .item:hover .arrow{opacity:1;transform:none;}
+  .item .arrow{opacity:0;transform:translateX(-4px);transition:.15s ease;color:var(--muted);font-size:12px;}
+  #detail{display:none;}
+  body.zoomed #detail{display:block;}
+  body.zoomed #index{display:none;}
+  .back{display:inline-flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);background:none;border:none;cursor:pointer;padding:0;margin-bottom:22px;font-family:inherit;}
+  .back:hover{color:var(--ink);}
+  .d-eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px;}
+  .d-title{font-size:24px;font-weight:800;letter-spacing:-.015em;line-height:1.15;}
+  .d-promise{font-size:13.5px;color:var(--muted);line-height:1.6;margin-top:10px;}
+  .d-control{margin-top:18px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:12px 14px;background:var(--paper);}
+  .d-control .lbl{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+  .d-control .val{font-size:13.5px;font-weight:700;letter-spacing:.01em;}
+  .gear{margin-top:20px;}
+  .gear h4{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:10px;}
+  .g-row{display:flex;gap:12px;padding:9px 0;border-top:1px solid var(--paper);}
+  .g-row .pin{width:19px;height:19px;border-radius:50%;background:var(--ink);color:#fff;font-size:9.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px;}
+  .g-row .t{font-size:12.5px;font-weight:700;}
+  .g-row .d{font-size:12px;color:var(--muted);line-height:1.5;margin-top:2px;}
+  .d-nav{display:flex;gap:8px;margin-top:22px;}
+  .d-nav button{flex:1;padding:10px;border:1px solid var(--line);background:var(--card);border-radius:9px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;color:var(--ink);font-family:inherit;transition:border-color .15s;}
+  .d-nav button:hover{border-color:var(--ink);}
+  #side footer{border-top:1px solid var(--line);padding:18px 28px 20px;flex:none;background:var(--card);}
+  .cta{display:block;width:100%;text-align:center;background:var(--accent);color:#fff;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:13px;border-radius:10px;text-decoration:none;border:none;cursor:pointer;font-family:inherit;}
+  .cta:hover{filter:brightness(.94);}
+  .foot-row{display:flex;justify-content:space-between;align-items:center;margin-top:12px;}
+  .price{font-size:11px;color:var(--muted);}
+  .price b{color:var(--ink);}
+  .foot-actions{display:flex;align-items:center;gap:14px;}
+  #tourBtn,#reelBtn{background:none;border:none;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;padding:0;}
+  #tourBtn:hover,#reelBtn:hover{color:var(--ink);}
+  #tourBtn.on,#reelBtn.on{color:var(--accent);}
+
+  @media (prefers-reduced-motion: reduce){
+    #hint .dot{animation:none;}
+    .rlabel,#pins,#backBtn,#hint{transition:none !important;}
+  }
+  @media (max-width:1350px){ #tbr{display:none;} }
+  @media (max-width:1000px){ #tbl{display:none;} }
+  @media (max-width:920px){
+    #app{flex-direction:column;}
+    #stage{height:56vh;flex:none;}
+    #side{width:100%;flex:1;border-left:none;border-top:1px solid var(--line);}
+    body{overflow:auto;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="gl"></canvas>
+    <div id="overlay">
+      <div id="frame"></div>
+      <div class="tb" id="tbl"><b>Broadcastcopy.ai — Facility Model № 003</b><br>Exploded axonometric · Every department automated</div>
+      <div class="tb" id="tbr"><b>Sheet 01 / 01</b><br>Carson Communications · Ref Tenant WCCG 104.5</div>
+      <div id="labels"></div>
+      <div id="pins"></div>
+    </div>
+    <header>
+      <div class="brandrow">
+        <div class="mark">
+          <svg width="15" height="15" viewBox="0 0 15 15">
+            <circle cx="7.5" cy="10" r="2.4" fill="#ff4a1c"/>
+            <path d="M3.2,7.2 a6,6 0 0 1 8.6,0" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/>
+            <path d="M1.2,4.6 a9.4,9.4 0 0 1 12.6,0" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" opacity=".55"/>
+          </svg>
+        </div>
+        <div class="wordmark">BROADCAST&nbsp;COPY<span>.AI</span></div>
+      </div>
+      <div class="tagline">The whole station, <b>on autopilot</b>. Pick a room to see what runs itself.</div>
+    </header>
+    <div id="hint"><span class="dot"></span>Select a department — or click any room</div>
+    <button id="backBtn">← Whole building</button>
+  </div>
+
+  <aside id="side">
+    <div class="scroll">
+      <div id="index">
+        <div class="side-eyebrow">Automation Map</div>
+        <div class="side-title">One platform.<br>Every room in the building.</div>
+        <div class="side-sub">Broadcast Copy runs the software layer of a full-power radio station — studios, operations, front office and field. Select a department to zoom in.</div>
+        <div id="groups"></div>
+      </div>
+      <div id="detail">
+        <button class="back" id="backLink">← All departments</button>
+        <div class="d-eyebrow" id="dEyebrow"></div>
+        <div class="d-title" id="dTitle"></div>
+        <div class="d-promise" id="dPromise"></div>
+        <div class="d-control"><div class="lbl">Control surface</div><div class="val" id="dControl"></div></div>
+        <div class="gear"><h4>In this room</h4><div id="dGear"></div></div>
+        <div class="d-nav"><button id="prevBtn">← Prev</button><button id="nextBtn">Next →</button></div>
+      </div>
+    </div>
+    <footer>
+      <a class="cta" href="https://broadcastcopy.ai" target="_blank" rel="noopener">Get early access</a>
+      <div class="foot-row">
+        <div class="price"><b>$49.99</b>/mo per station</div>
+        <div class="foot-actions">
+          <button id="reelBtn">◉ Flyover</button>
+          <button id="tourBtn">▶ Play tour</button>
+        </div>
+      </div>
+    </footer>
+  </aside>
+</div>
+
+<script src="/dollhouse/three.min.js"></script>
+<script src="/dollhouse/scene.js"></script>
+</body>
+</html>
