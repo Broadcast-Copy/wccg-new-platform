@@ -2029,7 +2029,9 @@ const RIGHTW = PX1 - WT - 0.03;
 {
   const room = RM("listeners"), {g, pin} = roomGroup(room);
   g.userData.idx = ROOMS.indexOf(room); pickExtras.push(g);
-  function mkPed(color, phone){
+  // groundShadow: the jumpers get their contact shadow left behind on the
+  // grass instead of carried with them, or it reads as a floating smudge
+  function mkPed(color, phone, groundShadow){
     const p = new THREE.Group(); g.add(p);
     Cy(p, 0.2, 0.27, 1.0, std(color, {roughness:0.92}), 0, 0, 0, 12);
     Sp(p, 0.2, std(0xe9dfd2, {roughness:0.9}), 0, 1.22, 0);
@@ -2037,7 +2039,7 @@ const RIGHTW = PX1 - WT - 0.03;
       Bo(p, 0.05, 0.26, 0.16, MAT.inkFlat(), 0.3, 0.78, 0.1, 0, 0, -0.45);
       Bo(p, 0.02, 0.2, 0.12, emissive(0xfff0da), 0.335, 0.815, 0.1, 0, 0, -0.45);
     }
-    mkBlobShadow(p, 0.85, 0.6, -0.03);
+    if(!groundShadow) mkBlobShadow(p, 0.85, 0.6, -0.03);
     markNoBounds(p);
     return p;
   }
@@ -2055,6 +2057,24 @@ const RIGHTW = PX1 - WT - 0.03;
     {A:[29, 93],    B:[23.5, 100], c:0xf0ede6, phone:false, sp:0.95, ph:0.6},
     {A:[17, 112],   B:[17, 105],   c:0xd8d3c9, phone:true,  sp:1.15, ph:0.35},
     {A:[9, 106],    B:[25, 106],   c:0xbdb8ae, phone:false, sp:1.25, ph:0.8},
+    /* and the rest of the campus — every sidewalk and lot has someone on it.
+       Paths hug the streets without standing in them, and stay inside the
+       flat masks; a walker on a hillside would sink, since y is fixed. */
+    {A:[-3.4, 44],  B:[-3.4, 84],  c:0xffffff, phone:true,  sp:1.3,  ph:0.05},  // Maple, east side
+    {A:[-8.6, 82],  B:[-8.6, 48],  c:0xd8d3c9, phone:false, sp:1.15, ph:0.5},   // Maple, west side
+    {A:[-30, 53.4], B:[10, 53.4],  c:0xf0ede6, phone:true,  sp:1.4,  ph:0.25},  // Signal, north walk
+    {A:[30, 58.6],  B:[-14, 58.6], c:0xbdb8ae, phone:false, sp:1.25, ph:0.75},  // Signal, south walk
+    {A:[24.6, 56],  B:[24.6, 84],  c:0xffffff, phone:false, sp:1.1,  ph:0.4},   // Second Ave
+    {A:[-30, 85.4], B:[26, 85.4],  c:0xd8d3c9, phone:true,  sp:1.45, ph:0.6},   // Third St
+    {A:[34, 52.4],  B:[56, 52.4],  c:0xffffff, phone:true,  sp:1.05, ph:0.15},  // shop row one
+    {A:[56, 59.9],  B:[34, 59.9],  c:0xf0ede6, phone:false, sp:1.2,  ph:0.55},  // shop row two
+    {A:[30.5, 83],  B:[53, 83],    c:0xbdb8ae, phone:true,  sp:1.0,  ph:0.9},   // shop row three
+    {A:[21, 33.6],  B:[35, 33.6],  c:0xffffff, phone:false, sp:1.1,  ph:0.3},   // past the billboard
+    {A:[26, 22],    B:[26, -6],    c:0xd8d3c9, phone:true,  sp:1.35, ph:0.7},   // the field yard
+    {A:[38, -8],    B:[38, 16],    c:0xffffff, phone:false, sp:1.2,  ph:0.2},
+    {A:[8, 108],    B:[8, 93],     c:0xf0ede6, phone:true,  sp:0.95, ph:0.45},  // park, west path
+    {A:[27, 94],    B:[27, 107],   c:0xffffff, phone:false, sp:1.05, ph:0.85},  // park, east path
+    {A:[-20, 42.6], B:[6, 42.6],   c:0xbdb8ae, phone:true,  sp:1.15, ph:0.65},  // in front of the homes
   ].map(w => ({...w, ped: mkPed(w.c, w.phone),
     len: Math.hypot(w.B[0]-w.A[0], w.B[1]-w.A[1])}));
   // a pair chatting by the entrance
@@ -2096,10 +2116,10 @@ const RIGHTW = PX1 - WT - 0.03;
   mkPA(-5.9, 1.6, 0.5);
   mkPA(5.9, 1.6, -0.5);
   // performer, mid-set
-  const perf = mkPed(0xff4a1c, false);
+  const perf = mkPed(0xff4a1c, false, true);
   perf.position.set(CX + 0.2, 0.95, CZ + 0.6); perf.scale.setScalar(1.12);
-  if(ANIM) anims.push(t=>{ perf.position.y = 0.95 + Math.abs(Math.sin(t*3.2))*0.14;
-    perf.rotation.y = Math.sin(t*0.9)*0.4; });
+  { const psh = mkBlobShadow(stg, 0.9, 0.62, 0.93); psh.position.x = 0.2; psh.position.z = 0.6; }
+  // the performer works the same beat as the crowd — see jumpAt below
 
   /* the crowd — bouncing, phones up */
   const crowd = [];
@@ -2116,20 +2136,41 @@ const RIGHTW = PX1 - WT - 0.03;
   }
   spots.forEach(([px,pz], i)=>{
     const col = i%7===0 ? 0xff4a1c : [0xffffff,0xd8d3c9,0xbdb8ae,0xf0ede6][i%4];
-    const p = mkPed(col, i%3===0);
+    const p = mkPed(col, i%3===0, true);
     const ry = Math.atan2(CX - px, CZ - pz);      // face the stage
+    const s0 = 0.88 + (i%4)*0.06;
     p.position.set(px, 0.05, pz); p.rotation.y = ry;
-    p.scale.setScalar(0.88 + (i%4)*0.06);
-    crowd.push({p, ry, ph: i*1.31, f: (i%5)*0.5});
+    p.scale.setScalar(s0);
+    const sh = mkBlobShadow(g, 0.85*s0, 0.6*s0, 0.03);
+    sh.position.x = px; sh.position.z = pz;
+    // off is hundredths of a second — enough to keep the crowd from reading as
+    // one rigid object, small enough that they still leave the ground together
+    crowd.push({p, ry, s0, ph: i*1.31, off: (i%5)*0.006});
   });
   // stragglers arriving from the street and drifting along the back of the park
   const chatC = mkPed(0xffffff, true);  chatC.position.set(CX+9.6, 0.05, CZ+6.4); chatC.rotation.y = -1.9;
   const chatD = mkPed(0xd8d3c9, false); chatD.position.set(CX+10.4, 0.05, CZ+7.2); chatD.rotation.y = 1.3;
   const chatE = mkPed(0xbdb8ae, true);  chatE.position.set(CX-10.2, 0.05, CZ+5.1); chatE.rotation.y = 2.2;
-  if(ANIM) anims.push(t=> crowd.forEach(c=>{
-    c.p.position.y = 0.05 + Math.max(0, Math.sin(t*(2.4 + c.f) + c.ph))*0.22;
-    c.p.rotation.y = c.ry + Math.sin(t*1.2 + c.ph)*0.14;
-  }));
+  /* the whole crowd jumps on the same beat — airborne for the first half of
+     each bar, then a short crouch on the landing before the next one */
+  const BEAT = 1.85;
+  const jumpAt = t => {
+    const k = (t * BEAT) % 1;
+    return k < 0.58 ? {air: Math.sin(k/0.58 * Math.PI), sq: 1}
+                    : {air: 0, sq: 1 - 0.13*Math.sin((k-0.58)/0.42 * Math.PI)};
+  };
+  if(ANIM) anims.push(t=>{
+    crowd.forEach(c=>{
+      const j = jumpAt(t + c.off);
+      c.p.position.y = 0.05 + j.air*0.36;
+      c.p.scale.y = c.s0 * j.sq;
+      c.p.rotation.y = c.ry + Math.sin(t*1.2 + c.ph)*0.1;
+    });
+    const j = jumpAt(t + 0.02);            // leading the room by a hair
+    perf.position.y = 0.95 + j.air*0.3;
+    perf.scale.y = 1.12 * j.sq;
+    perf.rotation.y = Math.sin(t*0.9)*0.4;
+  });
   const placePed = (w, t) => {
     const cyc = (t * w.sp / w.len + w.ph) % 1;
     const k = 1 - Math.abs(2*cyc - 1);            // ping-pong
