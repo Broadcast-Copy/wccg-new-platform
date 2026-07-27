@@ -172,7 +172,13 @@ const ROOMS = [
    promise:"Every screen sells — the roadside board and the reels looping in partner stores, all cut from the same brand kit.",
    gear:[["Digital billboard","Campaigns flighted to the roadside screen straight from the traffic log."],
          ["In-store reels","Sponsor loops for partner shops, exported to every screen size automatically."],
-         ["Proof of play","Every rotation logged toward the affidavit — no phone calls, no photos."]]}
+         ["Proof of play","Every rotation logged toward the affidavit — no phone calls, no photos."]]},
+  {id:"biz", name:"Connected Businesses", group:"Audience", ext:{cx:45.5, cy:2.4, cz:51, w:27, h:7, d:13},
+   control:"Broadcast Copy Storefront",
+   promise:"The shops on the strip run on the station too — in-store audio, window screens and spot schedules fed by the same engine as the air chain.",
+   gear:[["In-store audio","The station feed with storefront-safe breaks — overhead music and live reads, licensed per location."],
+         ["Window screens","Menu boards and promo reels synced to the campaign calendar — one update hits every shopfront."],
+         ["Local spot pipeline","Commercials produced upstairs flow straight to the strip — booked, aired and screened from one log."]]}
 ];
 const GROUPS = ["Studios","Operations","Front Office","Creative","Field","Audience"];
 
@@ -596,7 +602,8 @@ scene.add(shellG);
         rectMask(x, z, 19, 37, 26, 34, 4),          // billboard + store lot
         rectMask(x, z, -27, -5, 26, 36, 4),         // concert lawn by the road
         rectMask(x, z, -8.2, -3.8, 38, 114, 3),     // Maple Ave, running off the frame
-        rectMask(x, z, -42, 34, 53.8, 58.2, 3),     // Signal St (east-west)
+        rectMask(x, z, -42, 58.5, 53.8, 58.2, 3),   // Signal St (east-west, runs to the strip)
+        rectMask(x, z, 33, 59, 44, 58.5, 4),        // business strip lot (east field)
         rectMask(x, z, 19.8, 24.2, 38, 90, 3),      // Second Ave
         rectMask(x, z, -38, 28, 85.8, 90.2, 3),     // Third St (east-west, far)
         rectMask(x, z, -32, -11, 43, 53, 4),        // house lots, north row
@@ -651,7 +658,7 @@ scene.add(shellG);
     const rIdx = [];
     for(let i=0;i<RSN;i++){ const a=i*2, b=i*2+1, c=i*2+2, d=i*2+3; rIdx.push(a,b,c, b,d,c); }
     rGeo.setIndex(rIdx); rGeo.computeVertexNormals();
-    const road = new THREE.Mesh(rGeo, std(0x968f80, {roughness:0.97, envMapIntensity:0.2}));
+    const road = new THREE.Mesh(rGeo, std(0xbab3a5, {roughness:0.97, envMapIntensity:0.2}));
     // the strip's winding leaves its normals pointing down — without this the
     // asphalt is backface-culled from above and only pale ground shows
     road.material.side = THREE.DoubleSide;
@@ -695,12 +702,12 @@ scene.add(shellG);
       s.castShadow = false; s.receiveShadow = true; return s;
     };
     strip(3.6, 76, -6, 76);        // Maple Ave, running off the bottom of the frame
-    strip(72, 3.6, -4, 56);        // Signal St
+    strip(98, 3.6, 9, 56);         // Signal St, running east to the business strip
     strip(3.6, 50, 22, 64);        // Second Ave
     strip(64, 3.6, -5, 88);        // Third St
     for(let z2=41.5; z2<113; z2+=5) if(Math.abs(z2-56) > 3.4 && Math.abs(z2-88) > 3.4)
       strip(0.14, 1.5, -6, z2, dashMat());
-    for(let x2=-38; x2<31; x2+=5) if(Math.abs(x2+6) > 3.4 && Math.abs(x2-22) > 3.4)
+    for(let x2=-38; x2<56; x2+=5) if(Math.abs(x2+6) > 3.4 && Math.abs(x2-22) > 3.4)
       strip(1.5, 0.14, x2, 56, dashMat());
     for(let z2=41.5; z2<87; z2+=5) if(Math.abs(z2-56) > 3.4)
       strip(0.14, 1.5, 22, z2, dashMat());
@@ -1935,6 +1942,7 @@ const RIGHTW = PX1 - WT - 0.03;
     {A:[-6.9, 41.5], B:[-6.9, 111],  sp:4.2, ph:0.0,  col:0xffffff},
     {A:[-37.5, 56.9],B:[29.5, 56.9], sp:4.8, ph:0.5,  col:0xe8e4dc},
     {A:[-33.5, 88.9],B:[25.5, 88.9], sp:4.0, ph:0.25, col:0xd8d3c9},
+    {A:[34, 55.1],   B:[56, 55.1],   sp:4.3, ph:0.35, col:0xf0ede6},
   ].map(L => ({...L, car: mkCar(L.col), len: Math.hypot(L.B[0]-L.A[0], L.B[1]-L.A[1])}));
   const placeLocal = (L, t) => {
     const cyc = (t * L.sp / L.len + L.ph) % 1;
@@ -1973,6 +1981,7 @@ const RIGHTW = PX1 - WT - 0.03;
   const rushLocals = [
     {A:[-6.9, 41.5], B:[-6.9, 111],  sp:4.6, ph:0.62, col:0xf0ede6, th:0.6},
     {A:[-33.5, 88.9],B:[25.5, 88.9], sp:4.4, ph:0.8,  col:0xffffff, th:0.72},
+    {A:[56, 56.9],   B:[34, 56.9],   sp:4.7, ph:0.1,  col:0xd8d3c9, th:0.65},
   ].map(L => ({...L, car: mkCar(L.col), len: Math.hypot(L.B[0]-L.A[0], L.B[1]-L.A[1])}));
   const clockEl = document.getElementById("dayclock");
   const DRIVE_TIMES = [12, 17, 22];
@@ -2226,6 +2235,64 @@ const RIGHTW = PX1 - WT - 0.03;
   pin(23.2, 4.5, 29.6);
   pin(31.2, 1.6, 32.1);
   pin(25.5, 0.9, 29.9);
+}
+
+/* --- Connected Businesses: the strip east of the suburb --- */
+{
+  const room = RM("biz"), {g, pin} = roomGroup(room);
+  const shopSign = label => tex(256, 44, (x,w,h)=>{
+    x.fillStyle = "#26211a"; rr(x, 4, 5, w-8, h-10, 7); x.fill();
+    x.fillStyle = "#fdfbf6"; x.font = "800 17px "+F;
+    x.textAlign = "center"; x.textBaseline = "middle";
+    x.fillText(label.split("").join(" "), w/2, h/2+1);
+  });
+  const shop = (x0, name, awnMat) => {
+    const s = new THREE.Group(); s.position.set(x0, 0, 48.5); g.add(s);
+    Bo(s, 6.6, 3.2, 5.0, MAT.wall(), 0, 0, 0);
+    Bo(s, 6.9, 0.26, 5.3, MAT.slab(), 0, 3.2, 0);                 // parapet
+    Bo(s, 0.95, 0.5, 0.7, std(0xe4e0d6), -1.6, 3.46, -0.9);       // rooftop unit
+    Bo(s, 5.9, 1.8, 0.1, MAT.inkFlat(), -0.35, 0.4, 2.46);        // storefront frame
+    Bo(s, 5.6, 1.55, 0.06, MAT.glass(), -0.35, 0.52, 2.52);       // glazing
+    Pl(s, 2.0, 1.05, signMat(TX.siteScreen), -1.75, 1.25, 2.56);  // the window reel
+    Bo(s, 1.12, 2.25, 0.1, std(0xdcd7cc), 2.45, 0, 2.48);         // door
+    const awn = Bo(s, 6.0, 0.07, 1.25, awnMat, -0.3, 2.42, 3.0);
+    awn.rotation.x = 0.42;
+    Pl(s, 3.6, 0.6, signMat(shopSign(name)), 0, 2.85, 2.72);      // fascia sign
+    Cy(s, 0.1, 0.12, 0.3, MAT.inkFlat(), 2.95, 2.5, 2.42, 10);    // wall speaker
+    Sp(s, 0.045, emissive(0xff4a1c), 2.95, 2.72, 2.5);            //   live ring
+    markNoBounds(s);
+    return s;
+  };
+  shop(37.5, "CAFE", MAT.accent());
+  shop(45.5, "MARKET", std(0x2f2a23, {roughness:0.9}));
+  shop(53.5, "GYM", std(0xbdb8ae, {roughness:0.9}));
+  // sidewalk connecting the strip to Signal St
+  const walk = Bo(g, 24.5, 0.05, 2.1, std(0xe9e5db, {roughness:0.96}), 45.5, 0.02, 52.4);
+  walk.castShadow = false; markNoBounds(walk);
+  // cafe seating: umbrella table + stools
+  Cy(g, 0.4, 0.44, 0.06, MAT.white(), 35.4, 0.62, 52.4, 16);
+  Cy(g, 0.035, 0.045, 0.68, MAT.chrome(), 35.4, 0, 52.4, 8);
+  Cy(g, 0.03, 0.03, 1.6, MAT.chrome(), 35.4, 0.62, 52.4, 8);
+  const um = new THREE.Mesh(new THREE.ConeGeometry(0.85, 0.42, 8), MAT.accent());
+  um.position.set(35.4, 2.28, 52.4); um.castShadow = true; g.add(um);
+  for(const a of [0.7, 2.5]) Cy(g, 0.16, 0.18, 0.5,
+    std(0xdfd9cd, {roughness:0.9}), 35.4+Math.cos(a)*0.85, 0, 52.4+Math.sin(a)*0.85, 10);
+  // market produce crates
+  for(const [cx2, cz2, cc] of [[43.9, 52.15, 0x8fa06b], [44.9, 52.3, 0xd98e4a], [44.4, 52.9, 0x8fa06b]]){
+    Bo(g, 0.8, 0.45, 0.6, std(0x9a8d79, {roughness:0.95}), cx2, 0, cz2);
+    for(let k=0;k<4;k++) Sp(g, 0.11, std(cc, {roughness:0.8}),
+      cx2-0.24+(k%2)*0.48, 0.5, cz2-0.12+Math.floor(k/2)*0.24);
+  }
+  // gym: rubber mat + barbell by the door
+  Bo(g, 1.5, 0.035, 0.9, std(0x3a352d, {roughness:0.98}), 52.6, 0.02, 52.5);
+  Cy(g, 0.026, 0.026, 1.3, MAT.chrome(), 52.6, -0.45, 52.5, 8, Math.PI/2);
+  Sp(g, 0.16, MAT.inkFlat(), 52.0, 0.2, 52.5);
+  Sp(g, 0.16, MAT.inkFlat(), 53.2, 0.2, 52.5);
+  mkPlant(g, 41.4, 0, 52.5, 0.9);
+  mkPlant(g, 49.6, 0, 52.5, 0.9);
+  pin(40.45, 2.6, 51.1);
+  pin(43.75, 1.35, 51.2);
+  pin(53.5, 3.0, 51.3);
 }
 
 Object.values(roomRecs).forEach(r=> r.rec = reg(r.group));
