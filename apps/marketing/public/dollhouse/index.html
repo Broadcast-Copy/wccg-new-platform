@@ -71,6 +71,13 @@
   body.zoomed #hint{opacity:0;}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
 
+  #dayclock{
+    position:absolute;left:36px;bottom:122px;z-index:5;
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+    font-variant-numeric:tabular-nums;
+  }
+  #dayclock b{color:var(--accent);font-weight:700;}
+
   #backBtn{
     position:absolute;top:28px;right:24px;z-index:6;
     font-size:11px;letter-spacing:.14em;text-transform:uppercase;
@@ -168,6 +175,7 @@
       <div class="tagline">The whole station, <b>on autopilot</b>. Pick a room to see what runs itself.</div>
     </header>
     <div id="hint"><span class="dot"></span>Select a department — or click any room</div>
+    <div id="dayclock"></div>
     <button id="backBtn">← Whole building</button>
   </div>
 

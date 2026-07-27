@@ -619,7 +619,20 @@ scene.add(shellG);
       pos.setY(i, hAt(x, z) * (1 - sstep(0.75, 1.0, r4)) - sstep(0.8, 1.25, r4) * 2.8);
     }
     geo.computeVertexNormals();
-    const land = new THREE.Mesh(geo, std(0xe1dcd2, {roughness:1, envMapIntensity:0.24}));
+    // topographic shading: valleys stay pale, rises deepen, slopes shade
+    {
+      const lo = new THREE.Color(0xe6e1d7), hi = new THREE.Color(0xc6bfae);
+      const nrm = geo.attributes.normal, cols = new Float32Array(pos.count*3);
+      const cc = new THREE.Color();
+      for(let i=0;i<pos.count;i++){
+        const hgt = Math.max(0, Math.min(1, pos.getY(i)/7));
+        cc.copy(lo).lerp(hi, hgt);
+        const shade = 0.86 + 0.14*Math.max(0, nrm.getY(i));
+        cols[i*3] = cc.r*shade; cols[i*3+1] = cc.g*shade; cols[i*3+2] = cc.b*shade;
+      }
+      geo.setAttribute("color", new THREE.BufferAttribute(cols, 3));
+    }
+    const land = new THREE.Mesh(geo, std(0xffffff, {roughness:1, envMapIntensity:0.24, vertexColors:true}));
     land.position.set(GCX, -0.02, GCZ);
     land.receiveShadow = true; land.castShadow = false;
     land.userData.noBounds = true;
@@ -639,6 +652,9 @@ scene.add(shellG);
     for(let i=0;i<RSN;i++){ const a=i*2, b=i*2+1, c=i*2+2, d=i*2+3; rIdx.push(a,b,c, b,d,c); }
     rGeo.setIndex(rIdx); rGeo.computeVertexNormals();
     const road = new THREE.Mesh(rGeo, std(0x968f80, {roughness:0.97, envMapIntensity:0.2}));
+    // the strip's winding leaves its normals pointing down — without this the
+    // asphalt is backface-culled from above and only pale ground shows
+    road.material.side = THREE.DoubleSide;
     road.material.userData.noDim = true;      // the road never ghosts — it's the
     road.receiveShadow = true; road.castShadow = false;   // subject of In-Car Radio
     road.userData.noBounds = true;
@@ -657,6 +673,7 @@ scene.add(shellG);
       lg.setAttribute("position", new THREE.BufferAttribute(lv, 3));
       lg.setIndex(rIdx); lg.computeVertexNormals();
       const line = new THREE.Mesh(lg, std(0xf8f5ee, {roughness:0.9}));
+      line.material.side = THREE.DoubleSide;
       line.castShadow = false; line.receiveShadow = true;
       lines.add(line);
     }
@@ -697,7 +714,7 @@ scene.add(shellG);
       const h = new THREE.Group(); h.position.set(x, 0, z); h.rotation.y = ry;
       levelG[0].add(h);
       Bo(h, 5.0, 2.8, 4.0, MAT.wall(), 0, 0, 0);
-      const sh2 = std(0x9d9484, {roughness:0.95, envMapIntensity:0.3});
+      const sh2 = std(0xffffff, {roughness:0.82, envMapIntensity:0.4});
       const ra = Bo(h, 5.5, 0.17, 2.6, sh2, 0, 3.2, -1.08); ra.rotation.x = -0.52;
       const rb = Bo(h, 5.5, 0.17, 2.6, sh2, 0, 3.2, 1.08);  rb.rotation.x = 0.52;
       Bo(h, 5.5, 0.15, 0.2, std(0xf4f1ea), 0, 3.76, 0);
@@ -1934,6 +1951,47 @@ const RIGHTW = PX1 - WT - 0.03;
       [6.2, 44.2, -0.08, 0xd8d3c9], [-18.6, 60.2, 0.12, 0xbdb8ae]]){
     const c = mkCar(pc); c.position.set(px, 0.035, pz); c.rotation.y = pr;
   }
+  // drive times: a 2-minute virtual day; the roads surge at 12p, 5p and 10p
+  const DAY = 120;                                     // real seconds per 24h
+  const hourAt = t => (10.5 + (t / DAY) * 24) % 24;
+  const busyAt = h => {
+    let b = 0;
+    for(const p of [12, 17, 22]){
+      const d = Math.min(Math.abs(h - p), 24 - Math.abs(h - p));
+      b = Math.max(b, Math.exp(-(d * d) / 2.645));
+    }
+    return 0.28 + 0.72 * b;
+  };
+  const rush = [0xffffff, 0xe8e4dc, 0xd8d3c9, 0xffffff, 0xf0ede6, 0xbdb8ae]
+    .map((col, i) => ({
+      car: mkCar(col),
+      lane: lanes[i % 2],
+      s0: (0.08 + i * 0.157) * lanes[i % 2].path.L,
+      speed: 4.6 + (i % 3) * 0.9,
+      th: 0.45 + i * 0.082,                            // staggers the surge in and out
+    }));
+  const rushLocals = [
+    {A:[-6.9, 41.5], B:[-6.9, 111],  sp:4.6, ph:0.62, col:0xf0ede6, th:0.6},
+    {A:[-33.5, 88.9],B:[25.5, 88.9], sp:4.4, ph:0.8,  col:0xffffff, th:0.72},
+  ].map(L => ({...L, car: mkCar(L.col), len: Math.hypot(L.B[0]-L.A[0], L.B[1]-L.A[1])}));
+  const clockEl = document.getElementById("dayclock");
+  const DRIVE_TIMES = [12, 17, 22];
+  const setClock = t => {
+    if(!clockEl) return;
+    const h = hourAt(t), b = busyAt(h);
+    const hh = Math.floor(h), mm = Math.floor((h - hh) * 60);
+    const h12 = ((hh + 11) % 12) + 1, ap = hh >= 12 ? "PM" : "AM";
+    const stamp = h12 + ":" + String(mm).padStart(2, "0") + " " + ap;
+    clockEl.innerHTML = b > 0.72 ? stamp + " &nbsp;<b>· drive time</b>" : stamp;
+  };
+  const setRush = t => {
+    const b = busyAt(hourAt(t));
+    rush.forEach(r => { r.car.visible = b >= r.th; if(r.car.visible) place(r, t); });
+    rushLocals.forEach(L => { L.car.visible = b >= L.th; if(L.car.visible) placeLocal(L, t); });
+    setClock(t);
+  };
+  if(ANIM){ setRush(0); anims.push(setRush); }
+  else setRush(7.5);                                   // static render parks at noon — peak drive time
   pin(0, 1.1, 36.95);
   pin(14, 1.1, 34.8);
   pin(6, 1.1, 39.05);
@@ -2077,7 +2135,7 @@ const RIGHTW = PX1 - WT - 0.03;
     Bo(stub, W2+0.04, 0.07, T+0.04, trim, 0, 0.95, D2/2-T/2);
     // roof assembly (lifts away when the house opens) — shingled tone, eaves,
     // fascia boards, chimney, porch canopy over the door
-    const shingle = std(0x9d9484, {roughness:0.95, envMapIntensity:0.3});
+    const shingle = std(0xffffff, {roughness:0.82, envMapIntensity:0.4});
     const roof = new THREE.Group(); h.add(roof);
     const rA = Bo(roof, 6.1, 0.18, 2.85, shingle, 0, 3.32, -1.18); rA.rotation.x = -0.52;
     const rB = Bo(roof, 6.1, 0.18, 2.85, shingle, 0, 3.32, 1.18);  rB.rotation.x = 0.52;
