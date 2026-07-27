@@ -227,7 +227,8 @@ for(let i=0;i<4;i++){
   if(i === 0){
     // the ground level also owns the terrain, road, cars and trees
     s.shadow.camera.left = -66; s.shadow.camera.right = 66;
-    s.shadow.camera.top = 64;   s.shadow.camera.bottom = -72;
+    s.shadow.camera.top = 64;   s.shadow.camera.bottom = -130;
+    s.shadow.camera.far = 250;
     s.shadow.mapSize.set(4096, 4096);
   }
   s.layers.set(i+1);
@@ -563,12 +564,13 @@ scene.add(shellG);
      hills elsewhere, a flat-topped crown for the transmitter, and a soft
      island rim dropping to the void. Nothing floats. */
   {
-    const GW = 128, GD = 134, GN = 132, GCX = 2, GCZ = 15;
+    const GW = 128, GD = 200, GN = 150, GCX = 2, GCZ = 45;
     const HILLS = [
       [-41, 26, 2.4, 4.2], [-22.5, 11.5, 2.6, 3.8], [-19.5, 27, 1.9, 3.6], [-38, 9.5, 1.7, 3.8],
       [-44, -3, 1.6, 5], [-34, -17, 1.3, 3.4], [-10, -29, 1.8, 5.5], [16, -29, 1.5, 5],
       [44, -17, 1.6, 4.5], [58, 5, 1.6, 4.5], [57, 27, 1.3, 4],
-      [-42, 62, 1.7, 5.5], [40, 64, 1.5, 5], [-4, 74, 1.2, 4.5]
+      [-42, 62, 1.7, 5.5], [40, 64, 1.5, 5], [-46, 86, 1.8, 6], [38, 92, 1.6, 5.5],
+      [-10, 126, 1.6, 7], [44, 122, 1.4, 6], [-46, 116, 1.5, 6]
     ];
     const sstep = (e0, e1, v) => { const t = Math.max(0, Math.min(1, (v-e0)/(e1-e0))); return t*t*(3-2*t); };
     const rectMask = (x, z, a, b, c, d, f) =>       // 1 inside rect, feather f outside
@@ -593,12 +595,17 @@ scene.add(shellG);
         rectMask(x, z, 10, 18, 32.6, 36.6, 4),      // parking pull-off by the front road
         rectMask(x, z, 19, 37, 26, 34, 4),          // billboard + store lot
         rectMask(x, z, -27, -5, 26, 36, 4),         // concert lawn by the road
-        rectMask(x, z, -8.2, -3.8, 38, 70, 3),      // Maple Ave (south)
+        rectMask(x, z, -8.2, -3.8, 38, 114, 3),     // Maple Ave, running off the frame
         rectMask(x, z, -42, 34, 53.8, 58.2, 3),     // Signal St (east-west)
-        rectMask(x, z, 19.8, 24.2, 38, 57, 3),      // Second Ave
+        rectMask(x, z, 19.8, 24.2, 38, 90, 3),      // Second Ave
+        rectMask(x, z, -38, 28, 85.8, 90.2, 3),     // Third St (east-west, far)
         rectMask(x, z, -32, -11, 43, 53, 4),        // house lots, north row
         rectMask(x, z, -1, 32, 42.5, 52, 4),        //   "      east row
         rectMask(x, z, -22, -9, 58, 68, 4),         //   "      south lot
+        rectMask(x, z, -31, -12, 72, 84, 4),        // far blocks (scenery)
+        rectMask(x, z, 1, 27, 70, 82, 4),
+        rectMask(x, z, -27, -3, 94, 108, 4),
+        rectMask(x, z, 7, 31, 92, 106, 4),
         roadMask(x, z));
       return h * (1 - flat);
     };
@@ -662,24 +669,47 @@ scene.add(shellG);
     lines.traverse(o=>{ if(o.material) o.material.userData.noDim = true; });
     markNoBounds(lines);
 
-    // neighborhood streets south of the ring, meeting it at intersections
+    // Neighborhood streets. They borrow the ring road's material object so
+    // the asphalt matches exactly — a same-hex clone rendered differently.
     const streets = new THREE.Group(); levelG[0].add(streets);
-    const stMat = () => std(0x968f80, {roughness:0.97, envMapIntensity:0.2});
-    const strip = (w, d, x, z) => {
-      const s = Bo(streets, w, 0.022, d, stMat(), x, 0.026, z);
+    const dashMat = () => std(0xfdfbf6, {roughness:0.85});
+    const strip = (w, d, x, z, mat) => {
+      const s = Bo(streets, w, 0.022, d, mat || road.material, x, 0.026, z);
       s.castShadow = false; s.receiveShadow = true; return s;
     };
-    strip(3.6, 30, -6, 55);        // Maple Ave, off the front road heading south
-    strip(72, 3.6, -4, 56);        // Signal St, crossing it east-west
-    strip(3.6, 16, 22, 47);        // Second Ave, up to Signal St
-    for(let z2=41.5; z2<69; z2+=5) if(Math.abs(z2-56) > 3.4)
-      strip(0.14, 1.5, -6, z2).material.color.setHex(0xfdfbf6);
+    strip(3.6, 76, -6, 76);        // Maple Ave, running off the bottom of the frame
+    strip(72, 3.6, -4, 56);        // Signal St
+    strip(3.6, 50, 22, 64);        // Second Ave
+    strip(64, 3.6, -5, 88);        // Third St
+    for(let z2=41.5; z2<113; z2+=5) if(Math.abs(z2-56) > 3.4 && Math.abs(z2-88) > 3.4)
+      strip(0.14, 1.5, -6, z2, dashMat());
     for(let x2=-38; x2<31; x2+=5) if(Math.abs(x2+6) > 3.4 && Math.abs(x2-22) > 3.4)
-      strip(1.5, 0.14, x2, 56).material.color.setHex(0xfdfbf6);
-    for(let z2=41.5; z2<53; z2+=5)
-      strip(0.14, 1.5, 22, z2).material.color.setHex(0xfdfbf6);
+      strip(1.5, 0.14, x2, 56, dashMat());
+    for(let z2=41.5; z2<87; z2+=5) if(Math.abs(z2-56) > 3.4)
+      strip(0.14, 1.5, 22, z2, dashMat());
+    for(let x2=-34; x2<27; x2+=5) if(Math.abs(x2+6) > 3.4 && Math.abs(x2-22) > 3.4)
+      strip(1.5, 0.14, x2, 88, dashMat());
     streets.traverse(o=>{ if(o.material) o.material.userData.noDim = true; });
     markNoBounds(streets);
+
+    // far blocks: scenery homes carrying the suburb off the frame
+    const farHouse = (x, z, ry) => {
+      const h = new THREE.Group(); h.position.set(x, 0, z); h.rotation.y = ry;
+      levelG[0].add(h);
+      Bo(h, 5.0, 2.8, 4.0, MAT.wall(), 0, 0, 0);
+      const sh2 = std(0x9d9484, {roughness:0.95, envMapIntensity:0.3});
+      const ra = Bo(h, 5.5, 0.17, 2.6, sh2, 0, 3.2, -1.08); ra.rotation.x = -0.52;
+      const rb = Bo(h, 5.5, 0.17, 2.6, sh2, 0, 3.2, 1.08);  rb.rotation.x = 0.52;
+      Bo(h, 5.5, 0.15, 0.2, std(0xf4f1ea), 0, 3.76, 0);
+      Bo(h, 1.0, 1.95, 0.1, std(0x9a8d79), 1.4, 0, 2.02);
+      Bo(h, 1.9, 1.35, 0.08, MAT.inkFlat(), -1.1, 0.7, 2.0);
+      Bo(h, 1.7, 1.15, 0.06, MAT.screen(), -1.1, 0.8, 2.04);
+      Bo(h, 0.55, 1.4, 0.55, std(0x9a8d79), -1.6, 2.9, -0.5);
+      markNoBounds(h);
+    };
+    farHouse(-22, 77, 0.1);  farHouse(-13, 78.5, -0.06); farHouse(9, 75.5, 0.12);
+    farHouse(20, 77, -0.1);  farHouse(-19, 99, 0.05);   farHouse(-8.5, 101, -0.12);
+    farHouse(13, 98, 0.08);  farHouse(24, 100.5, -0.05);
 
     // trees on the hills
     const tree = (x, z, s, blob) => {
@@ -705,6 +735,8 @@ scene.add(shellG);
     tree(58, 6, 1.2, true); tree(56, 26, 0.95, false); tree(-3.6, 34.6, 1.0, true); tree(15.5, 29.8, 0.9, false);
     tree(-34, 55.5, 1.1, true); tree(13, 53.4, 0.95, false); tree(-24.5, 67, 1.05, true);
     tree(16, 64, 1.2, false); tree(33, 53.5, 0.9, true);
+    tree(-27, 80.5, 1.1, true); tree(16.5, 80.5, 1.0, false); tree(-24, 104, 1.15, false);
+    tree(19, 104.5, 0.9, true); tree(2, 116, 1.05, true); tree(-38, 96, 1.2, false);
   }
 
   const noCast = m => { m.castShadow = false; return m; };
@@ -830,13 +862,13 @@ const shellRec = reg(shellG);
     clouds.push({c, sp: 0.5 + Math.abs(cx % 5)/8, y0: cy, ph: cx});
     return c;
   };
-  // low band, drifting through the void in front of and below the island
-  puff(-40, -7, 42, 2.2, 0xffffff);
-  puff(10, -9.5, 50, 2.8, 0xf6f4ef);
-  puff(52, -6.5, 38, 1.9, 0xffffff);
-  puff(-68, -11, 30, 2.5, 0xf3f1eb);
-  puff(30, -12, 58, 3.2, 0xffffff);
-  puff(74, -9, 62, 2.4, 0xf6f4ef);
+  // sky only — nothing floats below the island
+  puff(-40, 42, -36, 2.2, 0xffffff);
+  puff(10, 49, -64, 2.8, 0xf6f4ef);
+  puff(52, 37, -44, 1.9, 0xffffff);
+  puff(-68, 44, -52, 2.5, 0xf3f1eb);
+  puff(30, 52, -76, 3.2, 0xffffff);
+  puff(74, 40, -58, 2.4, 0xf6f4ef);
   // high band, far behind the model for the top of the frame
   puff(-30, 36, -46, 2.6, 0xffffff);
   puff(24, 41, -54, 3.1, 0xf6f4ef);
@@ -850,6 +882,39 @@ const shellRec = reg(shellG);
     if(cl.c.position.x > 100) cl.c.position.x = -100;
     cl.c.position.y = cl.y0 + Math.sin(t*0.14 + cl.ph)*0.6;
   }));
+}
+
+/* ---- horizon: far ridgelines and a sky band closing the backdrop ------ */
+{
+  const ridge = (x, y, z, sx, sy, c) => {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 12),
+      new THREE.MeshBasicMaterial({color:c, toneMapped:false}));
+    m.position.set(x, y, z); m.scale.set(sx, sy, sx*0.6);
+    m.userData.noBounds = true; scene.add(m); return m;
+  };
+  ridge(-90, -8, -70, 70, 15, 0xccc8be);
+  ridge(10, -10, -95, 92, 17, 0xd2cec4);
+  ridge(105, -7, -60, 60, 13, 0xccc8be);
+  ridge(150, -8, 20, 55, 12, 0xd2cec4);
+  ridge(-145, -8, 15, 55, 12, 0xd2cec4);
+  const skyTex = tex(64, 256, (x,w,h)=>{
+    const gr = x.createLinearGradient(0, 0, 0, h);
+    gr.addColorStop(0, "#dad7d0");
+    gr.addColorStop(0.5, "#d2cfc7");
+    gr.addColorStop(0.68, "#c7c3b9");
+    gr.addColorStop(0.74, "#cfcbc1");
+    gr.addColorStop(1, "#cfcbc1");
+    x.fillStyle = gr; x.fillRect(0,0,w,h);
+  });
+  const sky = new THREE.Mesh(new THREE.PlaneGeometry(920, 430),
+    new THREE.MeshBasicMaterial({map:skyTex, toneMapped:false, depthWrite:false}));
+  const vdir = new THREE.Vector3(0.80, 0.86, 1.0).normalize();   // matches VIEW below
+  const back = vdir.clone().multiplyScalar(-260);
+  sky.position.set(2 + back.x, 42 + back.y, 6 + back.z);
+  sky.lookAt(sky.position.clone().add(vdir));
+  sky.renderOrder = -3;
+  sky.userData.noBounds = true;
+  scene.add(sky);
 }
 
 /* =====================================================================
@@ -1827,9 +1892,10 @@ const RIGHTW = PX1 - WT - 0.03;
     {path: makePath(1.05), dir: 1},
     {path: makePath(-1.05), dir: -1},
   ];
-  const colors = [0xffffff, 0xd8d3c9, 0xff4a1c, 0xffffff, 0xbdb8ae, 0xf0ede6, 0xffffff];
+  const colors = [0xffffff, 0xd8d3c9, 0xff4a1c, 0xffffff, 0xbdb8ae, 0xf0ede6, 0xffffff,
+                  0xe8e4dc, 0xffffff, 0xd0cabf];
   /* spread so several cars sit on the visible front straight at load */
-  const SPREAD = [0.045, 0.5, 0.115, 0.62, 0.185, 0.78, 0.255];
+  const SPREAD = [0.045, 0.5, 0.115, 0.62, 0.185, 0.78, 0.255, 0.33, 0.415, 0.56];
   const fleet = colors.map((col, i) => ({
     car: mkCar(col),
     lane: lanes[i % 2],
@@ -1847,6 +1913,27 @@ const RIGHTW = PX1 - WT - 0.03;
   const parked = mkCar(0xffffff);
   parked.position.set(14, 0.035, 34.8); parked.rotation.y = 0.06;
   Bo(parked, 0.3, 0.12, 0.5, emissive(0xffe9d2), 0.28, 0.62, 0);
+  // neighborhood locals: two-way traffic on the side streets
+  const locals = [
+    {A:[-6.9, 41.5], B:[-6.9, 111],  sp:4.2, ph:0.0,  col:0xffffff},
+    {A:[-37.5, 56.9],B:[29.5, 56.9], sp:4.8, ph:0.5,  col:0xe8e4dc},
+    {A:[-33.5, 88.9],B:[25.5, 88.9], sp:4.0, ph:0.25, col:0xd8d3c9},
+  ].map(L => ({...L, car: mkCar(L.col), len: Math.hypot(L.B[0]-L.A[0], L.B[1]-L.A[1])}));
+  const placeLocal = (L, t) => {
+    const cyc = (t * L.sp / L.len + L.ph) % 1;
+    const k = 1 - Math.abs(2*cyc - 1);
+    const fwd = cyc < 0.5 ? 1 : -1;
+    const dx = L.B[0]-L.A[0], dz = L.B[1]-L.A[1];
+    L.car.position.set(L.A[0] + dx*k, 0.035, L.A[1] + dz*k);
+    L.car.rotation.y = Math.atan2(-dz*fwd, dx*fwd);
+  };
+  locals.forEach(L => placeLocal(L, 0));
+  if(ANIM) anims.push(t => locals.forEach(L => placeLocal(L, t)));
+  // and a few parked in driveways
+  for(const [px, pz, pr, pc] of [[-20.8, 45.0, 0.1, 0xffffff],
+      [6.2, 44.2, -0.08, 0xd8d3c9], [-18.6, 60.2, 0.12, 0xbdb8ae]]){
+    const c = mkCar(pc); c.position.set(px, 0.035, pz); c.rotation.y = pr;
+  }
   pin(0, 1.1, 36.95);
   pin(14, 1.1, 34.8);
   pin(6, 1.1, 39.05);
