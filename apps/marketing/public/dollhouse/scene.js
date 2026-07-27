@@ -187,7 +187,7 @@ const stage = document.getElementById("stage");
 const canvas = document.getElementById("gl");
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setClearColor(0xccd4d5);
+renderer.setClearColor(0xd2cfc7);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputEncoding = THREE.sRGBEncoding;
@@ -937,13 +937,10 @@ const shellRec = reg(shellG);
 {
   const skyTex = tex(64, 256, (x,w,h)=>{
     const gr = x.createLinearGradient(0, 0, 0, h);
-    // the sea's far edge is a hard straight line; the sky has to arrive at the
-    // water's own colour there or that edge reads as a wedge of land
-    gr.addColorStop(0, "#dfe3e4");
-    gr.addColorStop(0.5, "#d6dcdd");
-    gr.addColorStop(0.72, "#cad3d5");
-    gr.addColorStop(0.88, "#bfcacd");
-    gr.addColorStop(1, "#b9c5c9");
+    gr.addColorStop(0, "#dad7d0");
+    gr.addColorStop(0.5, "#d2cfc7");
+    gr.addColorStop(0.74, "#cdc9c0");
+    gr.addColorStop(1, "#c9c5bc");
     x.fillStyle = gr; x.fillRect(0,0,w,h);
   });
   // oversized on purpose: at wide window shapes a 920-unit backdrop ran out
@@ -964,10 +961,31 @@ const shellRec = reg(shellG);
    the frame at every zoom, so its own edge is never the thing you notice. */
 {
   const sea = new THREE.Group(); levelG[0].add(sea);
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000),
-    new THREE.MeshBasicMaterial({color:0xb9c5c9, toneMapped:false}));
+  /* The water is a coast off one corner, not a moat. In this view −x runs up
+     and to the left and +z runs down and to the left, so the sea occupies the
+     south-west quadrant: everything left and below the property, nothing
+     behind it. Both inland edges (x 40, z −20) fade out underneath the island,
+     so the coastline is the island's own rim rather than a drawn line, and the
+     two seaward edges fade to nothing, which reads as haze instead of the hard
+     horizon a solid plane gives. */
+  const seaTex = tex(256, 256, (x,w,h)=>{
+    x.fillStyle = "#fff"; x.fillRect(0, 0, w, h);
+    x.globalCompositeOperation = "destination-out";
+    const fade = (x0,y0,x1,y1) => {
+      const g = x.createLinearGradient(x0,y0,x1,y1);
+      g.addColorStop(0, "rgba(0,0,0,1)"); g.addColorStop(1, "rgba(0,0,0,0)");
+      x.fillStyle = g; x.fillRect(0, 0, w, h);
+    };
+    fade(w, 0, w*0.95, 0);      // inland edges — short, and hidden under the land
+    fade(0, 0, 0, h*0.05);
+    fade(0, 0, w*0.16, 0);      // out to sea
+    fade(0, h, 0, h*0.84);
+  });
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200),
+    new THREE.MeshBasicMaterial({color:0xb9c5c9, map:seaTex, transparent:true,
+      depthWrite:false, toneMapped:false}));
   water.rotation.x = -Math.PI/2;
-  water.position.set(2, -1.62, 45);
+  water.position.set(-560, -1.62, 580);
   water.renderOrder = -2;
   sea.add(water);
 
@@ -977,6 +995,18 @@ const shellRec = reg(shellG);
     x.shadowColor = "rgba(255,255,255,0.85)"; x.shadowBlur = 10;
     x.lineWidth = 6.5; rr(x, 9, 9, w-18, h-18, 60); x.stroke();
     x.lineWidth = 2.2; x.shadowBlur = 3; x.stroke();
+    // there's only surf where there's sea: canvas left is west and canvas
+    // bottom is south, so keep that corner's shoreline and wipe the rest,
+    // where the land simply carries on
+    x.shadowBlur = 0;
+    x.globalCompositeOperation = "destination-out";
+    const wipe = (x0,y0,x1,y1) => {
+      const g = x.createLinearGradient(x0,y0,x1,y1);
+      g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,1)");
+      x.fillStyle = g; x.fillRect(0, 0, w, h);
+    };
+    wipe(w*0.74, 0, w*0.9, 0);
+    wipe(0, h*0.22, 0, h*0.06);
   });
   const surf = new THREE.Mesh(new THREE.PlaneGeometry(127, 200),
     new THREE.MeshBasicMaterial({map:surfTex, transparent:true,
@@ -1010,15 +1040,14 @@ const shellRec = reg(shellG);
   }
   // clustered where open water actually shows in the frame — off the west
   // shore and across the south bay
-  // ringed around the island rather than bunched, so some are in shot at any
-  // window shape — the water margin narrows as the frame gets wider
+  // offshore in the south-west quadrant, working along the coast
   const boats = [
-    {x:-95,  z:55,   ry:0.75, s:1.5, sp:1.5},
-    {x:-112, z:-20,  ry:0.2,  s:1.2, sp:0.9},
-    {x:-60,  z:-105, ry:1.4,  s:1.6, sp:1.3},
-    {x:20,   z:-120, ry:2.1,  s:1.4, sp:1.1},
-    {x:-85,  z:130,  ry:-0.5, s:1.7, sp:1.2},
-    {x:100,  z:-70,  ry:-1.0, s:1.5, sp:1.4},
+    {x:-96,  z:30,  ry:0.16, s:1.5, sp:1.4},
+    {x:-124, z:-5,  ry:0.1,  s:1.2, sp:0.9},
+    {x:-88,  z:126, ry:3.0,  s:1.7, sp:1.2},
+    {x:-158, z:82,  ry:3.14, s:1.3, sp:1.1},
+    {x:-64,  z:196, ry:2.9,  s:1.6, sp:1.3},
+    {x:-186, z:24,  ry:0.2,  s:1.2, sp:1.0},
   ].map((b, i) => {
     const g0 = new THREE.Group(); g0.position.set(b.x, -1.35, b.z);
     g0.rotation.y = b.ry; g0.scale.setScalar(b.s); sea.add(g0);
@@ -1047,8 +1076,10 @@ const shellRec = reg(shellG);
   if(ANIM) anims.push((t, dt)=> boats.forEach(b=>{
     b.g0.position.x += dt * b.vx;
     b.g0.position.z += dt * b.vz;
-    // a long reach out and a reset once they're well past the frame
-    if(Math.abs(b.g0.position.x - 2) > 300 || Math.abs(b.g0.position.z - 45) > 320)
+    // hard-stop before any of them can drift onto dry land, and a reset once
+    // they've reached well past the frame
+    const p = b.g0.position;
+    if((p.x > -70 && p.z < 160) || p.x < -430 || p.z < -12 || p.z > 500)
       b.g0.position.copy(b.home);
     b.hull.position.y = Math.sin(t*0.75 + b.ph) * 0.14;
     b.hull.rotation.z = Math.sin(t*0.62 + b.ph) * 0.055;
