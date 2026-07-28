@@ -159,7 +159,7 @@ const ROOMS = [
    control:"Broadcast Copy Home Channels",
    promise:"Living rooms are listeners too — the station's TV apps and smart speakers, fed by the same engine as the air chain. Click a house to lift its roof.",
    gear:[["TV apps","Roku, Fire TV and Apple TV channels — video, streams and now-playing managed from one content library."],
-         ["Smart speakers","“Play WCCG” on Alexa and Google — skills kept live and certified automatically."],
+         ["Smart speakers","“Play WBCC” on Alexa and Google — skills kept live and certified automatically."],
          ["Rooftop antenna","Over the air by antenna, everywhere else by app — the household never hears the switch."]]},
   {id:"listeners", name:"Mobile Listeners", group:"Audience", ext:{cx:17, cy:2.6, cz:100, w:27, h:9, d:21},
    control:"Broadcast Copy Listener App",
@@ -480,7 +480,7 @@ const TX = {
     x.strokeStyle="#231f18"; x.lineWidth=4; rr(x,5,5,w-10,h-10,10); x.stroke();
     x.fillStyle="#ff4a1c"; x.beginPath(); x.arc(40,52,14,0,7); x.fill();
     x.fillStyle="#231f18"; x.font="800 30px "+F; x.textAlign="left"; x.textBaseline="middle";
-    x.letterSpacing="3px"; x.fillText("WCCG 104.5", 66, 54);
+    x.letterSpacing="3px"; x.fillText("WBCC 104.5", 66, 54);
     x.fillStyle="#ff4a1c"; x.font="800 17px "+F; x.letterSpacing="6px";
     x.fillText("DRIVE TIME · LIVE NOW", 40, 102);
   }),
@@ -1347,7 +1347,7 @@ const shellRec = reg(shellG);
     x.strokeStyle = "#ff4a1c"; x.lineWidth = 3.5; rr(x, 3, 3, w-6, h-6, 7); x.stroke();
     x.fillStyle = "#26211a"; x.font = "800 29px "+F;
     x.textAlign = "center"; x.textBaseline = "middle";
-    x.fillText("WCCG 104.5 · ALWAYS ON", w/2, h/2 + 1);
+    x.fillText("WBCC 104.5 · ALWAYS ON", w/2, h/2 + 1);
   });
   function mkPlane(banner){
     const g = new THREE.Group();
@@ -3204,6 +3204,7 @@ function activate(i, fromTour){
   }
   active = i;
   if(!fromTour){ stopTour(); stopReel(); }
+  revealGroup(room.group);
   document.getElementById("backBtn").textContent = "← Whole building";
   document.body.classList.add("zoomed");
   hitboxes.forEach(h=> h.userData.outline.visible = false);
@@ -3325,10 +3326,20 @@ canvas.addEventListener("pointerup", ev=>{
 
 /* ---------- sidebar ---------- */
 const groupsEl = document.getElementById("groups");
-GROUPS.forEach(gname=>{
+/* Groups collapse. 22 departments in one flat list is a wall of text; folded
+   up, the six groups are the map and you open the one you want. The first is
+   open on load so the rail never reads as empty. */
+const groupPanels = [];
+GROUPS.forEach((gname, gi)=>{
   const wrap = document.createElement("div");
   wrap.className = "group";
-  const h = document.createElement("h3"); h.textContent = gname; wrap.appendChild(h);
+  const h = document.createElement("button");
+  h.className = "ghead"; h.type = "button";
+  const n = ROOMS.filter(r => r.group === gname).length;
+  h.innerHTML = `<span class="gname">${gname}</span><span class="grule"></span>` +
+                `<span class="gcount">${n}</span><span class="gchev">›</span>`;
+  const body = document.createElement("div");
+  body.className = "gbody";
   ROOMS.forEach((room,i)=>{
     if(room.group !== gname) return;
     const b = document.createElement("button");
@@ -3337,10 +3348,27 @@ GROUPS.forEach(gname=>{
     b.addEventListener("click", ()=>activate(i));
     b.addEventListener("mouseenter", ()=>{ if(active<0) setHover(hitboxes[i]); });
     b.addEventListener("mouseleave", ()=>{ if(active<0) setHover(null); });
-    wrap.appendChild(b);
+    body.appendChild(b);
   });
+  const setOpen = open => {
+    wrap.classList.toggle("open", open);
+    h.setAttribute("aria-expanded", open ? "true" : "false");
+    // an explicit height is what lets the fold animate; auto would not
+    body.style.maxHeight = open ? body.scrollHeight + "px" : "0px";
+  };
+  h.setAttribute("aria-controls", "grp-" + gi);
+  body.id = "grp-" + gi;
+  h.addEventListener("click", ()=> setOpen(!wrap.classList.contains("open")));
+  wrap.appendChild(h); wrap.appendChild(body);
   groupsEl.appendChild(wrap);
+  groupPanels.push({gname, wrap, setOpen});
+  setOpen(gi === 0);
 });
+/* zooming a room from anywhere — a pin, a car, the flyover — opens the group
+   it belongs to, so the rail always agrees with what's on screen */
+function revealGroup(gname){
+  groupPanels.forEach(p => p.setOpen(p.gname === gname));
+}
 document.getElementById("backBtn").addEventListener("click", ()=>{
   if(document.body.classList.contains("zoomed")) overview(); else collapse();
 });
