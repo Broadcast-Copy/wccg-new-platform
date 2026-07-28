@@ -1237,11 +1237,16 @@ const shellRec = reg(shellG);
      half rides the headland and the east half the island. */
   const X0 = -178, X1 = 112, N = 380;
   const ss = (e0, e1, v) => { const t = Math.max(0, Math.min(1, (v-e0)/(e1-e0))); return t*t*(3-2*t); };
-  const railZ = x => 15 - 54*ss(-140, -25, x) + 4*Math.sin(x*0.09);
+  /* East of the campus the line swings south so it crosses the bay rather than
+     the empty water north of it, and climbs to a deck height that clears a
+     mast — the boats sail under it. */
+  const DECK = 8.4;
+  const railZ = x => 15 - 54*ss(-140, -25, x) + 4*Math.sin(x*0.09) + 60*ss(35, 100, x);
+  const railY = (x, z) => Math.max(groundH(x, z), westH(x, z)) + DECK*ss(24, 54, x);
   const pts = [];
   for(let i=0;i<=N;i++){
     const x = X0 + (X1-X0)*i/N, z = railZ(x);
-    pts.push({x, z, y: Math.max(groundH(x, z), westH(x, z))});
+    pts.push({x, z, y: railY(x, z)});
   }
   const smooth = pts.map((_, i)=>{
     let s = 0, n = 0;
@@ -1359,7 +1364,7 @@ const shellRec = reg(shellG);
      entering one tunnel and coming out of the other. */
   const knoll = (targetX, dir) => {
     let i = 0; while(i < pts.length-1 && pts[i].x < targetX) i++;
-    const p = pts[i], gy = Math.max(groundH(p.x, p.z), westH(p.x, p.z));
+    const p = pts[i], gy = railY(p.x, p.z);
     const mound = new THREE.Mesh(new THREE.SphereGeometry(1, 22, 14),
       std(0xdcd7cb, {roughness:1, envMapIntensity:0.22}));
     mound.position.set(p.x, gy - 1.7, p.z);
@@ -1368,7 +1373,7 @@ const shellRec = reg(shellG);
     rail.add(mound);
     const mx = p.x + dir*6.0, mz = railZ(mx);
     Bo(rail, 2.7, 2.0, 0.55, MAT.inkFlat(), mx,
-      Math.max(groundH(mx, mz), westH(mx, mz)) + 0.04, mz,
+      railY(mx, mz) + 0.04, mz,
       Math.atan2(p.tx, p.tz)).castShadow = false;
   };
   knoll(-172, 1);
@@ -1377,22 +1382,27 @@ const shellRec = reg(shellG);
      water and leaves the frame — which is a better answer than a mound the
      train vanishes into. Piers start where the ground stops holding it up. */
   const pierMat = std(0xdedad1, {roughness:0.95, envMapIntensity:0.28});
-  for(let s = 0; s < RAIL_L; s += 5.6){
+  const FOOT = -3.4;                       // piers stand in the water, not on it
+  for(let s = 0; s < RAIL_L; s += 7.4){
     const p = railAt(s);
-    // the island starts falling away under the line from about x 38, so the
-    // deck is already flying well before the shore; piers run long and are
-    // simply buried where the ground is still up
-    if(p.x < 41) continue;
-    const drop = 7.0;
-    Bo(rail, 1.6, drop, 1.6, pierMat, p.x, p.y - 0.12 - drop, p.z,
-      Math.atan2(p.tx, p.tz)).castShadow = false;
+    if(p.x < 26) continue;
+    // a clear navigation span over the boat lanes, so nothing sailing the bay
+    // has to thread between piers
+    if(p.x > 67 && p.x < 99) continue;
+    const h = p.y - 0.45 - FOOT;
+    if(h < 1.4) continue;                  // still on the embankment here
+    const nx = -p.tz, nz = p.tx, ry = Math.atan2(p.tx, p.tz);
+    for(const off of [1.3, -1.3])          // a pair of legs per bay
+      Bo(rail, 0.8, h, 0.8, pierMat, p.x + nx*off, FOOT, p.z + nz*off, ry)
+        .castShadow = false;
+    Bo(rail, 3.6, 0.45, 1.0, pierMat, p.x, p.y - 0.52, p.z, ry).castShadow = false;
   }
-  for(let s = 0; s < RAIL_L; s += 2.0){
+  for(let s = 0; s < RAIL_L; s += 2.0){    // parapet along the flying deck
     const p = railAt(s);
-    if(p.x < 39.5) continue;
+    if(p.x < 26 || p.y < 1.2) continue;
     const nx = -p.tz, nz = p.tx, ry = Math.atan2(p.tx, p.tz);
     for(const off of [1.86, -1.86])
-      Bo(rail, 0.3, 0.36, 2.1, pierMat, p.x + nx*off, p.y + 0.02, p.z + nz*off, ry)
+      Bo(rail, 0.3, 0.42, 2.1, pierMat, p.x + nx*off, p.y + 0.02, p.z + nz*off, ry)
         .castShadow = false;
   }
 
