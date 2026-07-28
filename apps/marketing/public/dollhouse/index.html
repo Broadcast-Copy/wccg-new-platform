@@ -185,7 +185,7 @@
     </div>
     <header>
       <div class="brandrow" id="brandrow" aria-label="broadcastcopy.ai" role="img"></div>
-      <div class="tagline">The whole station, <b>on autopilot</b>. Pick a room to see what runs itself.</div>
+      <div class="tagline" id="tagline">Automate your entire broadcast studio <b>end-to-end</b>.</div>
     </header>
     <div id="hint"><span class="dot"></span>Select a department — or click any room</div>
     <div id="dayclock"></div>
@@ -246,7 +246,12 @@
   if(!host) return;
   // the site frames this under its own header, and asks for ?embed=1 so the
   // page doesn't stack two wordmarks. Standalone (and in the artifact) it shows.
-  if(/(\?|&)embed=1\b/.test(location.search)){ host.style.display = "none"; return; }
+  if(/(\?|&)embed=1\b/.test(location.search)){
+    host.style.display = "none";
+    const tag = document.getElementById("tagline");
+    if(tag) tag.style.display = "none";     // the site header carries this line
+    return;
+  }
   const TEXT = "BROADCASTCOPY.AI", PX = 3;
   let pen = 0, accent = false, rects = "";
   for(const ch of TEXT){

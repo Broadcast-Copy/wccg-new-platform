@@ -19,8 +19,15 @@ export function SiteHeader({ sticky = true }: { sticky?: boolean }) {
       className={`${sticky ? "sticky top-0" : "flex-none"} z-50 border-b border-line bg-ink/85 backdrop-blur`}
     >
       <nav className="mx-auto flex max-w-6xl items-center justify-between gap-5 px-5 py-3.5">
-        <Link href="/" className="flex items-center" aria-label="broadcastcopy.ai">
+        <Link
+          href="/"
+          className="flex flex-col items-start gap-1.5"
+          aria-label="broadcastcopy.ai"
+        >
           <Wordmark px={3} className="text-fg" />
+          <span className="hidden text-xs text-dim sm:block">
+            Automate your entire broadcast studio <b className="font-semibold text-fg">end-to-end</b>.
+          </span>
         </Link>
 
         <div className="hidden items-center gap-7 text-sm text-dim md:flex">
