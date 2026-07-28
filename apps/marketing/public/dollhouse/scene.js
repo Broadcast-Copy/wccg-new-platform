@@ -1094,11 +1094,13 @@ const shellRec = reg(shellG);
 }
 
 /* ---- aircraft: light planes crossing the sky off the north-west, one of
-   them towing a station banner. Their lane (x −134…−18 at y 34…39, z 18…34)
-   was picked by projecting candidate points through the camera and keeping
-   the ones that land in the upper-left of the frame, below the wordmark; it
-   also clears the
-   exploded plates, which stack up and back toward z −49. -------------- */
+   them towing a station banner. They fly the −z axis, which climbs up and to
+   the right on screen, out of the lower left and away toward the cloud band —
+   rather than the +x axis, which ran them straight at the building. Held at
+   x −58…−92 so the whole visible run passes above and left of the station's
+   screen box (measured: the building sits at 484,268…784,506 and the lane
+   never enters it), and at y 27…31 — under the clouds at y 34+, and clear of
+   the exploded plates, which stack to y 34 over x −35…1. ----------------- */
 {
   const air = new THREE.Group(); levelG[0].add(air);
   const bannerTex = tex(384, 76, (x,w,h)=>{
@@ -1132,10 +1134,13 @@ const shellRec = reg(shellG);
     }
     return g;
   }
+  const HDG = Math.PI/2;              // nose down the −z axis, toward the clouds
   const planes = [
-    {x:-64,  y:36, z:26, ry:0.0,   s:1.0, sp:4.0, banner:true},
-    {x:-98,  y:39, z:18, ry:-0.04, s:0.8, sp:4.8, banner:false},
-    {x:-134, y:34, z:34, ry:0.03,  s:0.9, sp:4.4, banner:false},
+    {x:-58, y:29, z:66,  ry:HDG, s:0.85, sp:4.4, banner:false},
+    // the banner rides the middle lane: the outer one spends too much of its
+    // run off the left edge, taking the banner with it
+    {x:-76, y:31, z:20,  ry:HDG, s:1.0,  sp:5.0, banner:true},
+    {x:-92, y:27, z:-28, ry:HDG, s:0.9, sp:4.6, banner:false},
   ].map((a, i) => {
     const g0 = new THREE.Group(); g0.position.set(a.x, a.y, a.z);
     g0.rotation.y = a.ry; g0.scale.setScalar(a.s); air.add(g0);
@@ -1160,7 +1165,9 @@ const shellRec = reg(shellG);
   if(ANIM) anims.push((t, dt)=> planes.forEach(a=>{
     a.g0.position.x += dt * a.vx;
     a.g0.position.z += dt * a.vz;
-    if(a.g0.position.x > -18) a.g0.position.copy(a.home);
+    // they all restart from the same point down the coast, so the stagger in
+    // their starting z spaces them out instead of bunching them by lane length
+    if(a.g0.position.z < -88) a.g0.position.z = 78;
     a.body.position.y = Math.sin(t*0.5 + a.ph) * 0.5;
     a.body.rotation.z = Math.sin(t*0.37 + a.ph) * 0.045;
   }));
