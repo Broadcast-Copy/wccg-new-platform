@@ -13,7 +13,7 @@ export function StationTour() {
       <SiteHeader sticky={false} />
 
       <iframe
-        src="/dollhouse/"
+        src="/dollhouse/?embed=1"
         title="Interactive 3D model of a radio station, room by room"
         className="w-full flex-1 border-0"
       />

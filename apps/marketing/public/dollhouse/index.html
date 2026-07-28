@@ -244,8 +244,9 @@
   };
   const host = document.getElementById("brandrow");
   if(!host) return;
-  // embedded in the site, the page already has a header — don't stack two
-  if(window.self !== window.top){ host.style.display = "none"; return; }
+  // the site frames this under its own header, and asks for ?embed=1 so the
+  // page doesn't stack two wordmarks. Standalone (and in the artifact) it shows.
+  if(/(\?|&)embed=1\b/.test(location.search)){ host.style.display = "none"; return; }
   const TEXT = "BROADCASTCOPY.AI", PX = 3;
   let pen = 0, accent = false, rects = "";
   for(const ch of TEXT){
