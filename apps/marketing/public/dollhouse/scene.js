@@ -1259,10 +1259,13 @@ const shellRec = reg(shellG);
     markNoBounds(g2);
     return {g: g2, arm};
   }
+  /* Worked in close to the belt line — out on the far ridge the post read as
+     scenery nobody could reach. Lines are kept clear of the rail alignment,
+     which runs roughly z −16 at x −80 down to z −23 at x −66. */
   const patrol = [
-    {A:[-116, -34], B:[-101, -21], s:1.15, sp:0.55, ph:0.00},
-    {A:[-134, -6],  B:[-123, 7],   s:1.05, sp:0.45, ph:0.38},
-    {A:[-99, 23],   B:[-111, 35],  s:1.10, sp:0.50, ph:0.71},
+    {A:[-80, -40], B:[-66, -34], s:1.15, sp:0.55, ph:0.00},
+    {A:[-88, -2],  B:[-74, 6],   s:1.05, sp:0.45, ph:0.38},
+    {A:[-66, 14],  B:[-78, 24],  s:1.10, sp:0.50, ph:0.71},
   ].map(d => {
     const m = mkOperator(d.s);
     return {...d, ...m, len: Math.hypot(d.B[0]-d.A[0], d.B[1]-d.A[1])};
@@ -1284,7 +1287,7 @@ const shellRec = reg(shellG);
   };
   // an observation stand at the treeline
   {
-    const sx = -127, sz = -14;
+    const sx = -70, sz = -4;
     const st = new THREE.Group(); st.position.set(sx, westH(sx, sz) - 0.05, sz);
     st.rotation.y = 0.5; levelG[0].add(st);
     const timber = std(0x8a7f6e, {roughness:0.95});
