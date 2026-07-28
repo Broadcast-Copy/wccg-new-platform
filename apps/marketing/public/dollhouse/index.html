@@ -25,6 +25,15 @@
   }
   #app{display:flex;height:100vh;width:100vw;}
   #stage{flex:1;position:relative;min-width:0;background:var(--paper);}
+  /* the scene dissolves into the page at the top and bottom rather than
+     stopping at a hard edge. Sits above the canvas but below #overlay, so
+     labels, pins and the chrome stay crisp through the fade. */
+  #fade{
+    position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(to bottom,
+      #fff 0%, rgba(255,255,255,0.72) 5%, rgba(255,255,255,0) 17%,
+      rgba(255,255,255,0) 83%, rgba(255,255,255,0.72) 95%, #fff 100%);
+  }
   #gl{position:absolute;inset:0;width:100%;height:100%;display:block;}
   #overlay{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
 
@@ -157,6 +166,7 @@
 <div id="app">
   <div id="stage">
     <canvas id="gl"></canvas>
+    <div id="fade"></div>
     <div id="overlay">
       <div id="frame"></div>
       <div class="tb" id="tbl"><b>Broadcastcopy.ai — Facility Model № 003</b><br>Exploded axonometric · Every department automated</div>

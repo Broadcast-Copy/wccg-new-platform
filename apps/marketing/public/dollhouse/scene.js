@@ -1237,36 +1237,57 @@ const shellRec = reg(shellG);
 
   /* rolling stock: a loco and three coaches, nose along local +x so the same
      heading maths as the cars applies */
-  const stockPaint = () => std(0xf4f1ea, {roughness:0.45, envMapIntensity:1.0});
-  function bogies(g2){
-    for(const bx of [-1.6, 1.6]) for(const wz of [0.6, -0.6]){
-      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.16, 12), MAT.rubber());
-      w.rotation.x = Math.PI/2; w.position.set(bx, 0.26, wz); w.castShadow = true; g2.add(w);
+  /* What separates rail stock from a bus, at this size, is proportion and
+     what's under it: long and narrow, a dark underframe the body sits on,
+     inboard bogies rather than wheels at the corners, a rounded roof, and
+     windows broken up by mullions instead of one glazed band. */
+  const stockPaint = () => std(0xf7f4ee, {roughness:0.38, metalness:0.1, envMapIntensity:1.05});
+  const truckMat = std(0x3a352d, {roughness:0.55, metalness:0.35});
+  function bogie(g2, bx){
+    for(const wz of [0.52, -0.52])
+      Bo(g2, 1.7, 0.2, 0.14, MAT.inkFlat(), bx, 0.44, wz);       // side frame
+    for(const ax of [bx-0.5, bx+0.5]) for(const wz of [0.54, -0.54]){
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.13, 14), truckMat);
+      w.rotation.x = Math.PI/2; w.position.set(ax, 0.3, wz); w.castShadow = true; g2.add(w);
     }
   }
-  function mkLoco(){
-    const g2 = new THREE.Group(); rail.add(g2);
-    const dark = std(0x2f2a23, {roughness:0.42, envMapIntensity:1.0});
-    Bo(g2, 4.6, 1.15, 1.45, dark, 0, 0.34, 0);
-    Bo(g2, 1.7, 0.95, 1.38, dark, -1.25, 1.49, 0);
-    Bo(g2, 1.5, 0.36, 1.42, MAT.screen(), -1.25, 1.76, 0);
-    Bo(g2, 4.66, 0.14, 1.5, MAT.accent(), 0, 1.22, 0);
-    Sp(g2, 0.11, emissive(0xfff0da), 2.3, 0.95, 0);
-    Cy(g2, 0.015, 0.015, 0.4, MAT.inkFlat(), -1.9, 2.44, -0.4, 6);
-    Sp(g2, 0.05, emissive(0xff4a1c), -1.9, 2.88, -0.4);   // tuned in, like the cars
-    bogies(g2);
-    mkBlobShadow(g2, 5.8, 2.2, 0.02);
-    markNoBounds(g2);
-    return g2;
+  function glazing(g2, len, paint){
+    Bo(g2, len, 0.5, 1.3, MAT.screen(), 0, 1.06, 0);
+    for(let mx = -len/2 + 0.75; mx < len/2 - 0.3; mx += 1.15)
+      Bo(g2, 0.13, 0.52, 1.33, paint, mx, 1.05, 0);              // mullions
   }
   function mkCoach(){
     const g2 = new THREE.Group(); rail.add(g2);
-    Bo(g2, 5.0, 1.4, 1.42, stockPaint(), 0, 0.34, 0);
-    Bo(g2, 5.04, 0.46, 1.46, MAT.screen(), 0, 1.0, 0);
-    Bo(g2, 5.06, 0.11, 1.48, MAT.accent(), 0, 0.72, 0);
-    Bo(g2, 5.1, 0.14, 1.5, stockPaint(), 0, 1.6, 0);
-    bogies(g2);
-    mkBlobShadow(g2, 6.2, 2.2, 0.02);
+    const paint = stockPaint();
+    Bo(g2, 7.1, 0.36, 1.04, MAT.inkFlat(), 0, 0.5, 0);           // underframe
+    Bo(g2, 7.3, 0.92, 1.26, paint, 0, 0.86, 0);                  // body sides
+    glazing(g2, 6.5, paint);
+    Cy(g2, 0.63, 0.63, 7.3, paint, 0, -1.87, 0, 16, Math.PI/2);  // rounded roof
+    Bo(g2, 7.34, 0.09, 1.3, MAT.accent(), 0, 0.78, 0);           // waist stripe
+    for(const dx of [-2.6, 2.6]) Bo(g2, 0.1, 1.25, 0.9, std(0xdcd7cc, {roughness:0.7}), dx, 0.9, 0.64);
+    for(const cx of [-3.72, 3.72]) Bo(g2, 0.34, 0.2, 0.34, MAT.inkFlat(), cx, 0.56, 0);  // gangway
+    bogie(g2, -2.35); bogie(g2, 2.35);
+    mkBlobShadow(g2, 8.4, 2.0, 0.02);
+    markNoBounds(g2);
+    return g2;
+  }
+  function mkLoco(){
+    const g2 = new THREE.Group(); rail.add(g2);
+    const dark = std(0x2f2a23, {roughness:0.4, metalness:0.15, envMapIntensity:1.0});
+    Bo(g2, 6.4, 0.4, 1.06, MAT.inkFlat(), 0, 0.46, 0);           // underframe
+    Bo(g2, 4.5, 1.15, 1.2, dark, -0.7, 0.86, 0);                 // long hood
+    Cy(g2, 0.58, 0.58, 4.5, dark, -0.7, -1.24, 0, 14, Math.PI/2);
+    Bo(g2, 1.9, 1.7, 1.26, dark, 2.05, 0.86, 0);                 // cab
+    Bo(g2, 1.55, 0.5, 1.3, MAT.screen(), 2.05, 1.85, 0);
+    Bo(g2, 0.12, 0.5, 1.28, MAT.screen(), 3.02, 1.8, 0);         // front screen
+    Bo(g2, 6.5, 0.11, 1.24, MAT.accent(), 0, 1.42, 0);
+    Sp(g2, 0.13, emissive(0xfff0da), 3.15, 1.05, 0.3);
+    Sp(g2, 0.13, emissive(0xfff0da), 3.15, 1.05, -0.3);
+    Bo(g2, 0.28, 0.62, 1.34, MAT.inkFlat(), 3.3, 0.5, 0);        // buffer beam
+    Cy(g2, 0.015, 0.015, 0.4, MAT.inkFlat(), -2.4, 2.6, -0.4, 6);
+    Sp(g2, 0.05, emissive(0xff4a1c), -2.4, 3.04, -0.4);          // tuned in, like the cars
+    bogie(g2, -2.0); bogie(g2, 2.0);
+    mkBlobShadow(g2, 7.6, 2.0, 0.02);
     markNoBounds(g2);
     return g2;
   }
@@ -1294,9 +1315,11 @@ const shellRec = reg(shellG);
   const consist = [mkLoco(), mkCoach(), mkCoach(), mkCoach()];
   const CYCLE = RAIL_L + 34;          // a clear pause between passes
   const placeTrain = t => {
-    const head = ((t * 8.5) % CYCLE + CYCLE) % CYCLE;
+    // the offset starts the consist mid-line rather than inside the west
+    // tunnel, so it is on screen from the first frame
+    const head = ((t * 8.5 + 150) % CYCLE + CYCLE) % CYCLE;
     consist.forEach((car, i)=>{
-      const s = head - i*6.6;
+      const s = head - i*7.9;          // coach length plus a coupler gap
       car.visible = s > 0 && s < RAIL_L;
       if(!car.visible) return;
       const p = railAt(s);
@@ -2395,53 +2418,115 @@ const RIGHTW = PX1 - WT - 0.03;
                   0xe8e4dc, 0xffffff, 0xd0cabf];
   /* spread so several cars sit on the visible front straight at load */
   const SPREAD = [0.045, 0.5, 0.115, 0.62, 0.185, 0.78, 0.255, 0.33, 0.415, 0.56];
-  const fleet = colors.map((col, i) => ({
-    car: mkCar(col),
-    lane: lanes[i % 2],
-    s0: SPREAD[i] * lanes[i % 2].path.L,
-    speed: 5.2 + (i % 3) * 1.1,
-  }));
-  const place = (rec, t) => {
-    const p = rec.lane.path.at(rec.s0 + rec.lane.dir * rec.speed * t);
-    rec.car.position.set(p.x, 0.035, p.z);
-    rec.car.rotation.y = Math.atan2(-p.tz * rec.lane.dir, p.tx * rec.lane.dir);
+  /* The ring is simulated, not swept along on a timer. Every vehicle carries a
+     position and a speed and, each frame, measures the gap to whoever is in
+     front and brakes for it — which is what makes cars queue behind a bus
+     instead of driving straight through it. */
+  const RING = [];
+  const addRing = (mesh, laneIdx, spread, vmax, len, th) => {
+    const lane = lanes[laneIdx];
+    RING.push({mesh, lane, dir: lane.dir, p: spread * lane.path.L,
+               v: vmax, vmax, len, th: th || 0, on: true});
   };
-  // buses run the same two lanes, slower than the cars so traffic stacks up
-  // behind them the way it does on a real ring road
-  const buses = [
-    {dest:"DOWNTOWN", col:0xf0ede6, spread:0.30, lane:0, speed:3.6},
-    {dest:"CAMPUS",   col:0xffffff, spread:0.70, lane:1, speed:3.2},
-    {dest:"AIRPORT",  col:0xe8e4dc, spread:0.90, lane:0, speed:3.9},
-  ].map(b => ({
-    car: mkBus(b.col, b.dest),
-    lane: lanes[b.lane],
-    s0: b.spread * lanes[b.lane].path.L,
-    speed: b.speed,
-  }));
-  fleet.push(...buses);
-  fleet.forEach(r => place(r, 0));
-  if(ANIM) anims.push(t => fleet.forEach(r => place(r, t)));
+  colors.forEach((col, i) => addRing(mkCar(col), i % 2, SPREAD[i], 5.2 + (i%3)*1.1, 2.6));
+  // buses are slower, so traffic stacks up behind them like it does for real
+  [{dest:"DOWNTOWN", col:0xf0ede6, spread:0.30, lane:0, vmax:3.6},
+   {dest:"CAMPUS",   col:0xffffff, spread:0.70, lane:1, vmax:3.2},
+   {dest:"AIRPORT",  col:0xe8e4dc, spread:0.90, lane:0, vmax:3.9},
+  ].forEach(b => addRing(mkBus(b.col, b.dest), b.lane, b.spread, b.vmax, 5.2));
+
+  const placeRing = r => {
+    const p = r.lane.path.at(r.p);
+    r.mesh.position.set(p.x, 0.035, p.z);
+    r.mesh.rotation.y = Math.atan2(-p.tz * r.dir, p.tx * r.dir);
+  };
+  const gapAhead = me => {
+    const L = me.lane.path.L;
+    let best = L;
+    for(const o of RING){
+      if(o === me || !o.on || o.lane !== me.lane) continue;
+      let gp = (o.p - me.p) * me.dir;
+      gp = ((gp % L) + L) % L;
+      gp -= (me.len + o.len) / 2 + 1.1;
+      if(gp < best) best = gp;
+    }
+    return best;
+  };
+  const stepRing = dt => {
+    for(const r of RING){
+      if(!r.on) continue;
+      const clear = gapAhead(r);
+      const target = Math.max(0, Math.min(r.vmax, clear * 1.15));
+      r.v += (target - r.v) * Math.min(1, dt * 3);
+      r.p += r.dir * r.v * dt;
+      placeRing(r);
+    }
+  };
+  RING.forEach(placeRing);
   // parked listener at the pull-off, dash lit
   const parked = mkCar(0xffffff);
   parked.position.set(14, 0.035, 34.8); parked.rotation.y = 0.06;
   Bo(parked, 0.3, 0.12, 0.5, emissive(0xffe9d2), 0.28, 0.62, 0);
-  // neighborhood locals: two-way traffic on the side streets
+  /* Stop signs on the grid, and local traffic that actually obeys them: a
+     route is a timeline of runs and dwells rather than a constant sweep, so
+     a car rolls up to each junction, sits for a beat and pulls away. */
+  const STOP_TEX = tex(128, 128, (x, w, h)=>{
+    x.fillStyle = "#fdfbf6"; x.font = "800 40px "+F;
+    x.textAlign = "center"; x.textBaseline = "middle";
+    x.fillText("STOP", w/2, h/2 + 1);
+  });
+  const FACE_CAM = Math.atan2(0.80, 1.0);
+  const stopSign = (x, z) => {
+    const s = new THREE.Group(); s.position.set(x, 0, z); s.rotation.y = FACE_CAM; g.add(s);
+    Cy(s, 0.05, 0.065, 1.55, MAT.chrome(), 0, 0, 0, 8);
+    const oct = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.07, 8), MAT.accent());
+    oct.rotation.x = Math.PI/2; oct.position.set(0, 1.68, 0.02);
+    oct.castShadow = true; s.add(oct);
+    Pl(s, 0.66, 0.66, signMat(STOP_TEX), 0, 1.68, 0.07);
+    markNoBounds(s);
+  };
+  for(const [ix, iz] of [[-6, 56], [22, 56], [-6, 88], [22, 88]]){
+    stopSign(ix - 2.7, iz - 2.7);
+    stopSign(ix + 2.7, iz + 2.7);
+  }
+  stopSign(33.5, 52.4); stopSign(33.5, 59.9);
+
+  const buildRoute = (stops, len, sp, dwell) => {
+    const ks = [0, ...stops, 1], tl = [];
+    let t = 0, fwd = 1;
+    const run = (k0, k1) => {
+      fwd = Math.sign(k1 - k0) || 1;
+      const d = Math.abs(k1 - k0) * len / sp;
+      tl.push({t0:t, t1:t+d, k0, k1, fwd}); t += d;
+    };
+    const hold = k => { tl.push({t0:t, t1:t+dwell, k0:k, k1:k, fwd}); t += dwell; };
+    for(let i=0;i<ks.length-1;i++){ run(ks[i], ks[i+1]); hold(ks[i+1]); }
+    for(let i=ks.length-1;i>0;i--){ run(ks[i], ks[i-1]); hold(ks[i-1]); }
+    return {tl, T: t};
+  };
   const locals = [
-    {A:[-6.9, 41.5], B:[-6.9, 111],  sp:4.2, ph:0.0,  col:0xffffff},
-    {A:[-37.5, 56.9],B:[29.5, 56.9], sp:4.8, ph:0.5,  col:0xe8e4dc},
-    {A:[-33.5, 88.9],B:[54, 88.9],   sp:4.0, ph:0.25, col:0xd8d3c9},
-    {A:[34, 55.1],   B:[56, 55.1],   sp:4.3, ph:0.35, col:0xf0ede6},
+    {A:[-6.9, 41.5], B:[-6.9, 111],  sp:5.0, ph:0.0,  col:0xffffff, stops:[0.209, 0.669]},
+    {A:[-37.5, 56.9],B:[29.5, 56.9], sp:5.4, ph:0.5,  col:0xe8e4dc, stops:[0.470, 0.888]},
+    {A:[-33.5, 88.9],B:[54, 88.9],   sp:4.8, ph:0.25, col:0xd8d3c9, stops:[0.314, 0.634]},
+    {A:[34, 55.1],   B:[56, 55.1],   sp:4.6, ph:0.35, col:0xf0ede6, stops:[0.45]},
     // the local route: down Signal St past the shops and back
-    {A:[-37.5, 56.9],B:[54, 56.9],   sp:3.1, ph:0.15, col:0xffffff, bus:"SIGNAL ST"},
-  ].map(L => ({...L, car: L.bus ? mkBus(L.col, L.bus) : mkCar(L.col),
-    len: Math.hypot(L.B[0]-L.A[0], L.B[1]-L.A[1])}));
+    {A:[-37.5, 56.9],B:[54, 56.9],   sp:3.6, ph:0.15, col:0xffffff, bus:"SIGNAL ST",
+     stops:[0.344, 0.650, 0.87]},
+  ].map(L => {
+    const len = Math.hypot(L.B[0]-L.A[0], L.B[1]-L.A[1]);
+    return {...L, len, car: L.bus ? mkBus(L.col, L.bus) : mkCar(L.col),
+            route: buildRoute(L.stops, len, L.sp, L.bus ? 2.2 : 1.3)};
+  });
   const placeLocal = (L, t) => {
-    const cyc = (t * L.sp / L.len + L.ph) % 1;
-    const k = 1 - Math.abs(2*cyc - 1);
-    const fwd = cyc < 0.5 ? 1 : -1;
+    const R = L.route;
+    const u = (((t + L.ph * R.T) % R.T) + R.T) % R.T;
+    let seg = R.tl[R.tl.length-1];
+    for(const s of R.tl) if(u < s.t1){ seg = s; break; }
+    const k = seg.k1 === seg.k0 ? seg.k0
+      : seg.k0 + (seg.k1 - seg.k0) * (u - seg.t0) / (seg.t1 - seg.t0);
     const dx = L.B[0]-L.A[0], dz = L.B[1]-L.A[1];
     L.car.position.set(L.A[0] + dx*k, 0.035, L.A[1] + dz*k);
-    L.car.rotation.y = Math.atan2(-dz*fwd, dx*fwd);
+    L.car.rotation.y = Math.atan2(-dz*seg.fwd, dx*seg.fwd);
   };
   locals.forEach(L => placeLocal(L, 0));
   if(ANIM) anims.push(t => locals.forEach(L => placeLocal(L, t)));
@@ -2461,19 +2546,18 @@ const RIGHTW = PX1 - WT - 0.03;
     }
     return 0.28 + 0.72 * b;
   };
-  const rush = [0xffffff, 0xe8e4dc, 0xd8d3c9, 0xffffff, 0xf0ede6, 0xbdb8ae]
-    .map((col, i) => ({
-      car: mkCar(col),
-      lane: lanes[i % 2],
-      s0: (0.08 + i * 0.157) * lanes[i % 2].path.L,
-      speed: 4.6 + (i % 3) * 0.9,
-      th: 0.45 + i * 0.082,                            // staggers the surge in and out
-    }));
+  // rush-hour extras join the same simulation, so they queue like everyone else
+  [0xffffff, 0xe8e4dc, 0xd8d3c9, 0xffffff, 0xf0ede6, 0xbdb8ae].forEach((col, i)=>
+    addRing(mkCar(col), i % 2, 0.08 + i*0.157, 4.6 + (i%3)*0.9, 2.6,
+            0.45 + i*0.082));                          // staggers the surge in and out
   const rushLocals = [
-    {A:[-6.9, 41.5], B:[-6.9, 111],  sp:4.6, ph:0.62, col:0xf0ede6, th:0.6},
-    {A:[54, 87.1],   B:[-33.5, 87.1], sp:4.4, ph:0.8, col:0xffffff, th:0.72},
-    {A:[56, 56.9],   B:[34, 56.9],   sp:4.7, ph:0.1,  col:0xd8d3c9, th:0.65},
-  ].map(L => ({...L, car: mkCar(L.col), len: Math.hypot(L.B[0]-L.A[0], L.B[1]-L.A[1])}));
+    {A:[-6.9, 41.5], B:[-6.9, 111],  sp:5.2, ph:0.62, col:0xf0ede6, th:0.6,  stops:[0.209, 0.669]},
+    {A:[54, 87.1],   B:[-33.5, 87.1], sp:5.0, ph:0.8, col:0xffffff, th:0.72, stops:[0.366, 0.686]},
+    {A:[56, 56.9],   B:[34, 56.9],   sp:4.9, ph:0.1,  col:0xd8d3c9, th:0.65, stops:[0.5]},
+  ].map(L => {
+    const len = Math.hypot(L.B[0]-L.A[0], L.B[1]-L.A[1]);
+    return {...L, len, car: mkCar(L.col), route: buildRoute(L.stops, len, L.sp, 1.3)};
+  });
   const clockEl = document.getElementById("dayclock");
   const DRIVE_TIMES = [12, 17, 22];
   const setClock = t => {
@@ -2484,14 +2568,29 @@ const RIGHTW = PX1 - WT - 0.03;
     const stamp = h12 + ":" + String(mm).padStart(2, "0") + " " + ap;
     clockEl.innerHTML = b > 0.72 ? stamp + " &nbsp;<b>· drive time</b>" : stamp;
   };
-  const setRush = t => {
+  const setRush = (t, dt) => {
     const b = busyAt(hourAt(t));
-    rush.forEach(r => { r.car.visible = b >= r.th; if(r.car.visible) place(r, t); });
+    for(const r of RING){
+      const want = b >= r.th;
+      // a car arriving for the peak is dropped into the biggest gap on its
+      // lane, so it never materialises on top of somebody
+      if(want && !r.on){
+        let bestGap = -1, bestP = r.p;
+        for(const o of RING){
+          if(!o.on || o.lane !== r.lane) continue;
+          const gp = gapAhead(o);
+          if(gp > bestGap){ bestGap = gp; bestP = o.p + o.dir * gp / 2; }
+        }
+        r.p = bestP; r.v = 0;
+      }
+      r.on = want; r.mesh.visible = want;
+    }
+    stepRing(dt || 0.016);
     rushLocals.forEach(L => { L.car.visible = b >= L.th; if(L.car.visible) placeLocal(L, t); });
     setClock(t);
   };
-  if(ANIM){ setRush(0); anims.push(setRush); }
-  else setRush(7.5);                                   // static render parks at noon — peak drive time
+  if(ANIM){ setRush(0, 0); anims.push(setRush); }
+  else setRush(7.5, 0);                                // static render parks at noon — peak drive time
   pin(0, 1.1, 36.95);
   pin(14, 1.1, 34.8);
   pin(6, 1.1, 39.05);
@@ -3289,6 +3388,41 @@ roofCap.castShadow = false;
 roofCap.layers.enable(4);
 Cy(roofCap, 0.5, 0.5, 0.4, MAT.gray(), -10, 0.5, -6, 18).layers.enable(4);
 
+/* Call letters on the roof. They ride the cap, so they are part of the closed
+   building and step aside the moment it opens — the same rule the cap follows.
+   Two faces, because the camera sees the +x and +z sides of everything. */
+{
+  // light on dark: a white sign on a white building is invisible at this size
+  const callTex = tex(520, 190, (x, w, h)=>{
+    x.fillStyle = "#fdfbf6"; x.font = "800 134px "+F;
+    x.textAlign = "center"; x.textBaseline = "middle";
+    x.fillText("WBCC", w/2, h*0.42);
+    x.fillStyle = "#ff4a1c";
+    rr(x, w/2 - 122, h*0.74, 244, 11, 5); x.fill();
+    x.fillStyle = "#c8c1b4"; x.font = "700 31px "+F;
+    x.fillText("1 0 4 . 5   F M", w/2, h*0.93);
+  });
+  const sign = new THREE.Group();
+  sign.position.set(2.5, 0.5, 7.4);          // out at the front edge of the roof
+  // turned to look down over the neighbourhood and the shops, which sit south
+  // and south-east — near enough to square-on for the camera to read it too
+  sign.rotation.y = Math.atan2(0.42, 1.0);
+  roofCap.add(sign);
+  for(const px of [-6.6, 6.6]){
+    Cy(sign, 0.15, 0.19, 7.0, MAT.chrome(), px, 0, 0, 12).layers.enable(4);
+    Cy(sign, 0.11, 0.11, 4.2, MAT.chrome(), px, 0, -1.9, 10).layers.enable(4);
+  }
+  // the panel and its canvas share an aspect ratio (2.74:1); when they didn't,
+  // the letters came out stretched flat
+  Bo(sign, 14.6, 5.5, 0.3, std(0x26211a, {roughness:0.5, envMapIntensity:0.8}),
+    0, 1.6, 0).layers.enable(4);
+  Bo(sign, 15.0, 0.24, 0.5, MAT.white(), 0, 7.1, 0).layers.enable(4);
+  Bo(sign, 15.0, 0.22, 0.5, MAT.white(), 0, 1.4, 0).layers.enable(4);
+  Pl(sign, 13.7, 5.0, signMat(callTex), 0, 4.35, 0.17).layers.enable(4);
+  markNoBounds(sign);
+  sign.traverse(o=>{ if(o.isMesh) o.castShadow = false; });
+}
+
 const bldgHit = new THREE.Mesh(
   new THREE.BoxGeometry((PX1-PX0)+1.4, 4*4.38 + 1.4, (PZ1-PZ0)+1.4),
   new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false}));
@@ -3303,7 +3437,7 @@ bldgTag.className = "rlabel";
 bldgTag.style.fontSize = "11px"; bldgTag.style.padding = "5px 12px";
 bldgTag.textContent = "THE STATION · CLICK TO OPEN";
 labelsEl.appendChild(bldgTag);
-const bldgTagV = new THREE.Vector3(0, 4*4.38 + 2.2, 2);
+const bldgTagV = new THREE.Vector3(0, 4*4.38 + 9.6, 2);   // clears the roof sign
 
 function setHint(msg){
   const h = document.getElementById("hint");
