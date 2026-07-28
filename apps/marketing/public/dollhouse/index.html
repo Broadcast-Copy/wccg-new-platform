@@ -54,6 +54,9 @@
   #pins.show{opacity:1;}
 
   /* overlay chrome */
+  /* the scene now runs mountains up behind the top-left corner, so the header
+     and the ground-level captions need a halo to stay legible over terrain */
+  .wordmark,.tagline,#hint,#dayclock{text-shadow:0 1px 9px rgba(248,246,241,0.95),0 0 3px rgba(248,246,241,0.9);}
   header{position:absolute;top:28px;left:36px;z-index:5;pointer-events:none;}
   .brandrow{display:flex;align-items:center;gap:10px;pointer-events:auto;}
   .mark{width:26px;height:26px;border-radius:8px;background:var(--ink);display:flex;align-items:center;justify-content:center;flex:none;}

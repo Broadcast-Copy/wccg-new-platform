@@ -555,6 +555,7 @@ let groundH = () => 0;      // set by the terrain build below
 let tickClouds = () => {};  // set by the cloud build below
 let tickSea = () => {};     // set by the sea build below
 let tickSky = () => {};     // set by the aircraft build below
+let westH = () => 0;        // set by the west headland build below
 function markNoBounds(g){ g.traverse(o=>{ if(o.isMesh) o.userData.noBounds = true; }); }
 
 /* =====================================================================
@@ -1094,17 +1095,91 @@ const shellRec = reg(shellG);
   }));
 }
 
+/* ---- west headland: the land carries on across the road from the
+   transmitter, into the empty upper-left the planes were flying over. Real
+   terrain rather than painted-on shapes — same heightfield, superellipse rim
+   and topographic vertex colouring as the campus island, so the two read as
+   one landscape. Its east rim runs UNDER the island: the island's own ground
+   is higher there and wins, which is what hides the seam, so no blending
+   code is needed. The mountains on it are just tall hills in the field. --- */
+{
+  const GW2 = 152, GD2 = 214, GN2 = 112, CX2 = -118, CZ2 = -10;
+  /* Peaks sit off the rail alignment, not on it, so the line threads between
+     them instead of climbing over the summits — each one contributes under a
+     unit of height at the track. */
+  const PEAKS = [
+    [-165, -25, 26, 13], [-130, -35, 30, 15], [-100, -50, 24, 12],
+    [-195, -62, 26, 14], [-160, 50, 28, 14],  [-115, 46, 24, 12],
+    [-88, 30, 18, 10],   [-205, 8, 22, 13],
+  ];
+  const sstep2 = (e0, e1, v) => { const t = Math.max(0, Math.min(1, (v-e0)/(e1-e0))); return t*t*(3-2*t); };
+  const hAt2 = (x, z) => {
+    let h = 0;
+    for(const [hx, hz, amp, sig] of PEAKS)
+      h += amp * Math.exp(-(((x-hx)*(x-hx)) + ((z-hz)*(z-hz))) / (2*sig*sig));
+    return h;
+  };
+  westH = hAt2;
+  const geo = new THREE.PlaneGeometry(GW2, GD2, GN2, GN2);
+  geo.rotateX(-Math.PI/2);
+  const pos = geo.attributes.position;
+  for(let i=0;i<pos.count;i++){
+    const x = pos.getX(i) + CX2, z = pos.getZ(i) + CZ2;
+    const r4 = Math.pow((x-CX2)/(GW2/2-4), 4) + Math.pow((z-CZ2)/(GD2/2-4), 4);
+    pos.setY(i, hAt2(x, z) * (1 - sstep2(0.75, 1.0, r4)) - sstep2(0.8, 1.25, r4) * 3.0);
+  }
+  geo.computeVertexNormals();
+  {
+    const lo = new THREE.Color(0xe4dfd4), hi = new THREE.Color(0xa9a18e);
+    const nrm = geo.attributes.normal, cols = new Float32Array(pos.count*3);
+    const cc = new THREE.Color();
+    for(let i=0;i<pos.count;i++){
+      const hgt = Math.max(0, Math.min(1, pos.getY(i)/24));
+      cc.copy(lo).lerp(hi, hgt);
+      const shade = 0.82 + 0.18*Math.max(0, nrm.getY(i));
+      cols[i*3] = cc.r*shade; cols[i*3+1] = cc.g*shade; cols[i*3+2] = cc.b*shade;
+    }
+    geo.setAttribute("color", new THREE.BufferAttribute(cols, 3));
+  }
+  const land2 = new THREE.Mesh(geo, std(0xffffff, {roughness:1, envMapIntensity:0.22, vertexColors:true}));
+  land2.position.set(CX2, -0.04, CZ2);        // a hair under the island, so the island wins the overlap
+  land2.receiveShadow = true; land2.castShadow = false;
+  land2.userData.noBounds = true;
+  levelG[0].add(land2);
+  // conifers up the slopes
+  const conifer = (x, z, s) => {
+    const t = new THREE.Group(); t.position.set(x, hAt2(x, z) - 0.1, z); t.scale.setScalar(s);
+    levelG[0].add(t);
+    Cy(t, 0.1, 0.14, 0.9, std(0x8a7f6e, {roughness:0.95}), 0, 0, 0, 8);
+    for(const [cy, cr] of [[0.7, 1.15], [1.5, 0.9], [2.2, 0.62]]){
+      const c = new THREE.Mesh(new THREE.ConeGeometry(cr, 1.5, 8), MAT.leaf());
+      c.position.y = cy + 0.75; c.castShadow = true; t.add(c);
+    }
+    markNoBounds(t);
+  };
+  for(const [tx, tz, ts] of [[-104, -34, 1.5], [-88, -30, 1.3], [-132, 24, 1.6],
+      [-158, -40, 1.4], [-186, 30, 1.5], [-112, 40, 1.3], [-70, -42, 1.2],
+      [-150, -88, 1.4], [-96, 34, 1.4], [-176, -62, 1.3], [-142, -14, 1.5],
+      [-198, -28, 1.4]]) conifer(tx, tz, ts);
+}
+
 /* ---- railway: a single line snaking through the hills behind the station.
    It rides the terrain rather than sitting on a shelf, so y is sampled from
    groundH along the centreline and then smoothed over a nine-sample window —
    raw samples make the train jitter over every bump. ---------------------- */
 {
   const rail = new THREE.Group(); levelG[0].add(rail);
-  const X0 = -52, X1 = 54, N = 160;
+  /* The line comes in off the headland, crosses the country over the road
+     from the transmitter, then swings behind the station and out east. Its
+     height is the higher of the two landforms at each point, since the west
+     half rides the headland and the east half the island. */
+  const X0 = -178, X1 = 54, N = 320;
+  const ss = (e0, e1, v) => { const t = Math.max(0, Math.min(1, (v-e0)/(e1-e0))); return t*t*(3-2*t); };
+  const railZ = x => 15 - 54*ss(-140, -25, x) + 4*Math.sin(x*0.09);
   const pts = [];
   for(let i=0;i<=N;i++){
-    const x = X0 + (X1-X0)*i/N, z = -39 + 5*Math.sin(x*0.07);
-    pts.push({x, z, y: groundH(x, z)});
+    const x = X0 + (X1-X0)*i/N, z = railZ(x);
+    pts.push({x, z, y: Math.max(groundH(x, z), westH(x, z))});
   }
   const smooth = pts.map((_, i)=>{
     let s = 0, n = 0;
@@ -1201,24 +1276,25 @@ const shellRec = reg(shellG);
      entering one tunnel and coming out of the other. */
   const knoll = (targetX, dir) => {
     let i = 0; while(i < pts.length-1 && pts[i].x < targetX) i++;
-    const p = pts[i], gy = groundH(p.x, p.z);
+    const p = pts[i], gy = Math.max(groundH(p.x, p.z), westH(p.x, p.z));
     const mound = new THREE.Mesh(new THREE.SphereGeometry(1, 22, 14),
       std(0xdcd7cb, {roughness:1, envMapIntensity:0.22}));
     mound.position.set(p.x, gy - 1.7, p.z);
     mound.scale.set(7.4, 5.4, 6.6);
     mound.castShadow = false; mound.receiveShadow = true;
     rail.add(mound);
-    const mx = p.x + dir*6.0, mz = -39 + 5*Math.sin(mx*0.07);
-    Bo(rail, 2.7, 2.0, 0.55, MAT.inkFlat(), mx, groundH(mx, mz) + 0.04, mz,
+    const mx = p.x + dir*6.0, mz = railZ(mx);
+    Bo(rail, 2.7, 2.0, 0.55, MAT.inkFlat(), mx,
+      Math.max(groundH(mx, mz), westH(mx, mz)) + 0.04, mz,
       Math.atan2(p.tx, p.tz)).castShadow = false;
   };
-  knoll(-46, 1);
+  knoll(-172, 1);
   knoll(47, -1);
 
   const consist = [mkLoco(), mkCoach(), mkCoach(), mkCoach()];
   const CYCLE = RAIL_L + 34;          // a clear pause between passes
   const placeTrain = t => {
-    const head = ((t * 5.6) % CYCLE + CYCLE) % CYCLE;
+    const head = ((t * 8.5) % CYCLE + CYCLE) % CYCLE;
     consist.forEach((car, i)=>{
       const s = head - i*6.6;
       car.visible = s > 0 && s < RAIL_L;
