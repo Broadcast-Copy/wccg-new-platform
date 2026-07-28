@@ -518,9 +518,14 @@ function applyDim(rec){
    billboard lot, field kit — sits inside the ring. The old tighter circuit
    clipped the transmitter control building on its west corner. */
 const RD = {x0:-50, x1:52, z0:-24, z1:38, rc:14};
-function makePath(inset){
-  const x0 = RD.x0+inset, x1 = RD.x1-inset, z0 = RD.z0+inset, z1 = RD.z1-inset;
-  const rc = RD.rc - inset;
+/* The belt line: the same stadium shape thrown out around the whole city, so
+   the grid streets have something to terminate on instead of stopping in open
+   ground. Its corners are held inside the island — pushed much further out and
+   the south-east arc runs off the rim and into the water. */
+const BELT = {x0:-54, x1:60, z0:-26, z1:116, rc:20};
+function makePath(inset, rd = RD){
+  const x0 = rd.x0+inset, x1 = rd.x1-inset, z0 = rd.z0+inset, z1 = rd.z1-inset;
+  const rc = rd.rc - inset;
   const fx = x1-x0-2*rc, fz = z1-z0-2*rc, arc = Math.PI/2*rc;
   const L = 2*fx + 2*fz + 4*arc;
   const at = s => {
@@ -550,6 +555,9 @@ function makePath(inset){
 const ROAD = makePath(0);
 const ROAD_SAMPLES = [];
 for(let s=0; s<ROAD.L; s+=2) ROAD_SAMPLES.push(ROAD.at(s));
+const BELT_PATH = makePath(0, BELT);
+const BELT_SAMPLES = [];
+for(let s=0; s<BELT_PATH.L; s+=2) BELT_SAMPLES.push(BELT_PATH.at(s));
 
 let groundH = () => 0;      // set by the terrain build below
 let tickClouds = () => {};  // set by the cloud build below
@@ -592,6 +600,10 @@ scene.add(shellG);
         const dd = (x-p.x)*(x-p.x) + (z-p.z)*(z-p.z);
         if(dd < best) best = dd;
       }
+      for(const p of BELT_SAMPLES){        // the belt gets a flat bed too
+        const dd = (x-p.x)*(x-p.x) + (z-p.z)*(z-p.z);
+        if(dd < best) best = dd;
+      }
       return 1 - sstep(3.4, 6.5, Math.sqrt(best));
     };
     const hAt = (x, z) => {
@@ -606,11 +618,11 @@ scene.add(shellG);
         rectMask(x, z, 10, 18, 32.6, 36.6, 4),      // parking pull-off by the front road
         rectMask(x, z, 19, 37, 26, 34, 4),          // billboard + store lot
         rectMask(x, z, -27, -5, 26, 36, 4),         // concert lawn by the road
-        rectMask(x, z, -8.2, -3.8, 38, 114, 3),     // Maple Ave, running off the frame
-        rectMask(x, z, -42, 58.5, 53.8, 58.2, 3),   // Signal St (east-west, runs to the strip)
+        rectMask(x, z, -8.2, -3.8, 38, 118, 3),     // Maple Ave, ring to belt
+        rectMask(x, z, -56, 60, 53.8, 58.2, 3),     // Signal St (east-west, belt to belt)
         rectMask(x, z, 33, 59, 44, 70, 4),          // business strip, both sides of Signal St
         rectMask(x, z, 19.8, 24.2, 38, 90, 3),      // Second Ave
-        rectMask(x, z, -38, 58, 85.8, 90.2, 3),     // Third St (east-west, far)
+        rectMask(x, z, -56, 60, 85.8, 90.2, 3),     // Third St (east-west, belt to belt)
         rectMask(x, z, 29, 58, 73, 85, 4),          // third commercial row, off Third St
         rectMask(x, z, -32, -11, 43, 53, 4),        // house lots, north row
         rectMask(x, z, -1, 32, 42.5, 52, 4),        //   "      east row
@@ -651,53 +663,64 @@ scene.add(shellG);
     land.userData.noBounds = true;
     levelG[0].add(land);
 
-    // road ribbon + dashes
-    const RSN = ROAD_SAMPLES.length, rGeo = new THREE.BufferGeometry();
-    const rv = new Float32Array((RSN+1)*2*3);
-    for(let i=0;i<=RSN;i++){
-      const p = ROAD_SAMPLES[i % RSN];
-      const nx = -p.tz, nz = p.tx;
-      rv.set([p.x + nx*2.1, 0.03, p.z + nz*2.1], i*6);
-      rv.set([p.x - nx*2.1, 0.03, p.z - nz*2.1], i*6+3);
-    }
-    rGeo.setAttribute("position", new THREE.BufferAttribute(rv, 3));
-    const rIdx = [];
-    for(let i=0;i<RSN;i++){ const a=i*2, b=i*2+1, c=i*2+2, d=i*2+3; rIdx.push(a,b,c, b,d,c); }
-    rGeo.setIndex(rIdx); rGeo.computeVertexNormals();
-    const road = new THREE.Mesh(rGeo, std(0xbab3a5, {roughness:0.97, envMapIntensity:0.2}));
-    // the strip's winding leaves its normals pointing down — without this the
-    // asphalt is backface-culled from above and only pale ground shows
-    road.material.side = THREE.DoubleSide;
-    road.material.userData.noDim = true;      // the road never ghosts — it's the
-    road.receiveShadow = true; road.castShadow = false;   // subject of In-Car Radio
-    road.userData.noBounds = true;
-    levelG[0].add(road);
-    // solid edge lines + brighter center dashes define the asphalt
-    const lines = new THREE.Group(); levelG[0].add(lines);
-    for(const off of [1.86, -1.86]){
-      const lg = new THREE.BufferGeometry();
-      const lv = new Float32Array((RSN+1)*2*3);
-      for(let i=0;i<=RSN;i++){
-        const p = ROAD_SAMPLES[i % RSN];
+    /* Paving, shared by the inner ring and the belt line: a ribbon swept along
+       the path samples, two solid edge lines and a run of centre dashes. */
+    let asphalt = null;
+    const pave = (samples, path) => {
+      const N = samples.length, rGeo = new THREE.BufferGeometry();
+      const rv = new Float32Array((N+1)*2*3);
+      for(let i=0;i<=N;i++){
+        const p = samples[i % N];
         const nx = -p.tz, nz = p.tx;
-        lv.set([p.x + nx*(off+0.05), 0.045, p.z + nz*(off+0.05)], i*6);
-        lv.set([p.x + nx*(off-0.05), 0.045, p.z + nz*(off-0.05)], i*6+3);
+        rv.set([p.x + nx*2.1, 0.03, p.z + nz*2.1], i*6);
+        rv.set([p.x - nx*2.1, 0.03, p.z - nz*2.1], i*6+3);
       }
-      lg.setAttribute("position", new THREE.BufferAttribute(lv, 3));
-      lg.setIndex(rIdx); lg.computeVertexNormals();
-      const line = new THREE.Mesh(lg, std(0xf8f5ee, {roughness:0.9}));
-      line.material.side = THREE.DoubleSide;
-      line.castShadow = false; line.receiveShadow = true;
-      lines.add(line);
-    }
-    for(let s=0; s<ROAD.L; s+=6.5){
-      const p = ROAD.at(s);
-      const d = Bo(lines, 1.5, 0.02, 0.18, std(0xfdfbf6, {roughness:0.85}), p.x, 0.04, p.z,
-        Math.atan2(p.tx, p.tz) - Math.PI/2);
-      d.castShadow = false;
-    }
-    lines.traverse(o=>{ if(o.material) o.material.userData.noDim = true; });
-    markNoBounds(lines);
+      rGeo.setAttribute("position", new THREE.BufferAttribute(rv, 3));
+      const rIdx = [];
+      for(let i=0;i<N;i++){ const a=i*2, b=i*2+1, c=i*2+2, d=i*2+3; rIdx.push(a,b,c, b,d,c); }
+      rGeo.setIndex(rIdx); rGeo.computeVertexNormals();
+      // one material object across every road so the asphalt matches exactly
+      if(!asphalt){
+        asphalt = std(0xbab3a5, {roughness:0.97, envMapIntensity:0.2});
+        // the strip's winding leaves its normals pointing down — without this
+        // the asphalt is backface-culled from above and only pale ground shows
+        asphalt.side = THREE.DoubleSide;
+        asphalt.userData.noDim = true;    // roads never ghost — In-Car Radio is about them
+      }
+      const mesh = new THREE.Mesh(rGeo, asphalt);
+      mesh.receiveShadow = true; mesh.castShadow = false;
+      mesh.userData.noBounds = true;
+      levelG[0].add(mesh);
+
+      const lines = new THREE.Group(); levelG[0].add(lines);
+      for(const off of [1.86, -1.86]){
+        const lg = new THREE.BufferGeometry();
+        const lv = new Float32Array((N+1)*2*3);
+        for(let i=0;i<=N;i++){
+          const p = samples[i % N];
+          const nx = -p.tz, nz = p.tx;
+          lv.set([p.x + nx*(off+0.05), 0.045, p.z + nz*(off+0.05)], i*6);
+          lv.set([p.x + nx*(off-0.05), 0.045, p.z + nz*(off-0.05)], i*6+3);
+        }
+        lg.setAttribute("position", new THREE.BufferAttribute(lv, 3));
+        lg.setIndex(rIdx); lg.computeVertexNormals();
+        const line = new THREE.Mesh(lg, std(0xf8f5ee, {roughness:0.9}));
+        line.material.side = THREE.DoubleSide;
+        line.castShadow = false; line.receiveShadow = true;
+        lines.add(line);
+      }
+      for(let s=0; s<path.L; s+=6.5){
+        const p = path.at(s);
+        const d = Bo(lines, 1.5, 0.02, 0.18, std(0xfdfbf6, {roughness:0.85}), p.x, 0.04, p.z,
+          Math.atan2(p.tx, p.tz) - Math.PI/2);
+        d.castShadow = false;
+      }
+      lines.traverse(o=>{ if(o.material) o.material.userData.noDim = true; });
+      markNoBounds(lines);
+      return mesh;
+    };
+    const road = pave(ROAD_SAMPLES, ROAD);
+    pave(BELT_SAMPLES, BELT_PATH);
 
     // Neighborhood streets. They borrow the ring road's material object so
     // the asphalt matches exactly — a same-hex clone rendered differently.
@@ -707,17 +730,17 @@ scene.add(shellG);
       const s = Bo(streets, w, 0.022, d, mat || road.material, x, 0.026, z);
       s.castShadow = false; s.receiveShadow = true; return s;
     };
-    strip(3.6, 76, -6, 76);        // Maple Ave, running off the bottom of the frame
-    strip(98, 3.6, 9, 56);         // Signal St, running east to the business strip
+    strip(3.6, 80, -6, 78);        // Maple Ave, ring road down to the belt
+    strip(112, 3.6, 2, 56);        // Signal St, belt to belt
     strip(3.6, 50, 22, 64);        // Second Ave
-    strip(95, 3.6, 10.5, 88);      // Third St, carried east under the shops
+    strip(112, 3.6, 2, 88);        // Third St, belt to belt, under the shops
     for(let z2=41.5; z2<113; z2+=5) if(Math.abs(z2-56) > 3.4 && Math.abs(z2-88) > 3.4)
       strip(0.14, 1.5, -6, z2, dashMat());
-    for(let x2=-38; x2<56; x2+=5) if(Math.abs(x2+6) > 3.4 && Math.abs(x2-22) > 3.4)
+    for(let x2=-50; x2<57; x2+=5) if(Math.abs(x2+6) > 3.4 && Math.abs(x2-22) > 3.4)
       strip(1.5, 0.14, x2, 56, dashMat());
     for(let z2=41.5; z2<87; z2+=5) if(Math.abs(z2-56) > 3.4)
       strip(0.14, 1.5, 22, z2, dashMat());
-    for(let x2=-34; x2<56; x2+=5) if(Math.abs(x2+6) > 3.4 && Math.abs(x2-22) > 3.4)
+    for(let x2=-50; x2<57; x2+=5) if(Math.abs(x2+6) > 3.4 && Math.abs(x2-22) > 3.4)
       strip(1.5, 0.14, x2, 88, dashMat());
     /* Crosswalks at every junction the local traffic stops for. Bars run
        parallel to the traffic being crossed and are arrayed across the road,
@@ -2474,6 +2497,36 @@ const RIGHTW = PX1 - WT - 0.03;
   for(const li of [0, 1]){
     const mine = SPEC.filter(s => s.lane === li);
     const lane = lanes[li], step = lane.path.L / mine.length;
+    mine.forEach((s, i) => RING.push({
+      mesh: s.kind === "bus" ? mkBus(s.col, s.dest) : mkCar(s.col),
+      lane, dir: lane.dir, p: i * step + (li ? step * 0.5 : 0),
+      v: s.vmax, vmax: s.vmax, len: s.kind === "bus" ? 5.2 : 2.6,
+    }));
+  }
+
+  /* The belt carries its own traffic, and runs faster than the inner ring
+     because it is the bypass. It joins the same simulation — gapAhead only
+     compares vehicles sharing a lane object, so the two loops never see each
+     other even though they are stepped together. */
+  const beltLanes = [
+    {path: makePath(1.05, BELT), dir: 1},
+    {path: makePath(-1.05, BELT), dir: -1},
+  ];
+  const BELT_SPEC = [
+    {kind:"car", col:0xffffff, lane:0, vmax:8.0},
+    {kind:"car", col:0xe8e4dc, lane:0, vmax:8.6},
+    {kind:"bus", col:0xf0ede6, lane:0, vmax:5.2, dest:"BELT LINE"},
+    {kind:"car", col:0xf0ede6, lane:0, vmax:7.2},
+    {kind:"car", col:0xd0cabf, lane:0, vmax:8.3},
+    {kind:"car", col:0xd8d3c9, lane:1, vmax:7.4},
+    {kind:"car", col:0xbdb8ae, lane:1, vmax:7.8},
+    {kind:"car", col:0xffffff, lane:1, vmax:8.2},
+    {kind:"bus", col:0xffffff, lane:1, vmax:5.0, dest:"CROSSTOWN"},
+    {kind:"car", col:0xe8e4dc, lane:1, vmax:7.6},
+  ];
+  for(const li of [0, 1]){
+    const mine = BELT_SPEC.filter(s => s.lane === li);
+    const lane = beltLanes[li], step = lane.path.L / mine.length;
     mine.forEach((s, i) => RING.push({
       mesh: s.kind === "bus" ? mkBus(s.col, s.dest) : mkCar(s.col),
       lane, dir: lane.dir, p: i * step + (li ? step * 0.5 : 0),
