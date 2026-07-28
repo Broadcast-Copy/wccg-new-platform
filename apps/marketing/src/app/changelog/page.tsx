@@ -26,7 +26,13 @@ export default function ChangelogPage() {
           <span className="bc-pulse h-1.5 w-1.5 rounded-full bg-signal" aria-hidden />
           Updated in real time
         </span>
-        <h1 className="mt-6 text-4xl font-semibold tracking-tight">Changelog</h1>
+        <p className="mt-6 text-xs tracking-[0.24em] text-faint uppercase">
+          <Link href="/documentation" className="transition hover:text-fg">
+            Documentation
+          </Link>
+          <span className="px-2">/</span>Changelog
+        </p>
+        <h1 className="mt-3 text-4xl font-semibold tracking-tight">Changelog</h1>
         <p className="mt-3 max-w-xl text-lg text-dim text-pretty">
           Every release of Broadcast Copy. The flagship, WCCG 104.5 FM, runs on
           the same builds — so what ships to air shows up here, versioned.
@@ -37,8 +43,9 @@ export default function ChangelogPage() {
 
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-8 text-sm text-faint">
-          <Link href="/" className="transition hover:text-fg">
-            ← Back to broadcastcopy.ai
+          <Link href="/documentation" className="inline-flex items-center gap-1.5 transition hover:text-fg">
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            Documentation
           </Link>
           <a
             href="https://wccg1045fm.com"
