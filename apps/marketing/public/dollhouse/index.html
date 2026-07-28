@@ -65,15 +65,12 @@
   /* overlay chrome */
   /* the scene now runs mountains up behind the top-left corner, so the header
      and the ground-level captions need a halo to stay legible over terrain */
-  .tagline,#hint,#dayclock{text-shadow:0 1px 9px rgba(248,246,241,0.95),0 0 3px rgba(248,246,241,0.9);}
-  /* the wordmark is drawn as pixels, so it needs the halo as a filter */
-  .wordmark-px{display:block;image-rendering:pixelated;image-rendering:crisp-edges;
-    filter:drop-shadow(0 1px 7px rgba(248,246,241,0.95)) drop-shadow(0 0 2px rgba(248,246,241,0.9));}
+  .wordmark,.tagline,#hint,#dayclock{text-shadow:0 1px 9px rgba(248,246,241,0.95),0 0 3px rgba(248,246,241,0.9);}
   header{position:absolute;top:28px;left:36px;z-index:5;pointer-events:none;}
   .brandrow{display:flex;align-items:center;gap:10px;pointer-events:auto;}
-  .mark{width:26px;height:26px;border-radius:8px;background:var(--ink);display:flex;align-items:center;justify-content:center;flex:none;}
-  .wordmark{font-size:14px;font-weight:800;letter-spacing:.22em;}
-  .wordmark span{font-weight:300;color:var(--muted);letter-spacing:.22em;}
+  /* set solid, no mark and no word gap — the name is one clean line */
+  .wordmark{font-size:23px;font-weight:800;letter-spacing:-.025em;line-height:1;color:var(--ink);}
+  .wordmark span{color:var(--accent);}
   .tagline{margin-top:10px;font-size:13px;color:var(--muted);letter-spacing:.02em;}
   .tagline b{color:var(--ink);font-weight:600;}
 
@@ -188,7 +185,7 @@
     </div>
     <header>
       <div class="brandrow">
-        <canvas class="wordmark-px" id="logoPx" aria-label="Broadcast Copy .ai" role="img"></canvas>
+        <div class="wordmark">broadcastcopy<span>.ai</span></div>
       </div>
       <div class="tagline">The whole station, <b>on autopilot</b>. Pick a room to see what runs itself.</div>
     </header>
@@ -228,41 +225,6 @@
   </aside>
 </div>
 
-<script>
-/* 16-bit wordmark. Rather than ship a pixel font, the real wordmark is set at
-   11px, every pixel is thresholded to fully on or fully off — that hard cut is
-   what makes it read as bitmap rather than as small blurry text — and the
-   result is blown up with smoothing off. The suffix takes the accent colour. */
-(function pixelLogo(){
-  const cv = document.getElementById("logoPx");
-  if(!cv) return;
-  const SCALE = 3, H = 12, FONT = '800 10px "Inter","Segoe UI",sans-serif';
-  const off = document.createElement("canvas");
-  let ox = off.getContext("2d");
-  ox.font = FONT;
-  const A = "BROADCAST COPY", B = ".AI";
-  const wA = ox.measureText(A).width, W = Math.ceil(wA + ox.measureText(B).width) + 2;
-  off.width = W; off.height = H;
-  ox = off.getContext("2d");
-  ox.font = FONT; ox.textBaseline = "alphabetic"; ox.fillStyle = "#000";
-  ox.fillText(A, 1, 9); ox.fillText(B, 1 + wA, 9);
-  const img = ox.getImageData(0, 0, W, H), d = img.data, split = Math.round(1 + wA);
-  for(let y = 0; y < H; y++) for(let x = 0; x < W; x++){
-    const i = (y*W + x)*4;
-    if(d[i+3] > 120){
-      const accent = x >= split;
-      d[i] = accent ? 0xff : 0x26; d[i+1] = accent ? 0x4a : 0x21;
-      d[i+2] = accent ? 0x1c : 0x1a; d[i+3] = 255;
-    } else d[i+3] = 0;
-  }
-  ox.putImageData(img, 0, 0);
-  cv.width = W; cv.height = H;
-  cv.style.width = (W*SCALE) + "px"; cv.style.height = (H*SCALE) + "px";
-  const cx = cv.getContext("2d");
-  cx.imageSmoothingEnabled = false;
-  cx.drawImage(off, 0, 0);
-})();
-</script>
 <script src="/dollhouse/three.min.js"></script>
 <script src="/dollhouse/scene.js"></script>
 </body>
