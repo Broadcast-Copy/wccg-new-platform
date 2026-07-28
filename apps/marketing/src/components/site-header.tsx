@@ -7,7 +7,7 @@ import { Wordmark } from "@/components/wordmark";
  * for the home page, where the model fills the viewport under a fixed bar.
  */
 const LINKS = [
-  { href: "/", label: "Tour" },
+  // no Tour entry — the tour is the home page, which the wordmark links to
   { href: "/platform", label: "Platform" },
   { href: "/platform#pricing", label: "Pricing" },
   { href: "/changelog", label: "Changelog" },
