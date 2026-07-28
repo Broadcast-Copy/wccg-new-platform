@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Radio } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { SiteHeader } from "@/components/site-header";
 import { ChangelogList } from "@/components/changelog-list";
 import { SITE_URL } from "@/lib/site";
 
@@ -18,21 +19,7 @@ export const metadata: Metadata = {
 export default function ChangelogPage() {
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-50 border-b border-line/70 bg-ink/80 backdrop-blur">
-        <nav className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3.5">
-          <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-            <Radio className="h-5 w-5 text-signal" aria-hidden />
-            Broadcast&nbsp;Copy
-          </Link>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-sm text-dim transition hover:text-fg"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            Home
-          </Link>
-        </nav>
-      </header>
+      <SiteHeader />
 
       <main className="mx-auto max-w-3xl px-5 py-16">
         <span className="inline-flex items-center gap-2 rounded-full border border-signal/30 bg-signal/10 px-3.5 py-1.5 text-xs font-medium tracking-wide text-signal-soft uppercase">

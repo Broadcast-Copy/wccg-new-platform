@@ -1,21 +1,26 @@
 @import "tailwindcss";
 
 /**
- * Broadcast Copy brand. Dark-committed on purpose — this is a broadcast
- * product and the "ON AIR" signal color only reads against near-black.
+ * Broadcast Copy brand — the paper palette of the station model.
+ *
+ * The site used to be dark. It now matches the interactive model that opens
+ * the home page: warm white paper, ink type, a greige rule, and the signal
+ * orange doing all the work as the single accent. Token names kept from the
+ * dark build ("ink" is the page ground, "fg" the type) so every existing
+ * utility class flips with the palette instead of needing a rewrite.
  * Deliberately independent of apps/web (WCCG's per-station theme).
  */
 @theme {
-  --color-ink: #08080a;
-  --color-surface: #0e0f13;
-  --color-elevated: #15171d;
-  --color-line: #23262e;
-  --color-fg: #f5f5f7;
-  --color-dim: #a1a6b0;
-  --color-faint: #6b7280;
+  --color-ink: #eceae5;
+  --color-surface: #f4f2ee;
+  --color-elevated: #ffffff;
+  --color-line: #dcd8cf;
+  --color-fg: #26211a;
+  --color-dim: #6b6459;
+  --color-faint: #96907f;
   --color-signal: #ff4a1c;
-  --color-signal-soft: #ff8462;
-  --color-amber: #f5a524;
+  --color-signal-soft: #e63f14;
+  --color-amber: #c98a24;
 
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
@@ -23,7 +28,7 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
   scroll-behavior: smooth;
 }
 
@@ -39,12 +44,12 @@ body {
 .bc-glow {
   background-image: radial-gradient(
       60rem 30rem at 50% -10%,
-      color-mix(in oklab, var(--color-signal) 18%, transparent),
+      color-mix(in oklab, var(--color-signal) 9%, transparent),
       transparent 70%
     ),
     radial-gradient(
       40rem 24rem at 85% 10%,
-      color-mix(in oklab, var(--color-amber) 10%, transparent),
+      color-mix(in oklab, var(--color-amber) 7%, transparent),
       transparent 70%
     );
 }

@@ -34,7 +34,7 @@
       #fff 0%, rgba(255,255,255,0.72) 5%, rgba(255,255,255,0) 17%,
       rgba(255,255,255,0) 83%, rgba(255,255,255,0.72) 95%, #fff 100%);
   }
-  #gl{position:absolute;inset:0;width:100%;height:100%;display:block;}
+  #gl{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none;}
   #overlay{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
 
   /* sheet frame + title block */
@@ -65,12 +65,12 @@
   /* overlay chrome */
   /* the scene now runs mountains up behind the top-left corner, so the header
      and the ground-level captions need a halo to stay legible over terrain */
-  .wordmark,.tagline,#hint,#dayclock{text-shadow:0 1px 9px rgba(248,246,241,0.95),0 0 3px rgba(248,246,241,0.9);}
+  .tagline,#hint,#dayclock{text-shadow:0 1px 9px rgba(248,246,241,0.95),0 0 3px rgba(248,246,241,0.9);}
   header{position:absolute;top:28px;left:36px;z-index:5;pointer-events:none;}
   .brandrow{display:flex;align-items:center;gap:10px;pointer-events:auto;}
-  /* set solid, no mark and no word gap — the name is one clean line */
-  .wordmark{font-size:23px;font-weight:800;letter-spacing:-.025em;line-height:1;color:var(--ink);}
-  .wordmark span{color:var(--accent);}
+  /* the bitmap wordmark — no mark, no word gap, one clean line of pixels */
+  #brandrow svg{display:block;filter:drop-shadow(0 1px 7px rgba(248,246,241,0.95))
+    drop-shadow(0 0 2px rgba(248,246,241,0.9));}
   .tagline{margin-top:10px;font-size:13px;color:var(--muted);letter-spacing:.02em;}
   .tagline b{color:var(--ink);font-weight:600;}
 
@@ -184,9 +184,7 @@
       <div id="pins"></div>
     </div>
     <header>
-      <div class="brandrow">
-        <div class="wordmark">broadcastcopy<span>.ai</span></div>
-      </div>
+      <div class="brandrow" id="brandrow" aria-label="broadcastcopy.ai" role="img"></div>
       <div class="tagline">The whole station, <b>on autopilot</b>. Pick a room to see what runs itself.</div>
     </header>
     <div id="hint"><span class="dot"></span>Select a department — or click any room</div>
@@ -225,6 +223,43 @@
   </aside>
 </div>
 
+<script>
+/* Bitmap wordmark, drawn from a hand-authored 5x7 pixel font. The same glyph
+   table lives in the marketing app (src/components/wordmark.tsx) so the mark
+   matches across the site — edit one, edit both. */
+(function wordmark(){
+  const G = {
+    B:["11110","10001","10001","11110","10001","10001","11110"],
+    R:["11110","10001","10001","11110","10100","10010","10001"],
+    O:["01110","10001","10001","10001","10001","10001","01110"],
+    A:["01110","10001","10001","11111","10001","10001","10001"],
+    D:["11110","10001","10001","10001","10001","10001","11110"],
+    C:["01110","10001","10000","10000","10000","10001","01110"],
+    S:["01111","10000","10000","01110","00001","10001","01110"],
+    T:["11111","00100","00100","00100","00100","00100","00100"],
+    P:["11110","10001","10001","11110","10000","10000","10000"],
+    Y:["10001","10001","01010","00100","00100","00100","00100"],
+    I:["11111","00100","00100","00100","00100","00100","11111"],
+    ".":["00000","00000","00000","00000","00000","00000","01100"],
+  };
+  const host = document.getElementById("brandrow");
+  if(!host) return;
+  // embedded in the site, the page already has a header — don't stack two
+  if(window.self !== window.top){ host.style.display = "none"; return; }
+  const TEXT = "BROADCASTCOPY.AI", PX = 3;
+  let pen = 0, accent = false, rects = "";
+  for(const ch of TEXT){
+    if(ch === ".") accent = true;              // the suffix carries the accent
+    const g = G[ch];
+    if(g) for(let r=0;r<7;r++) for(let c=0;c<5;c++)
+      if(g[r][c] === "1")
+        rects += `<rect x="${pen+c}" y="${r}" width="1" height="1" fill="${accent ? "#ff4a1c" : "#26211a"}"/>`;
+    pen += ch === "." ? 4 : 6;
+  }
+  const w = pen - 1;
+  host.innerHTML = `<svg width="${w*PX}" height="${7*PX}" viewBox="0 0 ${w} 7" shape-rendering="crispEdges">${rects}</svg>`;
+})();
+</script>
 <script src="/dollhouse/three.min.js"></script>
 <script src="/dollhouse/scene.js"></script>
 </body>

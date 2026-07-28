@@ -3258,7 +3258,7 @@ canvas.addEventListener("pointermove", ev=>{
     if(active >= 0 && ROOMS[active].id === "homes"){
       ray.setFromCamera(mouse, cam);
       const hh = ray.intersectObjects(homesState.parts.map(p=>p.g), true)[0];
-      canvas.style.cursor = hh ? "pointer" : "default";
+      canvas.style.cursor = hh ? "pointer" : "grab";
     }
     return;
   }
@@ -3270,7 +3270,7 @@ canvas.addEventListener("pointermove", ev=>{
     setHover(null);
     const onBldg = !!(hb || ray.intersectObject(bldgHit, false)[0]);
     bldgOutline.visible = onBldg;
-    canvas.style.cursor = onBldg ? "pointer" : "default";
+    canvas.style.cursor = onBldg ? "pointer" : "grab";
     return;
   }
   setHover(pickRoom());
@@ -3292,10 +3292,55 @@ function setHover(hb){
   if(hovered) hovered.userData.outline.visible = false;
   hovered = hb;
   if(hovered){ hovered.userData.outline.visible = true; canvas.style.cursor = "pointer"; }
-  else canvas.style.cursor = "default";
+  else canvas.style.cursor = dragging ? "grabbing" : "grab";
 }
-canvas.addEventListener("pointerdown", ev=>{ downAt = [ev.clientX, ev.clientY]; });
+/* ---- grab to pan, wheel to zoom -------------------------------------
+   The view direction is fixed on purpose — fitBox measures against its screen
+   axes and every label projects through it — so dragging pans rather than
+   orbits. The whole rig (eye, target and the base the ambient drift is
+   measured from) shifts together, which keeps panning working both at the
+   overview and inside a room, and leaves the next goCam free to re-frame. */
+let dragging = false, lastDrag = null;
+const _pr = new THREE.Vector3(), _pu = new THREE.Vector3(), _pd = new THREE.Vector3();
+function panBy(dxPx, dyPx){
+  if(!camBase) return;
+  const dist = cam.position.distanceTo(camTarget);
+  const perPx = (2 * Math.tan(cam.fov * Math.PI / 360) * dist) / Math.max(1, stage.clientHeight);
+  cam.matrixWorld.extractBasis(_pr, _pu, _pd);
+  // the model should follow the cursor, so the camera goes the other way
+  const mv = _pr.multiplyScalar(-dxPx * perPx).add(_pu.multiplyScalar(dyPx * perPx));
+  cam.position.add(mv); camTarget.add(mv);
+  camBase.pos.add(mv); camBase.tgt.add(mv);
+  cam.lookAt(camTarget);
+}
+canvas.addEventListener("pointerdown", ev=>{
+  downAt = [ev.clientX, ev.clientY];
+  if(ev.button !== 0) return;
+  dragging = true; lastDrag = [ev.clientX, ev.clientY];
+  canvas.setPointerCapture(ev.pointerId);
+  canvas.style.cursor = "grabbing";
+});
+canvas.addEventListener("pointermove", ev=>{
+  if(!dragging) return;
+  camTween = null;                       // a drag takes the wheel off any tween
+  panBy(ev.clientX - lastDrag[0], ev.clientY - lastDrag[1]);
+  lastDrag = [ev.clientX, ev.clientY];
+}, true);
+canvas.addEventListener("wheel", ev=>{
+  ev.preventDefault();
+  camTween = null;
+  const dist = cam.position.distanceTo(camTarget);
+  const next = Math.max(14, Math.min(420, dist * (1 + Math.sign(ev.deltaY) * 0.12)));
+  cam.position.copy(camTarget).addScaledVector(VIEW, next);
+  if(camBase){ camBase.pos.copy(cam.position); camBase.tgt.copy(camTarget); }
+  cam.lookAt(camTarget);
+}, {passive:false});
 canvas.addEventListener("pointerup", ev=>{
+  if(dragging){
+    dragging = false;
+    try{ canvas.releasePointerCapture(ev.pointerId); }catch(e){}
+    canvas.style.cursor = hovered ? "pointer" : "grab";
+  }
   if(!downAt) return;
   const moved = Math.hypot(ev.clientX-downAt[0], ev.clientY-downAt[1]);
   downAt = null;
