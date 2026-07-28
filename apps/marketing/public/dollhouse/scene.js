@@ -577,6 +577,7 @@ scene.add(shellG);
     const HILLS = [
       [-41, 26, 2.4, 4.2], [-22.5, 11.5, 2.6, 3.8], [-19.5, 27, 1.9, 3.6], [-38, 9.5, 1.7, 3.8],
       [-44, -3, 1.6, 5], [-34, -17, 1.3, 3.4], [-10, -29, 1.8, 5.5], [16, -29, 1.5, 5],
+      [-28, -40, 1.9, 6], [4, -46, 2.2, 7], [34, -40, 1.7, 5.5],   // the rail hills
       [44, -17, 1.6, 4.5], [58, 5, 1.6, 4.5], [57, 27, 1.3, 4],
       [-42, 62, 1.7, 5.5], [40, 64, 1.5, 5], [-46, 86, 1.8, 6], [38, 92, 1.6, 5.5],
       [-10, 126, 1.6, 7], [44, 122, 1.4, 6], [-46, 116, 1.5, 6]
@@ -1091,6 +1092,145 @@ const shellRec = reg(shellG);
     b.hull.rotation.z = Math.sin(t*0.62 + b.ph) * 0.055;
     b.hull.rotation.x = Math.sin(t*0.9 + b.ph*1.4) * 0.03;
   }));
+}
+
+/* ---- railway: a single line snaking through the hills behind the station.
+   It rides the terrain rather than sitting on a shelf, so y is sampled from
+   groundH along the centreline and then smoothed over a nine-sample window —
+   raw samples make the train jitter over every bump. ---------------------- */
+{
+  const rail = new THREE.Group(); levelG[0].add(rail);
+  const X0 = -52, X1 = 54, N = 160;
+  const pts = [];
+  for(let i=0;i<=N;i++){
+    const x = X0 + (X1-X0)*i/N, z = -39 + 5*Math.sin(x*0.07);
+    pts.push({x, z, y: groundH(x, z)});
+  }
+  const smooth = pts.map((_, i)=>{
+    let s = 0, n = 0;
+    for(let k=-4;k<=4;k++){ const j = i+k; if(j>=0 && j<pts.length){ s += pts[j].y; n++; } }
+    return s/n;
+  });
+  pts.forEach((p, i)=>{ p.y = smooth[i] + 0.14; });
+  // per-point tangent and normal, plus a running arc length for the train
+  let total = 0;
+  pts.forEach((p, i)=>{
+    const a = pts[Math.max(0, i-1)], b = pts[Math.min(pts.length-1, i+1)];
+    const tx = b.x-a.x, tz = b.z-a.z, m = Math.hypot(tx, tz) || 1;
+    p.tx = tx/m; p.tz = tz/m; p.nx = -p.tz; p.nz = p.tx;
+    if(i > 0) total += Math.hypot(p.x-pts[i-1].x, p.z-pts[i-1].z);
+    p.s = total;
+  });
+  const RAIL_L = total;
+  const railAt = s => {
+    s = ((s % RAIL_L) + RAIL_L) % RAIL_L;
+    let i = 1;
+    while(i < pts.length-1 && pts[i].s < s) i++;
+    const a = pts[i-1], b = pts[i];
+    const k = (s - a.s) / Math.max(1e-4, b.s - a.s);
+    return {x: a.x + (b.x-a.x)*k, y: a.y + (b.y-a.y)*k, z: a.z + (b.z-a.z)*k,
+            tx: b.tx, tz: b.tz};
+  };
+  // ballast bed and the two rails, all ribbons along the centreline
+  const ribbon = (hw, dy, mat, off=0) => {
+    const geo = new THREE.BufferGeometry();
+    const v = new Float32Array(pts.length*2*3);
+    pts.forEach((p, i)=>{
+      v.set([p.x + p.nx*(off+hw), p.y+dy, p.z + p.nz*(off+hw)], i*6);
+      v.set([p.x + p.nx*(off-hw), p.y+dy, p.z + p.nz*(off-hw)], i*6+3);
+    });
+    geo.setAttribute("position", new THREE.BufferAttribute(v, 3));
+    const idx = [];
+    for(let i=0;i<pts.length-1;i++){ const a=i*2, b=i*2+1, c=i*2+2, d=i*2+3; idx.push(a,b,c, b,d,c); }
+    geo.setIndex(idx); geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, mat);
+    m.material.side = THREE.DoubleSide;      // same winding trap as the ring road
+    m.material.userData.noDim = true;
+    m.castShadow = false; m.receiveShadow = true;
+    rail.add(m); return m;
+  };
+  ribbon(1.75, 0, std(0xcac4b6, {roughness:0.99, envMapIntensity:0.2}));
+  const railMat = std(0xb4aea3, {roughness:0.4, metalness:0.65, envMapIntensity:1.1});
+  ribbon(0.075, 0.17, railMat, 0.62);
+  ribbon(0.075, 0.17, railMat, -0.62);
+  const sleeper = std(0x9a8d79, {roughness:0.95});
+  for(let s=1; s<RAIL_L; s+=2.1){
+    const p = railAt(s);
+    Bo(rail, 2.05, 0.11, 0.35, sleeper, p.x, p.y+0.02, p.z,
+      Math.atan2(p.tx, p.tz)).castShadow = false;
+  }
+
+  /* rolling stock: a loco and three coaches, nose along local +x so the same
+     heading maths as the cars applies */
+  const stockPaint = () => std(0xf4f1ea, {roughness:0.45, envMapIntensity:1.0});
+  function bogies(g2){
+    for(const bx of [-1.6, 1.6]) for(const wz of [0.6, -0.6]){
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.16, 12), MAT.rubber());
+      w.rotation.x = Math.PI/2; w.position.set(bx, 0.26, wz); w.castShadow = true; g2.add(w);
+    }
+  }
+  function mkLoco(){
+    const g2 = new THREE.Group(); rail.add(g2);
+    const dark = std(0x2f2a23, {roughness:0.42, envMapIntensity:1.0});
+    Bo(g2, 4.6, 1.15, 1.45, dark, 0, 0.34, 0);
+    Bo(g2, 1.7, 0.95, 1.38, dark, -1.25, 1.49, 0);
+    Bo(g2, 1.5, 0.36, 1.42, MAT.screen(), -1.25, 1.76, 0);
+    Bo(g2, 4.66, 0.14, 1.5, MAT.accent(), 0, 1.22, 0);
+    Sp(g2, 0.11, emissive(0xfff0da), 2.3, 0.95, 0);
+    Cy(g2, 0.015, 0.015, 0.4, MAT.inkFlat(), -1.9, 2.44, -0.4, 6);
+    Sp(g2, 0.05, emissive(0xff4a1c), -1.9, 2.88, -0.4);   // tuned in, like the cars
+    bogies(g2);
+    mkBlobShadow(g2, 5.8, 2.2, 0.02);
+    markNoBounds(g2);
+    return g2;
+  }
+  function mkCoach(){
+    const g2 = new THREE.Group(); rail.add(g2);
+    Bo(g2, 5.0, 1.4, 1.42, stockPaint(), 0, 0.34, 0);
+    Bo(g2, 5.04, 0.46, 1.46, MAT.screen(), 0, 1.0, 0);
+    Bo(g2, 5.06, 0.11, 1.48, MAT.accent(), 0, 0.72, 0);
+    Bo(g2, 5.1, 0.14, 1.5, stockPaint(), 0, 1.6, 0);
+    bogies(g2);
+    mkBlobShadow(g2, 6.2, 2.2, 0.02);
+    markNoBounds(g2);
+    return g2;
+  }
+  /* A hill swallows each end of the line. That is what stops the train
+     appearing in mid-air: cars are hidden past either end of the track, and
+     both of those thresholds sit inside a knoll, so what you see is a train
+     entering one tunnel and coming out of the other. */
+  const knoll = (targetX, dir) => {
+    let i = 0; while(i < pts.length-1 && pts[i].x < targetX) i++;
+    const p = pts[i], gy = groundH(p.x, p.z);
+    const mound = new THREE.Mesh(new THREE.SphereGeometry(1, 22, 14),
+      std(0xdcd7cb, {roughness:1, envMapIntensity:0.22}));
+    mound.position.set(p.x, gy - 1.7, p.z);
+    mound.scale.set(7.4, 5.4, 6.6);
+    mound.castShadow = false; mound.receiveShadow = true;
+    rail.add(mound);
+    const mx = p.x + dir*6.0, mz = -39 + 5*Math.sin(mx*0.07);
+    Bo(rail, 2.7, 2.0, 0.55, MAT.inkFlat(), mx, groundH(mx, mz) + 0.04, mz,
+      Math.atan2(p.tx, p.tz)).castShadow = false;
+  };
+  knoll(-46, 1);
+  knoll(47, -1);
+
+  const consist = [mkLoco(), mkCoach(), mkCoach(), mkCoach()];
+  const CYCLE = RAIL_L + 34;          // a clear pause between passes
+  const placeTrain = t => {
+    const head = ((t * 5.6) % CYCLE + CYCLE) % CYCLE;
+    consist.forEach((car, i)=>{
+      const s = head - i*6.6;
+      car.visible = s > 0 && s < RAIL_L;
+      if(!car.visible) return;
+      const p = railAt(s);
+      car.position.set(p.x, p.y + 0.28, p.z);
+      car.rotation.y = Math.atan2(-p.tz, p.tx);
+    });
+  };
+  markNoBounds(rail);
+  placeTrain(0);
+  if(ANIM) anims.push(t => placeTrain(t));
 }
 
 /* ---- aircraft: light planes crossing the sky off the north-west, one of
@@ -2144,6 +2284,33 @@ const RIGHTW = PX1 - WT - 0.03;
     markNoBounds(c);
     return c;
   }
+  /* A transit bus — same footprint logic as the cars but longer, with a glazed
+     band down the side and a rolling destination sign, which is one more screen
+     the traffic log feeds. */
+  function mkBus(color, dest){
+    const c = new THREE.Group(); g.add(c);
+    const paint = std(color, {roughness:0.45, envMapIntensity:0.95});
+    Bo(c, 4.6, 1.5, 1.35, paint, 0, 0.3, 0);
+    Bo(c, 4.64, 0.5, 1.39, MAT.screen(), 0, 1.02, 0);        // window band
+    Bo(c, 4.7, 0.16, 1.42, paint, 0, 1.62, 0);               // roof cap
+    Bo(c, 0.06, 0.42, 1.2, MAT.glass(), 2.32, 0.42, 0);      // windscreen
+    Pl(c, 1.05, 0.3, signMat(tex(160, 44, (x,w,h)=>{
+      x.fillStyle = "#26211a"; x.fillRect(0, 0, w, h);
+      x.fillStyle = "#ffd9a8"; x.font = "800 22px "+F;
+      x.textAlign = "center"; x.textBaseline = "middle";
+      x.fillText(dest, w/2, h/2 + 1);
+    })), 2.36, 1.35, 0, Math.PI/2);
+    Bo(c, 4.66, 0.1, 1.37, MAT.accent(), 0, 0.72, 0);        // livery stripe
+    for(const [wx,wz] of [[-1.55,0.66],[1.6,0.66],[-1.55,-0.66],[1.6,-0.66]]){
+      const t = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,0.2,14), MAT.rubber());
+      t.rotation.x = Math.PI/2; t.position.set(wx, 0.3, wz); t.castShadow = true; c.add(t);
+    }
+    Cy(c, 0.015, 0.015, 0.4, MAT.inkFlat(), -1.9, 1.78, -0.4, 6);
+    Sp(c, 0.05, emissive(0xff4a1c), -1.9, 2.22, -0.4);       // tuned in, same as the cars
+    mkBlobShadow(c, 5.6, 2.1, 0.012);
+    markNoBounds(c);
+    return c;
+  }
   const lanes = [
     {path: makePath(1.05), dir: 1},
     {path: makePath(-1.05), dir: -1},
@@ -2163,6 +2330,19 @@ const RIGHTW = PX1 - WT - 0.03;
     rec.car.position.set(p.x, 0.035, p.z);
     rec.car.rotation.y = Math.atan2(-p.tz * rec.lane.dir, p.tx * rec.lane.dir);
   };
+  // buses run the same two lanes, slower than the cars so traffic stacks up
+  // behind them the way it does on a real ring road
+  const buses = [
+    {dest:"DOWNTOWN", col:0xf0ede6, spread:0.30, lane:0, speed:3.6},
+    {dest:"CAMPUS",   col:0xffffff, spread:0.70, lane:1, speed:3.2},
+    {dest:"AIRPORT",  col:0xe8e4dc, spread:0.90, lane:0, speed:3.9},
+  ].map(b => ({
+    car: mkBus(b.col, b.dest),
+    lane: lanes[b.lane],
+    s0: b.spread * lanes[b.lane].path.L,
+    speed: b.speed,
+  }));
+  fleet.push(...buses);
   fleet.forEach(r => place(r, 0));
   if(ANIM) anims.push(t => fleet.forEach(r => place(r, t)));
   // parked listener at the pull-off, dash lit
@@ -2175,7 +2355,10 @@ const RIGHTW = PX1 - WT - 0.03;
     {A:[-37.5, 56.9],B:[29.5, 56.9], sp:4.8, ph:0.5,  col:0xe8e4dc},
     {A:[-33.5, 88.9],B:[54, 88.9],   sp:4.0, ph:0.25, col:0xd8d3c9},
     {A:[34, 55.1],   B:[56, 55.1],   sp:4.3, ph:0.35, col:0xf0ede6},
-  ].map(L => ({...L, car: mkCar(L.col), len: Math.hypot(L.B[0]-L.A[0], L.B[1]-L.A[1])}));
+    // the local route: down Signal St past the shops and back
+    {A:[-37.5, 56.9],B:[54, 56.9],   sp:3.1, ph:0.15, col:0xffffff, bus:"SIGNAL ST"},
+  ].map(L => ({...L, car: L.bus ? mkBus(L.col, L.bus) : mkCar(L.col),
+    len: Math.hypot(L.B[0]-L.A[0], L.B[1]-L.A[1])}));
   const placeLocal = (L, t) => {
     const cyc = (t * L.sp / L.len + L.ph) % 1;
     const k = 1 - Math.abs(2*cyc - 1);
