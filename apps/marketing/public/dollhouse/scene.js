@@ -1231,58 +1231,58 @@ const shellRec = reg(shellG);
     conifer(tx, tz, ts);
 }
 
-/* ---- the ridge country: deer working through the trees. This side of the
-   map is earmarked for the defence automations, so for now it stays quiet
-   country with something living in it. ---------------------------------- */
+/* ---- the ridge: a radio operator working the high ground. This side of the
+   map is earmarked for the defence automations, and a man on a handset is the
+   honest picture of what that is — comms, not hardware. ------------------ */
 {
-  const herd = new THREE.Group(); levelG[0].add(herd);
-  const hide = std(0x9a8d79, {roughness:0.95});
-  const dark = std(0x6b6152, {roughness:0.95});
-  function mkDeer(s){
-    const g2 = new THREE.Group(); g2.scale.setScalar(s); herd.add(g2);
-    Bo(g2, 1.9, 0.85, 0.72, hide, 0, 0.95, 0);                    // barrel
-    Bo(g2, 0.7, 0.62, 0.66, hide, -0.95, 1.05, 0);                // haunch
-    for(const [lx, lz] of [[-0.68, 0.28], [0.66, 0.28], [-0.68, -0.28], [0.66, -0.28]])
-      Cy(g2, 0.075, 0.095, 0.98, dark, lx, 0, lz, 7);
-    const head = new THREE.Group(); head.position.set(0.92, 1.62, 0); g2.add(head);
-    Cy(head, 0.15, 0.19, 0.62, hide, 0, -0.62, 0, 8, -0.42);      // neck
-    Bo(head, 0.5, 0.3, 0.28, hide, 0.16, 0.02, 0);                // skull
-    Sp(head, 0.1, dark, 0.44, 0.06, 0);                           // muzzle
-    for(const az of [0.11, -0.11]){                               // antlers
-      Cy(head, 0.026, 0.034, 0.44, dark, 0.02, 0.24, az, 6, 0.3);
-      Cy(head, 0.022, 0.026, 0.3, dark, -0.14, 0.6, az, 6, -0.55);
-      Cy(head, 0.02, 0.024, 0.24, dark, 0.16, 0.58, az, 6, 0.7);
-    }
-    Sp(g2, 0.09, hide, -1.28, 1.28, 0);                           // tail
-    mkBlobShadow(g2, 2.6, 1.3, 0.02);
+  const post = new THREE.Group(); levelG[0].add(post);
+  const fatigue = std(0x6f7358, {roughness:0.96});
+  const webbing = std(0x4a4d3c, {roughness:0.96});
+  function mkOperator(s){
+    const g2 = new THREE.Group(); g2.scale.setScalar(s); post.add(g2);
+    Cy(g2, 0.21, 0.28, 0.98, fatigue, 0, 0, 0, 12);              // torso and legs
+    Bo(g2, 0.46, 0.44, 0.24, webbing, 0, 0.5, -0.22);            // pack
+    Bo(g2, 0.5, 0.16, 0.3, webbing, 0, 0.72, 0);                 // shoulder straps
+    Sp(g2, 0.185, std(0xe9dfd2, {roughness:0.9}), 0, 1.2, 0);    // head
+    const lid = new THREE.Mesh(
+      new THREE.SphereGeometry(0.23, 14, 10, 0, Math.PI*2, 0, Math.PI/2), webbing);
+    lid.position.set(0, 1.2, 0); lid.scale.set(1.02, 0.9, 1.12);
+    lid.castShadow = true; g2.add(lid);
+    // the arm is up on the handset — at this size that silhouette is the whole
+    // read, so it stays up rather than animating between poses
+    const arm = new THREE.Group(); arm.position.set(0.2, 0.92, 0.05); g2.add(arm);
+    Bo(arm, 0.11, 0.36, 0.11, fatigue, 0, 0, 0, 0, -0.55);
+    Bo(arm, 0.1, 0.22, 0.08, MAT.inkFlat(), 0.06, 0.24, 0.03);
+    Cy(arm, 0.012, 0.012, 0.34, MAT.inkFlat(), 0.09, 0.44, 0.03, 6);
+    Sp(arm, 0.028, emissive(0xff4a1c), 0.06, 0.3, 0.08);
+    mkBlobShadow(g2, 0.9, 0.7, -0.03);
     markNoBounds(g2);
-    return {g: g2, head};
+    return {g: g2, arm};
   }
-  const deer = [
-    {A:[-116, -34], B:[-101, -21], s:1.15, sp:0.60, ph:0.00},
-    {A:[-134, -6],  B:[-123, 7],   s:1.05, sp:0.48, ph:0.38},
-    {A:[-99, 23],   B:[-111, 35],  s:1.20, sp:0.52, ph:0.71},
-    {A:[-151, -53], B:[-140, -43], s:0.95, sp:0.42, ph:0.19},
-    {A:[-88, -52],  B:[-77, -62],  s:1.10, sp:0.55, ph:0.55},
+  const patrol = [
+    {A:[-116, -34], B:[-101, -21], s:1.15, sp:0.55, ph:0.00},
+    {A:[-134, -6],  B:[-123, 7],   s:1.05, sp:0.45, ph:0.38},
+    {A:[-99, 23],   B:[-111, 35],  s:1.10, sp:0.50, ph:0.71},
   ].map(d => {
-    const m = mkDeer(d.s);
+    const m = mkOperator(d.s);
     return {...d, ...m, len: Math.hypot(d.B[0]-d.A[0], d.B[1]-d.A[1])};
   });
-  /* a walk out, a spell with the head down, a walk back, another graze — deer
-     that only ever pace look like clockwork */
-  const placeDeer = (d, t) => {
+  /* walk the line, hold a while on the handset, walk back — a figure that only
+     ever paces reads as clockwork */
+  const placeOp = (d, t) => {
     const cyc = (((t * d.sp / d.len) + d.ph) % 1 + 1) % 1;
     let k, moving, fwd;
-    if(cyc < 0.34){ k = cyc / 0.34; moving = true; fwd = 1; }
+    if(cyc < 0.32){ k = cyc / 0.32; moving = true; fwd = 1; }
     else if(cyc < 0.5){ k = 1; moving = false; fwd = 1; }
-    else if(cyc < 0.84){ k = 1 - (cyc - 0.5) / 0.34; moving = true; fwd = -1; }
+    else if(cyc < 0.82){ k = 1 - (cyc - 0.5) / 0.32; moving = true; fwd = -1; }
     else { k = 0; moving = false; fwd = -1; }
     const x = d.A[0] + (d.B[0]-d.A[0])*k, z = d.A[1] + (d.B[1]-d.A[1])*k;
     d.g.position.set(x, westH(x, z) - 0.05 + (moving ? Math.abs(Math.sin(t*5 + d.ph*9))*0.05 : 0), z);
-    d.g.rotation.y = Math.atan2(-(d.B[1]-d.A[1])*fwd, (d.B[0]-d.A[0])*fwd);
-    d.head.rotation.z = moving ? Math.sin(t*2.2 + d.ph*5)*0.06 : -0.95;
+    d.g.rotation.y = Math.atan2(-(d.B[1]-d.A[1])*fwd, (d.B[0]-d.A[0])*fwd)
+      + (moving ? 0 : Math.sin(t*0.5 + d.ph*4)*0.5);        // sweeping the ground while stopped
+    d.arm.rotation.x = Math.sin(t*1.4 + d.ph*6) * 0.05;
   };
-  // a stand at the treeline, looking down the clearing the deer work
+  // an observation stand at the treeline
   {
     const sx = -127, sz = -14;
     const st = new THREE.Group(); st.position.set(sx, westH(sx, sz) - 0.05, sz);
@@ -1294,11 +1294,12 @@ const shellRec = reg(shellG);
     Bo(st, 2.3, 0.55, 0.1, timber, 0, 3.44, 1.1);
     Bo(st, 0.1, 0.55, 2.3, timber, -1.1, 3.44, 0);
     for(let i=0;i<5;i++) Bo(st, 0.9, 0.06, 0.08, timber, 0, 0.5 + i*0.6, -1.28);
+    Cy(st, 0.02, 0.02, 1.6, MAT.inkFlat(), 1.05, 3.44, -1.05, 6);   // whip aerial
     markNoBounds(st);
   }
-  markNoBounds(herd);
-  deer.forEach(d => placeDeer(d, 0));
-  if(ANIM) anims.push(t => deer.forEach(d => placeDeer(d, t)));
+  markNoBounds(post);
+  patrol.forEach(d => placeOp(d, 0));
+  if(ANIM) anims.push(t => patrol.forEach(d => placeOp(d, t)));
 }
 
 /* ---- railway: a single line snaking through the hills behind the station.
@@ -1316,9 +1317,13 @@ const shellRec = reg(shellG);
   /* East of the campus the line swings south so it crosses the bay rather than
      the empty water north of it, and climbs to a deck height that clears a
      mast — the boats sail under it. */
-  const DECK = 8.4;
+  const DECK = 7.6;
   const railZ = x => 15 - 54*ss(-140, -25, x) + 4*Math.sin(x*0.09) + 60*ss(35, 100, x);
-  const railY = (x, z) => Math.max(groundH(x, z), westH(x, z)) + DECK*ss(24, 54, x);
+  /* The climb is spread over 80 units rather than 30. At the old length the
+     grade peaked around 40 per cent, which is funicular territory — the train
+     visibly launched. Over this run it tops out near 12, which reads as a
+     long rail embankment rising to the crossing. */
+  const railY = (x, z) => Math.max(groundH(x, z), westH(x, z)) + DECK*ss(-18, 62, x);
   const pts = [];
   for(let i=0;i<=N;i++){
     const x = X0 + (X1-X0)*i/N, z = railZ(x);
@@ -1461,12 +1466,14 @@ const shellRec = reg(shellG);
   const FOOT = -3.4;                       // piers stand in the water, not on it
   for(let s = 0; s < RAIL_L; s += 7.4){
     const p = railAt(s);
-    if(p.x < 26) continue;
     // a clear navigation span over the boat lanes, so nothing sailing the bay
     // has to thread between piers
     if(p.x > 67 && p.x < 99) continue;
+    // piers only where the deck is genuinely flying; on the long approach it
+    // is still riding an embankment and wants none
+    if(p.y - Math.max(groundH(p.x, p.z), westH(p.x, p.z)) < 1.9) continue;
     const h = p.y - 0.45 - FOOT;
-    if(h < 1.4) continue;                  // still on the embankment here
+    if(h < 1.4) continue;
     const nx = -p.tz, nz = p.tx, ry = Math.atan2(p.tx, p.tz);
     for(const off of [1.3, -1.3])          // a pair of legs per bay
       Bo(rail, 0.8, h, 0.8, pierMat, p.x + nx*off, FOOT, p.z + nz*off, ry)
@@ -1475,7 +1482,7 @@ const shellRec = reg(shellG);
   }
   for(let s = 0; s < RAIL_L; s += 2.0){    // parapet along the flying deck
     const p = railAt(s);
-    if(p.x < 26 || p.y < 1.2) continue;
+    if(p.y - Math.max(groundH(p.x, p.z), westH(p.x, p.z)) < 1.9) continue;
     const nx = -p.tz, nz = p.tx, ry = Math.atan2(p.tx, p.tz);
     for(const off of [1.86, -1.86])
       Bo(rail, 0.3, 0.42, 2.1, pierMat, p.x + nx*off, p.y + 0.02, p.z + nz*off, ry)
@@ -3826,16 +3833,26 @@ Cy(roofCap, 0.5, 0.5, 0.4, MAT.gray(), -10, 0.5, -6, 18).layers.enable(4);
    building and step aside the moment it opens — the same rule the cap follows.
    Two faces, because the camera sees the +x and +z sides of everything. */
 {
-  // light on dark: a white sign on a white building is invisible at this size
-  const callTex = tex(520, 190, (x, w, h)=>{
-    x.fillStyle = "#fdfbf6"; x.font = "800 134px "+F;
+  /* The board carries the partners, one at a time. Light on dark, because a
+     white board on a white building is invisible at this size. Each mark is
+     drawn on its own canvas at the board's aspect, so nothing is stretched to
+     fit — real logo files drop in as textures at the same ratio. */
+  const PARTNERS = [
+    {name:"WCCG 104.5 FM", sub:"F A Y E T T E V I L L E ,  N C"},
+  ];
+  const partnerTex = PARTNERS.map(p => tex(520, 190, (x, w, h)=>{
+    x.fillStyle = "#fdfbf6";
+    // shrink the type until the longest name fits — never squeeze the canvas
+    let size = 88;
+    do { x.font = "800 " + size + "px " + F; size -= 4; }
+    while(size > 30 && x.measureText(p.name).width > w - 44);
     x.textAlign = "center"; x.textBaseline = "middle";
-    x.fillText("WBCC", w/2, h*0.42);
+    x.fillText(p.name, w/2, h*0.40);
     x.fillStyle = "#ff4a1c";
-    rr(x, w/2 - 122, h*0.74, 244, 11, 5); x.fill();
-    x.fillStyle = "#c8c1b4"; x.font = "700 31px "+F;
-    x.fillText("1 0 4 . 5   F M", w/2, h*0.93);
-  });
+    rr(x, w/2 - 122, h*0.66, 244, 9, 5); x.fill();
+    x.fillStyle = "#c8c1b4"; x.font = "700 23px "+F;
+    x.fillText(p.sub, w/2, h*0.86);
+  }));
   const sign = new THREE.Group();
   sign.position.set(2.0, 0.5, 1.6);          // set back from the roof's front edge
   // turned to look down over the neighbourhood and the shops, which sit south
@@ -3852,7 +3869,18 @@ Cy(roofCap, 0.5, 0.5, 0.4, MAT.gray(), -10, 0.5, -6, 18).layers.enable(4);
     0, 1.6, 0).layers.enable(4);
   Bo(sign, 15.0, 0.24, 0.5, MAT.white(), 0, 7.1, 0).layers.enable(4);
   Bo(sign, 15.0, 0.22, 0.5, MAT.white(), 0, 1.4, 0).layers.enable(4);
-  Pl(sign, 13.7, 5.0, signMat(callTex), 0, 4.35, 0.17).layers.enable(4);
+  const board = Pl(sign, 13.7, 5.0, signMat(partnerTex[0]), 0, 4.35, 0.17);
+  board.layers.enable(4);
+  if(ANIM && partnerTex.length > 1){
+    const DWELL = 4.6, FADE = 0.55;      // fade down, swap at the bottom, fade up
+    anims.push(t => {
+      const cyc = t % DWELL, i = Math.floor(t / DWELL) % partnerTex.length;
+      const m = board.material;
+      m.opacity = cyc > DWELL - FADE ? (DWELL - cyc)/FADE
+                : cyc < FADE ? cyc/FADE : 1;
+      if(m.map !== partnerTex[i]){ m.map = partnerTex[i]; m.needsUpdate = true; }
+    });
+  }
   markNoBounds(sign);
   sign.traverse(o=>{ if(o.isMesh) o.castShadow = false; });
 }
