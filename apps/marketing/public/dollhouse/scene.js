@@ -2595,49 +2595,95 @@ const RIGHTW = PX1 - WT - 0.03;
   }
   stopSign(33.5, 52.4); stopSign(33.5, 59.9);
 
-  const buildRoute = (stops, len, sp, dwell) => {
-    const ks = [0, ...stops, 1], tl = [];
-    let t = 0, fwd = 1;
-    const run = (k0, k1) => {
-      fwd = Math.sign(k1 - k0) || 1;
-      const d = Math.abs(k1 - k0) * len / sp;
-      tl.push({t0:t, t1:t+d, k0, k1, fwd}); t += d;
-    };
-    const hold = k => { tl.push({t0:t, t1:t+dwell, k0:k, k1:k, fwd}); t += dwell; };
-    for(let i=0;i<ks.length-1;i++){ run(ks[i], ks[i+1]); hold(ks[i+1]); }
-    for(let i=ks.length-1;i>0;i--){ run(ks[i], ks[i-1]); hold(ks[i-1]); }
-    return {tl, T: t};
-  };
-  /* Every stop is a junction with a sign standing at it — a car halting
-     mid-block just reads as a broken simulation, so those came out. Each
-     street carries at most one vehicle per side. */
-  const locals = [
-    {A:[-6.9, 41.5], B:[-6.9, 111],  sp:5.0, ph:0.0,  col:0xffffff, stops:[0.209, 0.669]},
-    {A:[-37.5, 55.3],B:[29.5, 55.3], sp:5.4, ph:0.5,  col:0xe8e4dc, stops:[0.470, 0.888]},
-    {A:[-33.5, 88.9],B:[54, 88.9],   sp:4.8, ph:0.25, col:0xd8d3c9, stops:[0.314, 0.634]},
-    {A:[34, 55.3],   B:[56, 55.3],   sp:4.6, ph:0.35, col:0xf0ede6, stops:[]},
-    // the local route: down Signal St past the shops and back, and unlike the
-    // cars it does have a reason to pause mid-block — the stop by the shops
-    {A:[-37.5, 56.7],B:[54, 56.7],   sp:3.6, ph:0.15, col:0xffffff, bus:"SIGNAL ST",
-     stops:[0.344, 0.650, 0.87]},
-  ].map(L => {
+  /* ---- local streets --------------------------------------------------
+     Two rules make the grid behave. A car halts at the STOP LINE, short of
+     the crossing, never inside the box — stopping on the crosswalk was the
+     giveaway that this was a timeline and not a simulation. And a junction is
+     a shared resource: north-south and east-west cannot hold the same box at
+     once, so two streets never meet in the middle of it. Vehicles on the same
+     axis may share, since they are in different lanes and only pass alongside.
+     Route ends are pulled back from the ring and the belt so a car waiting to
+     turn around is never parked in a through lane. */
+  const JUNC = [[-6, 56], [22, 56], [-6, 88], [22, 88]];
+  /* A junction is claimed BEFORE it is entered, not while occupied. Checking
+     occupancy alone races: two cars on crossing streets both see an empty box,
+     both proceed, and they meet in it. The claim is taken on approach and held
+     until the box is cleared; the axis is recorded so vehicles running the same
+     way can share, since they are in different lanes. */
+  const owner = JUNC.map(() => null);   // axis holding it, or null
+  const users = JUNC.map(() => 0);      // how many of that axis are engaged
+  const STOP_BACK = 5.4;      // outside the crosswalk, which reaches 4.35
+  const BOX = 5.0;            // half-depth of the junction body
+  const ENGAGE = 15;          // start bidding for the box this far out
+
+  const mkLocal = (L) => {
     const len = Math.hypot(L.B[0]-L.A[0], L.B[1]-L.A[1]);
-    return {...L, len, car: L.bus ? mkBus(L.col, L.bus) : mkCar(L.col),
-            route: buildRoute(L.stops, len, L.sp, L.bus ? 1.8 : 0.9)};
-  });
-  const placeLocal = (L, t) => {
-    const R = L.route;
-    const u = (((t + L.ph * R.T) % R.T) + R.T) % R.T;
-    let seg = R.tl[R.tl.length-1];
-    for(const s of R.tl) if(u < s.t1){ seg = s; break; }
-    const k = seg.k1 === seg.k0 ? seg.k0
-      : seg.k0 + (seg.k1 - seg.k0) * (u - seg.t0) / (seg.t1 - seg.t0);
-    const dx = L.B[0]-L.A[0], dz = L.B[1]-L.A[1];
-    L.car.position.set(L.A[0] + dx*k, 0.035, L.A[1] + dz*k);
-    L.car.rotation.y = Math.atan2(-dz*seg.fwd, dx*seg.fwd);
+    const ux = (L.B[0]-L.A[0])/len, uz = (L.B[1]-L.A[1])/len;
+    const axis = Math.abs(ux) > Math.abs(uz) ? "ew" : "ns";
+    const gates = [];
+    JUNC.forEach(([jx, jz], i) => {
+      const s = (jx - L.A[0])*ux + (jz - L.A[1])*uz;         // project onto the street
+      const px = L.A[0] + ux*s, pz = L.A[1] + uz*s;
+      if(s > BOX && s < len - BOX && Math.hypot(px-jx, pz-jz) < 3) gates.push({s, i});
+    });
+    gates.sort((a, b) => a.s - b.s);
+    return {...L, len, ux, uz, axis, gates,
+            car: L.bus ? mkBus(L.col, L.bus) : mkCar(L.col),
+            s: (L.ph || 0) * len, v: 0, dir: 1, claim: -1, cleared: -1, wait: 0};
   };
-  locals.forEach(L => placeLocal(L, 0));
-  if(ANIM) anims.push(t => locals.forEach(L => placeLocal(L, t)));
+  const releaseLocal = L => {
+    if(L.claim >= 0){
+      users[L.claim] = Math.max(0, users[L.claim] - 1);
+      if(users[L.claim] === 0) owner[L.claim] = null;
+      L.claim = -1;
+    }
+  };
+  const stepLocal = (L, dt) => {
+    // the junction we are engaged with: the one we sit in, else the next one
+    // close enough ahead to start bidding for
+    let want = -1, aheadD = Infinity;
+    for(const g of L.gates){
+      const d = (g.s - L.s) * L.dir;
+      if(Math.abs(L.s - g.s) < BOX){ want = g.i; aheadD = 0; break; }
+      if(d > 0 && d < ENGAGE && d < aheadD){ want = g.i; aheadD = d; }
+    }
+    if(L.claim !== want) releaseLocal(L);
+    let holds = L.claim === want && want >= 0;
+    if(want >= 0 && !holds && (owner[want] === null || owner[want] === L.axis)){
+      owner[want] = L.axis; users[want]++; L.claim = want; holds = true;
+    }
+
+    let target = L.vmax;
+    if(want >= 0 && aheadD > 0){
+      // stop at the line if the box is spoken for, or for the sign itself,
+      // which is obeyed once per approach — `cleared` remembers we did
+      if(!holds || L.cleared !== want){
+        const room = aheadD - STOP_BACK;
+        target = Math.max(0, Math.min(L.vmax, room * 1.5));
+        if(room < 0.3 && L.v < 0.25){
+          L.wait += dt;
+          if(holds && L.wait > 0.8){ L.cleared = want; L.wait = 0; }
+        }
+      }
+    }
+    L.v = Math.max(0, L.v + Math.max(-10*dt, Math.min(4.2*dt, target - L.v)));
+    L.s += L.dir * L.v * dt;
+    if(L.s >= L.len){ L.s = L.len; L.dir = -1; L.v = 0; L.cleared = -1; releaseLocal(L); }
+    if(L.s <= 0){ L.s = 0; L.dir = 1; L.v = 0; L.cleared = -1; releaseLocal(L); }
+    L.car.position.set(L.A[0] + L.ux*L.s, 0.035, L.A[1] + L.uz*L.s);
+    L.car.rotation.y = Math.atan2(-L.uz*L.dir, L.ux*L.dir);
+  };
+
+  const locals = [
+    {A:[-6.9, 42],  B:[-6.9, 105], vmax:5.4, ph:0.10, col:0xffffff},
+    {A:[-48, 55.3], B:[49, 55.3],  vmax:5.8, ph:0.55, col:0xe8e4dc},
+    {A:[-48, 88.9], B:[49, 88.9],  vmax:5.2, ph:0.30, col:0xd8d3c9},
+    {A:[21.1, 44],  B:[21.1, 85],  vmax:5.0, ph:0.70, col:0xf0ede6},
+    // the local route: down Signal St past the shops and back
+    {A:[-48, 56.7], B:[49, 56.7],  vmax:3.9, ph:0.02, col:0xffffff, bus:"SIGNAL ST"},
+  ].map(mkLocal);
+  locals.forEach(L => stepLocal(L, 0));
+  if(ANIM) anims.push((t, dt) => locals.forEach(L => stepLocal(L, dt)));
   // and a few parked in driveways
   for(const [px, pz, pr, pc] of [[-20.8, 45.0, 0.1, 0xffffff],
       [6.2, 44.2, -0.08, 0xd8d3c9], [-18.6, 60.2, 0.12, 0xbdb8ae]]){
@@ -2656,14 +2702,12 @@ const RIGHTW = PX1 - WT - 0.03;
   };
   // extras on the far side of each street, so they can never meet the local
   // already working it
+  // peak-hour extras, on the far side of each street from the base local
   const rushLocals = [
-    {A:[-5.1, 111],  B:[-5.1, 41.5], sp:5.2, ph:0.62, col:0xf0ede6, th:0.6,  stops:[0.331, 0.791]},
-    {A:[54, 87.1],   B:[-33.5, 87.1], sp:5.0, ph:0.8, col:0xffffff, th:0.72, stops:[0.366, 0.686]},
-    {A:[56, 56.7],   B:[34, 56.7],   sp:4.9, ph:0.1,  col:0xd8d3c9, th:0.65, stops:[]},
-  ].map(L => {
-    const len = Math.hypot(L.B[0]-L.A[0], L.B[1]-L.A[1]);
-    return {...L, len, car: mkCar(L.col), route: buildRoute(L.stops, len, L.sp, 0.9)};
-  });
+    {A:[-5.1, 105], B:[-5.1, 42],  vmax:5.6, ph:0.62, col:0xf0ede6, th:0.60},
+    {A:[49, 87.1],  B:[-48, 87.1], vmax:5.3, ph:0.80, col:0xffffff, th:0.72},
+    {A:[22.9, 85],  B:[22.9, 44],  vmax:5.1, ph:0.15, col:0xd8d3c9, th:0.65},
+  ].map(mkLocal);
   const clockEl = document.getElementById("dayclock");
   const setClock = t => {
     if(!clockEl) return;
@@ -2676,7 +2720,12 @@ const RIGHTW = PX1 - WT - 0.03;
   const setRush = (t, dt) => {
     const b = busyAt(hourAt(t));
     stepRing(dt || 0.016, b);
-    rushLocals.forEach(L => { L.car.visible = b >= L.th; if(L.car.visible) placeLocal(L, t); });
+    rushLocals.forEach(L => {
+      const on = b >= L.th;
+      L.car.visible = on;
+      // a hidden car must not keep a junction reserved against live traffic
+      if(on) stepLocal(L, dt || 0.016); else releaseLocal(L);
+    });
     setClock(t);
   };
   if(ANIM){ setRush(0, 0); anims.push(setRush); }
