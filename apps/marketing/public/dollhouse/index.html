@@ -30,17 +30,20 @@
      labels, pins and the chrome stay crisp through the fade. */
   #fade{
     position:absolute;inset:0;pointer-events:none;
+    /* the bottom runs whiter and starts higher than the top: the hint and the
+       title block sit in that band and have to be readable over the scene */
     background:linear-gradient(to bottom,
       #fff 0%, rgba(255,255,255,0.72) 5%, rgba(255,255,255,0) 17%,
-      rgba(255,255,255,0) 83%, rgba(255,255,255,0.72) 95%, #fff 100%);
+      rgba(255,255,255,0) 62%, rgba(255,255,255,0.45) 78%,
+      rgba(255,255,255,0.88) 88%, #fff 96%);
   }
   #gl{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none;}
   #overlay{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
 
   /* sheet frame + title block */
   #frame{position:absolute;inset:26px;border:1.5px solid rgba(23,21,15,.07);pointer-events:none;}
-  .tb{position:absolute;font-size:9.5px;letter-spacing:.26em;color:var(--faint);text-transform:uppercase;line-height:1.7;}
-  .tb b{color:var(--muted);font-weight:600;}
+  .tb{position:absolute;font-size:9.5px;letter-spacing:.26em;color:var(--muted);text-transform:uppercase;line-height:1.7;}
+  .tb b{color:var(--ink);font-weight:700;}
   #tbl{left:56px;bottom:34px;}
   #tbr{right:56px;bottom:34px;text-align:right;}
 

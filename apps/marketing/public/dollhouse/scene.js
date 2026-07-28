@@ -719,6 +719,25 @@ scene.add(shellG);
       strip(0.14, 1.5, 22, z2, dashMat());
     for(let x2=-34; x2<56; x2+=5) if(Math.abs(x2+6) > 3.4 && Math.abs(x2-22) > 3.4)
       strip(1.5, 0.14, x2, 88, dashMat());
+    /* Crosswalks at every junction the local traffic stops for. Bars run
+       parallel to the traffic being crossed and are arrayed across the road,
+       which is what makes them read as a crossing rather than as more dashes.
+       `acrossNS` marks a crossing laid over the north-south street. */
+    const zebra = (cx, cz, acrossNS) => {
+      for(let i=-2; i<=2; i++){
+        if(acrossNS) strip(0.42, 2.5, cx + i*0.78, cz, dashMat());
+        else         strip(2.5, 0.42, cx, cz + i*0.78, dashMat());
+      }
+    };
+    // [x, z, which approaches exist] — Second Ave ends at Third St, so that
+    // junction has no southern leg to cross
+    for(const [cx, cz, south] of [[-6, 56, true], [22, 56, true],
+                                  [-6, 88, true], [22, 88, false]]){
+      zebra(cx, cz - 3.1, true);
+      if(south) zebra(cx, cz + 3.1, true);
+      zebra(cx - 3.1, cz, false);
+      zebra(cx + 3.1, cz, false);
+    }
     streets.traverse(o=>{ if(o.material) o.material.userData.noDim = true; });
     markNoBounds(streets);
 
@@ -1157,10 +1176,19 @@ const shellRec = reg(shellG);
     }
     markNoBounds(t);
   };
+  /* Forest across the headland. Kept clear of the rail alignment, which runs
+     roughly z 16 at x −178 down to z −24 at x −60. */
   for(const [tx, tz, ts] of [[-104, -34, 1.5], [-88, -30, 1.3], [-132, 24, 1.6],
       [-158, -40, 1.4], [-186, 30, 1.5], [-112, 40, 1.3], [-70, -42, 1.2],
       [-150, -88, 1.4], [-96, 34, 1.4], [-176, -62, 1.3], [-142, -14, 1.5],
-      [-198, -28, 1.4]]) conifer(tx, tz, ts);
+      [-198, -28, 1.4],
+      [-120, -60, 1.5], [-104, -78, 1.3], [-140, -42, 1.6], [-156, -66, 1.2],
+      [-172, -34, 1.45],[-190, -8, 1.35],[-196, 42, 1.5], [-166, 44, 1.3],
+      [-148, 64, 1.55],[-128, 56, 1.35],[-108, 64, 1.25],[-92, 46, 1.4],
+      [-80, 32, 1.2],  [-118, 24, 1.5], [-138, -4, 1.3], [-100, -16, 1.45],
+      [-84, -60, 1.35],[-124, -92, 1.4],[-164, -12, 1.25],[-182, 62, 1.4],
+      [-206, 20, 1.3], [-152, 36, 1.2], [-134, 76, 1.45],[-98, 8, 1.15]])
+    conifer(tx, tz, ts);
 }
 
 /* ---- railway: a single line snaking through the hills behind the station.
@@ -2646,6 +2674,12 @@ const RIGHTW = PX1 - WT - 0.03;
     {A:[8, 108],    B:[8, 93],     c:0xf0ede6, phone:true,  sp:0.95, ph:0.45},  // park, west path
     {A:[27, 94],    B:[27, 107],   c:0xffffff, phone:false, sp:1.05, ph:0.85},  // park, east path
     {A:[-20, 42.6], B:[6, 42.6],   c:0xbdb8ae, phone:true,  sp:1.15, ph:0.65},  // in front of the homes
+    // using the crossings — the local traffic stops at these junctions, so the
+    // two read as one piece of choreography
+    {A:[-11.6, 52.6],B:[-0.4, 52.6],c:0xffffff, phone:false, sp:1.0, ph:0.12},  // over Maple
+    {A:[-9.1, 50.4], B:[-9.1, 61.6],c:0xf0ede6, phone:true,  sp:0.9, ph:0.58},  // over Signal
+    {A:[16.4, 52.6], B:[27.6, 52.6],c:0xd8d3c9, phone:false, sp:1.05,ph:0.34},  // over Second Ave
+    {A:[-9.1, 84.4], B:[-9.1, 91.6],c:0xbdb8ae, phone:true,  sp:0.85,ph:0.77},  // over Third St
   ].map(w => ({...w, ped: mkPed(w.c, w.phone),
     len: Math.hypot(w.B[0]-w.A[0], w.B[1]-w.A[1])}));
   // a pair chatting by the entrance
@@ -3068,7 +3102,11 @@ function projectOverlay(){
     _pv.copy(a.v).project(cam);
     a.el.style.left = ((_pv.x*0.5+0.5)*w)+"px";
     a.el.style.top  = ((-_pv.y*0.5+0.5)*h)+"px";
-    a.el.style.display = (_pv.z > 1 || (!expandedTarget && !a.room.ext)) ? "none" : "";
+    // the bottom strip belongs to the hint and the title block; a label that
+    // lands in it collides with that copy, so it steps aside
+    const py = (-_pv.y*0.5+0.5)*h;
+    a.el.style.display =
+      (_pv.z > 1 || py > h - 72 || (!expandedTarget && !a.room.ext)) ? "none" : "";
   });
   if(bldgTag.style.display !== "none"){
     _pv.copy(bldgTagV).project(cam);
