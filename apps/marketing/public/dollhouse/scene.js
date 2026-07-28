@@ -1022,7 +1022,9 @@ const shellRec = reg(shellG);
       x.fillStyle = g; x.fillRect(0, 0, w, h);
     };
     fade(0, 0, w*0.05, 0);      // inland edges — short, and hidden under the land
-    fade(0, 0, 0, h*0.05);
+    // the north edge fades in tight: the rail viaduct crosses the sea up here,
+    // and a bridge over near-transparent water reads as a bridge over nothing
+    fade(0, 0, 0, h*0.013);
     fade(w, 0, w*0.84, 0);      // out to sea
     fade(0, h, 0, h*0.84);
   });
@@ -1233,7 +1235,7 @@ const shellRec = reg(shellG);
      from the transmitter, then swings behind the station and out east. Its
      height is the higher of the two landforms at each point, since the west
      half rides the headland and the east half the island. */
-  const X0 = -178, X1 = 54, N = 320;
+  const X0 = -178, X1 = 112, N = 380;
   const ss = (e0, e1, v) => { const t = Math.max(0, Math.min(1, (v-e0)/(e1-e0))); return t*t*(3-2*t); };
   const railZ = x => 15 - 54*ss(-140, -25, x) + 4*Math.sin(x*0.09);
   const pts = [];
@@ -1370,7 +1372,29 @@ const shellRec = reg(shellG);
       Math.atan2(p.tx, p.tz)).castShadow = false;
   };
   knoll(-172, 1);
-  knoll(47, -1);
+  /* The east end is a viaduct, not a hill. The deck holds its level while the
+     island falls away beneath it, so the line simply carries on out over the
+     water and leaves the frame — which is a better answer than a mound the
+     train vanishes into. Piers start where the ground stops holding it up. */
+  const pierMat = std(0xdedad1, {roughness:0.95, envMapIntensity:0.28});
+  for(let s = 0; s < RAIL_L; s += 5.6){
+    const p = railAt(s);
+    // the island starts falling away under the line from about x 38, so the
+    // deck is already flying well before the shore; piers run long and are
+    // simply buried where the ground is still up
+    if(p.x < 41) continue;
+    const drop = 7.0;
+    Bo(rail, 1.6, drop, 1.6, pierMat, p.x, p.y - 0.12 - drop, p.z,
+      Math.atan2(p.tx, p.tz)).castShadow = false;
+  }
+  for(let s = 0; s < RAIL_L; s += 2.0){
+    const p = railAt(s);
+    if(p.x < 39.5) continue;
+    const nx = -p.tz, nz = p.tx, ry = Math.atan2(p.tx, p.tz);
+    for(const off of [1.86, -1.86])
+      Bo(rail, 0.3, 0.36, 2.1, pierMat, p.x + nx*off, p.y + 0.02, p.z + nz*off, ry)
+        .castShadow = false;
+  }
 
   const consist = [mkLoco(), mkCoach(), mkCoach(), mkCoach()];
   const CYCLE = RAIL_L + 34;          // a clear pause between passes
