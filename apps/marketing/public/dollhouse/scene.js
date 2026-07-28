@@ -142,7 +142,7 @@ const ROOMS = [
    gear:[["Telescoping mast","Bonded uplink straight into the stream chain."],
          ["Roof dish","Automatic backup path when the crowd kills the cell site."],
          ["Mobile unit","Codec connects itself when the engine sees the van go live."]]},
-  {id:"remote", name:"Live Remote", group:"Field", ext:{cx:32, cy:2.4, cz:10, w:12.5, h:8, d:13},
+  {id:"remote", name:"Live Remote", group:"Field", ext:{cx:44, cy:2.4, cz:12, w:12.5, h:8, d:13},
    control:"AirSuite Remote Console",
    promise:"Broadcast from anywhere — a folding table becomes a studio with liners, sweepers and sponsor reads on time.",
    gear:[["Remote console","Same AirSuite surface, running on a laptop."],
@@ -614,7 +614,7 @@ scene.add(shellG);
         h += amp * Math.exp(-(((x-hx)*(x-hx)) + ((z-hz)*(z-hz))) / (2*sig*sig));
       const flat = Math.max(
         rectMask(x, z, -21, 21, -16, 21, 5),        // station + front walk
-        rectMask(x, z, 22, 42, -12, 19, 5),         // field kit
+        rectMask(x, z, 22, 49, -12, 21, 5),         // field kit
         rectMask(x, z, 10, 18, 32.6, 36.6, 4),      // parking pull-off by the front road
         rectMask(x, z, 19, 37, 26, 34, 4),          // billboard + store lot
         rectMask(x, z, -27, -5, 26, 36, 4),         // concert lawn by the road
@@ -2347,7 +2347,9 @@ const RIGHTW = PX1 - WT - 0.03;
 /* --- Live Remote --- */
 {
   const room = RM("remote"), {g, pin} = roomGroup(room);
-  const tg = new THREE.Group(); tg.position.set(32, 0, 9); tg.rotation.y = -0.35; g.add(tg);
+  // pulled east toward the ring road so the booth sits on the street, not
+  // marooned in the middle of the yard
+  const tg = new THREE.Group(); tg.position.set(44, 0, 11); tg.rotation.y = -0.35; g.add(tg);
   /* trade-show canopy: open frame, translucent peaked roof, scalloped
      valance — you can see the whole booth under it */
   const EAVE = 3.5;
@@ -2418,9 +2420,9 @@ const RIGHTW = PX1 - WT - 0.03;
       new THREE.Vector3(30.1, 1.35, 11.9)
     ]), 26, 0.045, 8), MAT.gray());
   cable.castShadow = true; g.add(cable);
-  pin(29.3, 2.0, 12.2);
-  pin(35.3, 2.5, 13.6);
-  pin(31.0, 3.4, 11.6);
+  pin(41.3, 2.0, 14.2);
+  pin(47.3, 2.5, 15.6);
+  pin(43.0, 3.4, 13.6);
 }
 
 /* --- In-Car Radio: traffic on the ring road --- */
