@@ -2416,49 +2416,63 @@ const RIGHTW = PX1 - WT - 0.03;
   ];
   const colors = [0xffffff, 0xd8d3c9, 0xff4a1c, 0xffffff, 0xbdb8ae, 0xf0ede6, 0xffffff,
                   0xe8e4dc, 0xffffff, 0xd0cabf];
-  /* spread so several cars sit on the visible front straight at load */
-  const SPREAD = [0.045, 0.5, 0.115, 0.62, 0.185, 0.78, 0.255, 0.33, 0.415, 0.56];
   /* The ring is simulated, not swept along on a timer. Every vehicle carries a
      position and a speed and, each frame, measures the gap to whoever is in
      front and brakes for it — which is what makes cars queue behind a bus
      instead of driving straight through it. */
   const RING = [];
-  const addRing = (mesh, laneIdx, spread, vmax, len, th) => {
-    const lane = lanes[laneIdx];
-    RING.push({mesh, lane, dir: lane.dir, p: spread * lane.path.L,
-               v: vmax, vmax, len, th: th || 0, on: true});
-  };
-  colors.forEach((col, i) => addRing(mkCar(col), i % 2, SPREAD[i], 5.2 + (i%3)*1.1, 2.6));
+  const SPEC = [];
+  colors.forEach((col, i) => SPEC.push({kind:"car", col, lane: i % 2, vmax: 6.4 + (i % 3) * 1.0}));
   // buses are slower, so traffic stacks up behind them like it does for real
-  [{dest:"DOWNTOWN", col:0xf0ede6, spread:0.30, lane:0, vmax:3.6},
-   {dest:"CAMPUS",   col:0xffffff, spread:0.70, lane:1, vmax:3.2},
-   {dest:"AIRPORT",  col:0xe8e4dc, spread:0.90, lane:0, vmax:3.9},
-  ].forEach(b => addRing(mkBus(b.col, b.dest), b.lane, b.spread, b.vmax, 5.2));
+  [{dest:"DOWNTOWN", col:0xf0ede6, lane:0, vmax:4.4},
+   {dest:"CAMPUS",   col:0xffffff, lane:1, vmax:4.0},
+   {dest:"AIRPORT",  col:0xe8e4dc, lane:0, vmax:4.7},
+  ].forEach(b => SPEC.push({kind:"bus", ...b}));
+  [0xffffff, 0xe8e4dc, 0xd8d3c9, 0xbdb8ae].forEach((col, i) =>
+    SPEC.push({kind:"car", col, lane: i % 2, vmax: 5.8 + (i % 3) * 0.8}));
+  /* Spaced evenly around each lane at build. Hand-picked start offsets used to
+     drop two vehicles almost on top of each other, and a pair that starts
+     overlapped can never recover: each reads the other as directly ahead at
+     zero distance, both brake to a stop, and neither is the one that moves. */
+  for(const li of [0, 1]){
+    const mine = SPEC.filter(s => s.lane === li);
+    const lane = lanes[li], step = lane.path.L / mine.length;
+    mine.forEach((s, i) => RING.push({
+      mesh: s.kind === "bus" ? mkBus(s.col, s.dest) : mkCar(s.col),
+      lane, dir: lane.dir, p: i * step + (li ? step * 0.5 : 0),
+      v: s.vmax, vmax: s.vmax, len: s.kind === "bus" ? 5.2 : 2.6,
+    }));
+  }
 
   const placeRing = r => {
     const p = r.lane.path.at(r.p);
     r.mesh.position.set(p.x, 0.035, p.z);
     r.mesh.rotation.y = Math.atan2(-p.tz * r.dir, p.tx * r.dir);
   };
+  const MIN_GAP = 1.3;
   const gapAhead = me => {
     const L = me.lane.path.L;
     let best = L;
     for(const o of RING){
-      if(o === me || !o.on || o.lane !== me.lane) continue;
+      if(o === me || o.lane !== me.lane) continue;
       let gp = (o.p - me.p) * me.dir;
-      gp = ((gp % L) + L) % L;
-      gp -= (me.len + o.len) / 2 + 1.1;
+      gp = ((gp % L) + L) % L;                 // forward distance, centre to centre
+      gp -= (me.len + o.len) / 2;              // bumper to bumper
       if(gp < best) best = gp;
     }
     return best;
   };
-  const stepRing = dt => {
+  const stepRing = (dt, busy) => {
+    // drive time is congestion, not extra cars appearing out of nowhere:
+    // everyone's ceiling drops, so the ring visibly thickens and slows
+    const cap = 1 - 0.55 * Math.max(0, Math.min(1, (busy - 0.32) / 0.68));
     for(const r of RING){
-      if(!r.on) continue;
       const clear = gapAhead(r);
-      const target = Math.max(0, Math.min(r.vmax, clear * 1.15));
-      r.v += (target - r.v) * Math.min(1, dt * 3);
-      r.p += r.dir * r.v * dt;
+      const want = Math.min(r.vmax * cap, Math.max(0, (clear - MIN_GAP) * 1.4));
+      r.v = Math.max(0, r.v + Math.max(-11 * dt, Math.min(4.5 * dt, want - r.v)));
+      // the advance is capped by the room actually available, so no vehicle can
+      // ever pass through the one in front no matter how the timing lands
+      r.p += r.dir * Math.min(r.v * dt, Math.max(0, clear - MIN_GAP));
       placeRing(r);
     }
   };
@@ -2504,18 +2518,22 @@ const RIGHTW = PX1 - WT - 0.03;
     for(let i=ks.length-1;i>0;i--){ run(ks[i], ks[i-1]); hold(ks[i-1]); }
     return {tl, T: t};
   };
+  /* Every stop is a junction with a sign standing at it — a car halting
+     mid-block just reads as a broken simulation, so those came out. Each
+     street carries at most one vehicle per side. */
   const locals = [
     {A:[-6.9, 41.5], B:[-6.9, 111],  sp:5.0, ph:0.0,  col:0xffffff, stops:[0.209, 0.669]},
-    {A:[-37.5, 56.9],B:[29.5, 56.9], sp:5.4, ph:0.5,  col:0xe8e4dc, stops:[0.470, 0.888]},
+    {A:[-37.5, 55.3],B:[29.5, 55.3], sp:5.4, ph:0.5,  col:0xe8e4dc, stops:[0.470, 0.888]},
     {A:[-33.5, 88.9],B:[54, 88.9],   sp:4.8, ph:0.25, col:0xd8d3c9, stops:[0.314, 0.634]},
-    {A:[34, 55.1],   B:[56, 55.1],   sp:4.6, ph:0.35, col:0xf0ede6, stops:[0.45]},
-    // the local route: down Signal St past the shops and back
-    {A:[-37.5, 56.9],B:[54, 56.9],   sp:3.6, ph:0.15, col:0xffffff, bus:"SIGNAL ST",
+    {A:[34, 55.3],   B:[56, 55.3],   sp:4.6, ph:0.35, col:0xf0ede6, stops:[]},
+    // the local route: down Signal St past the shops and back, and unlike the
+    // cars it does have a reason to pause mid-block — the stop by the shops
+    {A:[-37.5, 56.7],B:[54, 56.7],   sp:3.6, ph:0.15, col:0xffffff, bus:"SIGNAL ST",
      stops:[0.344, 0.650, 0.87]},
   ].map(L => {
     const len = Math.hypot(L.B[0]-L.A[0], L.B[1]-L.A[1]);
     return {...L, len, car: L.bus ? mkBus(L.col, L.bus) : mkCar(L.col),
-            route: buildRoute(L.stops, len, L.sp, L.bus ? 2.2 : 1.3)};
+            route: buildRoute(L.stops, len, L.sp, L.bus ? 1.8 : 0.9)};
   });
   const placeLocal = (L, t) => {
     const R = L.route;
@@ -2546,20 +2564,17 @@ const RIGHTW = PX1 - WT - 0.03;
     }
     return 0.28 + 0.72 * b;
   };
-  // rush-hour extras join the same simulation, so they queue like everyone else
-  [0xffffff, 0xe8e4dc, 0xd8d3c9, 0xffffff, 0xf0ede6, 0xbdb8ae].forEach((col, i)=>
-    addRing(mkCar(col), i % 2, 0.08 + i*0.157, 4.6 + (i%3)*0.9, 2.6,
-            0.45 + i*0.082));                          // staggers the surge in and out
+  // extras on the far side of each street, so they can never meet the local
+  // already working it
   const rushLocals = [
-    {A:[-6.9, 41.5], B:[-6.9, 111],  sp:5.2, ph:0.62, col:0xf0ede6, th:0.6,  stops:[0.209, 0.669]},
+    {A:[-5.1, 111],  B:[-5.1, 41.5], sp:5.2, ph:0.62, col:0xf0ede6, th:0.6,  stops:[0.331, 0.791]},
     {A:[54, 87.1],   B:[-33.5, 87.1], sp:5.0, ph:0.8, col:0xffffff, th:0.72, stops:[0.366, 0.686]},
-    {A:[56, 56.9],   B:[34, 56.9],   sp:4.9, ph:0.1,  col:0xd8d3c9, th:0.65, stops:[0.5]},
+    {A:[56, 56.7],   B:[34, 56.7],   sp:4.9, ph:0.1,  col:0xd8d3c9, th:0.65, stops:[]},
   ].map(L => {
     const len = Math.hypot(L.B[0]-L.A[0], L.B[1]-L.A[1]);
-    return {...L, len, car: mkCar(L.col), route: buildRoute(L.stops, len, L.sp, 1.3)};
+    return {...L, len, car: mkCar(L.col), route: buildRoute(L.stops, len, L.sp, 0.9)};
   });
   const clockEl = document.getElementById("dayclock");
-  const DRIVE_TIMES = [12, 17, 22];
   const setClock = t => {
     if(!clockEl) return;
     const h = hourAt(t), b = busyAt(h);
@@ -2570,22 +2585,7 @@ const RIGHTW = PX1 - WT - 0.03;
   };
   const setRush = (t, dt) => {
     const b = busyAt(hourAt(t));
-    for(const r of RING){
-      const want = b >= r.th;
-      // a car arriving for the peak is dropped into the biggest gap on its
-      // lane, so it never materialises on top of somebody
-      if(want && !r.on){
-        let bestGap = -1, bestP = r.p;
-        for(const o of RING){
-          if(!o.on || o.lane !== r.lane) continue;
-          const gp = gapAhead(o);
-          if(gp > bestGap){ bestGap = gp; bestP = o.p + o.dir * gp / 2; }
-        }
-        r.p = bestP; r.v = 0;
-      }
-      r.on = want; r.mesh.visible = want;
-    }
-    stepRing(dt || 0.016);
+    stepRing(dt || 0.016, b);
     rushLocals.forEach(L => { L.car.visible = b >= L.th; if(L.car.visible) placeLocal(L, t); });
     setClock(t);
   };
@@ -3403,7 +3403,7 @@ Cy(roofCap, 0.5, 0.5, 0.4, MAT.gray(), -10, 0.5, -6, 18).layers.enable(4);
     x.fillText("1 0 4 . 5   F M", w/2, h*0.93);
   });
   const sign = new THREE.Group();
-  sign.position.set(2.5, 0.5, 7.4);          // out at the front edge of the roof
+  sign.position.set(2.0, 0.5, 1.6);          // set back from the roof's front edge
   // turned to look down over the neighbourhood and the shops, which sit south
   // and south-east — near enough to square-on for the camera to read it too
   sign.rotation.y = Math.atan2(0.42, 1.0);
