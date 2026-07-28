@@ -71,6 +71,51 @@ body {
   }
 }
 
+/* Partners marquee. The track holds two identical rows and slides exactly half
+   its own width, so the seam never shows. The mask fades logos out at both
+   ends instead of cutting them off at the edge. */
+.bc-marquee {
+  overflow: hidden;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 12%,
+    #000 88%,
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 12%,
+    #000 88%,
+    transparent
+  );
+}
+.bc-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: bc-marquee 38s linear infinite;
+}
+.bc-marquee-row {
+  display: flex;
+  align-items: center;
+  gap: 4.5rem;
+  padding-right: 4.5rem;
+}
+@keyframes bc-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bc-marquee-track {
+    animation: none;
+  }
+}
+
 .bc-pulse {
   animation: bc-pulse 2.4s ease-in-out infinite;
 }

@@ -1,5 +1,6 @@
 import { ArrowRight, Check } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
+import { Partners } from "@/components/partners";
 import { Wordmark } from "@/components/wordmark";
 import { EarlyAccessForm } from "@/components/early-access-form";
 import { Features } from "@/components/features";
@@ -96,6 +97,8 @@ export default function Page() {
           </dl>
         </div>
       </section>
+
+      <Partners />
 
       {/* ---------------------------------------------------- platform */}
       <section id="platform" className="mx-auto max-w-6xl px-5 py-24">

@@ -148,6 +148,12 @@ const ROOMS = [
    gear:[["Remote console","Same AirSuite surface, running on a laptop."],
          ["PA stack","Break liners and sponsor reads fire on schedule."],
          ["Site kit","Canopy to cable, checklisted and tracked."]]},
+  {id:"datacenter", name:"Network Operations", group:"Field", ext:{cx:-16, cy:5.4, cz:30, w:22, h:17, d:15},
+   control:"Broadcast Copy Core",
+   promise:"The rack room behind all of it — the content system, the station's own hardware, the compliance and EAS chain, and every stream leaving the building, watched from one place.",
+   gear:[["Racks & CMS","The content system and the station's own gear, monitored down to the rack unit — temperature, power draw and disk before anything goes quiet."],
+         ["EAS & compliance","Alerts pass, log themselves and land in the public file without anyone retyping a thing."],
+         ["Stream signals","Every mount and bitrate watched, with failover that trips before the request line does."]]},
 
   {id:"drive", name:"In-Car Radio", group:"Audience", ext:{cx:2, cy:1.6, cz:38, w:34, h:4.5, d:8.5},
    control:"Broadcast Copy Drive",
@@ -803,7 +809,7 @@ scene.add(shellG);
       }
       markNoBounds(tg2);
     };
-    tree(-41, 29, 1.25, false); tree(-45, 14, 1.1, true); tree(-21, 29.5, 1.0, false);
+    tree(-41, 29, 1.25, false); tree(-45, 14, 1.1, true); tree(-30, 33.5, 1.0, false);
     tree(-36, 7.5, 0.95, true); tree(-44, -4, 1.15, false); tree(-34, -17, 0.9, true);
     tree(-9, -29.5, 1.2, false); tree(17, -29.5, 1.05, true); tree(44, -16, 1.1, false);
     tree(58, 6, 1.2, true); tree(56, 26, 0.95, false); tree(-3.6, 34.6, 1.0, true); tree(15.5, 29.8, 0.9, false);
@@ -1223,6 +1229,76 @@ const shellRec = reg(shellG);
       [-92, 84, 1.25], [-68, 88, 1.4],  [-116, 70, 1.5], [-124, 50, 1.3],
       [-130, 66, 1.2], [-112, 86, 1.4], [-80, 80, 1.3],  [-50, 62, 1.15]])
     conifer(tx, tz, ts);
+}
+
+/* ---- the ridge country: deer working through the trees. This side of the
+   map is earmarked for the defence automations, so for now it stays quiet
+   country with something living in it. ---------------------------------- */
+{
+  const herd = new THREE.Group(); levelG[0].add(herd);
+  const hide = std(0x9a8d79, {roughness:0.95});
+  const dark = std(0x6b6152, {roughness:0.95});
+  function mkDeer(s){
+    const g2 = new THREE.Group(); g2.scale.setScalar(s); herd.add(g2);
+    Bo(g2, 1.9, 0.85, 0.72, hide, 0, 0.95, 0);                    // barrel
+    Bo(g2, 0.7, 0.62, 0.66, hide, -0.95, 1.05, 0);                // haunch
+    for(const [lx, lz] of [[-0.68, 0.28], [0.66, 0.28], [-0.68, -0.28], [0.66, -0.28]])
+      Cy(g2, 0.075, 0.095, 0.98, dark, lx, 0, lz, 7);
+    const head = new THREE.Group(); head.position.set(0.92, 1.62, 0); g2.add(head);
+    Cy(head, 0.15, 0.19, 0.62, hide, 0, -0.62, 0, 8, -0.42);      // neck
+    Bo(head, 0.5, 0.3, 0.28, hide, 0.16, 0.02, 0);                // skull
+    Sp(head, 0.1, dark, 0.44, 0.06, 0);                           // muzzle
+    for(const az of [0.11, -0.11]){                               // antlers
+      Cy(head, 0.026, 0.034, 0.44, dark, 0.02, 0.24, az, 6, 0.3);
+      Cy(head, 0.022, 0.026, 0.3, dark, -0.14, 0.6, az, 6, -0.55);
+      Cy(head, 0.02, 0.024, 0.24, dark, 0.16, 0.58, az, 6, 0.7);
+    }
+    Sp(g2, 0.09, hide, -1.28, 1.28, 0);                           // tail
+    mkBlobShadow(g2, 2.6, 1.3, 0.02);
+    markNoBounds(g2);
+    return {g: g2, head};
+  }
+  const deer = [
+    {A:[-116, -34], B:[-101, -21], s:1.15, sp:0.60, ph:0.00},
+    {A:[-134, -6],  B:[-123, 7],   s:1.05, sp:0.48, ph:0.38},
+    {A:[-99, 23],   B:[-111, 35],  s:1.20, sp:0.52, ph:0.71},
+    {A:[-151, -53], B:[-140, -43], s:0.95, sp:0.42, ph:0.19},
+    {A:[-88, -52],  B:[-77, -62],  s:1.10, sp:0.55, ph:0.55},
+  ].map(d => {
+    const m = mkDeer(d.s);
+    return {...d, ...m, len: Math.hypot(d.B[0]-d.A[0], d.B[1]-d.A[1])};
+  });
+  /* a walk out, a spell with the head down, a walk back, another graze — deer
+     that only ever pace look like clockwork */
+  const placeDeer = (d, t) => {
+    const cyc = (((t * d.sp / d.len) + d.ph) % 1 + 1) % 1;
+    let k, moving, fwd;
+    if(cyc < 0.34){ k = cyc / 0.34; moving = true; fwd = 1; }
+    else if(cyc < 0.5){ k = 1; moving = false; fwd = 1; }
+    else if(cyc < 0.84){ k = 1 - (cyc - 0.5) / 0.34; moving = true; fwd = -1; }
+    else { k = 0; moving = false; fwd = -1; }
+    const x = d.A[0] + (d.B[0]-d.A[0])*k, z = d.A[1] + (d.B[1]-d.A[1])*k;
+    d.g.position.set(x, westH(x, z) - 0.05 + (moving ? Math.abs(Math.sin(t*5 + d.ph*9))*0.05 : 0), z);
+    d.g.rotation.y = Math.atan2(-(d.B[1]-d.A[1])*fwd, (d.B[0]-d.A[0])*fwd);
+    d.head.rotation.z = moving ? Math.sin(t*2.2 + d.ph*5)*0.06 : -0.95;
+  };
+  // a stand at the treeline, looking down the clearing the deer work
+  {
+    const sx = -127, sz = -14;
+    const st = new THREE.Group(); st.position.set(sx, westH(sx, sz) - 0.05, sz);
+    st.rotation.y = 0.5; levelG[0].add(st);
+    const timber = std(0x8a7f6e, {roughness:0.95});
+    for(const [px, pz] of [[-0.85,-0.85],[0.85,-0.85],[-0.85,0.85],[0.85,0.85]])
+      Cy(st, 0.08, 0.1, 3.3, timber, px, 0, pz, 7);
+    Bo(st, 2.3, 0.14, 2.3, timber, 0, 3.3, 0);
+    Bo(st, 2.3, 0.55, 0.1, timber, 0, 3.44, 1.1);
+    Bo(st, 0.1, 0.55, 2.3, timber, -1.1, 3.44, 0);
+    for(let i=0;i<5;i++) Bo(st, 0.9, 0.06, 0.08, timber, 0, 0.5 + i*0.6, -1.28);
+    markNoBounds(st);
+  }
+  markNoBounds(herd);
+  deer.forEach(d => placeDeer(d, 0));
+  if(ANIM) anims.push(t => deer.forEach(d => placeDeer(d, t)));
 }
 
 /* ---- railway: a single line snaking through the hills behind the station.
@@ -2459,6 +2535,106 @@ const RIGHTW = PX1 - WT - 0.03;
   pin(43.0, 3.4, 13.6);
 }
 
+/* --- Data Center: the rack room the whole platform leans on -------------
+   It sits on the old concert lawn inside the ring, so it reads as part of the
+   plant rather than another storefront: long hall, rooftop chillers, a glazed
+   bay that shows the racks, and a fenced yard with the generator, the fuel
+   tank and the uplink dishes. */
+{
+  const room = RM("datacenter"), {g, pin} = roomGroup(room);
+  const dc = new THREE.Group(); dc.position.set(-16, 0, 30); dc.rotation.y = 0.12; g.add(dc);
+
+  /* Stacked, like the station across the lot: each floor is a body with a
+     slightly proud slab on top, so the building reads as plates rather than
+     one extruded box. Three storeys keeps it clearly subordinate to the
+     four-storey station. */
+  const FH = 3.3, FLOORS = 3;
+  for(let f = 0; f < FLOORS; f++){
+    const y = f * FH;
+    Bo(dc, 11.0, FH - 0.34, 8.8, MAT.wall(), 0, y, 0);
+    Bo(dc, 11.6, 0.34, 9.4, MAT.slab(), 0, y + FH - 0.34, 0);
+    if(f > 0){                                   // window band per upper floor
+      for(const [wz, wd] of [[4.46, 0.08], [-4.46, 0.08]]){
+        Bo(dc, 9.4, 1.35, wd, MAT.inkFlat(), 0, y + 0.75, wz);
+        Bo(dc, 9.0, 1.1, 0.05, MAT.glass(), 0, y + 0.87, wz + (wz > 0 ? 0.05 : -0.05));
+        for(let m = -3; m <= 3; m++)
+          Bo(dc, 0.14, 1.14, 0.07, MAT.white(), m*1.3, y + 0.85, wz + (wz > 0 ? 0.06 : -0.06));
+      }
+      Bo(dc, 0.08, 1.35, 7.6, MAT.inkFlat(), 5.56, y + 0.75, 0);
+      Bo(dc, 0.05, 1.1, 7.2, MAT.glass(), 5.61, y + 0.87, 0);
+    }
+  }
+  const TOP = FLOORS * FH;
+  Bo(dc, 11.6, 0.5, 0.34, MAT.white(), 0, TOP, 4.53);        // parapet, camera side
+  Bo(dc, 0.34, 0.5, 9.4, MAT.white(), 5.63, TOP, 0);
+  Bo(dc, 11.1, 0.1, 8.9, MAT.accent(), 0, TOP - 0.44, 0);    // banding at the cap
+
+  // rooftop plant — the giveaway that a building is full of computers
+  for(const cx of [-3.4, -0.2, 3.0]){
+    Bo(dc, 2.3, 0.85, 2.0, std(0xe4e0d6, {roughness:0.9}), cx, TOP, -1.4);
+    const fan = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.1, 18), MAT.inkFlat());
+    fan.position.set(cx, TOP + 0.9, -1.4); fan.castShadow = true; dc.add(fan);
+    Cy(dc, 0.44, 0.44, 0.06, std(0xf4f1ea, {roughness:0.8}), cx, TOP + 0.95, -1.4, 14);
+  }
+  for(const vx of [-4.6, 4.2])
+    Cy(dc, 0.32, 0.38, 1.4, std(0xe4e0d6, {roughness:0.9}), vx, TOP, 2.4, 12);
+
+  /* the ground floor is glazed and the racks are behind it — the whole point
+     of putting a window in a building nobody is meant to walk into */
+  Bo(dc, 8.6, 2.3, 0.14, MAT.inkFlat(), -1.0, 0.5, 4.36);
+  Bo(dc, 8.2, 2.0, 0.08, MAT.glass(), -1.0, 0.63, 4.43);
+  for(let i=0;i<5;i++){
+    const rx = -4.4 + i*1.7;
+    Bo(dc, 1.2, 2.2, 1.0, MAT.inkFlat(), rx, 0.05, 3.2);
+    Bo(dc, 0.98, 1.85, 0.05, MAT.screen(), rx, 0.25, 3.72);
+    for(let k=0;k<6;k++)
+      Sp(dc, 0.036, emissive(k % 3 ? 0xffd9a8 : 0xff4a1c), rx - 0.34 + (k % 2)*0.68,
+        0.5 + Math.floor(k/2)*0.55, 3.76);
+  }
+  // door, step and the plate by it
+  Bo(dc, 1.15, 2.2, 0.12, std(0xdcd7cc, {roughness:0.8}), 4.3, 0, 4.41);
+  Bo(dc, 1.5, 0.14, 0.7, MAT.slab(), 4.3, -0.02, 4.95);
+  Pl(dc, 4.4, 0.62, signMat(tex(440, 64, (x,w,h)=>{
+    x.fillStyle = "#26211a"; rr(x, 0, 0, w, h, 8); x.fill();
+    x.fillStyle = "#fdfbf6"; x.font = "800 25px "+F;
+    x.textAlign = "center"; x.textBaseline = "middle";
+    x.fillText("N E T W O R K   O P S", w/2, h/2 + 1);
+  })), -0.6, TOP + 0.24, 4.72);        // on the parapet — behind the glazing it vanished
+
+  // yard: generator, fuel tank and the uplinks
+  Bo(dc, 3.4, 2.0, 2.2, std(0xe4e0d6, {roughness:0.92}), 8.6, 0, 1.2);
+  Bo(dc, 3.44, 0.12, 0.14, MAT.accent(), 8.6, 1.55, 2.31);    // stripe, not a lid
+  Cy(dc, 0.16, 0.16, 1.5, MAT.inkFlat(), 9.7, 2.1, 0.4, 10);
+  Cy(dc, 0.95, 0.95, 3.6, std(0xdedad1, {roughness:0.9}), 8.8, 0.95, -3.4, 18, 0, Math.PI/2);
+  for(const [sx, sz] of [[-8.4, -0.6], [-8.9, -4.4]]){
+    Cy(dc, 0.13, 0.17, 1.2, MAT.chrome(), sx, 0, sz, 10);
+    const bowl = new THREE.Mesh(
+      new THREE.SphereGeometry(1.15, 20, 12, 0, Math.PI*2, 0, Math.PI/2.6),
+      std(0xf7f4ee, {roughness:0.55, envMapIntensity:0.9, side:THREE.DoubleSide}));
+    bowl.position.set(sx, 1.55, sz); bowl.rotation.x = -0.95;
+    bowl.castShadow = true; dc.add(bowl);
+    Cy(dc, 0.035, 0.035, 0.8, MAT.inkFlat(), sx, 1.6, sz + 0.55, 8, 0, -0.95);
+  }
+  // compound fence
+  const fence = (x0, z0, x1, z1) => {
+    const n = Math.round(Math.hypot(x1-x0, z1-z0) / 2.4);
+    for(let i=0;i<=n;i++)
+      Cy(dc, 0.05, 0.06, 1.5, MAT.chrome(), x0 + (x1-x0)*i/n, 0, z0 + (z1-z0)*i/n, 6);
+    const mx = (x0+x1)/2, mz = (z0+z1)/2, ln = Math.hypot(x1-x0, z1-z0);
+    for(const hy of [0.55, 1.32])
+      Bo(dc, 0.05, 0.05, ln, MAT.chrome(), mx, hy, mz, Math.atan2(x1-x0, z1-z0))
+        .castShadow = false;
+  };
+  fence(-10.6, -6.2, 10.8, -6.2);
+  fence(10.8, -6.2, 10.8, 3.2);
+  fence(-10.6, -6.2, -10.6, 1.6);
+  mkPlant(g, -25.4, 0, 33.6, 1.1);
+
+  pin(-19.6, 1.8, 34.2);      // the racks behind the glass
+  pin(-8.6, 2.6, 31.6);       // generator and fuel — the compliance side
+  pin(-24.6, 2.4, 28.8);      // uplink dishes
+}
+
 /* --- In-Car Radio: traffic on the ring road --- */
 {
   const room = RM("drive"), {g, pin} = roomGroup(room);
@@ -2797,7 +2973,7 @@ const RIGHTW = PX1 - WT - 0.03;
     {A:[24.5, 13],  B:[24.5, -5],  c:0xffffff, phone:true,  sp:1.5,  ph:0.3},
     {A:[-16, 15.2], B:[5, 15.2],   c:0xf0ede6, phone:false, sp:1.2,  ph:0.85},
     {A:[8, 15.4],   B:[-9, 15.4],  c:0xffffff, phone:true,  sp:1.0,  ph:0.15},
-    {A:[-9, 19.6],  B:[-13, 28.5], c:0xd8d3c9, phone:false, sp:0.8,  ph:0.55},
+    {A:[-9, 19.6],  B:[-2, 27.5],  c:0xd8d3c9, phone:false, sp:0.8,  ph:0.55},
     // walking in to the park off Third St
     {A:[6.5, 92],   B:[12.5, 99],  c:0xffffff, phone:true,  sp:1.0,  ph:0.1},
     {A:[29, 93],    B:[23.5, 100], c:0xf0ede6, phone:false, sp:0.95, ph:0.6},
