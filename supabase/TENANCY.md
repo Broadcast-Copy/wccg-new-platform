@@ -83,7 +83,7 @@ land, so a new station starts current rather than replaying a chain.
 | Fleet | `bc_devices` `bc_device_agents` `bc_device_installs` `bc_device_peripherals` `bc_pair_codes` |
 | Releases / product | `bc_releases` `bc_changelog` `bc_features` |
 | Sales & onboarding | `bc_leads` `bc_org_invites` |
-| Tenant directory | `organizations` `organization_members` `stations` `station_domains` `station_entitlements` |
+| Tenant directory | `organization_members` `station_domains` `station_entitlements` (`organizations` and `stations` are **BOTH** — see below) |
 | Billing | `platform_fees` |
 | Station credentials | `airsuite_station_keys` `airsuite_station_status` |
 | Platform audit | `audit_log` `impersonation_log` |
@@ -94,10 +94,42 @@ It is control-plane data *about* a station.
 
 ### BOTH — same schema, different data in each database
 
+**`stations` and `organizations` CANNOT be control-plane-only.** Measured 2026-08-01:
+
+| table | inbound foreign keys |
+|---|---|
+| `stations` | **92** — from nearly every content table (`shows`, `djs`, `videos`, `points_history`, `station_members`, …) |
+| `organizations` | **42** — including from `stations` itself |
+
+Drop `stations` from a station database and 92 foreign keys break. So:
+
+- **`stations`** — control plane holds every station; **each station database holds exactly
+  ONE row: itself.**
+- **`organizations`** — control plane holds every org; each station database holds exactly one
+  row: its own owner. (`stations.org_id` FKs to it.)
+
+This is also why provisioning must be *apply full baseline, then drop the control-only tables*
+rather than trying to filter the dump: `--exclude` on `supabase db dump` applies only to
+data-only dumps, and these two must survive anyway.
+
+Also BOTH, for the per-database identity reason:
 `profiles` · `user_roles` · `notification_preferences` · `push_subscriptions`
 
-Each database has its own users, so each needs its own copy. The control plane's copy holds BC
-staff and contract engineers; a station's copy holds that station's staff and listeners.
+Each database has its own `auth.users`, so each needs its own copy. The control plane's copy
+holds BC staff and contract engineers; a station's copy holds that station's staff and
+listeners.
+
+### Safe to DROP from a station database after applying the baseline
+
+No content table has an inbound FK to any of these, so dropping is clean:
+
+`bc_devices` `bc_device_agents` `bc_device_installs` `bc_device_peripherals` `bc_pair_codes`
+`bc_releases` `bc_changelog` `bc_features` `bc_leads` `bc_org_invites` `organization_members`
+`station_domains` `station_entitlements` `platform_fees` `airsuite_station_keys`
+`airsuite_station_status` `audit_log` `impersonation_log`
+
+Drop `bc_devices` last or use `cascade` — the other four `bc_device_*`/`bc_pair_codes` tables
+FK to it.
 
 ### STATION CONTENT — one database per station
 
