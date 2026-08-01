@@ -30,6 +30,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link href="/" className="transition-colors hover:text-fg">
               Stations
             </Link>
+            <Link href="/fleet" className="transition-colors hover:text-fg">
+              Fleet
+            </Link>
             <Link href="/team" className="transition-colors hover:text-fg">
               Team
             </Link>

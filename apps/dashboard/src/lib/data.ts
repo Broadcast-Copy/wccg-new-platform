@@ -3,8 +3,11 @@ import type {
   ComplianceDeadline,
   EngineStatus,
   Entitlement,
+  FleetDevice,
   Organization,
+  PairCode,
   PublicFileDoc,
+  Release,
   Station,
   StationDomain,
 } from "@/lib/types";
@@ -93,5 +96,68 @@ export function getStationPublicFileDocs(): Promise<PublicFileDoc[]> {
     "public_file_documents",
     "id, station_id, category, title, description, url, period_label, is_published, sort_order",
     { column: "sort_order" },
+  );
+}
+
+/* ------------------------------------------------------------------ fleet -- */
+
+/**
+ * Every device in one station's plant, with agents, peripherals and installs.
+ * Goes through bc_fleet (migration 105), which is SECURITY INVOKER — RLS is the
+ * authority, so passing a station id you do not own returns nothing rather than
+ * leaking another tenant's plant.
+ */
+export async function getFleet(stationId: string): Promise<FleetDevice[]> {
+  const { data, error } = await supabase.rpc("bc_fleet", { p_station: stationId });
+  if (error) {
+    console.error("[control-plane] failed to read fleet:", error.message);
+    return [];
+  }
+  return (data ?? []) as FleetDevice[];
+}
+
+/** Pairing codes for the caller's stations (RLS: station staff). */
+export function getPairCodes(): Promise<PairCode[]> {
+  return readList<PairCode>(
+    "bc_pair_codes",
+    "code, station_id, label, expires_at, claimed_at, claimed_hostname, revoked_at",
+    { column: "expires_at", ascending: false },
+  );
+}
+
+/** Issue a pairing code. Server generates it, sets expiry, and checks staffing. */
+export async function issuePairCode(
+  stationId: string,
+  label: string | null,
+  ttlMinutes = 30,
+): Promise<{ code: string; expires_at: string } | null> {
+  const { data, error } = await supabase.rpc("bc_issue_pair_code", {
+    p_station: stationId,
+    p_label: label,
+    p_ttl_minutes: ttlMinutes,
+  });
+  if (error) {
+    console.error("[control-plane] failed to issue pair code:", error.message);
+    return null;
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  return (row ?? null) as { code: string; expires_at: string } | null;
+}
+
+export async function revokePairCode(code: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc("bc_revoke_pair_code", { p_code: code });
+  if (error) {
+    console.error("[control-plane] failed to revoke pair code:", error.message);
+    return false;
+  }
+  return data === true;
+}
+
+/** The published download catalogue. */
+export function getReleases(): Promise<Release[]> {
+  return readList<Release>(
+    "bc_releases",
+    "id, package, version, channel, title, notes, url, sha256, size_bytes, min_os",
+    { column: "package" },
   );
 }

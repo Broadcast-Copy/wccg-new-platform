@@ -86,3 +86,81 @@ export type PublicFileDoc = {
   is_published: boolean;
   sort_order: number;
 };
+
+/* ------------------------------------------------------------------ fleet --
+ * The device layer (migration 105). These mirror the on-prem hub; the hub is
+ * authoritative. A stale last_seen means "the cloud has not heard", NOT "the
+ * machine is down" — the UI must never conflate the two.
+ */
+
+/** One watched process on a device, as its agent reports it. */
+export type FleetAgent = {
+  id: string;
+  agent_id: string;
+  agent_version: string | null;
+  last_report: string | null;
+  /** process name -> running. A false is only a fault if it was meant to run. */
+  watch: Record<string, boolean>;
+  commands: { id: string; label?: string; confirm?: boolean }[];
+};
+
+export type FleetPeripheral = {
+  id: string;
+  kind: string;
+  label: string;
+  detail: string | null;
+  identifier: string | null;
+  present: boolean;
+};
+
+export type FleetInstall = {
+  id: string;
+  package: string;
+  version: string | null;
+  channel: string | null;
+  install_path: string | null;
+  installed_at: string | null;
+};
+
+/** A computer in a station's plant, with everything hanging off it. */
+export type FleetDevice = {
+  device_id: string;
+  device_key: string;
+  hostname: string | null;
+  display_name: string | null;
+  role: string | null;
+  room: string | null;
+  lan_ip: string | null;
+  aoip_ip: string | null;
+  is_critical: boolean;
+  last_seen: string | null;
+  status: Record<string, unknown> | null;
+  agents: FleetAgent[];
+  peripherals: FleetPeripheral[];
+  installs: FleetInstall[];
+};
+
+/** A pairing code — a bearer credential for joining a machine to a station. */
+export type PairCode = {
+  code: string;
+  station_id: string;
+  label: string | null;
+  expires_at: string;
+  claimed_at: string | null;
+  claimed_hostname: string | null;
+  revoked_at: string | null;
+};
+
+/** A downloadable Broadcast Copy artefact (the download manager's catalogue). */
+export type Release = {
+  id: string;
+  package: string;
+  version: string;
+  channel: string;
+  title: string | null;
+  notes: string | null;
+  url: string | null;
+  sha256: string | null;
+  size_bytes: number | null;
+  min_os: string | null;
+};
