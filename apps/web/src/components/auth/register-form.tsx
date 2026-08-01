@@ -129,7 +129,11 @@ const USER_TYPE_OPTIONS: {
   {
     value: "employee",
     label: "Employee",
-    subtitle: "Staff access with employee code",
+    // "Request", not "Staff access". Signing up here grants nothing: the account
+    // is created as a listener with access_request_status='pending' and a human
+    // approves it at /my/admin/access-requests. Promising access the form cannot
+    // give is how people end up believing the code box is a security check.
+    subtitle: "Request staff access — approved by a manager",
     Icon: Building2,
     color: "text-[#dc2626]",
     ring: "ring-[#dc2626]",
@@ -320,7 +324,7 @@ function StepRoleFields({
       {/* Employee-specific fields */}
       {userType === "employee" && (
         <div className="space-y-2">
-          <Label htmlFor="employeeCode">Employee Invite Code</Label>
+          <Label htmlFor="employeeCode">Employee Invite Code (optional)</Label>
           <Input
             id="employeeCode"
             type="text"
@@ -328,8 +332,15 @@ function StepRoleFields({
             value={employeeCode}
             onChange={(e) => setEmployeeCode(e.target.value.toUpperCase())}
           />
+          {/* Marked optional and described as a claim on purpose. This form calls
+              supabase.auth.signUp() straight from the browser, so nothing here can
+              validate the code -- it is stored on the profile for the reviewer to
+              check by hand. Presenting it as a gate would be a lie, and a
+              convincing one. */}
           <p className="text-xs text-muted-foreground">
-            Enter the invite code provided by your manager
+            If your manager gave you a code, enter it — it helps them find your
+            request. Staff access is granted by a manager after review, not by
+            this form.
           </p>
         </div>
       )}
