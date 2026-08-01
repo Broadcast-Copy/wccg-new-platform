@@ -31,10 +31,17 @@ import {
 } from "@/data/check-in-locations";
 
 /**
- * Single-tenant for now. Hostname → station resolution is a later phase;
- * keeping the station id in one named constant makes that swap a one-liner.
+ * Per-deployment, resolved at BUILD time (this app is `output: 'export'`, so
+ * these queries run during `next build`). Broadcast Copy's tenancy model is
+ * SHARED CONTROL PLANE, ISOLATED DATA (decided 2026-08-01): each station's
+ * content lives in its own database, and one codebase builds N sites. The
+ * station id is therefore a property of the build, not of the source.
+ *
+ * Not NEXT_PUBLIC_ on purpose — every importer is a server component, so this
+ * is read at build time and never needs to reach a client bundle. The literal
+ * stays as the fallback so a build with no env wired still produces WCCG.
  */
-export const STATION_ID = "station_wccg";
+export const STATION_ID = process.env.STATION_ID ?? "station_wccg";
 
 // Public-by-design fallbacks — same values as `lib/supabase/client.ts`. The
 // project URL ships in every client bundle and the publishable key is RLS-
