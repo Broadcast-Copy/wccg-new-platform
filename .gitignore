@@ -38,3 +38,7 @@ scripts/deploy-*.sh
 
 # Misc
 *.tsbuildinfo
+
+# Release artefacts are served from Supabase Storage, not the repo (see
+# scripts/publish-release.sh). The console zip alone is ~47 MB and incompressible.
+apps/marketing/public/downloads/
