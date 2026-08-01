@@ -204,7 +204,19 @@ function DeviceCard({ device }: { device: FleetDevice }) {
                   <li key={i.id} className="flex items-center gap-1.5 text-xs text-dim">
                     <Package className="h-3.5 w-3.5 flex-none text-faint" aria-hidden />
                     <span className="truncate">{i.package}</span>
-                    <span className="font-mono text-faint">{i.version ?? "?"}</span>
+                    {/* A null version is a real finding, not a gap to paper over: the package
+                        is installed but its installer left no manifest, so the build cannot be
+                        managed. A bare "?" reads as a rendering fault, so say it in words. */}
+                    {i.version ? (
+                      <span className="font-mono text-faint">{i.version}</span>
+                    ) : (
+                      <span
+                        className="font-mono text-faint italic"
+                        title="Installed, but the agent found no manifest to read a build from. Different from not installed."
+                      >
+                        build unknown
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
