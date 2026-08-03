@@ -3,6 +3,8 @@
 import { Alfa_Slab_One, Work_Sans } from "next/font/google";
 import { useEffect, useRef, useState } from "react";
 import { AppImage as Image } from "@/components/ui/app-image";
+import { useNowPlaying } from "@/hooks/use-now-playing";
+import { prettifyTrackTitle } from "@/lib/track-title";
 
 const displayFont = Alfa_Slab_One({
   weight: "400",
@@ -17,8 +19,10 @@ const bodyFont = Work_Sans({
 });
 
 const STREAM_URL = "https://music.wccg1045fm.com:8007/stream";
-const APK_URL = "/downloads/AllDayAndNight-v1.0.apk";
+const APK_URL = "/downloads/AllDayAndNight-v1.1.apk";
 const LOGO_SRC = "/images/logos/yard-riddim-logo.png";
+const STATION_NAME = "Yard & Riddim Radio";
+const STATION_ARTIST = "WCCG 104.5 FM";
 
 type Status = "live" | "buffering" | "error";
 
@@ -27,6 +31,15 @@ export default function AllDayAndNightPage() {
   const [playing, setPlaying] = useState(false);
   const [status, setStatus] = useState<Status>("live");
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // A browser can't read ICY metadata off an <audio> element, so the track comes
+  // from IceCast's status JSON on the same mount (it sends CORS headers). Polls
+  // only while we're actually playing.
+  const { data: nowPlaying } = useNowPlaying(playing, STREAM_URL);
+  const rawTitle = nowPlaying?.title.trim() ?? "";
+  const rawArtist = nowPlaying?.artist.trim() ?? "";
+  const trackTitle = rawTitle ? prettifyTrackTitle(rawTitle, rawArtist) : STATION_NAME;
+  const trackArtist = rawArtist || STATION_ARTIST;
 
   useEffect(() => {
     setSubscribed(window.localStorage.getItem("adn_subscribed") === "1");
@@ -224,6 +237,34 @@ export default function AllDayAndNightPage() {
         .adn-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
         .adn-status.adn-buffering .adn-dot { animation: adn-pulse 1s infinite ease-in-out; }
         @keyframes adn-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+        .adn-track {
+          margin: 0 0 24px;
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+          min-height: 34px;
+          justify-content: center;
+        }
+        .adn-track-title {
+          color: var(--cream);
+          font-size: 14px;
+          font-weight: 700;
+          line-height: 1.3;
+          margin: 0;
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
+        .adn-track-artist {
+          color: var(--dim);
+          font-size: 12px;
+          margin: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
         .adn-cta {
           width: 100%;
           height: 48px;
@@ -372,6 +413,10 @@ export default function AllDayAndNightPage() {
                         : "LIVE"}
                   </span>
                 </div>
+                <div className="adn-track" aria-live="polite">
+                  <p className="adn-track-title">{trackTitle}</p>
+                  <p className="adn-track-artist">{trackArtist}</p>
+                </div>
                 <button
                   className="adn-play-btn"
                   aria-label={playing ? "Pause" : "Play"}
@@ -425,7 +470,7 @@ export default function AllDayAndNightPage() {
         <footer className="adn-footer">
           Built for <span className="adn-station">WCCG 104.5 FM</span> — Fayetteville, North Carolina.
           <br />
-          Android app · v1.0
+          Android app · v1.1
         </footer>
       </div>
 
