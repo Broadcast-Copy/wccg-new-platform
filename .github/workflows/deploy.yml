@@ -99,11 +99,12 @@ jobs:
           [ -z "$KH_USER" ] && missing+=("KNOWNHOST_SSH_USER")
           [ -z "$KH_PASS" ] && missing+=("KNOWNHOST_SSH_PASSWORD")
           if [ ${#missing[@]} -gt 0 ]; then
-            echo "::warning::KnownHost deploy skipped — secrets missing: ${missing[*]}"
             echo "can_deploy=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "can_deploy=true" >> "$GITHUB_OUTPUT"
+            # Fail rather than warn: see the note on the probe step below.
+            echo "::error::KnownHost deploy CANNOT run — secrets missing: ${missing[*]}"
+            exit 1
           fi
+          echo "can_deploy=true" >> "$GITHUB_OUTPUT"
 
       - name: Download build artifact
         if: steps.preflight.outputs.can_deploy == 'true'
@@ -133,7 +134,6 @@ jobs:
           rc=$?
           echo "SSH probe exit code: $rc"
           if [ $rc -ne 0 ]; then
-            echo "::warning::SSH probe failed — likely password change, IP block, or quota. Skipping deploy."
             echo "DEPLOY_SAFE=false" >> "$GITHUB_ENV"
           else
             echo "DEPLOY_SAFE=true" >> "$GITHUB_ENV"
@@ -142,6 +142,15 @@ jobs:
           du -sh out
           echo "=== Local file count ==="
           find out -type f | wc -l
+          # A deploy that quietly does not deploy is worse than a red build. This
+          # step used to only ::warning:: on a failed probe, so the upload was
+          # skipped while the run still reported success — on 2026-08-03 the probe
+          # had been failing since 2026-08-01 and the live site sat two days stale
+          # behind a wall of green checkmarks, through ~a dozen cron runs. Fail.
+          if [ "$rc" -ne 0 ]; then
+            echo "::error::SSH probe failed (exit $rc) — likely a KnownHost password change, IP block, or disk quota. NOT deploying."
+            exit 1
+          fi
 
       - name: Deploy to KnownHost via lftp (SFTP)
         if: steps.preflight.outputs.can_deploy == 'true' && env.DEPLOY_SAFE == 'true'
