@@ -15,7 +15,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
  *   RESEND_API_KEY   (Dashboard → Edge Functions → Secrets)
  * Optional:
  *   DROP_NOTIFY_EMAIL  (default biggleem@gmail.com)
- *   DROP_NOTIFY_FROM   (default "WCCG Drops <onboarding@resend.dev>")
+ *   DROP_NOTIFY_FROM   (default "WCCG Drops <noreply@wccg1045fm.com>")
  */
 
 Deno.serve(async (req: Request) => {
@@ -38,11 +38,11 @@ Deno.serve(async (req: Request) => {
     if (!drop) return json({ ok: false, reason: "drop not found" }, 404);
 
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    // Resend test mode (from onboarding@resend.dev) only delivers to the
-    // Resend account owner's address. Verify a domain at resend.com/domains
-    // to notify arbitrary admins (then set DROP_NOTIFY_FROM + DROP_NOTIFY_EMAIL).
+    // Sends from a verified WCCG domain (default noreply@wccg1045fm.com).
+    // Override the sender/recipient via DROP_NOTIFY_FROM + DROP_NOTIFY_EMAIL
+    // (the FROM domain must be verified at resend.com/domains).
     const NOTIFY = Deno.env.get("DROP_NOTIFY_EMAIL") ?? "wccg1045fm@gmail.com";
-    const FROM = Deno.env.get("DROP_NOTIFY_FROM") ?? "WCCG Drops <onboarding@resend.dev>";
+    const FROM = Deno.env.get("DROP_NOTIFY_FROM") ?? "WCCG Drops <noreply@wccg1045fm.com>";
     if (!RESEND_API_KEY) {
       console.log("RESEND_API_KEY not set; skipping email for", drop.file_code);
       return json({ ok: false, reason: "RESEND_API_KEY not set" }, 200);

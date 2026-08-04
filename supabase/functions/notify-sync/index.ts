@@ -4,10 +4,10 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 // scheduled email-mix-sermon watch task calls at the end of a run to email a
 // human-readable summary of what it downloaded + synced (sermons, DJ mixes).
 //
-// Resend is in TEST MODE (from onboarding@resend.dev) so it can ONLY deliver
-// to the Resend account owner, wccg1045fm@gmail.com. To send elsewhere, verify
-// a domain at resend.com/domains and set NOTIFY_FROM (verified domain) +
-// SYNC_NOTIFY_EMAIL (recipient).
+// Sends from a verified WCCG domain (default noreply@wccg1045fm.com). Override
+// the sender with NOTIFY_FROM (must be a verified domain at resend.com/domains)
+// and the recipient with SYNC_NOTIFY_EMAIL. Requires the RESEND_API_KEY project
+// secret; if it's unset the send is skipped gracefully.
 //
 // POST {secret, subject, text}  ->  emails the summary. `text` is plain text;
 // newlines become <br>. Returns {ok, resend_status}.
@@ -24,9 +24,13 @@ Deno.serve(async (req: Request) => {
   const text = typeof body.text === "string" ? body.text : "";
   if (!text.trim()) return json({ ok: false, error: "empty text" }, 400);
 
-  const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "re_Kx844fVV_GG2tnUbCFtr3NCMAs3Ey5ecs";
+  const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
   const NOTIFY = Deno.env.get("SYNC_NOTIFY_EMAIL") ?? "wccg1045fm@gmail.com";
-  const FROM = Deno.env.get("NOTIFY_FROM") ?? "WCCG Auto-Sync <onboarding@resend.dev>";
+  const FROM = Deno.env.get("NOTIFY_FROM") ?? "WCCG Auto-Sync <noreply@wccg1045fm.com>";
+  if (!RESEND_API_KEY) {
+    console.log("RESEND_API_KEY not set; skipping email for", subject);
+    return json({ ok: false, reason: "RESEND_API_KEY not set" }, 200);
+  }
 
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const html = `<div style="font-family:system-ui,sans-serif;max-width:560px">` +

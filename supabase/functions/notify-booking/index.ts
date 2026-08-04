@@ -16,7 +16,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
  *   RESEND_API_KEY     (Dashboard → Edge Functions → Secrets)
  * Optional:
  *   BOOKING_NOTIFY_EMAIL  (default wccg1045fm@gmail.com — Resend test-mode owner)
- *   BOOKING_NOTIFY_FROM   (default "WCCG Bookings <onboarding@resend.dev>")
+ *   BOOKING_NOTIFY_FROM   (default "WCCG Bookings <noreply@wccg1045fm.com>")
  */
 
 Deno.serve(async (req: Request) => {
@@ -41,11 +41,11 @@ Deno.serve(async (req: Request) => {
     if (!b) return json({ ok: false, reason: "booking not found" }, 404);
 
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    // Resend test mode (from onboarding@resend.dev) only delivers to the Resend
-    // account owner's address. Verify a domain at resend.com/domains to notify
-    // arbitrary addresses (then set BOOKING_NOTIFY_FROM + BOOKING_NOTIFY_EMAIL).
+    // Sends from a verified WCCG domain (default noreply@wccg1045fm.com).
+    // Override the sender/recipient via BOOKING_NOTIFY_FROM + BOOKING_NOTIFY_EMAIL
+    // (the FROM domain must be verified at resend.com/domains).
     const NOTIFY = Deno.env.get("BOOKING_NOTIFY_EMAIL") ?? "wccg1045fm@gmail.com";
-    const FROM = Deno.env.get("BOOKING_NOTIFY_FROM") ?? "WCCG Bookings <onboarding@resend.dev>";
+    const FROM = Deno.env.get("BOOKING_NOTIFY_FROM") ?? "WCCG Bookings <noreply@wccg1045fm.com>";
     if (!RESEND_API_KEY) {
       console.log("RESEND_API_KEY not set; skipping email for booking", b.id);
       return json({ ok: false, reason: "RESEND_API_KEY not set" }, 200);
