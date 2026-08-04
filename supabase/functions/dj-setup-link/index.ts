@@ -38,7 +38,8 @@ Deno.serve(async (req: Request) => {
       userId = (data as { user?: { id?: string } })?.user?.id ?? "";
       if (!userId) return json({ error: "user not found" }, 404);
     }
-    const password = tempPassword();
+    const customPassword = String(body.password ?? "").trim();
+    const password = customPassword.length >= 8 ? customPassword : tempPassword();
     const { data: upd, error: uerr } = await supabase.auth.admin.updateUserById(userId, { password, email_confirm: true });
     if (uerr) return json({ error: uerr.message }, 500);
     const uemail = (upd as { user?: { email?: string } })?.user?.email ?? email;

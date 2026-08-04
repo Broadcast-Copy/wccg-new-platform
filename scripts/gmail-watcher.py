@@ -78,12 +78,15 @@ NOTIFY_TO = "biggleem@gmail.com"
 POLL_SECONDS = int(os.environ.get("WCCG_POLL_SECONDS", "20"))
 
 # sender-key (addr or domain, matched as substring of the From header) -> sermon spec
+# deadline_hour: on the airing Sunday, once this local hour passes, a still-failing
+# message is retired (the slot already played) and the watcher just waits for next
+# week's email — owner decision 2026-07-05 after the pmb1 link-less-chip week.
 SERMONS = {
-    "vesax86@gmail.com":                  dict(code="pmb1", djb="DJB_52011", ext="mp3", kind="drive",       transcode=False, church="Progressive",          air="1:00 PM"),  # WAV bytes, but the on-air cart RadioSpider plays is DJB_52011.mp3
-    "lewischapel.org":                    dict(code="lcc1", djb="DJB_52014", ext="mp3", kind="attachment",  transcode=False, church="Lewis Chapel",         air="2-3 PM"),
-    "mondselite27@yahoo.com":             dict(code="gpn1", djb="DJB_52002", ext="mp3", kind="dropbox",     transcode=False, church="Grace Plus Nothing",   air="AM"),
-    "ffwcaudio@gmail.com":                dict(code="dvp1", djb="DJB_52008", ext="mp3", kind="dropbox",     transcode=False, church="Family Fellowship",    air="AM"),
-    "drive-shares-dm-noreply@google.com": dict(code="thm1", djb="DJB_52005", ext="mp3", kind="drive_share", transcode=True,  church="Encouraging Moment",   air="~9 AM", sharer="tony haire"),
+    "vesax86@gmail.com":                  dict(code="pmb1", djb="DJB_52011", ext="mp3", kind="drive",       transcode=False, church="Progressive",          air="1:00 PM", deadline_hour=13),  # WAV bytes, but the on-air cart RadioSpider plays is DJB_52011.mp3
+    "lewischapel.org":                    dict(code="lcc1", djb="DJB_52014", ext="mp3", kind="attachment",  transcode=False, church="Lewis Chapel",         air="2-3 PM",  deadline_hour=15),
+    "mondselite27@yahoo.com":             dict(code="gpn1", djb="DJB_52002", ext="mp3", kind="dropbox",     transcode=False, church="Grace Plus Nothing",   air="AM",      deadline_hour=13),
+    "ffwcaudio@gmail.com":                dict(code="dvp1", djb="DJB_52008", ext="mp3", kind="dropbox",     transcode=False, church="Family Fellowship",    air="AM",      deadline_hour=13),
+    "drive-shares-dm-noreply@google.com": dict(code="thm1", djb="DJB_52005", ext="mp3", kind="drive_share", transcode=True,  church="Encouraging Moment",   air="~9 AM",   deadline_hour=13, sharer="tony haire"),
 }
 
 # DJ-mix senders: detect + notify only (download still via hourly task for v1)
@@ -122,6 +125,9 @@ def load_state():
 
 def save_state(state):
     state["processed"] = state["processed"][-500:]  # keep it bounded
+    # drop notify-guard entries older than a week (their retry window is long gone)
+    cutoff = (datetime.now() - timedelta(days=7)).isoformat()
+    state["fail_notified"] = {k: v for k, v in state.get("fail_notified", {}).items() if v >= cutoff}
     os.makedirs(CONFIG_DIR, exist_ok=True)
     json.dump(state, open(STATE_FILE, "w", encoding="utf-8"), indent=2)
 
@@ -245,6 +251,36 @@ def extract_drive_id(text):
     return None
 
 
+AUDIO_NAME_RE = re.compile(r"([^\r\n\"'<>/\\]+?\.(?:wav|mp3|m4a|aac))", re.I)
+
+
+def drive_search_by_name(drive, text, frm):
+    """Fallback for a LINK-LESS Gmail Drive chip (pmb1 2026-07-05): the sender hit
+    Send before the Drive attach finished, so the email has no file id anywhere —
+    not in the API body, raw MIME, or print view — and the chip is dead even in the
+    Gmail UI. The body still NAMES the file, so search Drive for it by name each
+    retry: the moment the sender shares it (or re-uploads it link-public) this
+    finds it and the sermon auto-syncs without a resend landing a new email."""
+    for name in dict.fromkeys(AUDIO_NAME_RE.findall(text)):
+        safe = name.strip().replace("'", r"\'")
+        try:
+            res = drive.files().list(
+                q=f"name = '{safe}'", pageSize=10,
+                fields="files(id,name,size,owners(emailAddress))").execute()
+        except Exception as e:
+            log(f"    Drive name-search failed: {e}")
+            continue
+        cands = res.get("files", [])
+        # prefer a file owned by the sender of the email
+        cands.sort(key=lambda f: 0 if any((o.get("emailAddress") or "").lower() in frm
+                                          for o in f.get("owners", [])) else 1)
+        if cands:
+            f = cands[0]
+            log(f"    Drive fallback matched by name: {f['name']} ({f['id']}, {f.get('size', '?')} bytes)")
+            return f["id"]
+    return None
+
+
 def extract_dropbox(text):
     m = DROPBOX_RE.search(text)
     if not m:
@@ -322,13 +358,22 @@ def fetch_audio(gmail, drive, msg, spec):
         if url:
             log("    Dropbox link found")
             return curl_bytes(url)
+        fid = drive_search_by_name(drive, text, header(msg, "From").lower())
+        if fid:
+            try:
+                return drive_bytes(drive, fid)
+            except Exception as e:
+                log(f"    Drive get_media failed ({e})")
         log("    no audio attachment and no Drive/Dropbox link found"); return None
 
     text = body_text(msg)
     if kind in ("drive", "drive_share"):
         fid = extract_drive_id(text)
         if not fid:
-            log("    no Drive id in body"); return None
+            log("    no Drive id in body (link-less chip?) — trying Drive search by filename")
+            fid = drive_search_by_name(drive, text, header(msg, "From").lower())
+        if not fid:
+            log("    no Drive id in body and no filename match in Drive"); return None
         log(f"    Drive id: {fid}")
         try:
             return drive_bytes(drive, fid)
@@ -436,11 +481,40 @@ def handle_message(gmail, drive, mid, state):
     except Exception as e:
         log(f"    fetch error: {e}")
         data = None
+    # Notify AT MOST ONCE per message id — the retry loop runs every POLL_SECONDS,
+    # and a permanent failure (e.g. the 2026-07-05 pmb1 link-less Drive chip) used
+    # to email an identical alert on every tick (~180/hour) until fixed.
+    notified = state.setdefault("fail_notified", {})
     if not data or len(data) < 200000:
-        log(f"    download failed/too small ({len(data) if data else 0} bytes) — will retry next tick (not marking processed)")
-        send_mail(gmail, f"Sermon {spec['code']} arrived but auto-download FAILED",
-                  f"{spec['church']} ({spec['code']}, airs {spec['air']}) emailed \"{subj}\" but the headless "
-                  f"download failed. Grab it manually — slot M:/JBMusic/{spec['djb']}.{spec['ext']}.")
+        # Weekly timeout: once the airing Sunday's deadline hour passes, the slot has
+        # already played — retire this message (mark processed) and just wait for next
+        # week's email. A proper re-send from the church is a NEW message id, so it
+        # still syncs even after this one is retired.
+        dl = spec.get("deadline_hour")
+        now = datetime.now()
+        if dl is not None and now.date() == this_sunday() and now.hour >= dl:
+            log(f"    past Sunday {dl}:00 air deadline — retiring this message; waiting for next week's email")
+            send_mail(gmail, f"Sermon {spec['code']} NOT synced this week — waiting for next week",
+                      f"{spec['church']} ({spec['code']}) emailed \"{subj}\" but no usable file became reachable "
+                      f"by the Sunday {dl}:00 air deadline, so the watcher gave up on this message. The cart "
+                      f"M:/JBMusic/{spec['djb']}.{spec['ext']} keeps last week's sermon.\n\n"
+                      f"Polling continues as normal — next week's email (or a re-send with a working link this "
+                      f"week) will sync automatically.")
+            state["processed"].append(mid)
+            notified.pop(mid, None)
+            return
+        log(f"    download failed/too small ({len(data) if data else 0} bytes) — retrying every tick, silently (not marking processed)")
+        if mid not in notified:
+            send_mail(gmail, f"Sermon {spec['code']} arrived but auto-download FAILED",
+                      f"{spec['church']} ({spec['code']}, airs {spec['air']}) emailed \"{subj}\" but the headless "
+                      f"download failed — no reachable file link/attachment was found (or the download errored).\n\n"
+                      f"If the email shows a Google Drive chip that does nothing when clicked, the sender hit Send "
+                      f"before the Drive attach finished — nobody can open it, so ask them to re-send it "
+                      f"(Drive link set to 'Anyone with the link', or share the file to {NOTIFY_TO}).\n\n"
+                      f"The watcher keeps retrying quietly and will auto-sync to M:/JBMusic/{spec['djb']}.{spec['ext']} "
+                      f"the moment the file becomes reachable (it also searches Drive for the filename named in the "
+                      f"email). This is the only alert you'll get for this message.")
+            notified[mid] = datetime.now().isoformat()
         return  # don't mark processed -> retried next tick
 
     ok, note = stage_sermon(data, spec)
@@ -450,10 +524,14 @@ def handle_message(gmail, drive, mid, state):
         send_mail(gmail, f"{spec['code']} ({spec['church']}) synced for Sun {sd.month}/{sd.day} air",
                   f"Auto-synced the moment it arrived.\n{note}\nAirs {spec['air']} this Sunday.")
         state["processed"].append(mid)
+        notified.pop(mid, None)
     else:
         log(f"    STAGE FAILED: {note} — not marking processed")
-        send_mail(gmail, f"Sermon {spec['code']} download OK but staging failed",
-                  f"{spec['church']} ({spec['code']}): {note}. Needs a look.")
+        if mid not in notified:
+            send_mail(gmail, f"Sermon {spec['code']} download OK but staging failed",
+                      f"{spec['church']} ({spec['code']}): {note}. Needs a look. "
+                      f"(Retrying quietly — this is the only alert for this message.)")
+            notified[mid] = datetime.now().isoformat()
 
 
 # --------------------------------------------------------------------------- #
