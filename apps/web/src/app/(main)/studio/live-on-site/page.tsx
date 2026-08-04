@@ -45,7 +45,7 @@ const djList = [
   "DJ YaFeelMe",
   "DJ T-Money",
   "DJ Swazzey",
-  "DJ TommyGeeMixxed",
+  "DJ TommyGeeMixx",
   "DJ Tonelo",
   "DJ Weezy",
   "DJ Official",

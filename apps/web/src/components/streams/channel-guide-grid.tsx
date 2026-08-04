@@ -79,7 +79,7 @@ const CHANNEL_ARTISTS: Record<string, string> = {
   stream_hot: "Drake, Doja Cat, SZA, Lil Baby, Metro Boomin...",
   stream_vibe: "H.E.R., Daniel Caesar, Khalid, Jhené Aiko, Lucky Daye...",
   stream_yard: "Shaggy, Sean Paul, Vybz Kartel, Alkaline...",
-  stream_mixsquad: "DJ Ricoveli, DJ SpinWiz, DJ Rayn, DJ TommyGee Mixx, DJ Yodo...",
+  stream_mixsquad: "DJ Ricoveli, DJ SpinWiz, DJ Rayn, DJ TommyGeeMixx, DJ Yodo...",
 };
 
 // Live status is driven by each station's `status` field (lib/stations.ts).

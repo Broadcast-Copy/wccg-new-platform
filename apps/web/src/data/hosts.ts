@@ -340,10 +340,10 @@ export const HOST_DJ_RAYN: HostData = {
 
 export const HOST_DJ_TOMMYGEE: HostData = {
   id: "host_dj_tommygee",
-  name: "DJ TommyGee Mixx",
+  name: "DJ TommyGeeMixx",
   role: "DJ",
   showIds: ["show_mixsquad_radio"],
-  bio: "DJ TommyGee Mixx is a featured DJ on MixxSquadd Radio, known for his party-rocking mixes that keep the energy going around the clock.",
+  bio: "DJ TommyGeeMixx is a featured DJ on MixxSquadd Radio, known for his party-rocking mixes that keep the energy going around the clock.",
   imageUrl: "/images/hosts/dj-tommygeemixx.png",
   socialLinks: [],
   isActive: true,
