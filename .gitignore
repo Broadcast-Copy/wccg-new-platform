@@ -42,3 +42,10 @@ scripts/deploy-*.sh
 # Release artefacts are served from Supabase Storage, not the repo (see
 # scripts/publish-release.sh). The console zip alone is ~47 MB and incompressible.
 apps/marketing/public/downloads/
+
+# Supabase CLI scratch — records whichever project the CLI was last linked to,
+# so committing it makes one developer's link state everyone else's.
+supabase/.temp/
+
+# Python bytecode from scripts/
+__pycache__/
