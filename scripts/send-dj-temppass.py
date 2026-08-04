@@ -14,8 +14,17 @@ service role -- this script never sees any Supabase secret. Outbound goes via
 wccg_mailer (support@ SMTP, or the gmail-watcher fallback while support@'s
 password file is empty).
 
+The roster of who still needs this is fetched LIVE from the dj-setup-link edge
+function each run -- see roster(). It used to be hardcoded, which meant a rerun
+would reset the password of every DJ who had signed in since the list was
+written.
+
+The sign-in CTA carries ?next=/my/dj, so the DJ lands on the upload page rather
+than the homepage.
+
 Modes:
   python send-dj-temppass.py test          # sample email -> biggleem (NO db change)
+  python send-dj-temppass.py list          # who still hasn't signed in (no changes)
   python send-dj-temppass.py one "DJ Weezy" # provision + email a single DJ
   python send-dj-temppass.py blast         # all never-signed-in active DJs
 """
@@ -28,9 +37,12 @@ from datetime import datetime
 
 import wccg_mailer
 
-FN_URL = "https://irjiqbmoohklagdegezz.supabase.co/functions/v1/dj-setup-link"
+SUPA_URL = "https://irjiqbmoohklagdegezz.supabase.co"
+FN_URL = f"{SUPA_URL}/functions/v1/dj-setup-link"
 SECRET = "c2040f1371c9265c538bdce3547346bd5ae53060"
-LOGIN_URL = "https://wccg1045fm.com/login"
+# ?next= is honored by the login form (login-form.tsx), so signing in drops the
+# DJ straight onto the upload page instead of the homepage.
+LOGIN_URL = "https://wccg1045fm.com/login?next=/my/dj"
 ADMIN_EMAIL = "biggleem@gmail.com"
 SUBJECT = "\U0001F511 Your WCCG 104.5 FM sign-in is ready"
 
@@ -39,54 +51,42 @@ LOGO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 LOGOS = [("wccglogo", os.path.join(LOGO_DIR, "wccg-logo.png")),
          ("carsonlogo", os.path.join(LOGO_DIR, "carson-communications-logo.png"))]
 
-# Active DJs with last_sign_in_at IS NULL (never once got in). The 3 DJs who have
-# already signed in (Tony Neal, Ike GDA, VI) and the admin are intentionally NOT
-# here -- they have working credentials and must not be clobbered.
-ROSTER = [
-    ("DJ Chuck", "c_murphy00@yahoo.com", "266f461f-9b36-4a42-a497-9733d3f251fe"),
-    ("DJ Chuck T", "djchuckt@gmail.com", "e11ee623-9bcd-4567-8606-b4b79da66e77"),
-    ("DJ Corleone", "cjgarris3@hotmail.com", "8a7403d8-8d29-40c1-8e8d-3a9567f6026c"),
-    ("DJ Crisco", "Cirsco1@gmail.com", "3d65e3b8-5807-42ac-918c-94cb453ba919"),
-    ("DJ Daddy Black", "djdaddyblack005@gmail.com", "bf80d0fd-445d-464a-84da-fee754bb075b"),
-    ("DJ Daffie", "djdaffiebookings@gmail.com", "a8d68e5a-807f-4237-94aa-0e0fbe30136c"),
-    ("DJ Dane Dinero", "danedinero@icloud.com", "868e1ce3-ae52-43d3-91d5-6eadddf9238a"),
-    ("DJ Drop", "djdropnc@gmail.com", "483ae76d-b249-456a-898b-1de22cddbaed"),
-    ("DJ Itanist", "itanmeade@gmail.com", "ab1a93a1-d89b-4b88-bea6-b4db03cc8ab3"),
-    ("DJ Izzy Nice", "unitsinthecity@gmail.com", "584e0c0a-06dc-4e1b-8aa7-d864d7d45d55"),
-    ("DJ Jay B", "jermainebright08@yahoo.com", "2adf9e5b-498e-4ea0-874a-e750e4b43347"),
-    ("DJ Juice", "Im_juice@icloud.com", "6c2b4cb2-e3e2-43a2-82ac-5e421058d32c"),
-    ("DJ KillaKo", "Djkillako2017@gmail.com", "3c7b14ea-07b6-459a-bd27-1a37f70e34b0"),
-    ("DJ KingViv", "Kingviv93@gmail.com", "467467a3-2834-4803-b825-eadd62147d0b"),
-    ("DJ KVNG", "youngkvngonthebeat@gmail.com", "b3b8d51a-727b-4b3a-995c-1e600e751974"),
-    ("DJ LJay", "Djlj242@gmail.com", "11a07ee0-8e67-4dc6-9052-75f3770f7e1f"),
-    ("DJ LouDiamonds", "ruggedlocks@gmail.com", "0955242b-2487-44a8-bedf-7f60a3aa4ae3"),
-    ("DJ Official", "danielwilliams05@gmail.com", "a1f76157-b64d-4b79-966c-96cf0780914c"),
-    ("DJ Rayn", "deejrayn@gmail.com", "d8a954a9-0389-4cbe-8f96-3689a885c0f1"),
-    ("DJ Ricoveli", "djricoveli@gmail.com", "bfe93b6e-6f1f-41bb-ba29-f53a94a73201"),
-    ("DJ SpinWiz", "fleetdjspinwiz@gmail.com", "55b77f90-94ec-4702-922f-ff67bdac4f89"),
-    ("DJ Swayzee", "Ewynn22@gmail.com", "78af40f7-6fef-4d51-b61d-62f1ee4bf9cb"),
-    ("DJ T-Money", "Djtmoney910@gmail.com", "69e7c8f0-26c3-424e-ad6f-cece5c2c1347"),
-    ("DJ TommyGee Mix", "tommygeemixx@gmail.com", "e026e318-0ab2-401e-b129-79069aaef0b7"),
-    ("DJ Tone Lo", "booktonelo@gmail.com", "5fc0d7ce-998f-41a5-b861-d12909277d27"),
-    ("DJ Weezy", "weezy.fleetdjs@gmail.com", "9e046cc3-3dc0-4db2-93cc-6d41953eed55"),
-    ("DJ Whosane", "kotcokeboydjwhosane@gmail.com", "e3abd8d1-0151-4ae7-8285-80bb41027a0d"),
-    ("DJ Wolf", "Djwolfcp4life@gmail.com", "da87a515-a449-4827-aac9-48b7aa9d5c2f"),
-    ("DJ YaFeelMe", "Reggielee3rd@gmail.com", "ef31cfcd-a8d6-4a15-bce4-1a1cb73a39c1"),
-    ("DJ Yodo", "Theyodoshow@gmail.com", "eab6847c-6471-4b18-9908-163886f978f1"),
-]
-
-
-def setpass(user_id: str):
-    """Ask the edge function to set a fresh temp password; returns (email, password)."""
+# The roster is fetched at RUNTIME (dj-setup-link action "never_signed_in") --
+# never hardcoded. A hardcoded snapshot goes stale the moment a DJ logs in, and
+# re-running the blast against a stale list CLOBBERS the working password of
+# every DJ who has since gotten in. Ask the server every time. Fetching also
+# keeps the 30-odd DJ emails + user_ids (PII) out of this file.
+def roster():
+    """Active DJs whose auth user has never signed in -> [(name, email, user_id)]."""
     req = urllib.request.Request(
         FN_URL,
-        data=json.dumps({"secret": SECRET, "action": "setpass", "user_id": user_id}).encode(),
+        data=json.dumps({"secret": SECRET, "action": "never_signed_in"}).encode(),
+        headers={"Content-Type": "application/json"}, method="POST")
+    with urllib.request.urlopen(req, timeout=60) as r:
+        p = json.loads(r.read().decode())
+    if not p.get("ok"):
+        raise RuntimeError(f"roster fetch failed: {p}")
+    return [(d["name"], d["email"], d["user_id"]) for d in p["djs"]]
+
+
+def setpass(user_id: str, verify: bool = True):
+    """Set a fresh temp password; returns (email, password, verified).
+
+    verify happens SERVER-SIDE on purpose. Signing in to test the credential
+    stamps last_sign_in_at, so doing it from here would make every DJ we touch
+    look like they'd logged in. The edge function records its own sign-in as
+    user_metadata.temppass_verified_at, which roster() then discounts.
+    """
+    req = urllib.request.Request(
+        FN_URL,
+        data=json.dumps({"secret": SECRET, "action": "setpass",
+                         "user_id": user_id, "verify": verify}).encode(),
         headers={"Content-Type": "application/json"}, method="POST")
     with urllib.request.urlopen(req, timeout=60) as r:
         p = json.loads(r.read().decode())
     if not p.get("ok"):
         raise RuntimeError(f"setpass failed: {p}")
-    return p["email"], p["password"]
+    return p["email"], p["password"], bool(p.get("verified", not verify))
 
 
 def html_for(dj_name: str, email: str, password: str) -> str:
@@ -110,7 +110,7 @@ def html_for(dj_name: str, email: str, password: str) -> str:
 </td></tr></table>
 <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px;"><tr><td align="center" bgcolor="#e11d1d" style="border-radius:999px;">
 <a href="{LOGIN_URL}" style="display:inline-block;padding:15px 40px;font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:999px;">Sign In &amp; Upload My Mix &rarr;</a></td></tr></table>
-<p style="font-size:13px;line-height:1.6;color:#555;margin:0 0 6px;">Go to <b>wccg1045fm.com/login</b>, enter the email and password above, and you&rsquo;re in. Then head to <b>My DJ</b> to drop your weekly mix &mdash; any file name works, we match it to your slot.</p>
+<p style="font-size:13px;line-height:1.6;color:#555;margin:0 0 6px;">Tap the button, enter the email and password above, and you land <b>straight on your upload page</b> &mdash; your slots for the week are already waiting. Drop your mix on any slot; any file name works, we match it to your slot for you.</p>
 <p style="font-size:13px;line-height:1.6;color:#777;margin:0;">This password is just to get you started &mdash; want a different one? Reply to this email or write <b>support@wccg1045fm.com</b> and we&rsquo;ll sort it out fast.</p></td></tr>
 <tr><td style="padding:14px 40px 0;"><hr style="border:none;border-top:1px solid #eee;margin:0;"></td></tr>
 <tr><td style="padding:16px 40px 26px;font-family:Helvetica,Arial,sans-serif;"><p style="font-size:14px;color:#3a3a3a;margin:0;line-height:1.6;">Keep it locked,<br><b>WCCG 104.5 FM &mdash; The Hip Hop Station</b></p></td></tr>
@@ -122,9 +122,10 @@ def html_for(dj_name: str, email: str, password: str) -> str:
 
 def text_for(dj_name: str, email: str, password: str) -> str:
     return (f"You're in{(', ' + dj_name) if dj_name else ''}! Sign in to your WCCG 104.5 FM DJ Portal:\n\n"
-            f"  Login:    {LOGIN_URL}\n  Email:    {email}\n  Password: {password}\n\n"
-            "This password doesn't expire. Once you're in, go to 'My DJ' to upload your weekly mix "
-            "(any file name works). Want a different password? Reply here or email support@wccg1045fm.com.")
+            f"  Upload:   {LOGIN_URL}\n  Email:    {email}\n  Password: {password}\n\n"
+            "That link takes you straight to your upload page once you sign in -- your slots for the "
+            "week are already waiting, and any file name works. This password doesn't expire. "
+            "Want a different one? Reply here or email support@wccg1045fm.com.")
 
 
 def send_one(name: str, email: str, password: str) -> str:
@@ -140,18 +141,29 @@ def main():
         print(f"TEST (sample, no db change) sent to {ADMIN_EMAIL}")
         return
 
+    if mode == "list":
+        rows = roster()
+        print(f"{len(rows)} active DJs have never signed in:")
+        for name, email, _uid in rows:
+            print(f"  {name:<18} {email}")
+        return
+
     if mode == "one":
         want = (sys.argv[2] if len(sys.argv) > 2 else "").lower()
-        row = next((r for r in ROSTER if r[0].lower() == want), None)
+        rows = roster()
+        row = next((r for r in rows if r[0].lower() == want), None)
         if not row:
             print(f"No never-signed-in DJ named {want!r}. Options:")
-            for r in ROSTER:
+            for r in rows:
                 print("  ", r[0])
             sys.exit(1)
         name, email, uid = row
-        em, pw = setpass(uid)
+        em, pw, verified = setpass(uid)
+        if not verified:
+            print(f"ABORT {name} <{em}>: login did not verify, not emailing a dud password")
+            sys.exit(2)
         via = send_one(name, em, pw)
-        print(f"OK {name} <{em}> provisioned + emailed (via {via})")
+        print(f"OK {name} <{em}> provisioned + verified + emailed (via {via})")
         return
 
     if mode == "blast":
@@ -166,22 +178,25 @@ def main():
             except Exception:
                 pass
 
-        logln(f"Temp-password blast: {len(ROSTER)} never-signed-in DJs")
+        rows = roster()
+        logln(f"Temp-password blast: {len(rows)} never-signed-in DJs")
         ok, fail = 0, 0
-        for name, email, uid in ROSTER:
+        for name, email, uid in rows:
             try:
-                em, pw = setpass(uid)
+                em, pw, verified = setpass(uid)
+                if not verified:
+                    raise RuntimeError("login did not verify -- not emailing a dud password")
                 via = send_one(name, em, pw)
                 ok += 1
-                logln(f"  OK  {name:<18} {em:<34} via {via}")
+                logln(f"  OK  {name:<18} {em:<34} verified, via {via}")
             except Exception as e:  # noqa: BLE001
                 fail += 1
                 logln(f"  ERR {name:<18} {email:<34} {e}")
             time.sleep(1.3)
-        logln(f"DONE provisioned+sent={ok} failed={fail} total={len(ROSTER)}")
+        logln(f"DONE provisioned+sent={ok} failed={fail} total={len(rows)}")
         return
 
-    print("Unknown mode. Use: test | one <name> | blast")
+    print("Unknown mode. Use: test | list | one <name> | blast")
     sys.exit(1)
 
 
