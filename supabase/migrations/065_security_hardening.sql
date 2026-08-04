@@ -4,7 +4,7 @@
 
 -- 1) impersonation_log: the INSERT policy WITH CHECK (true) for PUBLIC let any client
 --    (including anon) forge audit rows. Only service_role (RLS-bypassing) ever wrote here.
-DROP POLICY "System can insert impersonation logs" ON public.impersonation_log;
+DROP POLICY IF EXISTS "System can insert impersonation logs" ON public.impersonation_log;
 CREATE POLICY "Admins log own impersonation actions" ON public.impersonation_log
   FOR INSERT TO authenticated
   WITH CHECK (is_admin() AND admin_id = (SELECT auth.uid()));
@@ -27,7 +27,7 @@ ALTER FUNCTION public.dj_collections_touch() SET search_path = public, pg_temp;
 ALTER FUNCTION public.hub_groups_touch() SET search_path = public, pg_temp;
 
 -- 4) content_plays: plays may be anonymous, but can no longer be attributed to OTHER users.
-DROP POLICY "Anyone can record a play" ON public.content_plays;
+DROP POLICY IF EXISTS "Anyone can record a play" ON public.content_plays;
 CREATE POLICY "Anyone can record a play" ON public.content_plays
   FOR INSERT TO anon, authenticated
   WITH CHECK (user_id IS NULL OR user_id = (SELECT auth.uid()));
