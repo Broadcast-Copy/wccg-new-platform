@@ -24,6 +24,36 @@ import { createClient } from "@/lib/supabase/client";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+/**
+ * Everything airs as MP3. WAV plays out fine as-is, but normalising it keeps
+ * every cart in M:\JBMusic one format; anything else -- AIFF above all, which
+ * is what Logic and Pro Tools export by default -- would otherwise be bounced
+ * back at the DJ. So we convert for them, no prompt. The production PC does
+ * the ffmpeg work in sync-dj-drops.py.
+ */
+const AIR_FORMAT = "mp3";
+
+/** Lowercase extension, or "" when the filename has none. */
+function extensionOf(file: File): string {
+  return (file.name.match(/\.([A-Za-z0-9]+)$/)?.[1] ?? "").toLowerCase();
+}
+
+function needsConversion(file: File): boolean {
+  return extensionOf(file) !== AIR_FORMAT;
+}
+
+/**
+ * A zipped folder renamed .mp3 passes every extension check and then hangs
+ * playout when the cart fires -- a Thursday slot froze on Mac "Compress"
+ * exports for three weeks before anyone traced it to the file. The upload page
+ * is the one place we can still tell the DJ what to do about it, so sniff the
+ * ZIP magic number here rather than discovering it on air.
+ */
+async function looksZipped(file: File): Promise<boolean> {
+  const head = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+  return head[0] === 0x50 && head[1] === 0x4b && head[2] === 0x03 && head[3] === 0x04;
+}
+
 /** ISO Monday of the current week in America/New_York (YYYY-MM-DD). */
 function currentWeekOfET(): string {
   // Shared helper formats the LOCAL date — the old toISOString() version
@@ -39,6 +69,8 @@ interface Drop {
   storage_path: string | null;
   format: string | null;
   size_bytes: number | null;
+  convert_to_mp3: boolean | null;
+  converted_at: string | null;
 }
 
 interface Slot {
@@ -122,7 +154,9 @@ export default function DjPortalPage() {
         const weekOf = currentWeekOfET();
         const { data: drops } = await supabase
           .from("dj_drops")
-          .select("id, file_code, status, source, uploaded_at, storage_path, format, size_bytes")
+          .select(
+            "id, file_code, status, source, uploaded_at, storage_path, format, size_bytes, convert_to_mp3, converted_at",
+          )
           .eq("dj_id", dj.id)
           .eq("week_of", weekOf);
 
@@ -163,7 +197,51 @@ export default function DjPortalPage() {
 
   useEffect(reload, [reload]);
 
-  // Upload an mp3 straight to Supabase Storage, then upsert the dj_drops row.
+  // Push the file to Supabase Storage, then upsert the dj_drops row. `convert`
+  // flags that this upload isn't MP3 yet, so the slot row can say so while the
+  // production PC does the actual ffmpeg work in sync-dj-drops.py.
+  const uploadFile = async (file: File, code: string, slotId: string, convert: boolean) => {
+    setUploadingCode(code);
+    try {
+      const supabase = createClient();
+      const ext = extensionOf(file);
+      const weekOf = me!.weekOf;
+      const storagePath = `${me!.dj.slug}/${weekOf}/${code}.${ext}`;
+
+      const { error: upErr } = await supabase.storage
+        .from("dj-drops")
+        .upload(storagePath, file, { upsert: true, contentType: file.type || `audio/${ext}` });
+      if (upErr) throw new Error(`Storage upload failed: ${upErr.message}`);
+
+      const { error: rowErr } = await supabase.from("dj_drops").upsert(
+        {
+          dj_id: me!.dj.id,
+          slot_id: slotId,
+          file_code: code,
+          week_of: weekOf,
+          status: "uploaded",
+          source: "web",
+          storage_path: storagePath,
+          size_bytes: file.size,
+          format: ext,
+          convert_to_mp3: convert,
+          uploaded_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "slot_id,file_code,week_of" },
+      );
+      if (rowErr) throw new Error(rowErr.message);
+
+      reload();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setUploadingCode(null);
+    }
+  };
+
+  // Work out which slot file this is, then either upload it or -- if it isn't a
+  // format that can go to air -- stop and offer to convert it first.
   const handleFile = async (file: File, fileCode?: string) => {
     setError(null);
     let code = fileCode;
@@ -194,43 +272,20 @@ export default function DjPortalPage() {
       setError(`${code} is not one of your assigned codes. Check your slot list.`);
       return;
     }
-    setUploadingCode(code);
-
-    try {
-      const supabase = createClient();
-      const ext = (file.name.match(/\.(mp3|wav|flac|m4a|ogg)$/i)?.[1] ?? "mp3").toLowerCase();
-      const weekOf = me.weekOf;
-      const storagePath = `${me.dj.slug}/${weekOf}/${code}.${ext}`;
-
-      const { error: upErr } = await supabase.storage
-        .from("dj-drops")
-        .upload(storagePath, file, { upsert: true, contentType: file.type || `audio/${ext}` });
-      if (upErr) throw new Error(`Storage upload failed: ${upErr.message}`);
-
-      const { error: rowErr } = await supabase.from("dj_drops").upsert(
-        {
-          dj_id: me.dj.id,
-          slot_id: slot.slotId,
-          file_code: code,
-          week_of: weekOf,
-          status: "uploaded",
-          source: "web",
-          storage_path: storagePath,
-          size_bytes: file.size,
-          format: ext,
-          uploaded_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "slot_id,file_code,week_of" },
+    // A compressed folder is the one thing no amount of downstream transcoding
+    // can rescue -- say so now, while the DJ is still at the keyboard.
+    if (await looksZipped(file)) {
+      setError(
+        `${file.name} is a compressed folder, not an audio file. On a Mac, open it and drag the MP3 out — don't right-click → Compress. Then upload that file.`,
       );
-      if (rowErr) throw new Error(rowErr.message);
-
-      reload();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setUploadingCode(null);
+      return;
     }
+
+    // Anything that isn't already MP3 uploads exactly the same way and gets
+    // converted on the production PC. The DJ shouldn't have to think about
+    // codecs to get a mix on air, so there's no prompt -- the slot row shows
+    // "converting AIFF to MP3" while it happens.
+    await uploadFile(file, code, slot.slotId, needsConversion(file));
   };
 
   if (loading && !me) return <div className="py-8 text-sm text-muted-foreground">Loading…</div>;
@@ -288,6 +343,7 @@ export default function DjPortalPage() {
           {error}
         </div>
       )}
+
 
       {/* A file we couldn't auto-match — let the DJ tap which slot file it is. */}
       {pendingFile && (
@@ -404,7 +460,7 @@ function BulkDropZone({
         ref={inputRef}
         type="file"
         multiple
-        accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg"
+        accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg,.aiff,.aif,.aifc"
         className="hidden"
         onChange={(e) => {
           const files = Array.from(e.currentTarget.files ?? []);
@@ -499,6 +555,10 @@ function FileRow({
         <p className={`text-xs ${statusColor}`}>
           {status}
           {drop?.source === "ftp" ? " · via FTP" : ""}
+          {drop?.convert_to_mp3 && !drop?.converted_at
+            ? ` · converting ${(drop.format ?? "").toUpperCase()} to MP3`
+            : ""}
+          {drop?.converted_at ? " · converted to MP3" : ""}
           {drop?.uploaded_at ? ` · ${new Date(drop.uploaded_at).toLocaleString()}` : ""}
           {drop?.size_bytes ? ` · ${prettyBytes(drop.size_bytes)}` : ""}
         </p>
@@ -506,7 +566,7 @@ function FileRow({
       <input
         ref={inputRef}
         type="file"
-        accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg"
+        accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg,.aiff,.aif,.aifc"
         className="hidden"
         onChange={(e) => {
           const f = e.currentTarget.files?.[0];

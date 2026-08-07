@@ -11,6 +11,9 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 //
 // POST {secret, action:"pending"}      -> uploaded/validated drops + dj slug + slot day
 // POST {secret, action:"publish", id}  -> mark a drop published (now playable on the site)
+// POST {secret, action:"converted", id, from, size_bytes?}
+//                                     -> record that the studio PC transcoded a
+//                                        non-mp3 upload to mp3 (see migration 111)
 // POST {secret, action:"roster"}       -> active mixshow DJs (>=1 active slot): {slug,name,email}
 
 const SECRET = "c2040f1371c9265c538bdce3547346bd5ae53060";
@@ -27,7 +30,7 @@ Deno.serve(async (req: Request) => {
   if (body.action === "pending") {
     const { data, error } = await supabase
       .from("dj_drops")
-      .select("id,file_code,storage_path,format,week_of,status,size_bytes,djs(slug,display_name),slot:dj_slots(day_of_week,start_time)")
+      .select("id,file_code,storage_path,format,week_of,status,size_bytes,convert_to_mp3,converted_at,source_format,djs(slug,display_name),slot:dj_slots(day_of_week,start_time)")
       .in("status", ["uploaded", "validated"])
       .not("storage_path", "is", null)
       .order("uploaded_at", { ascending: true })
@@ -42,6 +45,25 @@ Deno.serve(async (req: Request) => {
       .from("dj_drops")
       .update({ status: "published", published_at: new Date().toISOString() })
       .eq("id", body.id);
+    if (error) return json({ error: error.message }, 500);
+    return json({ ok: true });
+  }
+
+  if (body.action === "converted") {
+    // The file that actually went to air is now an mp3. Rewrite `format` so a
+    // re-sync looks for CODE.mp3 on disk rather than the original CODE.aiff,
+    // and keep what it used to be in source_format.
+    if (!body.id) return json({ error: "no id" }, 400);
+    const patch: Record<string, unknown> = {
+      format: "mp3",
+      converted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    if (body.from) patch.source_format = String(body.from).toLowerCase();
+    // size_bytes described the AIFF; the mp3 on disk is much smaller and the
+    // sync's file_ok() size check compares against whatever is stored here.
+    if (typeof body.size_bytes === "number") patch.size_bytes = body.size_bytes;
+    const { error } = await supabase.from("dj_drops").update(patch).eq("id", body.id);
     if (error) return json({ error: error.message }, 500);
     return json({ ok: true });
   }

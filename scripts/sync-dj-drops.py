@@ -12,6 +12,11 @@ Files each new drop to BOTH:
     M:\\JBMusic\\<CODE>.<ext>
 then marks it published (which also makes it playable on the website).
 
+If the DJ uploaded a format playout can't take (AIFF, mostly -- it's what Logic
+and Pro Tools export by default) and accepted the portal's offer to convert,
+the file is transcoded to mp3 with ffmpeg here, before it's filed. Only the mp3
+reaches the air folders. See migration 111.
+
 Idempotent: a drop already on disk at the right size is just (re)published,
 not re-downloaded. Logs to D:\\WCCG\\sync-logs\\dj-drops-sync.log. Prints a
 final SUMMARY line the hourly watch task folds into its email.
@@ -19,7 +24,7 @@ final SUMMARY line the hourly watch task folds into its email.
 Run: python scripts/sync-dj-drops.py
 """
 
-import json, os, subprocess, sys
+import json, os, shutil, subprocess, sys, zipfile
 from datetime import datetime, timedelta
 
 import dj_sync_mail  # emails each DJ when their drop newly syncs (best-effort)
@@ -31,6 +36,14 @@ BUCKET_PUBLIC = f"{SUPA}/storage/v1/object/public/dj-drops"
 ARCHIVE_ROOT = r"D:\WCCG\b-mixshows"
 ONAIR_FLAT = r"M:\JBMusic"
 LOG = r"D:\WCCG\sync-logs\dj-drops-sync.log"
+
+# Same ffmpeg the gmail-watcher shells out to for sermon transcodes.
+FFMPEG = os.environ.get("FFMPEG_BIN", r"C:\Program Files\Nickvision Parabolic\Release\ffmpeg.exe")
+FFPROBE = os.environ.get("FFPROBE_BIN") or os.path.join(os.path.dirname(FFMPEG), "ffprobe.exe")
+MP3_BITRATE = "192k"          # matches the sermon pipeline
+AIR_READY = {"mp3", "wav"}    # what playout takes without help
+AUDIO_KINDS = {"mp3", "wav", "aiff", "flac", "ogg", "m4a"}
+MIN_AIR_SECONDS = 30          # anything shorter than this isn't a mix
 
 # slug -> prefixed local folder (mirror of studio-sync-watcher.LOCAL_FOLDER)
 LOCAL_FOLDER = {
@@ -79,8 +92,145 @@ def air_line(wk, dow, start_time):
     tm = fmt_time(start_time)
     return f"{line} at {tm}" if tm else line
 
+# --- content guards -------------------------------------------------------
+# Never trust the declared format. A ZIP named .mp3 passes an extension check,
+# passes a size check, and then hangs playout when the cart fires. DJ Chuck's
+# Mac "Compress" exports did exactly that to carts 76073/76074 for three weeks
+# (2026-07-09 through 07-30) before anyone traced the freeze to the file.
+
+MAGIC = [
+    (b"ID3", "mp3"), (b"\xff\xfb", "mp3"), (b"\xff\xfa", "mp3"), (b"\xff\xf3", "mp3"),
+    (b"\xff\xf2", "mp3"), (b"\xff\xe3", "mp3"),
+    (b"fLaC", "flac"), (b"OggS", "ogg"), (b"PK\x03\x04", "zip"),
+]
+
+def sniff(path):
+    """What the bytes actually are, ignoring the filename."""
+    try:
+        with open(path, "rb") as f:
+            head = f.read(12)
+    except OSError:
+        return "unknown"
+    if head[:4] == b"RIFF" and head[8:12] == b"WAVE":
+        return "wav"
+    if head[:4] == b"FORM" and head[8:12] in (b"AIFF", b"AIFC"):
+        return "aiff"
+    if head[4:8] == b"ftyp":
+        return "m4a"
+    for sig, kind in MAGIC:
+        if head.startswith(sig):
+            return kind
+    return "unknown"
+
+def unwrap_zip(path):
+    """Pull the real mix back out of a zipped folder. Returns (path, kind).
+
+    Mac's Compress on a music folder yields <name>/Unknown Album/<name>.mp3
+    alongside __MACOSX resource forks -- the audio itself is intact, just
+    wrapped. Take the largest real entry and let the caller re-verify it.
+    """
+    out = path + ".unwrapped"
+    try:
+        with zipfile.ZipFile(path) as z:
+            cands = [e for e in z.infolist()
+                     if not e.is_dir()
+                     and not e.filename.startswith("__MACOSX")
+                     and not os.path.basename(e.filename).startswith("._")
+                     and e.file_size > 1_000_000]
+            if not cands:
+                log("  UNWRAP: zip holds no file big enough to be a mix")
+                return None, None
+            best = max(cands, key=lambda e: e.file_size)
+            with z.open(best) as src, open(out, "wb") as dst:
+                shutil.copyfileobj(src, dst, 1024 * 1024)
+    except Exception as e:  # noqa: BLE001
+        log(f"  UNWRAP failed: {e}")
+        if os.path.exists(out):
+            os.remove(out)
+        return None, None
+    kind = sniff(out)
+    log(f"  UNWRAP zip -> {best.filename} ({best.file_size // 1048576}MB, {kind})")
+    return out, kind
+
+def audio_ok(path):
+    """Last gate before an on-air cart: does this actually decode as audio?"""
+    if not os.path.exists(FFPROBE):
+        log(f"  VERIFY skipped: ffprobe not found at {FFPROBE}")
+        return True  # magic-byte guard already ran; don't stall the pipeline
+    try:
+        r = subprocess.run(
+            [FFPROBE, "-v", "error", "-select_streams", "a:0",
+             "-show_entries", "stream=codec_type", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", path],
+            capture_output=True, timeout=300)
+        fields = r.stdout.decode(errors="replace").split()
+        if r.returncode != 0 or "audio" not in fields:
+            log(f"  VERIFY no decodable audio stream: {r.stderr.decode(errors='replace')[:160]}")
+            return False
+        dur = 0.0
+        for f in fields:
+            try:
+                dur = max(dur, float(f))
+            except ValueError:
+                pass
+        if dur < MIN_AIR_SECONDS:
+            log(f"  VERIFY duration {dur:.1f}s under {MIN_AIR_SECONDS}s floor")
+            return False
+        return True
+    except Exception as e:  # noqa: BLE001
+        log(f"  VERIFY error: {e}")
+        return False
+
+def dest_paths(code, ext, slug, dow, wk):
+    """(filename, dated archive path, flat on-air cart path) for one drop."""
+    fname = f"{code}.{ext}"
+    dated = None
+    if dow is not None and wk:
+        dated = os.path.join(ARCHIVE_ROOT, LOCAL_FOLDER.get(slug, slug), "a-on-air",
+                             air_date(wk, dow).strftime("%m%d%Y") + "-onair", fname)
+    return fname, dated, os.path.join(ONAIR_FLAT, fname)
+
 def file_ok(path, size):
-    return path and os.path.exists(path) and (not size or os.path.getsize(path) == size)
+    """Is the on-disk copy already good?
+
+    When the portal never recorded a size (size_bytes=0, which is exactly what
+    the zipped uploads carried) the old `not size` shortcut called any existing
+    file a match -- so a broken cart was treated as synced forever and never
+    self-healed. With no size to compare, check the bytes instead.
+    """
+    if not path or not os.path.exists(path):
+        return False
+    if size:
+        return os.path.getsize(path) == size
+    return sniff(path) in AUDIO_KINDS
+
+def transcode_to_mp3(src, ext):
+    """AIFF (or other non-air format) -> mp3 bytes. Returns None if ffmpeg fails.
+
+    DJs export whatever their DAW defaults to -- Logic and Pro Tools hand out
+    AIFF -- and the portal now offers to convert rather than bouncing an
+    hour-long mix back at them. The DJ's acceptance arrives as convert_to_mp3.
+    """
+    if not os.path.exists(FFMPEG):
+        log(f"  CONVERT skipped: ffmpeg not found at {FFMPEG}")
+        return None
+    out = src + ".mp3"
+    try:
+        r = subprocess.run(
+            [FFMPEG, "-y", "-v", "error", "-i", src, "-vn",
+             "-c:a", "libmp3lame", "-b:a", MP3_BITRATE, out],
+            capture_output=True, timeout=1800)
+        if r.returncode != 0 or not os.path.exists(out) or os.path.getsize(out) < 100000:
+            log(f"  CONVERT {ext}->mp3 FAILED: {r.stderr.decode(errors='replace')[:200]}")
+            return None
+        data = open(out, "rb").read()
+        return data
+    except Exception as e:  # noqa: BLE001
+        log(f"  CONVERT {ext}->mp3 error: {e}")
+        return None
+    finally:
+        if os.path.exists(out):
+            os.remove(out)
 
 def main():
     res = api({"secret": SECRET, "action": "pending"})
@@ -94,12 +244,7 @@ def main():
         slug = (d.get("djs") or {}).get("slug") or "_unassigned"
         slot = d.get("slot") or {}; dow = slot.get("day_of_week"); wk = d.get("week_of")
         size = d.get("size_bytes") or 0
-        fname = f"{code}.{ext}"
-        dated = None
-        if dow is not None and wk:
-            dated = os.path.join(ARCHIVE_ROOT, LOCAL_FOLDER.get(slug, slug), "a-on-air",
-                                 air_date(wk, dow).strftime("%m%d%Y") + "-onair", fname)
-        flat = os.path.join(ONAIR_FLAT, fname)
+        fname, dated, flat = dest_paths(code, ext, slug, dow, wk)
         if file_ok(dated, size) and file_ok(flat, size):
             api({"secret": SECRET, "action": "publish", "id": d["id"]}); published_only += 1
             continue
@@ -112,11 +257,66 @@ def main():
             failed += 1; log(f"FAIL download {slug}/{fname}");
             if os.path.exists(tmp): os.remove(tmp)
             continue
-        data = open(tmp, "rb").read(); os.remove(tmp)
+        # Trust the bytes, not d["format"]. Unwrap a zipped folder if that's
+        # what turned up, then refuse anything that won't decode -- a bad file
+        # must never overwrite the good cart already sitting in M:\JBMusic.
+        kind = sniff(tmp)
+        unwrapped = False
+        if kind == "zip":
+            un, kind = unwrap_zip(tmp)
+            if un is None:
+                failed += 1; log(f"FAIL {slug}/{fname}: zip with no usable audio inside")
+                os.remove(tmp); continue
+            os.remove(tmp); tmp = un; unwrapped = True
+        if kind not in AUDIO_KINDS:
+            failed += 1
+            log(f"FAIL {slug}/{fname}: bytes are '{kind}', not audio -- cart left untouched")
+            os.remove(tmp); continue
+        if not audio_ok(tmp):
+            failed += 1
+            log(f"FAIL {slug}/{fname}: failed decode check -- cart left untouched")
+            os.remove(tmp); continue
+        if kind != ext:
+            log(f"  SNIFF {slug}/{code}: declared '{ext}', bytes are '{kind}'")
+
+        # Everything reaches air as mp3. DJs export whatever their DAW hands
+        # them -- Logic and Pro Tools default to AIFF, and WAV turns up too --
+        # so convert here automatically rather than bouncing an hour-long mix
+        # back at them or asking them to opt in.
+        converted_from = None
+        data = None
+        if kind != "mp3":
+            data = transcode_to_mp3(tmp, kind)
+            if data is not None:
+                converted_from = f"zip+{kind}" if unwrapped else kind
+                log(f"  CONVERT {slug}/{code}: {kind} -> mp3 @{MP3_BITRATE}")
+                kind = "mp3"
+            elif kind in AIR_READY:
+                # WAV plays out fine as-is; file the original rather than
+                # dropping the mix over a failed convenience transcode.
+                log(f"  CONVERT {slug}/{code} failed, filing original {kind}")
+            else:
+                failed += 1
+                log(f"FAIL {slug}/{code}: {kind} -> mp3 failed -- cart left untouched")
+                os.remove(tmp); continue
+        # An unwrapped zip whose insides were already mp3 still needs reporting:
+        # it tells the edge fn the real byte count (the row's size_bytes describes
+        # the zip, or nothing at all) and leaves "zip" in source_format so a DJ
+        # who keeps compressing their folder is obvious in the data.
+        if unwrapped and converted_from is None:
+            converted_from = "zip"
+        ext = kind
+        fname, dated, flat = dest_paths(code, ext, slug, dow, wk)
+        if data is None:
+            data = open(tmp, "rb").read()
+        os.remove(tmp)
         for p in [dated, flat]:
             if p:
                 os.makedirs(os.path.dirname(p), exist_ok=True)
                 open(p, "wb").write(data)
+        if converted_from:
+            api({"secret": SECRET, "action": "converted", "id": d["id"],
+                 "from": converted_from, "size_bytes": len(data)})
         api({"secret": SECRET, "action": "publish", "id": d["id"]})
         synced.append(f"{slug}/{fname} ({len(data)//1048576}MB)")
         synced_meta.append({
