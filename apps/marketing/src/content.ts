@@ -48,10 +48,11 @@ type Stat = { readonly value: string; readonly label: string };
 /* ------------------------------------------------------------------ */
 
 export const STATS = [
+  // counted off the flagship's live database, 2026-07-27
   { value: "27", label: "shows programmed" },
   { value: "44", label: "on-air hosts" },
-  { value: "216K+", label: "loyalty events" },
-  { value: "1,441", label: "on-demand items" },
+  { value: "217K+", label: "loyalty events" },
+  { value: "2,122", label: "on-demand items" },
 ] as const satisfies readonly Stat[];
 
 /* ------------------------------------------------------------------ */
