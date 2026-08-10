@@ -19,7 +19,7 @@ const bodyFont = Work_Sans({
 });
 
 const STREAM_URL = "https://music.wccg1045fm.com:8007/stream";
-const APK_URL = "/downloads/AllDayAndNight-v1.1.apk";
+const APK_URL = "/downloads/AllDayAndNight-v1.2.apk";
 const LOGO_SRC = "/images/logos/yard-riddim-logo.png";
 const STATION_NAME = "Yard & Riddim Radio";
 const STATION_ARTIST = "WCCG 104.5 FM";
@@ -470,7 +470,7 @@ export default function AllDayAndNightPage() {
         <footer className="adn-footer">
           Built for <span className="adn-station">WCCG 104.5 FM</span> — Fayetteville, North Carolina.
           <br />
-          Android app · v1.1
+          Android app · v1.2
         </footer>
       </div>
 
