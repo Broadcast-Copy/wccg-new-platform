@@ -92,12 +92,12 @@ jobs:
         env:
           KH_HOST: ${{ secrets.KNOWNHOST_SSH_HOST }}
           KH_USER: ${{ secrets.KNOWNHOST_SSH_USER }}
-          KH_PASS: ${{ secrets.KNOWNHOST_SSH_PASSWORD }}
+          KH_KEY: ${{ secrets.KNOWNHOST_SSH_KEY }}
         run: |
           missing=()
           [ -z "$KH_HOST" ] && missing+=("KNOWNHOST_SSH_HOST")
           [ -z "$KH_USER" ] && missing+=("KNOWNHOST_SSH_USER")
-          [ -z "$KH_PASS" ] && missing+=("KNOWNHOST_SSH_PASSWORD")
+          [ -z "$KH_KEY" ] && missing+=("KNOWNHOST_SSH_KEY")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "can_deploy=false" >> "$GITHUB_OUTPUT"
             # Fail rather than warn: see the note on the probe step below.
@@ -113,14 +113,23 @@ jobs:
           name: knownhost-build
           path: out
 
-      - name: Install lftp + sshpass
-        if: steps.preflight.outputs.can_deploy == 'true'
-        run: sudo apt-get install -y lftp sshpass
-
-      - name: Probe SSH + remote disk before deploy
+      - name: Write SSH deploy key
         if: steps.preflight.outputs.can_deploy == 'true'
         env:
-          SSHPASS: ${{ secrets.KNOWNHOST_SSH_PASSWORD }}
+          KH_KEY: ${{ secrets.KNOWNHOST_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KH_KEY" > ~/.ssh/knownhost_deploy
+          chmod 600 ~/.ssh/knownhost_deploy
+
+      # Auth is a dedicated ed25519 deploy key, NOT the account password: the
+      # 2026-08-06 KnownHost migration to the Centova VPS invalidated the stored
+      # password and broke every deploy until 2026-08-10. The account needs its
+      # jailshell enabled and the deploy pubkey in ~/.ssh/authorized_keys —
+      # both are set up on the box; if this probe ever reports "Shell access is
+      # not enabled", re-enable it in WHM (modifyacct shell=jailshell).
+      - name: Probe SSH + remote disk before deploy
+        if: steps.preflight.outputs.can_deploy == 'true'
         run: |
           set +e
           PORT="${{ secrets.KNOWNHOST_SSH_PORT }}"
@@ -128,8 +137,8 @@ jobs:
           USER="${{ secrets.KNOWNHOST_SSH_USER }}"
           HOST="${{ secrets.KNOWNHOST_SSH_HOST }}"
           echo "=== SSH connectivity ==="
-          sshpass -e ssh -p "$PORT" -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=10 -o BatchMode=no \
+          ssh -i ~/.ssh/knownhost_deploy -p "$PORT" -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 -o BatchMode=yes -o IdentitiesOnly=yes \
             "$USER@$HOST" "echo SSH_OK_FROM_REMOTE; uname -a; df -h ~/public_html | tail -2; ls -ld ~/public_html"
           rc=$?
           echo "SSH probe exit code: $rc"
@@ -148,24 +157,22 @@ jobs:
           # had been failing since 2026-08-01 and the live site sat two days stale
           # behind a wall of green checkmarks, through ~a dozen cron runs. Fail.
           if [ "$rc" -ne 0 ]; then
-            echo "::error::SSH probe failed (exit $rc) — likely a KnownHost password change, IP block, or disk quota. NOT deploying."
+            echo "::error::SSH probe failed (exit $rc) — likely the deploy key was removed, the account shell was disabled, or an IP block/disk quota. NOT deploying."
             exit 1
           fi
 
-      - name: Deploy to KnownHost via lftp (SFTP)
+      - name: Deploy to KnownHost via rsync (SSH key)
         if: steps.preflight.outputs.can_deploy == 'true' && env.DEPLOY_SAFE == 'true'
         env:
-          KH_PASS: ${{ secrets.KNOWNHOST_SSH_PASSWORD }}
           KH_USER: ${{ secrets.KNOWNHOST_SSH_USER }}
           KH_HOST: ${{ secrets.KNOWNHOST_SSH_HOST }}
           KH_PORT: ${{ secrets.KNOWNHOST_SSH_PORT }}
         run: |
           set -x
           PORT="${KH_PORT:-22}"
-          # Push out/ to public_html over SFTP. mirror --reverse --delete makes the
-          # deploy idempotent; cgi-bin/.well-known are excluded so --delete can't
-          # remove server-managed paths. Commands go through lftp -e (NOT a heredoc)
-          # so the workflow YAML and the shell both parse cleanly.
+          # Push out/ to public_html. --delete makes the deploy idempotent;
+          # cgi-bin/.well-known are excluded so --delete can't remove
+          # server-managed paths.
           #
           # The broadcastcopy.ai / platform.broadcastcopy.ai excludes are LOAD
           # BEARING: those are cPanel addon-domain docroots that live INSIDE
@@ -173,6 +180,10 @@ jobs:
           # as extraneous and wiped both Broadcast Copy sites (this job also runs
           # on a 4x/day cron, so it happened unattended). Never remove them, and
           # add an exclude here for every future addon domain on this account.
-          lftp -u "$KH_USER,$KH_PASS" -p "$PORT" "sftp://$KH_HOST" -e "set sftp:auto-confirm yes; set net:max-retries 2; set net:timeout 30; set mirror:parallel-transfer-count 4; mirror --reverse --delete --verbose=1 --exclude-glob cgi-bin/ --exclude-glob .well-known/ --exclude-glob broadcastcopy.ai/ --exclude-glob platform.broadcastcopy.ai/ out/ public_html/; cls -l public_html/index.html; bye"
+          rsync -az --delete \
+            -e "ssh -i $HOME/.ssh/knownhost_deploy -p $PORT -o StrictHostKeyChecking=no -o BatchMode=yes -o IdentitiesOnly=yes" \
+            --exclude 'cgi-bin/' --exclude '.well-known/' \
+            --exclude 'broadcastcopy.ai/' --exclude 'platform.broadcastcopy.ai/' \
+            out/ "$KH_USER@$KH_HOST:public_html/"
           echo "=== Sanity-check the upload via SSH ==="
-          SSHPASS="$KH_PASS" sshpass -e ssh -p "$PORT" -o StrictHostKeyChecking=no "$KH_USER@$KH_HOST" 'for f in public_html/index.html public_html/videos/index.html public_html/my/points/index.html; do if [ -f "$f" ]; then echo "OK   $f"; else echo "MISS $f"; fi; done'
+          ssh -i ~/.ssh/knownhost_deploy -p "$PORT" -o StrictHostKeyChecking=no -o BatchMode=yes -o IdentitiesOnly=yes "$KH_USER@$KH_HOST" 'for f in public_html/index.html public_html/videos/index.html public_html/my/points/index.html; do if [ -f "$f" ]; then echo "OK   $f"; else echo "MISS $f"; fi; done'
