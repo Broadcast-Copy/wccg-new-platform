@@ -39,3 +39,18 @@ export const AIRSUITE_CONSOLE = {
   // Left inline on purpose -- this one is meant to be read in the browser, not saved.
   sha256Href: `${RELEASES_ORIGIN}/airsuite-console/AirSuiteConsole-1.0.0.sha256`,
 } as const;
+
+/**
+ * Broadcast Copy Manager — THE download. A native Windows dashboard that launches the
+ * suite, and installs/updates modules from bc_releases with sha256 verification of every
+ * artifact. Built by packaging/manager/build-manager.ps1 in the wccg-airsuite repo; same
+ * bump-every-field-together rule as the console above.
+ */
+export const BROADCAST_COPY_MANAGER = {
+  version: "0.2.0",
+  size: "58.3 MB",
+  installedSize: "134 MB",
+  href: `${RELEASES_ORIGIN}/broadcast-copy-manager/BroadcastCopyManager-0.2.0.zip?download=BroadcastCopyManager-0.2.0.zip`,
+  sha256: "2b96ac78014164621c43a6d35547aec57d2d412e4fc4a0c0472df88af8f0a54b",
+  sha256Href: `${RELEASES_ORIGIN}/broadcast-copy-manager/BroadcastCopyManager-0.2.0.sha256`,
+} as const;
