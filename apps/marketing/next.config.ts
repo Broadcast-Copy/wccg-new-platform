@@ -7,6 +7,12 @@ import type { NextConfig } from 'next';
  */
 const nextConfig: NextConfig = {
   output: 'export',
+  // Next 16's flat export writes /download as download.html BESIDE a download/
+  // payload directory. Apache's DirectorySlash then 301s /download to
+  // /download/, which has no index -> 403 on every subpage. Trailing slashes
+  // make each route export as route/index.html, which the docroot's existing
+  // .htaccess serves directly.
+  trailingSlash: true,
   images: { unoptimized: true },
 };
 
