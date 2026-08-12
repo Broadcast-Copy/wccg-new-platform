@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  AudioLines,
   CalendarClock,
   Disc3,
   LineChart,
@@ -60,6 +61,12 @@ export const STATS = [
 /* ------------------------------------------------------------------ */
 
 export const FEATURES = [
+  {
+    name: "On-air playout",
+    icon: AudioLines,
+    blurb:
+      "AirSuite On-Air: three decks, the program log, hotkeys and live copy in one window. Sample-accurate segues, an audition bus that can never reach the transmitter, and a muted shadow mode that runs beside your current automation until you trust it.",
+  },
   {
     name: "Streaming & channels",
     icon: Radio,
