@@ -9,6 +9,39 @@ export const FLAGSHIP_URL = "https://wccg1045fm.com";
 /** Flagship station id — the tenant whose live now-playing we show as proof. */
 export const FLAGSHIP_STATION_ID = "station_wccg";
 
+/**
+ * On-Air clips — short loops of the console, one per capability.
+ *
+ * Storage, not public/, for the same reason the console zip is: this app is a
+ * static export, so a video in the repo is incompressible binary in git history
+ * permanently, on every re-render. Storage also means a recut clip does not need
+ * a site redeploy.
+ *
+ * Rendered by dev/broadcastcopy-video and uploaded with its publish-clips.sh.
+ * `square` is the 1080 crop for social; both are the same composition.
+ */
+const MARKETING_ORIGIN =
+  "https://irjiqbmoohklagdegezz.supabase.co/storage/v1/object/public/marketing";
+
+export type ClipId =
+  | "segue" | "log" | "hotkeys" | "liners"
+  | "talkset" | "capture" | "imaging" | "shadow";
+
+export const clipUrl = (id: ClipId, square = false): string =>
+  `${MARKETING_ORIGIN}/clips/on-air/${id}${square ? "-square" : ""}.mp4`;
+
+/** What each clip argues, for captions and alt text. */
+export const CLIP_CAPTIONS: Record<ClipId, string> = {
+  segue: "Deck A hands to deck B, both meters on one crossfade curve.",
+  log: "Air time projected from what is actually playing.",
+  hotkeys: "Pads found by colour, and one firing.",
+  liners: "Live copy arriving on its cue, with the pacing gutter.",
+  talkset: "A break assembled beat by beat, with its running time.",
+  capture: "A show-prep story captured straight into a break, as a draft.",
+  imaging: "An imaging effect imported and placed on a hotkey pad.",
+  shadow: "Muted shadow beside your automation, then the cutover.",
+};
+
 /** Public Supabase Storage origin for release artefacts. */
 const RELEASES_ORIGIN =
   "https://irjiqbmoohklagdegezz.supabase.co/storage/v1/object/public/releases";
