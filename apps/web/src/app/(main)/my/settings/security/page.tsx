@@ -65,6 +65,8 @@ function PasswordInput({
   show,
   onToggleShow,
   placeholder,
+  name,
+  autoComplete,
 }: {
   label: string;
   value: string;
@@ -72,6 +74,8 @@ function PasswordInput({
   show: boolean;
   onToggleShow: () => void;
   placeholder: string;
+  name: string;
+  autoComplete: "current-password" | "new-password";
 }) {
   return (
     <div>
@@ -81,6 +85,9 @@ function PasswordInput({
       <div className="relative">
         <input
           type={show ? "text" : "password"}
+          id={name}
+          name={name}
+          autoComplete={autoComplete}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
@@ -189,6 +196,8 @@ export default function SecurityPage() {
             show={showCurrent}
             onToggleShow={() => setShowCurrent(!showCurrent)}
             placeholder="Enter current password"
+            name="current-password"
+            autoComplete="current-password"
           />
           <PasswordInput
             label="New Password"
@@ -197,6 +206,8 @@ export default function SecurityPage() {
             show={showNew}
             onToggleShow={() => setShowNew(!showNew)}
             placeholder="Enter new password"
+            name="new-password"
+            autoComplete="new-password"
           />
           <PasswordInput
             label="Confirm New Password"
@@ -205,6 +216,8 @@ export default function SecurityPage() {
             show={showConfirm}
             onToggleShow={() => setShowConfirm(!showConfirm)}
             placeholder="Re-enter new password"
+            name="confirm-new-password"
+            autoComplete="new-password"
           />
 
           {message && (
