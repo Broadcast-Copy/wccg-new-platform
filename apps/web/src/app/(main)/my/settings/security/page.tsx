@@ -52,6 +52,56 @@ function ComingSoonBadge() {
   );
 }
 
+// -------------------------------------------------------------------------
+// Password Input Helper
+// NOTE: must stay at MODULE scope. Declared inside SecurityPage it got a new
+// component identity every render, so React remounted the <input> on each
+// keystroke and focus was lost -- the "cannot type in the password box" bug.
+// -------------------------------------------------------------------------
+function PasswordInput({
+  label,
+  value,
+  onChange,
+  show,
+  onToggleShow,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  show: boolean;
+  onToggleShow: () => void;
+  placeholder: string;
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-sm font-medium text-foreground/70">
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          type={show ? "text" : "password"}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="w-full rounded-lg border border-border bg-foreground/[0.04] px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground/40 focus:border-[#74ddc7]/50 focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/30"
+        />
+        <button
+          type="button"
+          onClick={onToggleShow}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground/70"
+        >
+          {show ? (
+            <EyeOff className="h-4 w-4" />
+          ) : (
+            <Eye className="h-4 w-4" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -110,53 +160,6 @@ export default function SecurityPage() {
     } finally {
       setSaving(false);
     }
-  }
-
-  // -------------------------------------------------------------------------
-  // Password Input Helper
-  // -------------------------------------------------------------------------
-  function PasswordInput({
-    label,
-    value,
-    onChange,
-    show,
-    onToggleShow,
-    placeholder,
-  }: {
-    label: string;
-    value: string;
-    onChange: (v: string) => void;
-    show: boolean;
-    onToggleShow: () => void;
-    placeholder: string;
-  }) {
-    return (
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-foreground/70">
-          {label}
-        </label>
-        <div className="relative">
-          <input
-            type={show ? "text" : "password"}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            className="w-full rounded-lg border border-border bg-foreground/[0.04] px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground/40 focus:border-[#74ddc7]/50 focus:outline-none focus:ring-1 focus:ring-[#74ddc7]/30"
-          />
-          <button
-            type="button"
-            onClick={onToggleShow}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground/70"
-          >
-            {show ? (
-              <EyeOff className="h-4 w-4" />
-            ) : (
-              <Eye className="h-4 w-4" />
-            )}
-          </button>
-        </div>
-      </div>
-    );
   }
 
   return (
