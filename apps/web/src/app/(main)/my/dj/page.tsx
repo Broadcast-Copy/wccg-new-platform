@@ -17,9 +17,11 @@ import { Button } from "@/components/ui/button";
 import { isoMondayOfNow } from "@/lib/broadcast-week";
 import {
   Calendar,
+  KeyRound,
   RefreshCw,
   UploadCloud,
 } from "lucide-react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -326,10 +328,20 @@ export default function DjPortalPage() {
             })()}
           </p>
         </div>
-        <Button onClick={reload} variant="outline" size="sm" className="rounded-full">
-          <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* DJs land here straight from the temp-password email, so the only
+              route to changing that password used to be buried in Settings. */}
+          <Button asChild variant="outline" size="sm" className="rounded-full">
+            <Link href="/my/settings/security">
+              <KeyRound className="mr-1.5 h-3.5 w-3.5" />
+              Change password
+            </Link>
+          </Button>
+          <Button onClick={reload} variant="outline" size="sm" className="rounded-full">
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+            Refresh
+          </Button>
+        </div>
       </header>
 
       {/* Bulk drag-drop */}

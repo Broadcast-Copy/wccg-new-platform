@@ -15,6 +15,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 
 // ---------------------------------------------------------------------------
 // Section Card (matches settings page pattern)
@@ -113,6 +114,7 @@ function PasswordInput({
 // Page
 // ---------------------------------------------------------------------------
 export default function SecurityPage() {
+  const { user } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -189,6 +191,20 @@ export default function SecurityPage() {
       {/* ─── Change Password ──────────────────────────────────────────── */}
       <SectionCard icon={KeyRound} title="Change Password">
         <div className="space-y-4">
+          {/* Password managers need a username to attach the saved credential
+              to. Without it they fall back to guessing from field order, which
+              is what makes their overlays land on the wrong box. Hidden from
+              sight but readable by the manager. */}
+          <input
+            type="text"
+            name="username"
+            autoComplete="username"
+            value={user?.email ?? ""}
+            readOnly
+            hidden
+            aria-hidden="true"
+            tabIndex={-1}
+          />
           <PasswordInput
             label="Current Password"
             value={currentPassword}
