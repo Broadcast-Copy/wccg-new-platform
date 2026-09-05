@@ -35,8 +35,8 @@ export const STATIONS: Station[] = [
     category: "HIP_HOP",
     // Flagship: the over-the-air 104.5 FM simulcast — the original SecureNet
     // feed (HTTPS, AAC+). The genre channels below are the self-hosted IceCast
-    // streams. No now-playing JSON here (SecureNet), so the player shows the
-    // station name until/unless a SecureNet now-playing feed is wired.
+    // streams. Now-playing comes from the Cirrus `<CALL>.xml` feed — see
+    // nowPlayingSourceFor() below.
     streamUrl: "https://ice66.securenetsystems.net/WCCG",
     logo: "/images/logos/wccg-logo.png",
     status: "ACTIVE",
@@ -148,9 +148,12 @@ export interface NowPlayingSource {
 /**
  * Resolve the now-playing feed + format for a stream:
  *  - self-hosted IceCast (*.wccg1045fm.com) → /status-json.xsl (needs IceCast CORS).
- *  - SecureNet (the WCCG flagship, *.securenetsystems.net) → the Cirrus playHistory
- *    feed, which DOES send Access-Control-Allow-Origin, so the flagship can show
- *    live titles in the browser even while the IceCast titles are CORS-blocked.
+ *  - SecureNet (the WCCG flagship, *.securenetsystems.net) → the Cirrus
+ *    `<CALL>.xml` status feed, which DOES send Access-Control-Allow-Origin, so
+ *    the flagship can show live titles in the browser even while the IceCast
+ *    titles are CORS-blocked. Preferred over the older `_history.txt` JSON
+ *    because it reports `programType`, letting the player tell a commercial
+ *    break apart from a song.
  */
 export function nowPlayingSourceFor(streamUrl: string | null | undefined): NowPlayingSource | null {
   if (!streamUrl) return null;
@@ -163,7 +166,7 @@ export function nowPlayingSourceFor(streamUrl: string | null | undefined): NowPl
       const call = u.pathname.split("/").filter(Boolean).pop();
       if (call) {
         return {
-          url: `https://streamdb7web.securenetsystems.net/player_status_update/${call}_history.txt`,
+          url: `https://streamdb7web.securenetsystems.net/player_status_update/${call}.xml`,
           kind: "securenet",
         };
       }

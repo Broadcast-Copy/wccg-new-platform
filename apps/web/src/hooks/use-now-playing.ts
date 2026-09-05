@@ -8,6 +8,12 @@ interface NowPlayingData {
   artist: string;
   albumArt: string | null;
   streamName: string;
+  /** True while the station is in a break — Cirrus `programType` ADV/PRL. */
+  isAd?: boolean;
+  /** Length of the current item in seconds, when the feed reports one. */
+  durationSec?: number;
+  /** Client clock (ms) at the changeover — see the note in the poll loop. */
+  startedAt?: number;
 }
 
 const POLL_INTERVAL_MS = 15_000; // 15 seconds
@@ -74,35 +80,72 @@ function parseIcecast(json: unknown): NowPlayingData | null {
 }
 
 /**
- * Parse a SecureNet/Cirrus `<CALL>_history.txt` payload. The current song is the
- * first entry of `playHistory.song[]`, with title/artist already split out.
+ * Parse a SecureNet/Cirrus `<CALL>.xml` payload — the single item on air right
+ * now. Richer than the older `_history.txt` feed: it carries `programType`, so
+ * a commercial break is distinguishable from a song instead of leaving the last
+ * song on screen for the length of the break. It also carries `duration`, which
+ * gives consumers enough for a progress bar.
  */
-function parseSecureNet(json: unknown): NowPlayingData | null {
-  const songs = (json as { playHistory?: { song?: unknown } })?.playHistory?.song;
-  const arr = Array.isArray(songs) ? songs : songs ? [songs] : [];
-  const cur = arr[0] as { title?: string; artist?: string; cover?: string } | undefined;
-  if (!cur) return null;
+function parseSecureNetXml(xml: string): NowPlayingData | null {
+  let doc: Document;
+  try {
+    doc = new DOMParser().parseFromString(xml.trim(), "text/xml");
+  } catch {
+    return null;
+  }
+  if (doc.getElementsByTagName("parsererror").length > 0) return null;
+
+  const tag = (name: string) =>
+    (doc.getElementsByTagName(name)[0]?.textContent ?? "").trim();
+
+  const programType = tag("programType").toUpperCase();
+  const title = tag("title");
+  if (!programType && !title) return null;
+
+  const streamName = "WCCG 104.5 FM";
+  const duration = Number(tag("duration"));
+  const durationSec =
+    Number.isFinite(duration) && duration > 0 ? duration : undefined;
+
+  // ADV = ad break, PRL = pre-roll. Neither is a song, so blank the title and
+  // let consumers fall back to the station name the way they already do.
+  if (programType === "ADV" || programType === "PRL") {
+    return {
+      title: "",
+      artist: "",
+      albumArt: null,
+      streamName,
+      isAd: true,
+      durationSec,
+    };
+  }
+
   return {
-    title: (cur.title || "").trim(),
-    artist: (cur.artist || "").trim(),
-    albumArt: (cur.cover || "").trim() || null,
-    streamName: "WCCG 104.5 FM",
+    title,
+    artist: tag("artist"),
+    albumArt: tag("cover") || null,
+    streamName,
+    isAd: false,
+    durationSec,
   };
 }
 
 /**
- * Polls the currently-playing station's IceCast now-playing JSON.
+ * Polls the currently-playing station's now-playing feed.
  * Only polls while `enabled` and while a WCCG stream is loaded.
  *
- * NOTE: requires the IceCast server to send `Access-Control-Allow-Origin`
- * (CORS). Without it the cross-origin fetch is blocked and we keep the last
- * data (audio still plays; the player falls back to the station name).
+ * NOTE: requires the feed to send `Access-Control-Allow-Origin` (CORS). The
+ * Cirrus feed does; our own IceCast servers must be configured to. Without it
+ * the cross-origin fetch is blocked and we keep the last data (audio still
+ * plays; the player falls back to the station name).
  */
 export function useNowPlaying(enabled: boolean, streamUrl?: string | null) {
   const [data, setData] = useState<NowPlayingData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastArtLookupRef = useRef<string>("");
+  const lastItemKeyRef = useRef<string>("");
+  const startedAtRef = useRef<number>(0);
 
   useEffect(() => {
     const source = nowPlayingSourceFor(streamUrl);
@@ -117,6 +160,7 @@ export function useNowPlaying(enabled: boolean, streamUrl?: string | null) {
     const feedKind = source.kind;
 
     let cancelled = false;
+    lastItemKeyRef.current = "";
 
     async function fetchNowPlaying() {
       try {
@@ -127,11 +171,28 @@ export function useNowPlaying(enabled: boolean, streamUrl?: string | null) {
           signal: AbortSignal.timeout(8000),
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const json = await response.json();
-        const parsed = feedKind === "securenet" ? parseSecureNet(json) : parseIcecast(json);
+        const parsed =
+          feedKind === "securenet"
+            ? parseSecureNetXml(await response.text())
+            : parseIcecast(await response.json());
         if (!parsed || cancelled) return;
 
-        if (parsed.artist || parsed.title) {
+        // Cirrus reports `programStartTS` as a bare local-time string with no
+        // zone, so it can't be trusted for elapsed time. Stamp the changeover
+        // off the client clock instead — the error is bounded by the poll
+        // interval, which is close enough for a progress bar.
+        const itemKey = parsed.isAd
+          ? "__break__"
+          : `${parsed.artist}||${parsed.title}`;
+        if (itemKey !== lastItemKeyRef.current) {
+          lastItemKeyRef.current = itemKey;
+          startedAtRef.current = Date.now();
+        }
+        parsed.startedAt = startedAtRef.current;
+
+        // Only look art up when the feed didn't supply a cover, and never
+        // during a break.
+        if (!parsed.isAd && !parsed.albumArt && (parsed.artist || parsed.title)) {
           const lookupKey = `${parsed.artist}||${parsed.title}`;
           if (lookupKey !== lastArtLookupRef.current) {
             lastArtLookupRef.current = lookupKey;
