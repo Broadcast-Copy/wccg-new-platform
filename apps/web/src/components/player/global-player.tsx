@@ -368,10 +368,15 @@ export function GlobalPlayer() {
       const label = "Duke Football on 104.5";
 
       if (football.phase === "live") {
-        const status =
-          live && live.state === "in"
-            ? `${live.displayPeriod ? `${live.displayPeriod} QTR` : ""}${live.clock ? ` ${live.clock}` : ""}`.trim()
-            : "Kickoff";
+        const status = !live
+          ? "Kickoff"
+          : live.isDelayed
+            ? "Kickoff delayed"
+            : live.statusName === "STATUS_HALFTIME"
+              ? "Halftime"
+              : live.state === "in" && live.period
+                ? `${live.displayPeriod ? `${live.displayPeriod} QTR` : `Q${live.period}`}${live.clock ? ` ${live.clock}` : ""}`.trim()
+                : "Kickoff";
         const score = live ? `DUKE ${live.dukeScore} · ${fb.opponentAbbr} ${live.opponentScore}` : "";
         return {
           title: `${matchup} — LIVE`,

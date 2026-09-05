@@ -107,6 +107,10 @@ export interface ScoringPlay {
 
 export interface FootballLive {
   state: "pre" | "in" | "post";
+  /** ESPN status name, e.g. STATUS_IN_PROGRESS, STATUS_DELAYED, STATUS_HALFTIME, STATUS_END_PERIOD */
+  statusName: string;
+  /** Weather / other hold — ESPN reports state "in" with period 0 and no clock */
+  isDelayed: boolean;
   detail: string;
   period: number;
   displayPeriod: string;
@@ -369,8 +373,11 @@ function parseSummary(json: unknown, game: FootballGame): FootballLive | null {
     dukeWinProbability = game.isHome ? home : 1 - home;
   }
 
+  const statusName = str(type.name, "");
   return {
     state,
+    statusName,
+    isDelayed: statusName === "STATUS_DELAYED" || /delay/i.test(str(type.description, "")),
     detail: str(type.shortDetail, str(type.detail, "")),
     period: num(status.period),
     displayPeriod: str(status.displayPeriod, ""),

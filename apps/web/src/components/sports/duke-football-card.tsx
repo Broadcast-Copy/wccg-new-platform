@@ -51,6 +51,10 @@ function kickoffLabel(iso: string) {
 function periodLabel(live: FootballLive) {
   if (live.state === "post") return "FINAL";
   if (live.state === "pre") return "PREGAME";
+  if (live.isDelayed) return "DELAYED";
+  if (live.statusName === "STATUS_HALFTIME") return "HALFTIME";
+  if (live.statusName === "STATUS_END_PERIOD" && live.period) return `END Q${live.period}`;
+  if (!live.period) return "KICKOFF";
   if (live.displayPeriod) {
     // "3rd" → "3rd QTR", "OT" stays
     return /^\d/.test(live.displayPeriod) ? `${live.displayPeriod} QTR` : live.displayPeriod;
@@ -458,7 +462,16 @@ function ScoringPlays({ plays, game }: { plays: FootballLive["scoringPlays"]; ga
   );
 }
 
-function LiveFace({ game, live }: { game: FootballGame; live: FootballLive | null }) {
+function UpdatedAgo({ fetchedAt, now }: { fetchedAt: number; now: number }) {
+  const secs = Math.max(0, Math.round((now - fetchedAt) / 1000));
+  return (
+    <span className="font-mono text-[10px] tabular-nums text-white/45">
+      {secs < 2 ? "updated just now" : `updated ${secs}s ago`}
+    </span>
+  );
+}
+
+function LiveFace({ game, live, now }: { game: FootballGame; live: FootballLive | null; now: number }) {
   const isFinal = live?.state === "post";
   const dukeHasBall = live?.possession === "duke";
   const oppHasBall = live?.possession === "opponent";
@@ -482,6 +495,7 @@ function LiveFace({ game, live }: { game: FootballGame; live: FootballLive | nul
             <span className="text-[11px] font-bold uppercase tracking-widest text-white/70">
               Duke Football {isFinal ? "· Final" : "· Game day"}
             </span>
+            {live && <UpdatedAgo fetchedAt={live.fetchedAt} now={now} />}
           </div>
           <ListenLiveButton compact />
         </div>
@@ -505,7 +519,7 @@ function LiveFace({ game, live }: { game: FootballGame; live: FootballLive | nul
               {live ? periodLabel(live) : "Kickoff"}
             </p>
             <p className="mt-1 font-mono text-2xl font-black tabular-nums text-white sm:text-3xl">
-              {live?.state === "in" ? live.clock || "" : isFinal ? "" : "—"}
+              {live?.state === "in" && live.period > 0 && !live.isDelayed ? live.clock || "" : isFinal ? "" : "—"}
             </p>
             {live?.downDistance && (
               <p className="mt-1 rounded-full bg-black/30 px-2 py-0.5 text-[10px] font-bold text-white/80">
@@ -548,7 +562,11 @@ function LiveFace({ game, live }: { game: FootballGame; live: FootballLive | nul
             </>
           ) : (
             <span className="text-white/60">
-              {live ? live.detail || "Waiting for the first snap…" : "Connecting to the live feed…"}
+              {!live
+                ? "Connecting to the live feed…"
+                : live.isDelayed
+                  ? `Kickoff is delayed at ${game.venue.split(",")[0]} — stay with WCCG 104.5 FM for updates.`
+                  : live.detail || "Waiting for the first snap…"}
             </span>
           )}
         </div>
@@ -650,7 +668,7 @@ export function DukeFootballCard({ state }: { state: DukeFootballGameState }) {
         {face === "front" ? (
           <CountdownFace game={game} record={record} now={now} />
         ) : (
-          <LiveFace game={game} live={live} />
+          <LiveFace game={game} live={live} now={now} />
         )}
       </div>
     </section>
