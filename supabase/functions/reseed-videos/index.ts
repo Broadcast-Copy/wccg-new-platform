@@ -31,6 +31,10 @@ interface ChannelConfig {
   category: string;
   rating: "G" | "PG" | "PG-13" | "R" | "NR";
   channelId: string;
+  // Optional per-channel title filter. Entries whose title matches are skipped
+  // entirely — never inserted, never title-refreshed. Used to drop a single
+  // show from a channel we otherwise carry in full.
+  excludeTitle?: RegExp;
 }
 
 const CHANNELS: ChannelConfig[] = [
@@ -60,7 +64,9 @@ const CHANNELS: ChannelConfig[] = [
   // Sports — Duke + Pick'em Pros. Duke rows are curated as "Duke Blue Devils".
   { program: "Sports", creator: "Duke Blue Devils", category: "Sports", rating: "G", channelId: "UC9KCzNMmf0IRcEIsFDgt2bg" }, // Duke Basketball
   { program: "Sports", creator: "Duke Blue Devils", category: "Sports", rating: "G", channelId: "UC-v9UWlnqtYeCQtPDO1lGVQ" }, // Duke Football
-  { program: "Sports", creator: "Pick'em Pros", category: "Sports", rating: "PG", channelId: "UC4DI4UXm2vIS5-6fhuCAh6g" }, // Pick'em Pros
+  // Pick'em Pros: carry the channel, but NOT its "Pain Points" show — those
+  // episodes are excluded from the Sports row by request.
+  { program: "Sports", creator: "Pick'em Pros", category: "Sports", rating: "PG", channelId: "UC4DI4UXm2vIS5-6fhuCAh6g", excludeTitle: /pain\s*points/i }, // Pick'em Pros
 
   // From Your College — area colleges & universities combined into one row.
   { program: "From Your College", creator: "Fayetteville State University", category: "Education", rating: "G", channelId: "UCVEbUWk96dmaDFwenptsx5Q" },
@@ -376,7 +382,8 @@ Deno.serve(async (req: Request) => {
         continue;
       }
       const xml = await res.text();
-      const entries = parseEntries(xml, PER_CHANNEL);
+      const parsed = parseEntries(xml, PER_CHANNEL);
+      const entries = ch.excludeTitle ? parsed.filter((e) => !ch.excludeTitle!.test(e.title)) : parsed;
       if (entries.length === 0) {
         results.push({ channel: label, channelId: ch.channelId, inserted: 0, updated: 0, errors: 0, reason: "no entries parsed" });
         continue;

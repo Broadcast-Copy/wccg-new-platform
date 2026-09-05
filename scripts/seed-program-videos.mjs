@@ -34,7 +34,9 @@ const PROGRAMS = [
   // Sports — Duke + Pick'em Pros combined into one "Sports" row
   { program: "Sports", category: "Sports", rating: "G", channelId: "UC9KCzNMmf0IRcEIsFDgt2bg" }, // Duke Basketball
   { program: "Sports", category: "Sports", rating: "G", channelId: "UC-v9UWlnqtYeCQtPDO1lGVQ" }, // Duke Football
-  { program: "Sports", category: "Sports", rating: "PG", channelId: "UC4DI4UXm2vIS5-6fhuCAh6g" }, // Pick'em Pros
+  // Pick'em Pros: carry the channel, but NOT its "Pain Points" show —
+  // excludeTitle drops those episodes from the Sports row by request.
+  { program: "Sports", category: "Sports", rating: "PG", channelId: "UC4DI4UXm2vIS5-6fhuCAh6g", excludeTitle: /pain\s*points/i }, // Pick'em Pros
 
   // From Your College — area colleges & universities combined into one row.
   { program: "From Your College", creator: "Fayetteville State University", category: "Education", rating: "G", channelId: "UCVEbUWk96dmaDFwenptsx5Q" },
@@ -119,7 +121,9 @@ async function main() {
         continue;
       }
       const xml = await res.text();
-      const entries = parseEntries(xml, PER_CHANNEL);
+      const parsed = parseEntries(xml, PER_CHANNEL);
+      // Optional per-channel title filter (see excludeTitle in PROGRAMS).
+      const entries = p.excludeTitle ? parsed.filter((e) => !p.excludeTitle.test(e.title)) : parsed;
       console.error(`OK   ${p.program}: ${entries.length} videos`);
       for (const e of entries) {
         rows.push({

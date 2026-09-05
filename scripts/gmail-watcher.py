@@ -77,6 +77,11 @@ NOTIFY_TO = "biggleem@gmail.com"
 
 POLL_SECONDS = int(os.environ.get("WCCG_POLL_SECONDS", "20"))
 
+# Child processes (curl / ffmpeg) must never open a console: the watcher runs under
+# pythonw, which has no console of its own, so a spawn without this flag creates a
+# fresh visible terminal window on the operator's desktop — once per retry tick.
+NO_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+
 # sender-key (addr or domain, matched as substring of the From header) -> sermon spec
 # deadline_hour: on the airing Sunday, once this local hour passes, a still-failing
 # message is retired (the slot already played) and the watcher just waits for next
@@ -157,7 +162,7 @@ def ffmpeg_intact(path):
     """Full decode; exit 0 with no errors == complete, untruncated audio."""
     try:
         r = subprocess.run([FFMPEG, "-v", "error", "-i", path, "-f", "null", "-"],
-                           capture_output=True, timeout=300)
+                           capture_output=True, timeout=300, creationflags=NO_WINDOW)
         return r.returncode == 0 and not r.stderr.strip()
     except Exception as e:
         log(f"    ffmpeg check failed: {e}")
@@ -310,7 +315,8 @@ def drive_bytes(drive, fid):
 
 def curl_bytes(url):
     tmp = os.path.join(CONFIG_DIR, "_dl.part")
-    r = subprocess.run(["curl", "-sL", "--max-time", "900", "-o", tmp, url], capture_output=True)
+    r = subprocess.run(["curl", "-sL", "--max-time", "900", "-o", tmp, url], capture_output=True,
+                       creationflags=NO_WINDOW)
     if r.returncode != 0 or not os.path.exists(tmp):
         return None
     data = open(tmp, "rb").read()
@@ -412,7 +418,7 @@ def stage_sermon(data, spec):
         raw = os.path.join(CONFIG_DIR, f"_{code}_in.bin")
         open(raw, "wb").write(data)
         r = subprocess.run([FFMPEG, "-y", "-i", raw, "-vn", "-c:a", "libmp3lame", "-b:a", "192k", dest_sermon],
-                           capture_output=True, timeout=600)
+                           capture_output=True, timeout=600, creationflags=NO_WINDOW)
         try:
             os.remove(raw)
         except Exception:
@@ -422,9 +428,20 @@ def stage_sermon(data, spec):
     else:
         open(dest_sermon, "wb").write(data)
 
+    # On validation failure REMOVE the staged file: RadioSpider's mtSun FILE COPY
+    # events read this folder, so a leftover non-audio pmb1.mp3 would get staged
+    # toward air next weekend.
     if not audio_header_ok(dest_sermon, ext):
+        try:
+            os.remove(dest_sermon)
+        except Exception:
+            pass
         return False, f"bad audio header for {os.path.basename(dest_sermon)}"
     if ext != "wav" and not ffmpeg_intact(dest_sermon):
+        try:
+            os.remove(dest_sermon)
+        except Exception:
+            pass
         return False, "ffmpeg full-decode reported errors (possibly truncated)"
 
     # copy the staged sermon to the flat M:\JBMusic slot (same bytes on disk)
@@ -485,23 +502,40 @@ def handle_message(gmail, drive, mid, state):
     # and a permanent failure (e.g. the 2026-07-05 pmb1 link-less Drive chip) used
     # to email an identical alert on every tick (~180/hour) until fixed.
     notified = state.setdefault("fail_notified", {})
-    if not data or len(data) < 200000:
-        # Weekly timeout: once the airing Sunday's deadline hour passes, the slot has
-        # already played — retire this message (mark processed) and just wait for next
-        # week's email. A proper re-send from the church is a NEW message id, so it
-        # still syncs even after this one is retired.
+
+    # Weekly timeout, shared by EVERY failure mode (no data, tiny data, staging
+    # rejected the bytes): once the airing Sunday's deadline hour has passed, the
+    # slot already played — retire the message (mark processed) and wait for next
+    # week's email. A proper re-send from the church is a NEW message id, so it
+    # still syncs even after this one is retired. The deadline is anchored to the
+    # Sunday THIS MESSAGE was aiming at (from its arrival time) and fires on any
+    # later day too — the old `now.date() == this_sunday()` check could only ever
+    # be true on a Sunday, so a failure surviving past midnight retried forever.
+    def retire_if_past_deadline():
         dl = spec.get("deadline_hour")
+        if dl is None:
+            return False
         now = datetime.now()
-        if dl is not None and now.date() == this_sunday() and now.hour >= dl:
-            log(f"    past Sunday {dl}:00 air deadline — retiring this message; waiting for next week's email")
-            send_mail(gmail, f"Sermon {spec['code']} NOT synced this week — waiting for next week",
-                      f"{spec['church']} ({spec['code']}) emailed \"{subj}\" but no usable file became reachable "
-                      f"by the Sunday {dl}:00 air deadline, so the watcher gave up on this message. The cart "
-                      f"M:/JBMusic/{spec['djb']}.{spec['ext']} keeps last week's sermon.\n\n"
-                      f"Polling continues as normal — next week's email (or a re-send with a working link this "
-                      f"week) will sync automatically.")
-            state["processed"].append(mid)
-            notified.pop(mid, None)
+        try:
+            msg_date = datetime.fromtimestamp(int(msg["internalDate"]) / 1000).date()
+        except Exception:
+            msg_date = now.date()
+        air_sunday = this_sunday(msg_date)
+        if now.date() < air_sunday or (now.date() == air_sunday and now.hour < dl):
+            return False
+        log(f"    past the Sunday {air_sunday:%m/%d} {dl}:00 air deadline — retiring this message; waiting for next week's email")
+        send_mail(gmail, f"Sermon {spec['code']} NOT synced this week — waiting for next week",
+                  f"{spec['church']} ({spec['code']}) emailed \"{subj}\" but no usable file became reachable "
+                  f"by the Sunday {dl}:00 air deadline, so the watcher gave up on this message. The cart "
+                  f"M:/JBMusic/{spec['djb']}.{spec['ext']} keeps last week's sermon.\n\n"
+                  f"Polling continues as normal — next week's email (or a re-send with a working link this "
+                  f"week) will sync automatically.")
+        state["processed"].append(mid)
+        notified.pop(mid, None)
+        return True
+
+    if not data or len(data) < 200000:
+        if retire_if_past_deadline():
             return
         log(f"    download failed/too small ({len(data) if data else 0} bytes) — retrying every tick, silently (not marking processed)")
         if mid not in notified:
@@ -527,6 +561,8 @@ def handle_message(gmail, drive, mid, state):
         notified.pop(mid, None)
     else:
         log(f"    STAGE FAILED: {note} — not marking processed")
+        if retire_if_past_deadline():
+            return
         if mid not in notified:
             send_mail(gmail, f"Sermon {spec['code']} download OK but staging failed",
                       f"{spec['church']} ({spec['code']}): {note}. Needs a look. "
