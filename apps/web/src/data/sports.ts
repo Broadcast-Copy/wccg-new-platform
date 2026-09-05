@@ -170,7 +170,7 @@ export const DUKE_BASKETBALL: SportsTeam = {
   logoUrl: "https://a.espncdn.com/i/teamlogos/ncaa/500/150.png",
   espnTeamId: "150",
   espnSport: "mens-college-basketball",
-  heroImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/09/duke-basket-ball.png",
+  heroImageUrl: "/images/sports/dukebasketball.jpg",
   description: "Duke Men's Basketball is one of the most storied programs in college basketball history. Under legendary coach Mike Krzyzewski and now Jon Scheyer, the Blue Devils have won 5 national championships, made 17 Final Four appearances, and produced countless NBA players. WCCG 104.5 FM brings you complete coverage of Duke basketball throughout the season.",
   broadcastDescription: "Listen to Duke Basketball and experience the unmatched intensity, precision, and tradition that define one of the nation's most iconic programs. Since 1905, Duke basketball has been a cornerstone of college hoops, producing legends like Christian Laettner, Grant Hill, Kyrie Irving, Zion Williamson, and Paolo Banchero. Under Coach K's legendary tenure (1980–2022), the Blue Devils won five NCAA championships (1991, 1992, 2001, 2010, 2015) and now continue to dominate under head coach Jon Scheyer. WCCG 104.5 FM is your home for Duke Basketball — tune in for live play-by-play coverage, pre-game shows, postgame analysis, and exclusive interviews throughout the season. For broadcast inquiries, contact programming@wccg1045fm.com.",
   youtube: {
@@ -279,7 +279,7 @@ export const DUKE_FOOTBALL: SportsTeam = {
   logoUrl: "https://a.espncdn.com/i/teamlogos/ncaa/500/150.png",
   espnTeamId: "150",
   espnSport: "college-football",
-  heroImageUrl: "https://wccg1045fm.com/wp-content/uploads/2025/09/DUKE-FB-1.png",
+  heroImageUrl: "/images/sports/FOOTBALL-DUKE.png",
   description: "Duke Blue Devils Football competes in the Atlantic Coast Conference and plays home games at the historic Wallace Wade Stadium in Durham, NC. Under head coach Manny Diaz, the program continues to build on its recent success. WCCG 104.5 FM brings you full coverage of Duke Football including game highlights, player interviews, and analysis.",
   broadcastDescription: "Duke Football has a proud tradition dating back to 1895, competing in the Atlantic Coast Conference. The Blue Devils play home games at the iconic Wallace Wade Stadium in Durham, NC — a venue that hosted the 1942 Rose Bowl. Under head coach Manny Diaz, Duke Football continues to build momentum. WCCG 104.5 FM is your home for Duke Football — tune in for live game broadcasts, pre-game tailgate shows, halftime analysis, and postgame wrap-ups. For broadcast inquiries, contact programming@wccg1045fm.com.",
   youtube: {
