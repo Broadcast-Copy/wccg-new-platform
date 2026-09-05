@@ -25,7 +25,7 @@ import {
   Mail,
   type LucideIcon,
 } from "lucide-react";
-import { DukeGameTile } from "@/components/sports/duke-game-tile";
+import { DukeGameDay } from "@/components/sports/duke-game-day";
 import { STATIONS } from "@/lib/stations";
 import { getListeningPoints, usePointsSync } from "@/hooks/use-listening-points";
 
@@ -365,7 +365,7 @@ export default function HomePageContent({
       <Hero heroShows={heroShows} />
 
       {/* Duke Game Day */}
-      <DukeGameTile />
+      <DukeGameDay />
 
       {/* Quick access — Marketplace · Local Resources · Events */}
       <section className="px-4 md:px-[50px]">
