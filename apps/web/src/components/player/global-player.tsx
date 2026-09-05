@@ -16,7 +16,8 @@ import { stationByStreamUrl } from "@/lib/stations";
 import { getListeningStats } from "@/lib/listening-history";
 import { checkMilestones } from "@/lib/milestones";
 import { resolveNowPlaying, getUpNext, type ScheduleBlock } from "@/data/schedule";
-import { DUKE_BASKETBALL } from "@/data/sports";
+import { DUKE_BASKETBALL, DUKE_FOOTBALL } from "@/data/sports";
+import { useDukeFootballGame } from "@/hooks/use-duke-football-game";
 import { Button } from "@/components/ui/button";
 import {
   Pause,
@@ -65,6 +66,8 @@ export function GlobalPlayer() {
 
   // Poll for now-playing metadata while stream is active (per current station)
   const { data: nowPlaying } = useNowPlaying(isPlaying, currentStream);
+  // Duke football from ESPN (schedule + live score) — drives the coverage override below.
+  const football = useDukeFootballGame();
 
   // Track listening time for points rewards — with bonus toast callback
   const handleBonus = useCallback((bonus: BonusEvent) => {
@@ -347,21 +350,68 @@ export function GlobalPlayer() {
   };
 
   // ── Duke game override: replace song info with show name during coverage ──
+  // The station's now-playing feed keeps reporting the last automation song for
+  // the whole broadcast, so while Duke is on the air we show the game instead.
   const dukeOverride = (() => {
+    const now = new Date();
+
+    // Football first — ESPN-driven, so the opponent/score/clock are real.
+    const fb = football.game;
+    if (fb && football.phase !== "none" && football.phase !== "loading") {
+      const kickoff = new Date(fb.date);
+      const tailgateStart = new Date(kickoff.getTime() - 2 * 60 * 60 * 1000);
+      const preGameStart = new Date(kickoff.getTime() - 60 * 60 * 1000);
+      const opp = fb.opponentShort || fb.opponent;
+      const matchup = `Duke ${fb.isHome ? "vs" : "at"} ${opp}`;
+      const live = football.live;
+      const art = DUKE_FOOTBALL.logoUrl;
+      const label = "Duke Football on 104.5";
+
+      if (football.phase === "live") {
+        const status =
+          live && live.state === "in"
+            ? `${live.displayPeriod ? `${live.displayPeriod} QTR` : ""}${live.clock ? ` ${live.clock}` : ""}`.trim()
+            : "Kickoff";
+        const score = live ? `DUKE ${live.dukeScore} · ${fb.opponentAbbr} ${live.opponentScore}` : "";
+        return {
+          title: `${matchup} — LIVE`,
+          artist: [score, status, "WCCG 104.5 FM"].filter(Boolean).join(" · "),
+          albumArt: art,
+          label,
+        };
+      }
+      if (football.phase === "post" && live) {
+        return {
+          title: `${matchup} — FINAL`,
+          artist: `DUKE ${live.dukeScore} · ${fb.opponentAbbr} ${live.opponentScore} · Postgame on WCCG 104.5 FM`,
+          albumArt: art,
+          label,
+        };
+      }
+      if (now >= tailgateStart && now < preGameStart) {
+        return { title: "Duke Football Tailgate Show", artist: `${matchup} · WCCG 104.5 FM`, albumArt: art, label };
+      }
+      if (now >= preGameStart && now < kickoff) {
+        return { title: "Duke Football Pregame Show", artist: `${matchup} · WCCG 104.5 FM`, albumArt: art, label };
+      }
+      // Football game exists but we're outside its broadcast window — fall through.
+    }
+
     const game = DUKE_BASKETBALL.nextGame;
     if (!game) return null;
-    const now = new Date();
     const tipoff = new Date(game.date);
     const tailgateStart = new Date(tipoff.getTime() - 2 * 60 * 60 * 1000); // 2h before
     const preGameStart = new Date(tipoff.getTime() - 60 * 60 * 1000); // 1h before
     const gameEnd = new Date(tipoff.getTime() + 2.5 * 60 * 60 * 1000);
     const opponent = game.opponent.split(" ").slice(0, -1).join(" ") || game.opponent;
+    const label = "Countdown to Crazy";
 
     if (now >= tailgateStart && now < preGameStart) {
       return {
         title: "Duke Tailgate Show",
         artist: "WCCG 104.5 FM — Countdown to Crazy",
         albumArt: DUKE_BASKETBALL.logoUrl,
+        label,
       };
     }
     if (now >= preGameStart && now < tipoff) {
@@ -369,6 +419,7 @@ export function GlobalPlayer() {
         title: "Duke Pregame Tipoff Show",
         artist: "WCCG 104.5 FM — Countdown to Crazy",
         albumArt: DUKE_BASKETBALL.logoUrl,
+        label,
       };
     }
     if (now >= tipoff && now < gameEnd) {
@@ -376,6 +427,7 @@ export function GlobalPlayer() {
         title: `Duke vs ${opponent} LIVE`,
         artist: "WCCG 104.5 FM — Game Coverage",
         albumArt: DUKE_BASKETBALL.logoUrl,
+        label,
       };
     }
     return null;
@@ -687,7 +739,7 @@ export function GlobalPlayer() {
                   <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" />
                 </span>
                 <span className="truncate text-xs font-medium text-muted-foreground">
-                  {dukeOverride ? "Countdown to Crazy" : (currentShow || "WCCG 104.5 FM")}
+                  {dukeOverride ? dukeOverride.label : (currentShow || "WCCG 104.5 FM")}
                 </span>
               </>
             )}

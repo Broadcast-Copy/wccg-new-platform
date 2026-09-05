@@ -31,7 +31,7 @@ const GOSPEL_CARAVAN_SHOWS: GospelCaravanShow[] = [
     description:
       "Start your Sunday morning with an uplifting mix of gospel music, praise and worship, and inspirational tracks to set the tone for your day of faith.",
     imageUrl:
-      "https://wccg1045fm.com/wp-content/uploads/2025/12/praisemix-6.png",
+      "/images/shows/praise-mix-6.png",
   },
   {
     id: "show_grace_plus_nothing",
@@ -42,7 +42,7 @@ const GOSPEL_CARAVAN_SHOWS: GospelCaravanShow[] = [
       "Apostle Anthony Monds brings messages of faith, grace, and community rooted in the transformative power of God's grace alone.",
     host: "Apostle Anthony Monds",
     imageUrl:
-      "https://wccg1045fm.com/wp-content/uploads/2025/10/gpn-1-1024x743-1.png",
+      "/images/shows/grace-plus-nothing.png",
   },
   {
     id: "show_encouraging_moment",
@@ -53,7 +53,7 @@ const GOSPEL_CARAVAN_SHOWS: GospelCaravanShow[] = [
       "Dr. Anthony Haire delivers spiritual encouragement, biblical teaching, and messages of hope to lift and inspire the community.",
     host: "Dr. Anthony Haire",
     imageUrl:
-      "https://wccg1045fm.com/wp-content/uploads/2025/10/thm-main-1024x743-1.png",
+      "/images/shows/encouraging-moments.png",
   },
   {
     id: "show_marvin_sapp",
@@ -64,7 +64,7 @@ const GOSPEL_CARAVAN_SHOWS: GospelCaravanShow[] = [
       "Multi-Grammy nominated gospel legend Bishop Marvin Sapp brings inspirational conversation, the best in gospel music, and uplifting messages.",
     host: "Bishop Marvin Sapp",
     imageUrl:
-      "https://wccg1045fm.com/wp-content/uploads/2025/10/marvin-sapp12.jpg",
+      "/images/shows/marvin-sapp-show.jpg",
   },
   {
     id: "show_family_fellowship",
@@ -75,7 +75,7 @@ const GOSPEL_CARAVAN_SHOWS: GospelCaravanShow[] = [
       "Pastor Dr. T.L. Davenport leads Family Fellowship Worship Center with powerful sermons, spiritual guidance, and community worship.",
     host: "Pastor Dr. T.L. Davenport",
     imageUrl:
-      "https://wccg1045fm.com/wp-content/uploads/2025/10/ffwc-1024x743-1.png",
+      "/images/shows/family-fellowship.png",
   },
   {
     id: "show_progressive_mbc",
@@ -86,7 +86,7 @@ const GOSPEL_CARAVAN_SHOWS: GospelCaravanShow[] = [
       "Reverend F. Bernard Fuller delivers the Sunday service broadcast from Progressive Missionary Baptist Church with faith-filled messages and community worship.",
     host: "Reverend F. Bernard Fuller",
     imageUrl:
-      "https://wccg1045fm.com/wp-content/uploads/2025/10/progressive-1024x743-1.png",
+      "/images/shows/progressive-baptist.png",
   },
   {
     id: "show_lewis_chapel",
@@ -97,7 +97,7 @@ const GOSPEL_CARAVAN_SHOWS: GospelCaravanShow[] = [
       "Pastor Dr. Christopher Stackhouse, Sr. leads the Lewis Chapel Missionary Baptist Church broadcast every Sunday afternoon with inspirational messages.",
     host: "Pastor Dr. Christopher Stackhouse, Sr.",
     imageUrl:
-      "https://wccg1045fm.com/wp-content/uploads/2025/10/lewis-chapel-1024x743-1.png",
+      "/images/shows/lewis-chapel.png",
   },
 ];
 
