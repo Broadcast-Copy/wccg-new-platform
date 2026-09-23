@@ -18,11 +18,13 @@ import { isoMondayOfNow } from "@/lib/broadcast-week";
 import {
   Calendar,
   KeyRound,
+  Mic,
   RefreshCw,
   UploadCloud,
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { MixRecorder } from "@/components/djs/mix-recorder";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -118,6 +120,8 @@ export default function DjPortalPage() {
   // auto-matched (more than one open slot file) — the DJ picks a chip instead
   // of being told to rename the file.
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  // The slot file whose in-studio recorder is open (one at a time).
+  const [recordingCode, setRecordingCode] = useState<string | null>(null);
 
   // Load DJ profile + slots + this-week's drops directly from Supabase.
   // No API server — the static site talks to Supabase via RLS-scoped queries.
@@ -201,8 +205,10 @@ export default function DjPortalPage() {
 
   // Push the file to Supabase Storage, then upsert the dj_drops row. `convert`
   // flags that this upload isn't MP3 yet, so the slot row can say so while the
-  // production PC does the actual ffmpeg work in sync-dj-drops.py.
-  const uploadFile = async (file: File, code: string, slotId: string, convert: boolean) => {
+  // production PC does the actual ffmpeg work in sync-dj-drops.py. Resolves
+  // false on failure so the recorder can hold on to a take that didn't land.
+  const uploadFile = async (file: File, code: string, slotId: string, convert: boolean): Promise<boolean> => {
+    setError(null);
     setUploadingCode(code);
     try {
       const supabase = createClient();
@@ -235,8 +241,10 @@ export default function DjPortalPage() {
       if (rowErr) throw new Error(rowErr.message);
 
       reload();
+      return true;
     } catch (e) {
       setError((e as Error).message);
+      return false;
     } finally {
       setUploadingCode(null);
     }
@@ -415,6 +423,9 @@ export default function DjPortalPage() {
               slot={slot}
               uploadingCode={uploadingCode}
               onFile={handleFile}
+              recordingCode={recordingCode}
+              onRecord={setRecordingCode}
+              onSaveRecording={(file, code) => uploadFile(file, code, slot.slotId, needsConversion(file))}
             />
           ))}
           {me.slots.length === 0 && (
@@ -498,10 +509,16 @@ function SlotCard({
   slot,
   uploadingCode,
   onFile,
+  recordingCode,
+  onRecord,
+  onSaveRecording,
 }: {
   slot: Slot;
   uploadingCode: string | null;
   onFile: (file: File, fileCode?: string) => void;
+  recordingCode: string | null;
+  onRecord: (fileCode: string | null) => void;
+  onSaveRecording: (file: File, fileCode: string) => Promise<boolean>;
 }) {
   return (
     <article className="rounded-2xl border border-border bg-card">
@@ -531,6 +548,11 @@ function SlotCard({
             drop={f.drop}
             uploading={uploadingCode === f.fileCode}
             onFile={(file) => onFile(file, f.fileCode)}
+            recorderOpen={recordingCode === f.fileCode}
+            recordLocked={recordingCode !== null && recordingCode !== f.fileCode}
+            onRecord={() => onRecord(f.fileCode)}
+            onCloseRecorder={() => onRecord(null)}
+            onSaveRecording={(file) => onSaveRecording(file, f.fileCode)}
           />
         ))}
       </ul>
@@ -543,11 +565,22 @@ function FileRow({
   drop,
   uploading,
   onFile,
+  recorderOpen,
+  recordLocked,
+  onRecord,
+  onCloseRecorder,
+  onSaveRecording,
 }: {
   fileCode: string;
   drop: Drop | null;
   uploading: boolean;
   onFile: (file: File) => void;
+  recorderOpen: boolean;
+  /** Another slot file's recorder is open -- one take at a time. */
+  recordLocked: boolean;
+  onRecord: () => void;
+  onCloseRecorder: () => void;
+  onSaveRecording: (file: File) => Promise<boolean>;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const status = drop?.status ?? "pending";
@@ -561,41 +594,64 @@ function FileRow({
           : "text-muted-foreground";
 
   return (
-    <li className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
-      <div className="min-w-0">
-        <p className="font-mono text-sm font-bold tracking-wide text-foreground">{fileCode}</p>
-        <p className={`text-xs ${statusColor}`}>
-          {status}
-          {drop?.source === "ftp" ? " · via FTP" : ""}
-          {drop?.convert_to_mp3 && !drop?.converted_at
-            ? ` · converting ${(drop.format ?? "").toUpperCase()} to MP3`
-            : ""}
-          {drop?.converted_at ? " · converted to MP3" : ""}
-          {drop?.uploaded_at ? ` · ${new Date(drop.uploaded_at).toLocaleString()}` : ""}
-          {drop?.size_bytes ? ` · ${prettyBytes(drop.size_bytes)}` : ""}
-        </p>
+    <li>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+        <div className="min-w-0">
+          <p className="font-mono text-sm font-bold tracking-wide text-foreground">{fileCode}</p>
+          <p className={`text-xs ${statusColor}`}>
+            {status}
+            {drop?.source === "ftp" ? " · via FTP" : ""}
+            {drop?.convert_to_mp3 && !drop?.converted_at
+              ? ` · converting ${(drop.format ?? "").toUpperCase()} to MP3`
+              : ""}
+            {drop?.converted_at ? " · converted to MP3" : ""}
+            {drop?.uploaded_at ? ` · ${new Date(drop.uploaded_at).toLocaleString()}` : ""}
+            {drop?.size_bytes ? ` · ${prettyBytes(drop.size_bytes)}` : ""}
+          </p>
+        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg,.aiff,.aif,.aifc"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.currentTarget.files?.[0];
+            if (f) onFile(f);
+            e.currentTarget.value = "";
+          }}
+        />
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onRecord}
+            disabled={uploading || recorderOpen || recordLocked}
+            className="rounded-full"
+            title="Record this part live from the studio input"
+          >
+            <Mic className="mr-1.5 h-3.5 w-3.5" />
+            Record
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading || recorderOpen}
+            className="rounded-full"
+          >
+            <UploadCloud className="mr-1.5 h-3.5 w-3.5" />
+            {uploading ? "Uploading…" : drop ? "Replace" : "Upload"}
+          </Button>
+        </div>
       </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg,.aiff,.aif,.aifc"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.currentTarget.files?.[0];
-          if (f) onFile(f);
-          e.currentTarget.value = "";
-        }}
-      />
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={() => inputRef.current?.click()}
-        disabled={uploading}
-        className="rounded-full"
-      >
-        <UploadCloud className="mr-1.5 h-3.5 w-3.5" />
-        {uploading ? "Uploading…" : drop ? "Replace" : "Upload"}
-      </Button>
+      {recorderOpen && (
+        <MixRecorder
+          fileCode={fileCode}
+          replacing={!!drop}
+          onSave={onSaveRecording}
+          onClose={onCloseRecorder}
+        />
+      )}
     </li>
   );
 }
