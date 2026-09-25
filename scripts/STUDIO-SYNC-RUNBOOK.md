@@ -53,6 +53,8 @@ schtasks /Create /F /TN "WCCG Studio Sync" /SC MINUTE /MO 5 /TR `
 
 ```
 DJ uploads in the web portal (My -> Mixshows, or DJ portal drag-drop)
+  OR the DJ emails a pack (TransferNow / Drive) -> gmail-watcher.py ingests
+     each part via studio-sync "ingest"/"ingested" (source=email)
   -> Supabase storage (dj-drops bucket) + dj_drops row (status=uploaded)
     -> THIS WATCHER (<=5 min): air-date folder + M:\JBMusic, marks published
       -> website: mix is now publicly playable (archive + DJ profile)

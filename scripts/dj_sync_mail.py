@@ -21,11 +21,13 @@ import subprocess
 import sys
 from datetime import datetime
 
+import studio_sync_secret
 import wccg_mailer
 
 SUPA = "https://irjiqbmoohklagdegezz.supabase.co"
 FN = f"{SUPA}/functions/v1/studio-sync"
-SECRET = "c2040f1371c9265c538bdce3547346bd5ae53060"
+# same lookup as sync-dj-drops.py; the legacy constant is the fallback until rotated
+SECRET = studio_sync_secret.load() or "c2040f1371c9265c538bdce3547346bd5ae53060"
 PORTAL_URL = "https://wccg1045fm.com/my/dj"
 ADMIN_EMAIL = "biggleem@gmail.com"
 SUBJECT = "\U0001F3A7 Your mix is in the rotation — WCCG 104.5 FM"

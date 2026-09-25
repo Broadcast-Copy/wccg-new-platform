@@ -18,9 +18,26 @@ once; a refresh token is stored locally). Per sermon it downloads headlessly:
 
 It files each to `…\j-sun-am - (gospel)\<YYYY>\sunday <MMDDYY>\<code>.<ext>` **and**
 copies to `M:\JBMusic\DJB_520xx`, verifies (size + audio header + full ffmpeg
-decode), then self-sends a summary to **biggleem@gmail.com**. DJ-mix senders are
-detected and a heads-up is emailed (the mix download still runs via the hourly
-task for now).
+decode), then self-sends a summary to **biggleem@gmail.com**.
+
+**DJ packs by email (since 2026-09-25).** DJs in `DJ_PACKS` (Tony Neal's weekly
+TransferNow link, Daddy Black's Drive files, Corleone's Drive folder) are fetched
+headless, verified (size, mp3 header, full ffmpeg decode), ordered by the part
+number in the file name (Tony: the digit after the comma — never name order;
+only his `hh` set airs, the `rnb` set is listed and skipped) and must be exactly
+parts 1..N. Each part is then **ingested into the platform** through the
+studio-sync edge function (`ingest` → signed upload into the dj-drops bucket →
+`ingested`, dj_drops row source `email`, week_of = Monday of the air week), and
+**Studio Sync** files it to the dated folder + `M:\JBMusic` like any portal
+upload — the watcher never writes D:\WCCG\b-mixshows or M:\ for DJs. Only a pack
+for the DJ's *next* show, arriving 5+ min before it starts, is ingested; anything
+else (late, early, wrong parts, expired link) gets a "manual look" mail. A
+transient failure retries every 15 min (one alert). Plan a pack without touching
+anything: `python scripts\gmail-watcher.py --transfernow-dry-run <dl link>`; push
+one by hand: `--ingest-transfernow <dl link> --dj dj-tony-neal --air-date MMDDYYYY`.
+The studio-sync secret is read by `scripts\studio_sync_secret.py` (env
+`WCCG_STUDIO_SYNC_SECRET` → `studio-sync.secret` in the config dir → legacy
+constant in sync-dj-drops.py). Tests: `python scripts\test_gmail_watcher_transfernow.py`.
 
 Config + secrets live in **`C:\Users\wccg1\.wccg-gmail-watcher\`**
 (`client_secret.json`, `token.json`, `state.json`) — outside the repo, never committed.
@@ -104,5 +121,14 @@ Start-ScheduledTask -TaskName "WCCG Gmail Watcher"
 - **Stop/disable:** `Stop-ScheduledTask -TaskName "WCCG Gmail Watcher"` /
   `Disable-ScheduledTask -TaskName "WCCG Gmail Watcher"`.
 
-The hourly Claude watch task stays on as a **backstop** (and still handles the
-DJ mixes), but the sermons are now driven by this daemon.
+The hourly Claude watch task was the old sermon/DJ-mix path; it has been dead
+since ~08-17. Sermons AND the emailed DJ packs are now driven by this daemon.
+
+- **Restarting the daemon** (after a code update): `Stop-ScheduledTask -TaskName
+  "WCCG Gmail Watcher"`, confirm no `pythonw ... gmail-watcher.py` process is left
+  (`Get-CimInstance Win32_Process -Filter "Name='pythonw.exe'" | ? CommandLine -match
+  'gmail-watcher'`), `Start-ScheduledTask -TaskName "WCCG Gmail Watcher"`, then
+  confirm exactly ONE such process and a fresh `gmail-watcher up.` line in the log.
+  Do it well before Sunday morning — it owns the sermons (pmb1 airs 1 PM Sunday).
+  A restart loses nothing: state lives in `state.json`, and the watchdog task
+  relaunches it within ~2 min if it's down.

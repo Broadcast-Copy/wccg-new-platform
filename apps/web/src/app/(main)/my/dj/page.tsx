@@ -68,7 +68,7 @@ function currentWeekOfET(): string {
 interface Drop {
   id: string;
   status: "pending" | "uploaded" | "validated" | "published" | "rejected";
-  source: "web" | "ftp";
+  source: "web" | "ftp" | "email";
   uploaded_at: string | null;
   storage_path: string | null;
   format: string | null;
@@ -600,7 +600,7 @@ function FileRow({
           <p className="font-mono text-sm font-bold tracking-wide text-foreground">{fileCode}</p>
           <p className={`text-xs ${statusColor}`}>
             {status}
-            {drop?.source === "ftp" ? " · via FTP" : ""}
+            {drop?.source === "ftp" ? " · via FTP" : drop?.source === "email" ? " · via email" : ""}
             {drop?.convert_to_mp3 && !drop?.converted_at
               ? ` · converting ${(drop.format ?? "").toUpperCase()} to MP3`
               : ""}

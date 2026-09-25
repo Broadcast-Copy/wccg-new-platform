@@ -28,10 +28,13 @@ import json, os, shutil, subprocess, sys, zipfile
 from datetime import datetime, timedelta
 
 import dj_sync_mail  # emails each DJ when their drop newly syncs (best-effort)
+import studio_sync_secret
 
 SUPA = "https://irjiqbmoohklagdegezz.supabase.co"
 FN = f"{SUPA}/functions/v1/studio-sync"
-SECRET = "c2040f1371c9265c538bdce3547346bd5ae53060"
+# env / ~/.wccg-gmail-watcher/studio-sync.secret first; the legacy constant keeps
+# the sync running until that exists (it's committed — rotate it, then drop it).
+SECRET = studio_sync_secret.load() or "c2040f1371c9265c538bdce3547346bd5ae53060"
 BUCKET_PUBLIC = f"{SUPA}/storage/v1/object/public/dj-drops"
 ARCHIVE_ROOT = r"D:\WCCG\b-mixshows"
 ONAIR_FLAT = r"M:\JBMusic"
