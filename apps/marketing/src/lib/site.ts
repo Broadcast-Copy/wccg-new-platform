@@ -80,10 +80,10 @@ export const AIRSUITE_CONSOLE = {
  * bump-every-field-together rule as the console above.
  */
 export const BROADCAST_COPY_MANAGER = {
-  version: "0.2.0",
-  size: "58.3 MB",
-  installedSize: "134 MB",
-  href: `${RELEASES_ORIGIN}/broadcast-copy-manager/BroadcastCopyManager-0.2.0.zip?download=BroadcastCopyManager-0.2.0.zip`,
-  sha256: "2b96ac78014164621c43a6d35547aec57d2d412e4fc4a0c0472df88af8f0a54b",
-  sha256Href: `${RELEASES_ORIGIN}/broadcast-copy-manager/BroadcastCopyManager-0.2.0.sha256`,
+  version: "0.5.0",
+  size: "69.6 MB",
+  installedSize: "169 MB",
+  href: `${RELEASES_ORIGIN}/broadcast-copy-manager/BroadcastCopyManager-0.5.0.zip?download=BroadcastCopyManager-0.5.0.zip`,
+  sha256: "b63709ace3d26890cce6c1fd6fab6209c3654630fa7f280a48af7d446e8fb5b0",
+  sha256Href: `${RELEASES_ORIGIN}/broadcast-copy-manager/BroadcastCopyManager-0.5.0.sha256`,
 } as const;
