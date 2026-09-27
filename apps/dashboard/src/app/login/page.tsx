@@ -65,7 +65,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center text-center">
           <div className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-            <Radio className="h-6 w-6 text-signal" aria-hidden />
+            <Radio className="h-6 w-6 text-signal-ink" aria-hidden />
             Broadcast&nbsp;Copy
             <span className="ml-1 rounded bg-elevated px-1.5 py-0.5 text-[10px] font-medium tracking-wider text-faint uppercase">
               Control
@@ -114,7 +114,7 @@ export default function LoginPage() {
           </div>
 
           {state.status === "error" && (
-            <p className="flex items-start gap-2 text-sm text-signal-soft">
+            <p className="flex items-start gap-2 text-sm text-signal-ink">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
               {state.message}
             </p>
@@ -123,7 +123,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-5 py-3 text-sm font-semibold text-white transition hover:bg-signal-soft disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-5 py-3 text-sm font-semibold text-fg transition hover:bg-signal-soft disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
             {submitting ? "Signing in…" : "Sign in"}
@@ -132,7 +132,7 @@ export default function LoginPage() {
 
         <p className="mt-5 text-center text-sm text-dim">
           New to Broadcast Copy?{" "}
-          <a href="/signup" className="text-signal-soft transition hover:text-signal">
+          <a href="/signup" className="text-signal-ink transition hover:text-signal-ink">
             Create an account
           </a>
         </p>

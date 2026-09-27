@@ -1,21 +1,32 @@
 @import "tailwindcss";
 
 /**
- * Broadcast Copy control-plane brand. Shares the dark "ON AIR" palette with the
- * marketing site (apps/marketing) so the product feels like one system.
+ * Broadcast Copy control-plane brand: the warm-paper palette the marketing site
+ * moved to (apps/marketing), so the product reads as one system. Token names kept
+ * from the dark build ("ink" is the page ground, "fg" the type) so every utility
+ * class flips with the palette.
+ *
+ * Contrast, measured on the bone ground #ECEAE5 (WCAG, normal text needs 4.5):
+ *   fg 13.28 - dim 8.20 - faint 5.39 - signal-ink 5.71 - amber 5.63 - ok 6.20
+ * and each status colour on its OWN 15% tint (the chips: bg-amber/15 text-amber):
+ *   amber 4.59 - ok 4.95 - signal-ink on signal/15 4.81.
+ * `signal` (#FF4A1C) scores 2.80 as type, so it is for fills, dots and borders only;
+ * words in the accent use `signal-ink`. Buttons are bg-signal + text-fg (4.75),
+ * hover bg-signal-soft + text-fg (5.61) - never text-white on the accent (3.36).
  */
 @theme {
-  --color-ink: #08080a;
-  --color-surface: #0e0f13;
-  --color-elevated: #15171d;
-  --color-line: #23262e;
-  --color-fg: #f5f5f7;
-  --color-dim: #a1a6b0;
-  --color-faint: #6b7280;
+  --color-ink: #eceae5;
+  --color-surface: #f2f0eb;
+  --color-elevated: #f7f6f2;
+  --color-line: #d6d1c7;
+  --color-fg: #26211a;
+  --color-dim: #4a4239;
+  --color-faint: #655d52;
   --color-signal: #ff4a1c;
-  --color-signal-soft: #ff8462;
-  --color-amber: #f5a524;
-  --color-ok: #10b981;
+  --color-signal-soft: #ff6a3d;
+  --color-signal-ink: #a82e0c;
+  --color-amber: #7a5410;
+  --color-ok: #17613f;
 
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
@@ -23,7 +34,7 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {

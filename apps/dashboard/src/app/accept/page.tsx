@@ -87,7 +87,7 @@ function Accept() {
         <p className="mt-2 text-sm text-dim">{load.message}</p>
         <a
           href="https://broadcastcopy.ai"
-          className="mt-6 inline-block text-sm text-signal-soft transition hover:text-signal"
+          className="mt-6 inline-block text-sm text-signal-ink transition hover:text-signal-ink"
         >
           broadcastcopy.ai
         </a>
@@ -99,7 +99,7 @@ function Accept() {
 
   return (
     <div className="rounded-2xl border border-line bg-surface p-6 text-center sm:p-8">
-      <CheckCircle2 className="mx-auto h-9 w-9 text-signal" aria-hidden />
+      <CheckCircle2 className="mx-auto h-9 w-9 text-signal-ink" aria-hidden />
       <h1 className="mt-4 text-lg font-semibold">
         You&rsquo;re invited to {preview.org_name}
       </h1>
@@ -122,7 +122,7 @@ function Accept() {
             {accept.status === "accepting" ? "Joining…" : "Accept invitation"}
           </button>
           {accept.status === "error" && (
-            <p className="mt-3 flex items-start gap-2 text-left text-sm text-signal-soft">
+            <p className="mt-3 flex items-start gap-2 text-left text-sm text-signal-ink">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
               {accept.message}
             </p>
@@ -158,7 +158,7 @@ export default function Page() {
     <div className="grid min-h-screen place-items-center bg-ink px-5 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex items-center justify-center gap-2 font-semibold tracking-tight">
-          <Radio className="h-5 w-5 text-signal" aria-hidden />
+          <Radio className="h-5 w-5 text-signal-ink" aria-hidden />
           Broadcast&nbsp;Copy
         </div>
         <Suspense

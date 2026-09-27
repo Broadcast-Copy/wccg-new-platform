@@ -122,7 +122,7 @@ function OrgSettings({
         )}
 
         {save.status === "error" && (
-          <p className="mt-2 flex items-start gap-2 text-sm text-signal-soft">
+          <p className="mt-2 flex items-start gap-2 text-sm text-signal-ink">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             {save.message}
           </p>
@@ -172,7 +172,7 @@ function OrgSettings({
                   className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-ink px-4 py-3"
                 >
                   <div className="flex items-center gap-2.5">
-                    <RadioTower className="h-4 w-4 text-signal" aria-hidden />
+                    <RadioTower className="h-4 w-4 text-signal-ink" aria-hidden />
                     <span className="font-medium text-fg">
                       {station.call_sign !== null && station.call_sign.length > 0
                         ? station.call_sign

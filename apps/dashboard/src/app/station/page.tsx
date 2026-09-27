@@ -121,7 +121,7 @@ function EngineCard({ engine }: { engine: EngineStatus | undefined }) {
               className={cx(
                 "flex items-start gap-2 text-sm",
                 alert.level === "critical"
-                  ? "text-signal-soft"
+                  ? "text-signal-ink"
                   : alert.level === "warning"
                     ? "text-amber"
                     : "text-dim",
@@ -231,7 +231,7 @@ function SettingsForm({
       </div>
 
       {state.status === "error" && (
-        <p className="mt-3 flex items-start gap-2 text-sm text-signal-soft">
+        <p className="mt-3 flex items-start gap-2 text-sm text-signal-ink">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           {state.message}
         </p>
@@ -326,7 +326,7 @@ function StationDetail() {
         </p>
         <Link
           href="/"
-          className="mt-4 inline-flex items-center gap-1.5 text-sm text-signal-soft hover:text-signal"
+          className="mt-4 inline-flex items-center gap-1.5 text-sm text-signal-ink hover:text-signal-ink"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Back to your stations
@@ -350,7 +350,7 @@ function StationDetail() {
       </Link>
 
       <div className="flex flex-wrap items-center gap-3">
-        <span className="grid h-10 w-10 place-items-center rounded-lg bg-elevated text-signal">
+        <span className="grid h-10 w-10 place-items-center rounded-lg bg-elevated text-signal-ink">
           <RadioTower className="h-5 w-5" aria-hidden />
         </span>
         <h1 className="text-2xl font-semibold tracking-tight">
@@ -408,7 +408,7 @@ function StationDetail() {
                       href={`https://${domain.hostname}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-sm text-signal-soft transition-colors hover:text-signal"
+                      className="inline-flex items-center gap-1 text-sm text-signal-ink transition-colors hover:text-signal-ink"
                     >
                       {domain.hostname}
                       {domain.is_primary && (

@@ -97,7 +97,7 @@ function DeviceCard({ device }: { device: FleetDevice }) {
           aria-hidden
         >
           {device.is_critical ? (
-            <RadioTower className="h-4.5 w-4.5 text-signal" />
+            <RadioTower className="h-4.5 w-4.5 text-signal-ink" />
           ) : (
             <Monitor className="h-4.5 w-4.5 text-dim" />
           )}
@@ -109,7 +109,7 @@ function DeviceCard({ device }: { device: FleetDevice }) {
               {device.display_name ?? device.hostname ?? device.device_key}
             </p>
             {device.is_critical && (
-              <span className="rounded bg-signal/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wider text-signal uppercase">
+              <span className="rounded bg-signal/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wider text-signal-ink uppercase">
                 On air
               </span>
             )}
@@ -295,7 +295,7 @@ function PairPanel({ station }: { station: Station | null }) {
   return (
     <div className="rounded-2xl border border-line bg-elevated p-5">
       <div className="flex items-center gap-2">
-        <KeyRound className="h-4.5 w-4.5 text-signal" aria-hidden />
+        <KeyRound className="h-4.5 w-4.5 text-signal-ink" aria-hidden />
         <h2 className="font-semibold">Add a machine</h2>
       </div>
       <p className="mt-2 text-sm leading-relaxed text-dim">
@@ -309,14 +309,14 @@ function PairPanel({ station }: { station: Station | null }) {
           type="button"
           onClick={issue}
           disabled={busy || station === null}
-          className="mt-4 inline-flex items-center gap-2 rounded-lg bg-signal px-4 py-2 text-sm font-semibold text-white transition hover:bg-signal-soft disabled:opacity-50"
+          className="mt-4 inline-flex items-center gap-2 rounded-lg bg-signal px-4 py-2 text-sm font-semibold text-fg transition hover:bg-signal-soft disabled:opacity-50"
         >
           {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
           Issue authorisation code
         </button>
       ) : (
         <div className="mt-4">
-          <p className="font-mono text-3xl font-semibold tracking-[0.2em] text-signal">
+          <p className="font-mono text-3xl font-semibold tracking-[0.2em] text-signal-ink">
             {issued.code}
           </p>
           <p className="mt-2 text-xs text-faint">
@@ -408,7 +408,7 @@ export function Fleet() {
               onClick={() => setStationId(s.id)}
               className={`rounded-lg border px-3 py-1.5 text-sm transition ${
                 s.id === stationId
-                  ? "border-signal/40 bg-signal/10 font-semibold text-signal"
+                  ? "border-signal/40 bg-signal/10 font-semibold text-signal-ink"
                   : "border-line text-dim hover:text-fg"
               }`}
             >
@@ -444,7 +444,7 @@ export function Fleet() {
 
         <div className="rounded-2xl border border-line bg-elevated p-5">
           <div className="flex items-center gap-2">
-            <Package className="h-4.5 w-4.5 text-signal" aria-hidden />
+            <Package className="h-4.5 w-4.5 text-signal-ink" aria-hidden />
             <h2 className="font-semibold">Downloads</h2>
           </div>
           {releases.length === 0 ? (
