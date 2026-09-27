@@ -165,7 +165,7 @@ function StationCard({
     <article className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5 transition-colors hover:bg-elevated">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-elevated text-signal">
+          <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-elevated text-signal-ink">
             <RadioTower className="h-4 w-4" aria-hidden />
           </span>
           <div>
@@ -223,7 +223,7 @@ function StationCard({
             href={`https://${primaryDomain.hostname}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 text-sm text-signal-soft transition-colors hover:text-signal"
+            className="inline-flex items-center gap-1 text-sm text-signal-ink transition-colors hover:text-signal-ink"
           >
             {primaryDomain.hostname}
             <ExternalLink className="h-3.5 w-3.5" aria-hidden />

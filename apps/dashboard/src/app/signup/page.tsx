@@ -74,7 +74,7 @@ export default function Page() {
     <div className="grid min-h-screen place-items-center bg-ink px-5 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex items-center gap-2 font-semibold tracking-tight">
-          <Radio className="h-5 w-5 text-signal" aria-hidden />
+          <Radio className="h-5 w-5 text-signal-ink" aria-hidden />
           Broadcast&nbsp;Copy
           <span className="ml-1 rounded bg-elevated px-1.5 py-0.5 text-[10px] font-medium tracking-wider text-faint uppercase">
             Control
@@ -83,7 +83,7 @@ export default function Page() {
 
         {state.status === "confirm" ? (
           <div className="rounded-2xl border border-signal/30 bg-surface p-8 text-center">
-            <CheckCircle2 className="mx-auto h-10 w-10 text-signal" aria-hidden />
+            <CheckCircle2 className="mx-auto h-10 w-10 text-signal-ink" aria-hidden />
             <h1 className="mt-4 text-xl font-semibold">Check your email</h1>
             <p className="mt-2 text-sm text-dim">
               Confirm your account, then sign in — we&rsquo;ll finish setting up{" "}
@@ -123,7 +123,7 @@ export default function Page() {
               </div>
 
               {state.status === "error" && (
-                <p className="flex items-start gap-2 text-sm text-signal-soft">
+                <p className="flex items-start gap-2 text-sm text-signal-ink">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                   {state.message}
                 </p>
@@ -140,7 +140,7 @@ export default function Page() {
             </form>
             <p className="mt-5 text-center text-sm text-dim">
               Already have an account?{" "}
-              <Link href="/login" className="text-signal-soft hover:text-signal">
+              <Link href="/login" className="text-signal-ink hover:text-signal-ink">
                 Sign in
               </Link>
             </p>

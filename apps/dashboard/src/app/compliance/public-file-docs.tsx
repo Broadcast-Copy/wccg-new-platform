@@ -205,7 +205,7 @@ export function PublicFileDocs() {
           </div>
 
           {form.status === "error" && (
-            <p className="mt-3 flex items-start gap-2 text-sm text-signal-soft">
+            <p className="mt-3 flex items-start gap-2 text-sm text-signal-ink">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
               {form.message}
             </p>
@@ -255,7 +255,7 @@ export function PublicFileDocs() {
                           href={doc.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="mt-1 inline-block text-xs text-signal-soft hover:text-signal"
+                          className="mt-1 inline-block text-xs text-signal-ink hover:text-signal-ink"
                         >
                           {doc.url}
                         </a>

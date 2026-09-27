@@ -20,7 +20,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-50 border-b border-line/70 bg-ink/80 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3.5">
           <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-            <Radio className="h-5 w-5 text-signal" aria-hidden />
+            <Radio className="h-5 w-5 text-signal-ink" aria-hidden />
             Broadcast&nbsp;Copy
             <span className="ml-1 rounded bg-elevated px-1.5 py-0.5 text-[10px] font-medium tracking-wider text-faint uppercase">
               Control

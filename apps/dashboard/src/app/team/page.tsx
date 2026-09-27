@@ -60,7 +60,7 @@ type LoadState =
 const INVITE_ROLES = ["gm", "om", "billing", "staff"] as const;
 
 const ROLE_STYLE = new Map<string, string>([
-  ["owner", "bg-signal/15 text-signal-soft"],
+  ["owner", "bg-signal/15 text-signal-ink"],
   ["gm", "bg-amber/15 text-amber"],
   ["om", "bg-amber/15 text-amber"],
   ["billing", "bg-elevated text-dim"],
@@ -166,7 +166,7 @@ function InvitePanel({
       </form>
 
       {state.status === "error" && (
-        <p className="mt-2 flex items-start gap-2 text-sm text-signal-soft">
+        <p className="mt-2 flex items-start gap-2 text-sm text-signal-ink">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           {state.message}
         </p>
@@ -203,7 +203,7 @@ function InvitePanel({
                   type="button"
                   onClick={() => revoke(invite.id)}
                   aria-label="Revoke invite"
-                  className="inline-flex items-center rounded-md px-1.5 py-1 text-faint transition-colors hover:bg-elevated hover:text-signal-soft"
+                  className="inline-flex items-center rounded-md px-1.5 py-1 text-faint transition-colors hover:bg-elevated hover:text-signal-ink"
                 >
                   <X className="h-3.5 w-3.5" aria-hidden />
                 </button>

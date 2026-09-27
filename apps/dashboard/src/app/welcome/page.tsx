@@ -78,7 +78,7 @@ function Welcome() {
   return (
     <div className="mx-auto max-w-md">
       <div className="flex items-center gap-3">
-        <span className="grid h-10 w-10 place-items-center rounded-lg bg-elevated text-signal">
+        <span className="grid h-10 w-10 place-items-center rounded-lg bg-elevated text-signal-ink">
           <Building2 className="h-5 w-5" aria-hidden />
         </span>
         <h1 className="text-2xl font-semibold tracking-tight">
@@ -105,7 +105,7 @@ function Welcome() {
         </div>
 
         {state.status === "error" && (
-          <p className="flex items-start gap-2 text-sm text-signal-soft">
+          <p className="flex items-start gap-2 text-sm text-signal-ink">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             {state.message}
           </p>

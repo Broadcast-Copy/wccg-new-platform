@@ -159,7 +159,7 @@ function Compliance() {
                         <Check className="h-3.5 w-3.5" aria-hidden /> Filed
                       </span>
                     ) : overdue ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-signal/15 px-2.5 py-0.5 text-xs font-medium text-signal-soft">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-signal/15 px-2.5 py-0.5 text-xs font-medium text-signal-ink">
                         <AlertTriangle className="h-3.5 w-3.5" aria-hidden /> Overdue
                       </span>
                     ) : (

@@ -107,7 +107,7 @@ function RequestStationForm() {
 
       {state.status === "success" ? (
         <div className="mt-8 rounded-2xl border border-signal/30 bg-elevated p-8 text-center">
-          <CheckCircle2 className="mx-auto h-10 w-10 text-signal" aria-hidden />
+          <CheckCircle2 className="mx-auto h-10 w-10 text-signal-ink" aria-hidden />
           <h2 className="mt-4 text-xl font-semibold">Request received — we&rsquo;ll be in touch.</h2>
           <p className="mt-2 text-sm text-dim">
             We&rsquo;ll reach out at <span className="text-fg">{email}</span> to schedule
@@ -115,7 +115,7 @@ function RequestStationForm() {
           </p>
           <Link
             href="/"
-            className="mt-6 inline-flex items-center gap-1.5 text-sm text-signal transition hover:text-signal-soft"
+            className="mt-6 inline-flex items-center gap-1.5 text-sm text-signal-ink transition hover:text-signal-ink"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden />
             Back to your stations
@@ -143,7 +143,7 @@ function RequestStationForm() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <label className={LABEL} htmlFor="station_name">
-                Station name <span className="text-signal">*</span>
+                Station name <span className="text-signal-ink">*</span>
               </label>
               <input
                 id="station_name"
@@ -155,7 +155,7 @@ function RequestStationForm() {
             </div>
             <div className="space-y-1.5">
               <label className={LABEL} htmlFor="call_sign">
-                Call sign <span className="text-signal">*</span>
+                Call sign <span className="text-signal-ink">*</span>
               </label>
               <input
                 id="call_sign"
@@ -206,7 +206,7 @@ function RequestStationForm() {
           </div>
 
           {state.status === "error" && (
-            <p className="flex items-start gap-2 text-sm text-signal-soft">
+            <p className="flex items-start gap-2 text-sm text-signal-ink">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
               {state.message}
             </p>
@@ -215,7 +215,7 @@ function RequestStationForm() {
           <button
             type="submit"
             disabled={submitting}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-5 py-3 text-sm font-semibold text-white transition hover:bg-signal-soft disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-5 py-3 text-sm font-semibold text-fg transition hover:bg-signal-soft disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
             {submitting ? "Submitting…" : "Submit request"}
