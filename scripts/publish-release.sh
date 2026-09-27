@@ -17,7 +17,7 @@ PACKAGE="${1:?package name, e.g. airsuite-console}"
 VERSION="${2:?version, e.g. 1.0.0}"
 ZIP="${3:?path to the built zip}"
 
-: "${SUPABASE_SERVICE_ROLE_KEY:?export SUPABASE_SERVICE_ROLE_KEY first}"
+[ "${DRY_RUN:-0}" = 1 ] || : "${SUPABASE_SERVICE_ROLE_KEY:?export SUPABASE_SERVICE_ROLE_KEY first}"
 PROJECT_URL="${SUPABASE_URL:-https://irjiqbmoohklagdegezz.supabase.co}"
 BUCKET=releases
 CHANNEL="${CHANNEL:-stable}"
@@ -44,13 +44,25 @@ echo "sha256  : $SHA"
 #      not recognised as a local file and produces the same misleading error
 #   4. it resolves the project from supabase/.temp/project-ref, so it must run
 #      from the repo root or it reports "have you run supabase link?"
+#   5. (2026-08-10, CLI 2.113.0) an ABSOLUTE Windows source fails too: the drive
+#      letter parses as a URL scheme -> the same "copy between local directories".
+#      So: cd to the file's own folder, pass a RELATIVE source, and point
+#      --workdir at the repo root so --linked still finds the project-ref.
 # Falls back to the REST API with a service-role key if the CLI is unavailable.
+# DRY_RUN=1 prints every upload and write instead of doing it (nothing leaves
+# this PC), so the commands can be checked before a real publish.
 # ---------------------------------------------------------------------------
 SB="npx --yes supabase@latest"
+DRY_RUN="${DRY_RUN:-0}"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 use_cli=0
-if $SB projects list >/dev/null 2>&1; then use_cli=1; fi
+if [ "$DRY_RUN" = 1 ]; then use_cli=1
+elif $SB projects list >/dev/null 2>&1; then use_cli=1; fi
 
-api() { curl -sS -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" "$@"; }
+api() {
+  if [ "$DRY_RUN" = 1 ]; then echo "    [dry-run] curl (service-role) $*"; return 0; fi
+  curl -sS -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" "$@"
+}
 
 # Bucket: public read, private write. 'true' here is PUBLIC READ only -- writes still require
 # the service role, so nobody can replace a published artefact.
@@ -68,12 +80,20 @@ if [ "$use_cli" = 1 ]; then
   # cygpath so this works whether invoked from Git Bash or elsewhere; see the
   # note above about native paths being required.
   win() { command -v cygpath >/dev/null 2>&1 && cygpath -w "$1" || printf '%s' "$1"; }
+  # gotcha 5: a relative source from the file's own folder, the repo root via --workdir
+  cli_cp() {  # <local file> <content-type> <object path in the bucket>
+    local dir base; dir="$(dirname "$1")"; base="$(basename "$1")"
+    if [ "$DRY_RUN" = 1 ]; then
+      echo "    [dry-run] (cd $dir) $SB storage cp --experimental --linked --workdir $(win "$REPO_ROOT") --content-type $2 ./$base ss:///$BUCKET/$3"
+      return 0
+    fi
+    ( cd "$dir" && $SB storage cp --experimental --linked --workdir "$(win "$REPO_ROOT")" \
+        --content-type "$2" "./$base" "ss:///$BUCKET/$3" )
+  }
   echo "--> uploading $OBJECT (via CLI login, no service-role key)"
-  $SB storage cp --experimental --linked --content-type application/zip \
-    "$(win "$ZIP")" "ss:///$BUCKET/$OBJECT"
+  cli_cp "$ZIP" application/zip "$OBJECT"
   echo "--> uploading ${OBJECT%.zip}.sha256"
-  $SB storage cp --experimental --linked --content-type text/plain \
-    "$(win "$SIDECAR")" "ss:///$BUCKET/${OBJECT%.zip}.sha256"
+  cli_cp "$SIDECAR" text/plain "${OBJECT%.zip}.sha256"
 else
   : "${SUPABASE_SERVICE_ROLE_KEY:?no CLI session and no SUPABASE_SERVICE_ROLE_KEY}"
   echo "--> uploading $OBJECT (REST, service-role)"
@@ -91,6 +111,10 @@ fi
 # -- is the failure mode worth catching, and it is exactly what happened on the
 # first manual upload (files landed at the bucket root, one level too high).
 PUBLIC="$PROJECT_URL/storage/v1/object/public/$BUCKET/$OBJECT"
+if [ "$DRY_RUN" = 1 ]; then
+  echo "--> [dry-run] would verify $PUBLIC serves sha256 $SHA, then record $PACKAGE $VERSION in bc_releases"
+  exit 0
+fi
 echo "--> verifying $PUBLIC"
 TMP="$(mktemp)"; curl -sS -m 300 -o "$TMP" -w '    HTTP %{http_code}  %{size_download} bytes\n' "$PUBLIC"
 GOT="$(sha256sum "$TMP" | cut -d' ' -f1)"; rm -f "$TMP"
