@@ -17,7 +17,8 @@ PACKAGE="${1:?package name, e.g. airsuite-console}"
 VERSION="${2:?version, e.g. 1.0.0}"
 ZIP="${3:?path to the built zip}"
 
-[ "${DRY_RUN:-0}" = 1 ] || : "${SUPABASE_SERVICE_ROLE_KEY:?export SUPABASE_SERVICE_ROLE_KEY first}"
+# (2026-09-27) The service-role key is no longer required up front: with a CLI login the
+# uploads need none (see KEY below); without a CLI login the upload branch refuses by name.
 PROJECT_URL="${SUPABASE_URL:-https://irjiqbmoohklagdegezz.supabase.co}"
 BUCKET=releases
 CHANNEL="${CHANNEL:-stable}"
@@ -59,9 +60,16 @@ use_cli=0
 if [ "$DRY_RUN" = 1 ]; then use_cli=1
 elif $SB projects list >/dev/null 2>&1; then use_cli=1; fi
 
+# The service-role key is OPTIONAL when the CLI login works (2026-09-27): the uploads go
+# through the CLI, and without a key the two REST writes (ensure the bucket; record the
+# release) are SKIPPED BY NAME instead of aborting under `set -u` - the bucket already
+# exists, and the bc_releases row is printed as SQL to run in the SQL editor (or through
+# the Supabase MCP), which is how 0.5.0 was recorded.
+KEY="${SUPABASE_SERVICE_ROLE_KEY:-}"
 api() {
   if [ "$DRY_RUN" = 1 ]; then echo "    [dry-run] curl (service-role) $*"; return 0; fi
-  curl -sS -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" "$@"
+  if [ -z "$KEY" ]; then echo "    [no service-role key] skipped: curl $1 $2"; return 0; fi
+  curl -sS -H "Authorization: Bearer $KEY" -H "apikey: $KEY" "$@"
 }
 
 # Bucket: public read, private write. 'true' here is PUBLIC READ only -- writes still require
@@ -95,7 +103,7 @@ if [ "$use_cli" = 1 ]; then
   echo "--> uploading ${OBJECT%.zip}.sha256"
   cli_cp "$SIDECAR" text/plain "${OBJECT%.zip}.sha256"
 else
-  : "${SUPABASE_SERVICE_ROLE_KEY:?no CLI session and no SUPABASE_SERVICE_ROLE_KEY}"
+  [ -n "$KEY" ] || { echo "no CLI session and no SUPABASE_SERVICE_ROLE_KEY - cannot upload" >&2; exit 1; }
   echo "--> uploading $OBJECT (REST, service-role)"
   api -X POST "$PROJECT_URL/storage/v1/object/$BUCKET/$OBJECT" \
     -H 'Content-Type: application/zip' -H 'x-upsert: true' \
@@ -128,6 +136,12 @@ echo "    checksum verified against the live URL"
 URL="$PROJECT_URL/storage/v1/object/public/$BUCKET/$OBJECT"
 
 echo "--> recording in bc_releases"
+if [ -z "$KEY" ]; then
+  echo "    [no service-role key] run this in the Supabase SQL editor (or the Supabase MCP) to record the release:"
+  echo "    INSERT INTO bc_releases (package, version, channel, url, sha256, size_bytes, is_published, published_at)"
+  echo "      VALUES ('$PACKAGE', '$VERSION', '$CHANNEL', '$URL', '$SHA', $SIZE, true, now())"
+  echo "      ON CONFLICT (package, version, channel) DO NOTHING;"
+fi
 api -X POST "$PROJECT_URL/rest/v1/bc_releases" \
   -H 'Content-Type: application/json' \
   -H 'Prefer: resolution=merge-duplicates,return=minimal' \
