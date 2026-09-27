@@ -9,7 +9,8 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // published, and return the on-air mixshow DJ roster (with PII email) for the
 // weekly upload reminder.
 //
-// POST {secret, action:"pending"}      -> uploaded/validated drops + dj slug + slot day
+// POST {secret, action:"pending"}      -> uploaded/validated drops (+ checksum_sha256, source)
+//                                        + dj slug + slot day/start/end
 // POST {secret, action:"publish", id}  -> mark a drop published (now playable on the site)
 // POST {secret, action:"converted", id, from, size_bytes?}
 //                                     -> record that the studio PC transcoded a
@@ -96,9 +97,13 @@ Deno.serve(async (req: Request) => {
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
   if (body.action === "pending") {
+    // checksum_sha256 + source: sync-dj-drops.py trusts an email ingest's checksum
+    // for its "already on disk" check (a portal re-upload flips source to 'web').
+    // slot end_time: the air window its on-air guard falls back to when the ON-AIR
+    // journal mirror is stale. Older callers ignore the extra fields.
     const { data, error } = await supabase
       .from("dj_drops")
-      .select("id,file_code,storage_path,format,week_of,status,size_bytes,convert_to_mp3,converted_at,source_format,djs(slug,display_name),slot:dj_slots(day_of_week,start_time)")
+      .select("id,file_code,storage_path,format,week_of,status,size_bytes,convert_to_mp3,converted_at,source_format,checksum_sha256,source,djs(slug,display_name),slot:dj_slots(day_of_week,start_time,end_time)")
       .in("status", ["uploaded", "validated"])
       .not("storage_path", "is", null)
       .order("uploaded_at", { ascending: true })

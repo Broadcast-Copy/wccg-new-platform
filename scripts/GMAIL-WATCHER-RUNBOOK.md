@@ -29,7 +29,9 @@ parts 1..N. Each part is then **ingested into the platform** through the
 studio-sync edge function (`ingest` → signed upload into the dj-drops bucket →
 `ingested`, dj_drops row source `email`, week_of = Monday of the air week), and
 **Studio Sync** files it to the dated folder + `M:\JBMusic` like any portal
-upload — the watcher never writes D:\WCCG\b-mixshows or M:\ for DJs. Only a pack
+upload — the watcher never writes D:\WCCG\b-mixshows or M:\ for DJs. (How
+Studio Sync writes a cart — atomic, backed up, never while it airs — is in
+`STUDIO-SYNC-RUNBOOK.md`, "How writes reach air".) Only a pack
 for the DJ's *next* show, arriving 5+ min before it starts, is ingested; anything
 else (late, early, wrong parts, expired link) gets a "manual look" mail. A
 transient failure retries every 15 min (one alert). Plan a pack without touching
