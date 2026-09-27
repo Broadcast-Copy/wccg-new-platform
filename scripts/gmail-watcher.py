@@ -362,6 +362,53 @@ def extract_dropbox(text):
     return url
 
 
+# OneDrive share links (Progressive, since 2026-09-13: "The link I sent is from my
+# personal OneDrive account"). 1drv.ms redirects to onedrive.live.com's SharePoint
+# view; the old anonymous api.onedrive.com/v1.0/shares endpoint now answers 401, and
+# plain curl is refused 403 ("The request is blocked"). A browser User-Agent plus a
+# cookie jar and download=1 gets the file itself (206 audio/wav, measured 2026-09-27).
+ONEDRIVE_RE = re.compile(r"https://(?:1drv\.ms|onedrive\.live\.com)/[^\s\"'<>\)\]]+")
+BROWSER_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
+
+
+def extract_onedrive(text):
+    m = ONEDRIVE_RE.search(text)
+    if not m:
+        return None
+    url = m.group(0).rstrip(".,)>")
+    if "download=1" not in url:
+        url += ("&" if "?" in url else "?") + "download=1"
+    return url
+
+
+def onedrive_bytes(url):
+    """Download a OneDrive share link headless; None unless the bytes are audio."""
+    tmp = os.path.join(CONFIG_DIR, "_od.part")
+    jar = os.path.join(CONFIG_DIR, "_od.cookies")
+    try:
+        r = subprocess.run(["curl", "-sL", "--max-time", "900", "-A", BROWSER_UA,
+                            "-c", jar, "-b", jar, "-o", tmp, url],
+                           capture_output=True, creationflags=NO_WINDOW)
+        if r.returncode != 0 or not os.path.exists(tmp):
+            return None
+        with open(tmp, "rb") as fh:
+            data = fh.read()
+    finally:
+        for p in (tmp, jar):
+            try:
+                os.remove(p)
+            except Exception:
+                pass
+    # An HTML sign-in/blocked page is small and starts with "<"; audio starts with
+    # RIFF / ID3 / MPEG sync, or an ISO-BMFF 'ftyp' box (m4a, transcoded later).
+    audio = data[:4] == b"RIFF" or data[:3] == b"ID3" or data[:1] == b"\xff" or data[4:8] == b"ftyp"
+    if not audio:
+        log(f"    OneDrive returned {len(data)} bytes that are not audio")
+        return None
+    return data
+
+
 def gmail_attachment_bytes(gmail, mid, aid):
     att = gmail.users().messages().attachments().get(userId="me", messageId=mid, id=aid).execute()
     return base64.urlsafe_b64decode(att["data"])
@@ -428,6 +475,12 @@ def fetch_audio(gmail, drive, msg, spec):
         if url:
             log("    Dropbox link found")
             return curl_bytes(url)
+        od = extract_onedrive(text)
+        if od:
+            log("    OneDrive link found")
+            data = onedrive_bytes(od)
+            if data:
+                return data
         fid = drive_search_by_name(drive, text, header(msg, "From").lower())
         if fid:
             try:
@@ -440,6 +493,13 @@ def fetch_audio(gmail, drive, msg, spec):
     if kind in ("drive", "drive_share"):
         fid = extract_drive_id(text)
         if not fid:
+            od = extract_onedrive(text)
+            if od:
+                log("    no Drive id — OneDrive link found")
+                data = onedrive_bytes(od)
+                if data:
+                    return data
+                log("    OneDrive download failed")
             log("    no Drive id in body (link-less chip?) — trying Drive search by filename")
             fid = drive_search_by_name(drive, text, header(msg, "From").lower())
         if not fid:
@@ -454,6 +514,10 @@ def fetch_audio(gmail, drive, msg, spec):
     if kind == "dropbox":
         url = extract_dropbox(text)
         if not url:
+            od = extract_onedrive(text)
+            if od:
+                log("    no Dropbox link — OneDrive link found")
+                return onedrive_bytes(od)
             log("    no Dropbox link in body"); return None
         log("    Dropbox link found")
         return curl_bytes(url)
