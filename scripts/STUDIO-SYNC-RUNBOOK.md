@@ -23,6 +23,52 @@ Every 5 minutes (Windows scheduled task **"WCCG Studio Sync"**) it:
 Idempotent: re-runs skip files already on disk at the right size and
 backfill whichever copy is missing without re-downloading.
 
+> **Since 2026-09-27 the scheduled task runs `sync-dj-drops.py`** (no admin
+> password: public bucket + the secret-gated `studio-sync` edge function), not
+> the watcher described above. Its log is `D:\WCCG\sync-logs\dj-drops-sync.log`.
+
+## How writes reach air (2026-09-27)
+
+`M:\JBMusic\DJB_<code>.<ext>` is live the moment it changes (ON-AIR plays it
+straight off `\\onair\AUDIO`). The sync used to truncate and rewrite it in
+place, with no backup, even mid-air. Now, per drop:
+
+1. **Work files never look like carts.** Download / unzip / transcode happen
+   beside the cart as `.~sync-DJB_<code>.<ext>.<tag>` — never `DJB_…`, never an
+   audio extension, so AirSuite's library scan can't pick one up.
+2. **sha256, not size.** Cart already holds these exact bytes → `SAME sha256`,
+   not rewritten, just published. The "already on disk" fast path also needs the
+   archive copy and the cart to be byte-identical (and trusts an email ingest's
+   platform checksum when the row carries one).
+3. **On-air guard.** The cart is **not replaced and the drop not published**
+   while it may be airing: the ON-AIR journal mirror
+   (`C:\AirSuite\onair-journal\journal\<date>.jsonl`) shows it as the last thing
+   started, within its duration + 2 min — or the mirror is not live (last event
+   more than 2 min old; it is only fetched every ~15 min) and the slot's weekly
+   air window (±15 min) holds now. Log: `DEFER <slug>/<code>: on air now (why)`.
+   The dated archive copy is still filed; the next 5-minute run retries. A
+   replace the OS refuses because the file is held open is also a `DEFER`.
+4. **Atomic, backed-up replace.** Temp file in the cart's folder → fsync → read
+   back and sha-verified → the old cart copied (and verified) to
+   `D:\WCCG\sync-logs\cart-backups\<YYYYMMDD>\DJB_<code>.<ext>.<HHMMSS>` →
+   `os.replace` onto the cart. No verified backup, no replace. Newest **10**
+   backups kept per cart (the prune only ever deletes inside `cart-backups`).
+   The cart keeps the name case already on the share. Any failure leaves the
+   old cart exactly as it was (`FAIL … cart left untouched`).
+5. **Two files, one cart** (`DJB_x.mp3` beside `DJB_x.wav`): never deleted or
+   renamed — `WARN two files for cart …` once per run, counted in SUMMARY.
+6. **One run at a time** (`D:\WCCG\sync-logs\dj-drops-sync.lock`): the task
+   launches through `run-hidden.vbs`, which returns at once, so Task Scheduler's
+   IgnoreNew can't stop a long download overlapping the next runs. A second run
+   logs `BUSY` and exits.
+
+SUMMARY line: `SUMMARY dj-drops: new=N | <items> | deferred=N | two-file carts=N`.
+
+**Put a previous cart back** (owner's call; it is an on-air write): disable the
+"WCCG Studio Sync" task, check the cart is not airing, copy the backup over
+`M:\JBMusic\DJB_<code>.<ext>` (keep a copy of what you replace), re-enable.
+Tests: `python scripts\test_sync_dj_drops.py`.
+
 ## One-time setup (after a reinstall / new PC / password change)
 
 Run in PowerShell **as the logged-in studio user** (you'll be prompted for
