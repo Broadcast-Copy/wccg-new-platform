@@ -583,6 +583,7 @@ function FileRow({
   onSaveRecording: (file: File) => Promise<boolean>;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const preview = previewUrl(drop);
   const status = drop?.status ?? "pending";
   const statusColor =
     status === "published" || status === "validated"
@@ -644,6 +645,24 @@ function FileRow({
           </Button>
         </div>
       </div>
+      {preview.url ? (
+        <div className="px-5 pb-3">
+          {/* preload="none": an hour-long mix only downloads when the DJ presses play */}
+          <audio
+            key={preview.url}
+            controls
+            preload="none"
+            src={preview.url}
+            className="h-9 w-full"
+            aria-label={`Preview ${fileCode}`}
+          />
+        </div>
+      ) : drop?.storage_path && drop.status !== "rejected" && preview.ext ? (
+        <p className="px-5 pb-3 text-xs text-muted-foreground">
+          No in-browser preview for {preview.ext.toUpperCase()} files
+          {drop.convert_to_mp3 ? " — it is being converted to MP3 for air." : "."}
+        </p>
+      ) : null}
       {recorderOpen && (
         <MixRecorder
           fileCode={fileCode}
@@ -654,6 +673,23 @@ function FileRow({
       )}
     </li>
   );
+}
+
+/** Formats a browser can play in an <audio> element. AIFF is the one DJs
+ *  actually upload that no browser plays, so it gets a note instead. */
+const PREVIEWABLE = new Set(["mp3", "m4a", "aac", "wav", "ogg", "oga", "opus", "flac", "webm"]);
+
+/** Public URL of an uploaded part in the (public-read) dj-drops bucket, or null
+ *  when there is nothing a browser can play. A replaced upload keeps the same
+ *  storage path, so the upload time rides along as a version to get past the CDN. */
+function previewUrl(drop: Drop | null): { url: string | null; ext: string | null } {
+  if (!drop?.storage_path || drop.status === "rejected") return { url: null, ext: null };
+  const ext = drop.storage_path.match(/\.([a-z0-9]+)$/i)?.[1]?.toLowerCase() ?? null;
+  if (!ext || !PREVIEWABLE.has(ext)) return { url: null, ext };
+  const { data } = createClient().storage.from("dj-drops").getPublicUrl(drop.storage_path);
+  if (!data?.publicUrl) return { url: null, ext };
+  const v = encodeURIComponent(drop.uploaded_at ?? drop.id);
+  return { url: `${data.publicUrl}${data.publicUrl.includes("?") ? "&" : "?"}v=${v}`, ext };
 }
 
 function fmtTime(t: string): string {
