@@ -32,6 +32,7 @@ import {
   Volume2,
   Rss,
   ListMusic,
+  Church,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────
@@ -455,6 +456,9 @@ export default function ShowDetailPage({
   const schedule = showData?.timeSlot ?? null;
   const days = showData?.days ?? null;
   const hasYT = !!showData?.youtube?.channelUrl;
+  // A gospel church's profile leads with its sermons (each one appears from the
+  // moment it airs — RLS on sermons.airs_at, migration 119).
+  const isChurch = !!SERMON_CODES[show.id];
   const segments = showData?.segments ?? [];
   const hostImage = showData?.hostImageUrl ?? null;
   const gradient = showData?.gradient ?? "from-purple-900 via-indigo-900 to-teal-800";
@@ -534,7 +538,7 @@ export default function ShowDetailPage({
       </div>
 
       {/* ─── Tabbed Content ─── */}
-      <Tabs defaultValue={hasYT ? "videos" : "podcasts"} className="space-y-6">
+      <Tabs defaultValue={isChurch || !hasYT ? "podcasts" : "videos"} className="space-y-6">
         <TabsList className="w-full sm:w-auto bg-muted/50 border border-border">
           {hasYT && (
             <TabsTrigger value="videos" className="flex-1 sm:flex-initial data-[state=active]:bg-[#74ddc7] data-[state=active]:text-[#0a0a0f]">
@@ -542,7 +546,11 @@ export default function ShowDetailPage({
             </TabsTrigger>
           )}
           <TabsTrigger value="podcasts" className="flex-1 sm:flex-initial data-[state=active]:bg-[#74ddc7] data-[state=active]:text-[#0a0a0f]">
-            <Mic className="mr-2 h-4 w-4" />Podcasts
+            {isChurch ? (
+              <><Church className="mr-2 h-4 w-4" />Sermons</>
+            ) : (
+              <><Mic className="mr-2 h-4 w-4" />Podcasts</>
+            )}
           </TabsTrigger>
           <TabsTrigger value="show" className="flex-1 sm:flex-initial data-[state=active]:bg-[#74ddc7] data-[state=active]:text-[#0a0a0f]">
             <Radio className="mr-2 h-4 w-4" />The Show

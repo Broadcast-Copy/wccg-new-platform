@@ -38,8 +38,31 @@ transient failure retries every 15 min (one alert). Plan a pack without touching
 anything: `python scripts\gmail-watcher.py --transfernow-dry-run <dl link>`; push
 one by hand: `--ingest-transfernow <dl link> --dj dj-tony-neal --air-date MMDDYYYY`.
 The studio-sync secret is read by `scripts\studio_sync_secret.py` (env
-`WCCG_STUDIO_SYNC_SECRET` → `studio-sync.secret` in the config dir → legacy
+`WCCG_STUDIO_SYNC_SECRET` → `C:\AirSuite\secrets\studio-sync.dpapi` (DPAPI,
+ConvertFrom-SecureString format) → `studio-sync.secret` in the config dir → legacy
 constant in sync-dj-drops.py). Tests: `python scripts\test_gmail_watcher_transfernow.py`.
+
+**Sermons on the church's website profile (since 2026-09-28).** Owner: "sermons
+and mixes should land in the profile of the entity, once they air, or
+simultaneously". AFTER a sermon is synced for air, the watcher writes one queue
+file (`<config dir>\site-queue\<code>-<YYYY-MM-DD>.json`); that write can't raise,
+so the air path is never held up. A background thread (every 30 s, and never while
+a mail is being handled) copies the Sunday-folder file, turns WAV/m4a into a
+192k mp3 at below-normal priority, and uploads it through studio-sync's `sermon` →
+signed PUT → `sermon_uploaded` actions into the public `sermons` bucket + a
+`public.sermons` row. The website shows it **from its air time** (RLS on
+`sermons.airs_at`, migration 119; slot per church in `public.sermon_churches`).
+Failures log and retry (2, 5, 15, 30, then 60 min; give up after 14 days into
+`site-queue\failed\`). These actions accept ONLY the new secret (the function's
+`STUDIO_SYNC_SECRET`; never the legacy literal) — until it is provisioned they
+retry quietly. Switches: env `WCCG_SITE_PUBLISH=0` (off), `WCCG_SITE_DRY_RUN=1` or
+`--site-dry-run` (log only, entries parked in `site-queue\dry-run\`).
+`--status` shows the queue. By hand (never touches the carts):
+`--publish-sermon <file> --church pmb1 --air-date YYYY-MM-DD [--dry-run]`,
+`--withdraw-sermon --church pmb1 --air-date YYYY-MM-DD` (only before it airs),
+`--backfill-sermons YYYY-MM-DD [--until YYYY-MM-DD] [--dry-run]` (refused Sunday
+06:00-15:00; an aired row older than a week is never replaced).
+Tests: `python scripts\test_gmail_watcher_site.py` (local mock on port 3097).
 
 Config + secrets live in **`C:\Users\wccg1\.wccg-gmail-watcher\`**
 (`client_secret.json`, `token.json`, `state.json`) — outside the repo, never committed.

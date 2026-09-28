@@ -5,7 +5,8 @@
  *
  * Everything is read directly from Supabase as the (possibly anonymous)
  * browser user — there is no API server:
- *   • `dj_drops`  — published drops are public-readable (RLS, migration 025)
+ *   • `dj_drops`  — published drops are public-readable once their show has
+ *                   aired (RLS, migrations 025 + 119 dj_drops.airs_at)
  *   • `djs`       — active roster, public-readable
  *   • `dj_slots`  — the weekly broadcast schedule, public-readable
  *   • `entity_follows` — when signed in, the user's follow rows for ALL the

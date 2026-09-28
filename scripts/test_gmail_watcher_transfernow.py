@@ -333,11 +333,15 @@ class SecretLookup(unittest.TestCase):
     def setUp(self):
         self._env = os.environ.pop(studio_sync_secret.ENV, None)
         self._file = studio_sync_secret.FILE
+        self._dpapi = studio_sync_secret.DPAPI_FILE
         self.tmp = tempfile.TemporaryDirectory()
         studio_sync_secret.FILE = os.path.join(self.tmp.name, "studio-sync.secret")
+        # isolate from a real C:\AirSuite\secrets\studio-sync.dpapi on this PC
+        studio_sync_secret.DPAPI_FILE = os.path.join(self.tmp.name, "studio-sync.dpapi")
 
     def tearDown(self):
         studio_sync_secret.FILE = self._file
+        studio_sync_secret.DPAPI_FILE = self._dpapi
         if self._env is not None:
             os.environ[studio_sync_secret.ENV] = self._env
         self.tmp.cleanup()
@@ -354,6 +358,32 @@ class SecretLookup(unittest.TestCase):
             self.assertEqual(studio_sync_secret.load(legacy=True), "from-env")
         finally:
             os.environ.pop(studio_sync_secret.ENV, None)
+
+    @unittest.skipUnless(os.name == "nt", "DPAPI is Windows-only")
+    def test_dpapi_file_beats_plain_file(self):
+        # the ConvertFrom-SecureString format: hex of a CurrentUser DPAPI blob of UTF-16LE text
+        import ctypes
+        from ctypes import wintypes
+
+        class BLOB(ctypes.Structure):
+            _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_char))]
+        raw = "from-dpapi".encode("utf-16-le")
+        buf = ctypes.create_string_buffer(raw, len(raw))
+        src, out = BLOB(len(raw), ctypes.cast(buf, ctypes.POINTER(ctypes.c_char))), BLOB()
+        crypt32 = ctypes.WinDLL("crypt32")
+        crypt32.CryptProtectData.argtypes = [ctypes.POINTER(BLOB), ctypes.c_wchar_p, ctypes.c_void_p,
+                                             ctypes.c_void_p, ctypes.c_void_p, wintypes.DWORD,
+                                             ctypes.POINTER(BLOB)]
+        self.assertTrue(crypt32.CryptProtectData(ctypes.byref(src), None, None, None, None, 0, ctypes.byref(out)))
+        blob = ctypes.string_at(out.pbData, out.cbData)
+        with open(studio_sync_secret.DPAPI_FILE, "w", encoding="utf-8") as fh:
+            fh.write(blob.hex() + "\r\n")
+        with open(studio_sync_secret.FILE, "w", encoding="utf-8") as fh:
+            fh.write("from-file\n")
+        self.assertEqual(studio_sync_secret.load(), "from-dpapi")
+        with open(studio_sync_secret.DPAPI_FILE, "w", encoding="utf-8") as fh:
+            fh.write("not hex")
+        self.assertEqual(studio_sync_secret.load(), "from-file")          # a bad DPAPI file is skipped
 
     def test_legacy_parse_never_executes(self):
         src = os.path.join(self.tmp.name, "x.py")

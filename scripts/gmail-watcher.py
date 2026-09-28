@@ -48,7 +48,28 @@ Run modes:
                 storage path) — no download, no ingest, no Gmail token needed
   --ingest-transfernow <dl link> --dj <slug> [--air-date MMDDYYYY] [--dry-run]
                 one-shot: push one pack through the same ingest path by hand
+  --publish-sermon <file> --church <code> --air-date YYYY-MM-DD [--dry-run]
+                one-shot: put one sermon file on the church's website profile
+                (public from its air time). Never touches the air carts.
+  --withdraw-sermon --church <code> --air-date YYYY-MM-DD [--checksum <sha256>]
+                remove a website sermon that has NOT aired yet (a wrong file, or
+                the synthetic test row)
+  --backfill-sermons YYYY-MM-DD [--until YYYY-MM-DD] [--dry-run]
+                put every sermon in the Sunday folders since that date on the
+                website (aired archive rows are never replaced; refused on
+                Sundays 06:00-15:00)
+  --site-dry-run
+                daemon: website uploads only log what they would do
   (no flag)     run forever, polling every POLL_SECONDS
+
+WEBSITE (owner 2026-09-28: "sermons and mixes should land in the profile of the
+entity, once they air, or simultaneously"): after a sermon is synced for AIR it is
+QUEUED for the church's profile page (one small local file). A background worker
+uploads it through the secret-gated studio-sync "sermon" actions; the site shows it
+from its air time (migration 119). The website is never on the air path: the queue
+write can't raise, the worker never starts a job while a mail is being handled, and
+a failure only logs and retries later. Env WCCG_SITE_PUBLISH=0 turns it off,
+WCCG_SITE_DRY_RUN=1 (or --site-dry-run) makes it log only.
 """
 
 import argparse
@@ -61,6 +82,7 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import traceback
 from datetime import date, datetime, time as dtime, timedelta
@@ -105,6 +127,19 @@ POLL_SECONDS = int(os.environ.get("WCCG_POLL_SECONDS", "20"))
 # pythonw, which has no console of its own, so a spawn without this flag creates a
 # fresh visible terminal window on the operator's desktop — once per retry tick.
 NO_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+# The website's transcode must never compete with the air path's own ffmpeg checks.
+BELOW_NORMAL = getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)
+
+# Website copy of each synced sermon (see the module docstring). The queue lives in
+# CONFIG_DIR\site-queue (one JSON per church+Sunday); dirs are derived from
+# CONFIG_DIR at call time so a test/sandbox CONFIG_DIR is honoured.
+SITE_PUBLISH = os.environ.get("WCCG_SITE_PUBLISH", "1") != "0"
+SITE_DRY_RUN = os.environ.get("WCCG_SITE_DRY_RUN") == "1"
+SITE_BACKOFF_MINUTES = (2, 5, 15, 30, 60)   # then every 60 min
+SITE_GIVE_UP_DAYS = 14
+SITE_WORKER_SECONDS = 30
+SITE_WEB_BITRATE = "192k"                   # WAV/m4a sermons become this mp3 for the web
+AIR_BUSY = threading.Event()                # set while the main loop handles a mail
 
 # sender-key (addr or domain, matched as substring of the From header) -> sermon spec
 # deadline_hour: on the airing Sunday, once this local hour passes, a still-failing
@@ -525,9 +560,9 @@ def fetch_audio(gmail, drive, msg, spec):
     return None
 
 
-def stage_sermon(data, spec):
+def stage_sermon(data, spec, sun=None):
     """Write the bytes to the Sunday folder + M:\\JBMusic, transcoding thm1. Returns (ok, note)."""
-    sun = this_sunday()
+    sun = sun or this_sunday()
     folder = sunday_folder(sun)
     os.makedirs(folder, exist_ok=True)
     code, ext, djb = spec["code"], spec["ext"], spec["djb"]
@@ -688,12 +723,18 @@ def handle_message(gmail, drive, mid, state):
             notified[mid] = datetime.now().isoformat()
         return  # don't mark processed -> retried next tick
 
-    ok, note = stage_sermon(data, spec)
+    sd = this_sunday()
+    ok, note = stage_sermon(data, spec, sd)
     if ok:
         log(f"    SYNCED {note}")
-        sd = this_sunday()
+        # Website AFTER air: queue only (one local file, cannot raise); the site
+        # worker uploads it on its own thread once no mail is being handled.
+        queued = queue_site_publish(spec["code"], sd,
+                                    os.path.join(sunday_folder(sd), f"{spec['code']}.{spec['ext']}"))
         send_mail(gmail, f"{spec['code']} ({spec['church']}) synced for Sun {sd.month}/{sd.day} air",
-                  f"Auto-synced the moment it arrived.\n{note}\nAirs {spec['air']} this Sunday.")
+                  f"Auto-synced the moment it arrived.\n{note}\nAirs {spec['air']} this Sunday."
+                  + ("\nWebsite: queued for the church's profile page (public from its air time)."
+                     if queued else ""))
         state["processed"].append(mid)
         notified.pop(mid, None)
     else:
@@ -1359,6 +1400,365 @@ def transfernow_cli(url, dj_slug=None, air_arg=None, dry_run=True):
 
 
 # --------------------------------------------------------------------------- #
+# Website: each synced sermon also lands on the church's profile page
+# --------------------------------------------------------------------------- #
+class SiteRetry(Exception):
+    """Transient (network, 5xx, secret not set up yet, file busy) — retried with back-off."""
+
+
+class SiteSkip(Exception):
+    """Will never work as is (unknown church, aired archive row, not audio) — dropped with a log line."""
+
+
+SERMON_CODES = tuple(dict.fromkeys(s["code"] for s in SERMONS.values()))
+
+
+def site_dirs():
+    q = os.path.join(CONFIG_DIR, "site-queue")
+    return q, os.path.join(q, "failed"), os.path.join(q, "dry-run"), os.path.join(CONFIG_DIR, "_site")
+
+
+def _write_json_atomic(path, obj):
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(obj, fh, indent=2)
+    os.replace(tmp, path)
+
+
+def queue_site_publish(code, air, src, now=None):
+    """Called right after a sermon is synced for AIR. Writes one small queue file and
+    returns True; returns False (logged) on ANY problem — it never raises, so the air
+    path can't be held up by the website. A re-sent sermon for the same Sunday just
+    replaces the entry (newest file wins, like the cart)."""
+    try:
+        if not SITE_PUBLISH:
+            return False
+        now = now or datetime.now()
+        qdir = site_dirs()[0]
+        os.makedirs(qdir, exist_ok=True)
+        stamp = now.isoformat(timespec="microseconds")
+        _write_json_atomic(os.path.join(qdir, f"{code}-{air:%Y-%m-%d}.json"),
+                           dict(code=code, air_date=f"{air:%Y-%m-%d}", src=src, queued=stamp,
+                                tries=0, next=stamp, last=""))
+        log(f"    website: queued {code} {air:%Y-%m-%d} for the church profile (public from its air time)")
+        return True
+    except Exception as e:
+        log(f"    website: could not queue {code} ({type(e).__name__}: {e}) - air sync unaffected")
+        return False
+
+
+def _snapshot(src, code, air_date):
+    """Copy the staged sermon to CONFIG_DIR\\_site so the upload reads stable bytes even
+    if the church re-sends and the Sunday folder is rewritten mid-upload. Raises
+    SiteRetry when the source changed while it was being copied."""
+    tmpdir = site_dirs()[3]
+    os.makedirs(tmpdir, exist_ok=True)
+    try:
+        before = os.stat(src)
+    except OSError:
+        raise SiteSkip(f"{src} is gone")
+    snap = os.path.join(tmpdir, f"{code}-{air_date}.src")
+    shutil.copyfile(src, snap)
+    after = os.stat(src)
+    if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns) \
+            or os.path.getsize(snap) != after.st_size:
+        _rm(snap)
+        raise SiteRetry(f"{os.path.basename(src)} changed while it was being copied")
+    return snap
+
+
+def web_mp3(snap, code, air_date):
+    """(path, temp): an mp3 the website can serve. mp3 bytes go as they are; WAV (pmb1)
+    and m4a are transcoded to SITE_WEB_BITRATE at below-normal priority."""
+    if mp3_header_ok(snap):
+        return snap, False
+    with open(snap, "rb") as fh:
+        head = fh.read(12)
+    if head[:4] != b"RIFF" and head[4:8] != b"ftyp":
+        raise SiteSkip(f"{code} {air_date}: not audio the website can use")
+    out = os.path.join(site_dirs()[3], f"{code}-{air_date}.mp3")
+    try:
+        r = subprocess.run([FFMPEG, "-y", "-v", "error", "-i", snap, "-vn", "-c:a", "libmp3lame",
+                            "-b:a", SITE_WEB_BITRATE, out],
+                           capture_output=True, timeout=1800, creationflags=NO_WINDOW | BELOW_NORMAL)
+    except (OSError, subprocess.SubprocessError) as e:
+        _rm(out)
+        raise SiteRetry(f"website transcode failed ({type(e).__name__})")
+    if r.returncode != 0 or not mp3_header_ok(out):
+        _rm(out)
+        raise SiteRetry("website transcode failed (ffmpeg exit %s)" % r.returncode)
+    return out, True
+
+
+def site_call(secret, payload):
+    """POST one studio-sync sermon action. The secret travels only in the JSON body."""
+    what = f"studio-sync {payload.get('action')} {payload.get('church_code', '')} {payload.get('air_date', '')}"
+    try:
+        r = requests.post(studio_sync_secret.FN, json={**payload, "secret": secret}, timeout=(20, 90))
+    except requests.RequestException as e:
+        raise SiteRetry(f"{what} failed ({type(e).__name__})")
+    try:
+        body = r.json()
+    except ValueError:
+        body = {}
+    if r.status_code == 200 and body.get("ok"):
+        return body
+    err = str(body.get("error") or r.text[:160]).strip()
+    # bad request / unknown church / aired archive row won't fix themselves; 403 (secret
+    # not yet provisioned), 503 (function not configured), 409 after the PUT and 5xx do.
+    if r.status_code in (400, 404) or (r.status_code == 409 and payload.get("action") == "sermon"):
+        raise SiteSkip(f"{what}: HTTP {r.status_code} {err}")
+    raise SiteRetry(f"{what}: HTTP {r.status_code} {err}")
+
+
+def publish_sermon_to_site(code, air_date, src, secret, dry_run=False):
+    """One sermon file -> the church's profile. Returns a one-line summary; raises
+    SiteRetry / SiteSkip. Writes nothing outside CONFIG_DIR\\_site (removed after)."""
+    if code not in SERMON_CODES:
+        raise SiteSkip(f"unknown church code {code}")
+    if dry_run:
+        try:
+            size = os.path.getsize(src)
+            with open(src, "rb") as fh:
+                head = fh.read(12)
+        except OSError:
+            raise SiteSkip(f"{src} is gone")
+        how = "mp3 as is" if (head[:3] == b"ID3" or head[:1] == b"\xff") else f"-> mp3 {SITE_WEB_BITRATE}"
+        return (f"DRY RUN {code} {air_date}: {src} ({size / 1048576:.1f} MB, {how}) -> studio-sync "
+                f"sermon / PUT / sermon_uploaded; public on the church profile from its air time")
+    if not secret:
+        raise SiteRetry("no studio-sync secret on this PC (env WCCG_STUDIO_SYNC_SECRET, "
+                        "C:\\AirSuite\\secrets\\studio-sync.dpapi or studio-sync.secret)")
+    snap = _snapshot(src, code, air_date)
+    web, temp = snap, False
+    try:
+        web, temp = web_mp3(snap, code, air_date)
+        size, sha = os.path.getsize(web), sha256_file(web)
+        base = {"church_code": code, "air_date": air_date, "format": "mp3",
+                "size_bytes": size, "checksum_sha256": sha}
+        res = site_call(secret, {"action": "sermon", **base})
+        if res.get("done"):
+            return f"{code} {air_date}: already on the site ({res.get('storage_path')})"
+        if not res.get("upload_url"):
+            raise SiteRetry("studio-sync sermon: no upload_url")
+        try:
+            put_signed(res["upload_url"], web, f"{code} {air_date}")
+        except PackRetry as e:
+            raise SiteRetry(str(e))
+        done = site_call(secret, {"action": "sermon_uploaded", **base})
+        return (f"{code} {air_date}: on the site at {done.get('storage_path')} ({size / 1048576:.1f} MB), "
+                f"public from {done.get('airs_at')}")
+    finally:
+        _rm(snap)
+        if temp:
+            _rm(web)
+
+
+def _site_entries():
+    qdir = site_dirs()[0]
+    try:
+        names = sorted(n for n in os.listdir(qdir) if n.endswith(".json"))
+    except OSError:
+        return []
+    out = []
+    for n in names:
+        p = os.path.join(qdir, n)
+        try:
+            with open(p, encoding="utf-8-sig") as fh:
+                out.append((p, json.load(fh)))
+        except (OSError, ValueError) as e:
+            log(f"  website: unreadable queue entry {n} ({type(e).__name__}) - skipped")
+    return out
+
+
+def _site_park(path, entry, folder, note):
+    """Move a finished-with entry aside (failed/ or dry-run/), unless it was re-queued meanwhile."""
+    if not _site_same(path, entry):
+        return
+    os.makedirs(folder, exist_ok=True)
+    entry = dict(entry, last=note, parked=datetime.now().isoformat(timespec="seconds"))
+    _write_json_atomic(os.path.join(folder, os.path.basename(path)), entry)
+    _rm(path)
+
+
+def _site_same(path, entry):
+    """Is the queue file still the version this worker picked up? (A re-sent sermon
+    re-queues the same key while an older upload may be running.)"""
+    try:
+        with open(path, encoding="utf-8-sig") as fh:
+            return json.load(fh).get("queued") == entry.get("queued")
+    except (OSError, ValueError):
+        return False
+
+
+def site_process_due(now=None, secret=None, dry_run=None):
+    """Run every due queue entry once; returns how many reached the site. Never raises.
+    Stops as soon as the main loop starts handling a mail (the air path goes first)."""
+    now = now or datetime.now()
+    dry = SITE_DRY_RUN if dry_run is None else dry_run
+    _, failed_dir, dry_dir, _ = site_dirs()
+    done = 0
+    for path, e in _site_entries():
+        if AIR_BUSY.is_set():
+            break
+        if e.get("next", "") > now.isoformat(timespec="microseconds"):
+            continue
+        key = f"{e.get('code')} {e.get('air_date')}"
+        try:
+            if dry:
+                msg = publish_sermon_to_site(e["code"], e["air_date"], e["src"], None, dry_run=True)
+                log(f"  website: {msg}")
+                _site_park(path, e, dry_dir, "dry run - nothing uploaded")
+                continue
+            msg = publish_sermon_to_site(e["code"], e["air_date"], e["src"],
+                                         secret or studio_sync_secret.load())  # never the legacy literal
+            log(f"  website: {msg}")
+            if _site_same(path, e):
+                _rm(path)
+            done += 1
+        except SiteSkip as ex:
+            log(f"  website: {key} NOT published, not retrying: {ex}")
+            _site_park(path, e, failed_dir, str(ex)[:300])
+        except Exception as ex:  # SiteRetry and anything unexpected: back off, never crash
+            note = str(ex) if isinstance(ex, SiteRetry) else f"{type(ex).__name__}: {ex}"
+            tries = int(e.get("tries", 0)) + 1
+            try:
+                first = datetime.fromisoformat(e.get("queued") or now.isoformat())
+            except ValueError:
+                first = now
+            if now - first > timedelta(days=SITE_GIVE_UP_DAYS):
+                log(f"  website: {key} gave up after {tries} tries over {SITE_GIVE_UP_DAYS} days: {note}")
+                _site_park(path, e, failed_dir, note[:300])
+                continue
+            wait = SITE_BACKOFF_MINUTES[min(tries - 1, len(SITE_BACKOFF_MINUTES) - 1)]
+            log(f"  website: {key} try {tries} failed ({note}); next try in {wait} min")
+            if _site_same(path, e):
+                try:
+                    _write_json_atomic(path, dict(e, tries=tries, last=note[:300],
+                                                  next=(now + timedelta(minutes=wait)).isoformat(timespec="microseconds")))
+                except OSError:
+                    pass
+    return done
+
+
+def site_worker_loop():
+    log(f"website worker up (every {SITE_WORKER_SECONDS}s{', DRY RUN' if SITE_DRY_RUN else ''}); "
+        f"queue {site_dirs()[0]}")
+    while True:
+        try:
+            if not AIR_BUSY.is_set():
+                site_process_due()
+        except Exception:
+            log("  website worker error:\n" + traceback.format_exc())
+        time.sleep(SITE_WORKER_SECONDS)
+
+
+def start_site_worker():
+    if not SITE_PUBLISH:
+        log("website publishing is OFF (WCCG_SITE_PUBLISH=0)")
+        return None
+    t = threading.Thread(target=site_worker_loop, name="site-worker", daemon=True)
+    t.start()
+    return t
+
+
+def sunday_folder_files(since, until=None, root=None):
+    """[(code, air date, path)] for every sermon in the Sunday folders from `since`
+    to `until` (inclusive): <root>\\<YYYY>\\sunday <MMDDYY>\\<code>.<mp3|wav|m4a>."""
+    root = root or SERMON_ROOT
+    out = []
+    for y in range(since.year, (until or date.today()).year + 1):
+        ydir = os.path.join(root, str(y))
+        try:
+            names = os.listdir(ydir)
+        except OSError:
+            continue
+        for sub in names:
+            m = re.match(r"sunday (\d{2})(\d{2})(\d{2})$", sub.strip(), re.I)
+            if not m:
+                continue
+            try:
+                d = date(2000 + int(m.group(3)), int(m.group(1)), int(m.group(2)))
+            except ValueError:
+                continue
+            if d < since or (until and d > until) or d.weekday() != 6:
+                continue
+            sdir = os.path.join(ydir, sub)
+            best = {}  # one file per church: the .mp3 the cart used, else .m4a, else .wav
+            for f in os.listdir(sdir):
+                name, _, ext = f.lower().rpartition(".")
+                rank = {"mp3": 0, "m4a": 1, "wav": 2}.get(ext)
+                if name in SERMON_CODES and rank is not None and (name not in best or rank < best[name][0]):
+                    best[name] = (rank, os.path.join(sdir, f))
+            out += [(code, d, path) for code, (_, path) in best.items()]
+    return sorted(out, key=lambda x: (x[1], x[0]))
+
+
+def sermon_site_cli(args):
+    """--publish-sermon / --withdraw-sermon / --backfill-sermons. Returns the exit code.
+    None of them touches the Sunday folders' air copies or M:\\JBMusic."""
+    dry = bool(args.dry_run)
+    secret = None if dry else studio_sync_secret.load()  # never the legacy literal
+    if not dry and not secret:
+        print("no studio-sync secret on this PC (env WCCG_STUDIO_SYNC_SECRET, "
+              "C:\\AirSuite\\secrets\\studio-sync.dpapi or studio-sync.secret)")
+        return 1
+
+    if args.withdraw_sermon:
+        if args.church not in SERMON_CODES or not args.air_date:
+            print(f"--withdraw-sermon needs --church ({', '.join(SERMON_CODES)}) and --air-date YYYY-MM-DD")
+            return 1
+        payload = {"action": "sermon_withdraw", "church_code": args.church, "air_date": args.air_date}
+        if args.checksum:
+            payload["checksum_sha256"] = args.checksum.lower()
+        try:
+            res = site_call(secret, payload)
+        except (SiteRetry, SiteSkip) as e:
+            print(f"withdraw FAILED: {e}")
+            return 1
+        print(f"withdrawn: row_deleted={res.get('row_deleted')} removed={res.get('removed')}")
+        return 0
+
+    if args.publish_sermon:
+        if args.church not in SERMON_CODES or not args.air_date:
+            print(f"--publish-sermon needs --church ({', '.join(SERMON_CODES)}) and --air-date YYYY-MM-DD")
+            return 1
+        try:
+            print(publish_sermon_to_site(args.church, args.air_date, args.publish_sermon, secret, dry_run=dry))
+        except (SiteRetry, SiteSkip) as e:
+            print(f"FAILED: {e}")
+            return 1
+        return 0
+
+    # --backfill-sermons
+    now = datetime.now()
+    if not dry and now.weekday() == 6 and 6 <= now.hour < 15:
+        print("refused: Sunday 06:00-15:00 is the sermon air window - run the backfill later")
+        return 1
+    try:
+        since = datetime.strptime(args.backfill_sermons, "%Y-%m-%d").date()
+        until = datetime.strptime(args.until, "%Y-%m-%d").date() if args.until else None
+    except ValueError:
+        print("--backfill-sermons / --until take YYYY-MM-DD")
+        return 1
+    files = sunday_folder_files(since, until)
+    print(f"{len(files)} sermon file(s) in the Sunday folders from {since}" + (f" to {until}" if until else ""))
+    bad = 0
+    for code, d, path in files:
+        if d > now.date():
+            print(f"  skip {code} {d}: airs later - the daemon publishes it when it is synced")
+            continue
+        try:
+            print("  " + publish_sermon_to_site(code, f"{d:%Y-%m-%d}", path, secret, dry_run=dry))
+        except SiteSkip as e:
+            print(f"  skip {code} {d}: {e}")
+        except SiteRetry as e:
+            bad += 1
+            print(f"  FAILED {code} {d}: {e}")
+    return 1 if bad else 0
+
+
+# --------------------------------------------------------------------------- #
 # Loop
 # --------------------------------------------------------------------------- #
 def list_matches(gmail):
@@ -1381,10 +1781,13 @@ def check_once(gmail, drive, state, catchup=False):
     if new:
         log(f"{len(new)} new message(s)")
     for mid in new:
+        AIR_BUSY.set()  # the website worker starts no upload while a mail is handled
         try:
             handle_message(gmail, drive, mid, state)
         except Exception:
             log("  handler error:\n" + traceback.format_exc())
+        finally:
+            AIR_BUSY.clear()
         save_state(state)
     if catchup:
         state["seeded"] = True
@@ -1411,12 +1814,32 @@ def main():
                     help="one-shot: fetch + verify + ingest a TransferNow pack via studio-sync")
     ap.add_argument("--dj", metavar="SLUG", help="DJ slug for the TransferNow modes, e.g. dj-tony-neal")
     ap.add_argument("--air-date", metavar="MMDDYYYY", help="air date for the TransferNow modes")
-    ap.add_argument("--dry-run", action="store_true", help="with --ingest-transfernow: plan only")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="with --ingest-transfernow / --publish-sermon / --backfill-sermons: plan only")
+    ap.add_argument("--publish-sermon", metavar="FILE",
+                    help="one-shot: put this sermon file on the church's website profile")
+    ap.add_argument("--withdraw-sermon", action="store_true",
+                    help="remove a website sermon that has not aired yet")
+    ap.add_argument("--backfill-sermons", metavar="YYYY-MM-DD",
+                    help="put every Sunday-folder sermon since this date on the website")
+    ap.add_argument("--until", metavar="YYYY-MM-DD", help="with --backfill-sermons: last Sunday")
+    ap.add_argument("--church", metavar="CODE", help="sermon code for the website modes, e.g. pmb1")
+    ap.add_argument("--checksum", metavar="SHA256", help="with --withdraw-sermon: also clear that upload")
+    ap.add_argument("--site-dry-run", action="store_true",
+                    help="daemon: website uploads only log what they would do")
     args = ap.parse_args()
 
     if args.authorize:
         authorize()
         return
+
+    if args.publish_sermon or args.withdraw_sermon or args.backfill_sermons:
+        # website only: no Gmail token needed, the air carts are never touched
+        sys.exit(sermon_site_cli(args))
+
+    if args.site_dry_run:
+        global SITE_DRY_RUN
+        SITE_DRY_RUN = True
 
     if args.transfernow_dry_run or args.ingest_transfernow:
         # no Gmail token needed: the pack is read straight off TransferNow
@@ -1459,14 +1882,20 @@ def main():
             "sunday_folder": sunday_folder(this_sunday()),
             "dj_packs_handled": len(state.get("dj_packs", {})),
             "dj_packs_retrying": sorted(state.get("pack_retry", {}).keys()),
+            "website_publish": "off" if not SITE_PUBLISH else ("dry-run" if SITE_DRY_RUN else "on"),
+            "website_queue": [dict(entry=os.path.basename(p), tries=e.get("tries"), next=e.get("next"),
+                                   last=e.get("last")) for p, e in _site_entries()],
         }, indent=2))
         return
 
     if args.once or args.catchup:
         check_once(gmail, drive, state, catchup=args.catchup)
+        if SITE_PUBLISH:
+            site_process_due()  # no worker thread in one-shot mode
         return
 
     log(f"gmail-watcher up. polling every {POLL_SECONDS}s. query: {GMAIL_QUERY}")
+    start_site_worker()
     # gmail/drive were built from creds that carry the refresh token; the client
     # auto-refreshes the access token during API calls, so we don't rebuild here.
     while True:

@@ -30,10 +30,49 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 //                                        dj_drops row on (slot_id,file_code,week_of)
 //                                        as status 'uploaded', source 'email',
 //                                        published_at cleared -> Studio Sync files it.
+//
+// Sermons -> the church's public profile (gmail-watcher.py, right AFTER the air
+// sync; owner 2026-09-28 "once they air, or simultaneously"). The public sees a
+// sermon from its air time: public.sermons.airs_at (migration 119) is computed
+// by a trigger from sermon_churches, and RLS shows a row only once it has aired.
+// POST {secret, action:"sermon", church_code, air_date (a Sunday), format:"mp3",
+//       size_bytes, checksum_sha256}
+//                                     -> {upload_url, storage_path, airs_at, existing,
+//                                        done}. done=true (no url) when that exact file
+//                                        is already there. storage_path carries a hash
+//                                        prefix, so the public URL can't be guessed
+//                                        before air (the bucket can't be listed by anon).
+// POST {same fields, action:"sermon_uploaded"}
+//                                     -> after the PUT: confirms the object's size, then
+//                                        upserts the sermons row on (church_code,
+//                                        air_date); the previous object is removed.
+// POST {secret, action:"sermon_withdraw", church_code, air_date[, checksum_sha256]}
+//                                     -> removes a sermon that has NOT aired yet (a wrong
+//                                        file, or the integrator's synthetic test row).
+// A sermon row that aired more than 7 days ago is never replaced here (the
+// archive); a missing past Sunday may still be filled in (backfill).
+//
+// SECRETS. The sermon actions accept ONLY the secret in the function's
+// environment (STUDIO_SYNC_SECRET, set with `supabase secrets set`; never in
+// code). The older actions accept that secret OR the legacy literal below, which
+// has been public in this repository since June and is kept only until every
+// caller (Studio Sync, the reminders, dj-setup-link, the watcher) reads the new
+// one; deleting LEGACY_SECRET is the last step of that rotation.
 
-const SECRET = "c2040f1371c9265c538bdce3547346bd5ae53060";
+const LEGACY_SECRET = "c2040f1371c9265c538bdce3547346bd5ae53060";
+const SERMON_ACTIONS = new Set(["sermon", "sermon_uploaded", "sermon_withdraw"]);
 
 function json(o: unknown, s = 200) { return new Response(JSON.stringify(o), { status: s, headers: { "Content-Type": "application/json" } }); }
+
+/** Constant-time string compare (no early exit on the first differing byte). */
+function safeEqual(a: string, b: string): boolean {
+  const ea = new TextEncoder().encode(a);
+  const eb = new TextEncoder().encode(b);
+  let diff = ea.length ^ eb.length;
+  const n = Math.max(ea.length, eb.length);
+  for (let i = 0; i < n; i++) diff |= (ea[i] ?? 0) ^ (eb[i] ?? 0);
+  return diff === 0;
+}
 
 const CODE_RE = /^DJB_\d{5}$/;
 const WEEK_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -89,12 +128,198 @@ async function resolveIngest(supabase: any, body: Record<string, unknown>): Prom
   };
 }
 
+// ------------------------------------------------------------- sermons --
+const SERMON_CODE_RE = /^[a-z]{3}[0-9]$/;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const SERMON_MIN_BYTES = 1024;
+const SERMON_MAX_BYTES = 629145600; // sermons bucket file_size_limit (migration 119)
+const ARCHIVE_LOCK_MS = 7 * 86400 * 1000;
+
+interface SermonTarget {
+  code: string; air_date: string; station_id: string;
+  size_bytes: number; checksum_sha256: string; storage_path: string;
+}
+interface SermonRow {
+  id: string; storage_path: string; size_bytes: number | null;
+  checksum_sha256: string | null; airs_at: string | null;
+}
+type SermonResolved = { ok: true; t: SermonTarget } | { ok: false; error: string; status: number };
+
+// Shared by the three sermon actions: a known church, a real Sunday, and (for
+// the two upload steps) an mp3 of a sane size with its sha256. The object path
+// is <code>/<air_date>-<first 16 hex of sha256>.mp3.
+// deno-lint-ignore no-explicit-any
+async function resolveSermon(supabase: any, body: Record<string, unknown>, needFile: boolean): Promise<SermonResolved> {
+  const bad = (error: string, status = 400): SermonResolved => ({ ok: false, error, status });
+  const code = String(body.church_code ?? "").trim().toLowerCase();
+  const air = String(body.air_date ?? "").trim();
+  if (!SERMON_CODE_RE.test(code)) return bad("church_code must look like pmb1");
+  const day = new Date(`${air}T12:00:00Z`);
+  if (!DATE_RE.test(air) || Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== air
+      || day.getUTCDay() !== 0) {
+    return bad("air_date must be the Sunday it airs (YYYY-MM-DD)");
+  }
+  if (day.getUTCFullYear() < 2020 || day.getUTCFullYear() > 2099) return bad("air_date out of range");
+  const { data: church, error } = await supabase
+    .from("sermon_churches").select("code,station_id").eq("code", code).maybeSingle();
+  if (error) return bad(error.message, 500);
+  if (!church) return bad(`unknown church ${code}`, 404);
+
+  let size = 0;
+  let sum = String(body.checksum_sha256 ?? "").trim().toLowerCase();
+  if (needFile) {
+    const format = String(body.format ?? "").trim().toLowerCase().replace(/^\./, "");
+    if (format !== "mp3") return bad("format must be mp3 (the watcher transcodes WAV/m4a for the web)");
+    size = Number(body.size_bytes);
+    if (!Number.isInteger(size) || size < SERMON_MIN_BYTES || size > SERMON_MAX_BYTES) {
+      return bad("size_bytes out of range");
+    }
+    if (!SHA_RE.test(sum)) return bad("checksum_sha256 must be 64 lowercase hex chars");
+  } else if (sum && !SHA_RE.test(sum)) {
+    sum = "";
+  }
+  return {
+    ok: true,
+    t: {
+      code, air_date: air, station_id: (church as { station_id: string }).station_id,
+      size_bytes: size, checksum_sha256: sum,
+      storage_path: sum ? `${code}/${air}-${sum.slice(0, 16)}.mp3` : "",
+    },
+  };
+}
+
+// deno-lint-ignore no-explicit-any
+async function sermonRow(supabase: any, t: SermonTarget): Promise<{ row: SermonRow | null; error?: string }> {
+  const { data, error } = await supabase
+    .from("sermons")
+    .select("id,storage_path,size_bytes,checksum_sha256,airs_at")
+    .eq("church_code", t.code).eq("air_date", t.air_date)
+    .maybeSingle();
+  if (error) return { row: null, error: error.message };
+  return { row: (data as SermonRow | null) ?? null };
+}
+
+// deno-lint-ignore no-explicit-any
+async function sermonAirsAt(supabase: any, t: SermonTarget): Promise<string | null> {
+  const { data, error } = await supabase.rpc("sermon_airs_at", {
+    p_code: t.code, p_air_date: t.air_date, p_station: t.station_id,
+  });
+  return error ? null : ((data as string | null) ?? null);
+}
+
+/** An aired archive row (older than a week) is never replaced by this path. */
+function archiveLocked(row: SermonRow | null): boolean {
+  return !!row?.airs_at && Date.parse(row.airs_at) < Date.now() - ARCHIVE_LOCK_MS;
+}
+
+function sameFile(row: SermonRow | null, t: SermonTarget): boolean {
+  return !!row && (row.checksum_sha256 ?? "").toLowerCase() === t.checksum_sha256
+    && row.storage_path === t.storage_path && Number(row.size_bytes) === t.size_bytes;
+}
+
+// deno-lint-ignore no-explicit-any
+async function handleSermon(supabase: any, action: string, body: Record<string, unknown>): Promise<Response> {
+  const r = await resolveSermon(supabase, body, action !== "sermon_withdraw");
+  if (!r.ok) return json({ error: r.error }, r.status);
+  const t = r.t;
+  const { row: existing, error: exErr } = await sermonRow(supabase, t);
+  if (exErr) return json({ error: exErr }, 500);
+  const airsAt = existing?.airs_at ?? await sermonAirsAt(supabase, t);
+
+  if (action === "sermon") {
+    if (sameFile(existing, t)) {
+      return json({ ok: true, done: true, upload_url: null, storage_path: t.storage_path, airs_at: airsAt, existing });
+    }
+    if (archiveLocked(existing)) {
+      return json({ error: `${t.code} ${t.air_date} aired over a week ago; the archive row is not replaced`, existing }, 409);
+    }
+    const { data: up, error: upErr } = await supabase.storage
+      .from("sermons").createSignedUploadUrl(t.storage_path, { upsert: true });
+    if (upErr || !up) return json({ error: `signed upload url: ${upErr?.message ?? "none"}` }, 500);
+    return json({ ok: true, done: false, upload_url: up.signedUrl, storage_path: t.storage_path, airs_at: airsAt, existing });
+  }
+
+  if (action === "sermon_uploaded") {
+    if (archiveLocked(existing) && !sameFile(existing, t)) {
+      return json({ error: `${t.code} ${t.air_date} aired over a week ago; the archive row is not replaced` }, 409);
+    }
+    // Never point the row at bytes that are not really there.
+    const name = t.storage_path.slice(t.storage_path.indexOf("/") + 1);
+    const { data: objs, error: lsErr } = await supabase.storage
+      .from("sermons").list(t.code, { search: name, limit: 20 });
+    if (lsErr) return json({ error: `list: ${lsErr.message}` }, 500);
+    const obj = ((objs ?? []) as Array<{ name: string; metadata: { size?: number } | null }>)
+      .find((o) => o.name === name);
+    if (!obj) return json({ error: `object ${t.storage_path} not found — upload first` }, 409);
+    const got = Number(obj.metadata?.size ?? -1);
+    if (got !== t.size_bytes) return json({ error: `object is ${got} bytes, expected ${t.size_bytes}` }, 409);
+
+    const previousPath = existing?.storage_path ?? null;
+    const { data: row, error: rowErr } = await supabase
+      .from("sermons")
+      .upsert(
+        {
+          church_code: t.code,
+          air_date: t.air_date,
+          station_id: t.station_id,
+          storage_path: t.storage_path,
+          format: "mp3",
+          size_bytes: t.size_bytes,
+          checksum_sha256: t.checksum_sha256,
+        },
+        { onConflict: "church_code,air_date" },
+      )
+      .select("id,airs_at,storage_path")
+      .single();
+    if (rowErr) return json({ error: rowErr.message }, 500);
+    let oldRemoved: boolean | null = null;
+    if (previousPath && previousPath !== t.storage_path) {
+      const { error: rmErr } = await supabase.storage.from("sermons").remove([previousPath]);
+      oldRemoved = !rmErr;
+    }
+    return json({ ok: true, id: row.id, airs_at: row.airs_at, storage_path: row.storage_path, old_removed: oldRemoved });
+  }
+
+  // sermon_withdraw: only while it has not aired.
+  if (!airsAt) return json({ error: "no air time for that church/date" }, 409);
+  if (Date.parse(airsAt) <= Date.now()) {
+    return json({ error: `${t.code} ${t.air_date} has already aired (${airsAt}); withdraw refused` }, 409);
+  }
+  const paths = new Set<string>();
+  if (existing?.storage_path) paths.add(existing.storage_path);
+  if (t.storage_path) paths.add(t.storage_path);  // an upload whose row was never written
+  if (existing) {
+    const { error: delErr } = await supabase.from("sermons").delete().eq("id", existing.id);
+    if (delErr) return json({ error: delErr.message }, 500);
+  }
+  let removed: string[] = [];
+  if (paths.size) {
+    const { data: gone, error: rmErr } = await supabase.storage.from("sermons").remove([...paths]);
+    if (rmErr) return json({ error: `row ${existing ? "deleted" : "absent"}; object remove: ${rmErr.message}` }, 500);
+    removed = ((gone ?? []) as Array<{ name: string }>).map((o) => o.name);
+  }
+  return json({ ok: true, row_deleted: !!existing, removed });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
   let body: Record<string, unknown> = {};
   try { body = await req.json(); } catch { /* */ }
-  if (body.secret !== SECRET) return json({ error: "forbidden" }, 403);
+  const given = typeof body.secret === "string" ? body.secret : "";
+  const envSecret = (Deno.env.get("STUDIO_SYNC_SECRET") ?? "").trim();
+  const envUsable = envSecret.length >= 32 && envSecret !== LEGACY_SECRET;
+  const byEnv = envUsable && safeEqual(given, envSecret);
+  const action = String(body.action ?? "");
+  if (SERMON_ACTIONS.has(action)) {
+    // Fail closed: no environment secret (or the leaked one) -> no sermon writes at all.
+    if (!envUsable) return json({ error: "sermon actions are not configured (STUDIO_SYNC_SECRET)" }, 503);
+    if (!byEnv) return json({ error: "forbidden" }, 403);
+  } else if (!byEnv && !safeEqual(given, LEGACY_SECRET)) {
+    return json({ error: "forbidden" }, 403);
+  }
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+  if (SERMON_ACTIONS.has(action)) return await handleSermon(supabase, action, body);
 
   if (body.action === "pending") {
     // checksum_sha256 + source: sync-dj-drops.py trusts an email ingest's checksum

@@ -12,6 +12,8 @@
  *
  * Everything is read directly from Supabase (no API server). Published drops and
  * mixes are public-readable and the `dj-drops` / `dj-mixes` buckets are public.
+ * A published drop reaches the public only once its show has AIRED (RLS on
+ * dj_drops.airs_at, migration 119); the DJ and staff still see it earlier.
  *
  * Staff/admins and the owning DJ also get front-end controls to create
  * collections, upload a single mix (audio + cover, duration read from the file),
