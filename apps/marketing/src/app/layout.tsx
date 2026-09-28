@@ -4,7 +4,7 @@ import { SITE_URL } from "@/lib/site";
 
 const title = "Broadcast Copy — the operating system for modern radio";
 const description =
-  "Broadcast Copy runs your FCC station end to end: streaming, programming, DJ operations, listener loyalty, FCC compliance, and ad sales — with an agentic layer that handles the busywork. $49.99/mo per station.";
+  "Broadcast Copy runs your FCC station end to end: streaming, programming, DJ operations, listener loyalty, FCC compliance, and ad sales — with an agentic layer that handles the busywork.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
