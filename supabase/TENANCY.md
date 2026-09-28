@@ -81,7 +81,7 @@ land, so a new station starts current rather than replaying a chain.
 | group | tables |
 |---|---|
 | Fleet | `bc_devices` `bc_device_agents` `bc_device_installs` `bc_device_peripherals` `bc_pair_codes` |
-| Releases / product | `bc_releases` `bc_changelog` `bc_features` |
+| Releases / product | `bc_releases` `bc_changelog` `bc_features` `bc_docs` |
 | Sales & onboarding | `bc_leads` `bc_org_invites` |
 | Tenant directory | `organization_members` `station_domains` `station_entitlements` (`organizations` and `stations` are **BOTH** — see below) |
 | Billing | `platform_fees` |
@@ -124,7 +124,7 @@ listeners.
 No content table has an inbound FK to any of these, so dropping is clean:
 
 `bc_devices` `bc_device_agents` `bc_device_installs` `bc_device_peripherals` `bc_pair_codes`
-`bc_releases` `bc_changelog` `bc_features` `bc_leads` `bc_org_invites` `organization_members`
+`bc_releases` `bc_changelog` `bc_features` `bc_docs` `bc_leads` `bc_org_invites` `organization_members`
 `station_domains` `station_entitlements` `platform_fees` `airsuite_station_keys`
 `airsuite_station_status` `audit_log` `impersonation_log`
 
