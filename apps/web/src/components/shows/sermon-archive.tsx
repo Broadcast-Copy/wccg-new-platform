@@ -60,9 +60,10 @@ export function SermonArchive({ churchCode, showName }: { churchCode: string; sh
   useEffect(() => {
     let active = true;
     void (async () => {
-      // Hide future-dated sermons from the public archive until they actually
-      // air (lcc1 etc. can be filed a few days early). Local date — never UTC
-      // slicing (see lib/broadcast-week).
+      // RLS already hides each sermon until its air time (sermons.airs_at,
+      // migration 119: a new sermon appears the moment its slot starts). This
+      // date filter only keeps next Sunday's out if the site ever runs against
+      // a database without 119. Local date — never UTC slicing (lib/broadcast-week).
       const today = isoLocalDate(new Date());
       const { data, error } = await supabase
         .from("sermons")

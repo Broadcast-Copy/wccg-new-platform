@@ -329,37 +329,105 @@ class HandlerFlow(unittest.TestCase):
         self.assertIn("m9", st["processed"])
 
 
+def _dpapi_hex(text):
+    """What PowerShell's ConvertFrom-SecureString writes: hex of a CurrentUser DPAPI
+    blob of the UTF-16LE text (Windows only)."""
+    import ctypes
+    from ctypes import wintypes
+
+    class BLOB(ctypes.Structure):
+        _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_char))]
+    raw = text.encode("utf-16-le")
+    buf = ctypes.create_string_buffer(raw, len(raw))
+    src, out = BLOB(len(raw), ctypes.cast(buf, ctypes.POINTER(ctypes.c_char))), BLOB()
+    crypt32 = ctypes.WinDLL("crypt32")
+    crypt32.CryptProtectData.argtypes = [ctypes.POINTER(BLOB), ctypes.c_wchar_p, ctypes.c_void_p,
+                                         ctypes.c_void_p, ctypes.c_void_p, wintypes.DWORD,
+                                         ctypes.POINTER(BLOB)]
+    assert crypt32.CryptProtectData(ctypes.byref(src), None, None, None, None, 0, ctypes.byref(out))
+    return ctypes.string_at(out.pbData, out.cbData).hex()
+
+
 class SecretLookup(unittest.TestCase):
+    """scripts/studio_sync_secret.py: DPAPI > env > config-dir file > (legacy=True
+    only) the retired value from git history. Never a literal in the tree."""
     def setUp(self):
         self._env = os.environ.pop(studio_sync_secret.ENV, None)
         self._file = studio_sync_secret.FILE
+        self._dpapi = studio_sync_secret.DPAPI_FILE
         self.tmp = tempfile.TemporaryDirectory()
         studio_sync_secret.FILE = os.path.join(self.tmp.name, "studio-sync.secret")
+        # isolate from a real C:\AirSuite\secrets\studio-sync.dpapi on this PC
+        studio_sync_secret.DPAPI_FILE = os.path.join(self.tmp.name, "studio-sync.dpapi")
 
     def tearDown(self):
         studio_sync_secret.FILE = self._file
+        studio_sync_secret.DPAPI_FILE = self._dpapi
+        os.environ.pop(studio_sync_secret.ENV, None)
         if self._env is not None:
             os.environ[studio_sync_secret.ENV] = self._env
         self.tmp.cleanup()
 
-    def test_order(self):
-        self.assertIsNone(studio_sync_secret.load())                       # nothing configured
-        legacy = studio_sync_secret.load(legacy=True)
-        self.assertTrue(legacy and len(legacy) >= 20)                      # parsed from sync-dj-drops.py
-        with open(studio_sync_secret.FILE, "w", encoding="utf-8") as fh:
-            fh.write("from-file\n")
-        self.assertEqual(studio_sync_secret.load(legacy=True), "from-file")
+    def write(self, path, text):
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(text)
+
+    def test_nothing_configured(self):
+        self.assertEqual(studio_sync_secret.resolve(), (None, None))
+
+    def test_history_bridge_only_with_legacy(self):
+        value, src = studio_sync_secret.resolve(legacy=True)
+        self.assertEqual(src, "history-bridge")
+        self.assertRegex(value or "", r"^[0-9a-f]{40}$")                    # the retired shared secret
+        with open(os.path.join(HERE, "sync-dj-drops.py"), encoding="utf-8") as fh:
+            self.assertNotIn(value, fh.read())                              # ...no longer in the tree
+
+    def test_file_then_env(self):
+        self.write(studio_sync_secret.FILE, "from-file\n")
+        self.assertEqual(studio_sync_secret.resolve(legacy=True), ("from-file", "file"))
         os.environ[studio_sync_secret.ENV] = "from-env"
-        try:
-            self.assertEqual(studio_sync_secret.load(legacy=True), "from-env")
-        finally:
-            os.environ.pop(studio_sync_secret.ENV, None)
+        self.assertEqual(studio_sync_secret.resolve(legacy=True), ("from-env", "env"))
+
+    @unittest.skipUnless(os.name == "nt", "DPAPI is Windows-only")
+    def test_dpapi_wins_and_a_bad_file_is_skipped(self):
+        os.environ[studio_sync_secret.ENV] = "from-env"
+        self.write(studio_sync_secret.DPAPI_FILE, _dpapi_hex("from-dpapi") + "\r\n")
+        self.assertEqual(studio_sync_secret.resolve(legacy=True), ("from-dpapi", "dpapi"))
+        self.write(studio_sync_secret.DPAPI_FILE, "not hex")
+        self.assertEqual(studio_sync_secret.resolve(legacy=True), ("from-env", "env"))
+
+    def test_bridge_fails_closed(self):
+        self.assertIsNone(studio_sync_secret.legacy_from_history(commit="0" * 40))
+        self.assertIsNone(studio_sync_secret.legacy_from_history(repo=self.tmp.name))   # not a repo
 
     def test_legacy_parse_never_executes(self):
         src = os.path.join(self.tmp.name, "x.py")
-        with open(src, "w", encoding="utf-8") as fh:
-            fh.write('import nonexistent_module\nSECRET = load() or "abc123"\n')
+        self.write(src, 'import nonexistent_module\nSECRET = load() or "abc123"\n')
         self.assertEqual(studio_sync_secret.legacy_constant(src), "abc123")
+
+    def test_ping_reports_without_the_secret(self):
+        import contextlib
+        import io
+        os.environ[studio_sync_secret.ENV] = "the-test-secret-never-printed"
+        seen, saved = [], studio_sync_secret.post
+        studio_sync_secret.post = lambda url, payload, timeout=60: (
+            seen.append((url, payload["action"])) or (200, {"ok": True, "via": "current"}))
+        out = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(out):
+                rc = studio_sync_secret._main(["--ping"])
+        finally:
+            studio_sync_secret.post = saved
+        self.assertEqual(rc, 0)
+        self.assertNotIn("the-test-secret-never-printed", out.getvalue())
+        self.assertIn("PING studio-sync ok current", out.getvalue())
+        self.assertIn("PING dj-setup-link ok current", out.getvalue())
+        self.assertEqual([a for _, a in seen], ["ping", "ping"])
+
+    def test_old_function_code_is_recognised(self):
+        self.assertEqual(studio_sync_secret.describe_ping("studio-sync", 400, {"error": "unknown action"}),
+                         "PING studio-sync accepted-old-code")
+        self.assertTrue(studio_sync_secret.describe_ping("x", 403, {"error": "forbidden"}).startswith("PING x fail"))
 
 
 if __name__ == "__main__":

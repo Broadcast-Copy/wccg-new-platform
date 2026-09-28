@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { checkSecret } from "../_shared/shared-secret.ts";
 
 // wiki-generate (verify_jwt=false, shared-secret gated).
 // Batch content generator for wiki_entities — the SAME OpenAI research the staff
@@ -14,8 +15,11 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // POST {secret, slug}          -> generate one entity by slug
 // POST {secret, batch:true, limit?} -> generate up to `limit` (default 6, max 12)
 //                                      still-empty (status='requested') entries
+// POST {secret, action:"ping"}    -> {ok, via}: proves the secret works, touches nothing
+//
+// Secret: WIKI_GENERATE_SECRET in the function environment (never in code;
+// ../_shared/shared-secret.ts, rotated by scripts/rotate-shared-secrets.ps1).
 
-const SECRET = "wgen_a3f8c1729e5b46d0b8f2c94e7a1d5063";
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "content-type",
@@ -75,7 +79,10 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
   let body: Record<string, unknown> = {};
   try { body = await req.json(); } catch { /* */ }
-  if (body.secret !== SECRET) return json({ error: "forbidden" }, 403);
+  const gate = checkSecret("WIKI_GENERATE", body.secret);
+  if (!gate.configured) return json({ error: "wiki-generate is not configured (WIKI_GENERATE_SECRET)" }, 503);
+  if (!gate.match) return json({ error: "forbidden" }, 403);
+  if (body.action === "ping") return json({ ok: true, fn: "wiki-generate", via: gate.match });
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

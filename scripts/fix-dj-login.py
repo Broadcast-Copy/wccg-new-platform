@@ -16,13 +16,16 @@ import json
 import sys
 import urllib.request
 
+import studio_sync_secret
 import wccg_mailer  # noqa: F401  (config + password/fallback used by send_one)
 
 tp = importlib.import_module("send-dj-temppass")  # hyphenated filename -> importlib
 
 SUPA = "https://irjiqbmoohklagdegezz.supabase.co"
-FN = f"{SUPA}/functions/v1/dj-setup-link"
-SECRET = "c2040f1371c9265c538bdce3547346bd5ae53060"
+FN = studio_sync_secret.SETUP_LINK_FN
+# Shared secret: scripts/studio_sync_secret.py (DPAPI / env / file; git-history
+# bridge until the rotation stores the new one). Never a literal here.
+SECRET = studio_sync_secret.load(legacy=True)
 
 
 def setpass(email=None, user_id=None):

@@ -87,6 +87,36 @@ schtasks /Create /F /TN "WCCG Studio Sync" /SC MINUTE /MO 5 /TR `
   "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"C:\Users\wccg1\dev\wccg-new-platform\scripts\studio-sync-task.ps1\""
 ```
 
+## The shared secret and how to rotate it (2026-09-28)
+
+studio-sync and dj-setup-link share one secret (the `STUDIO_SYNC_*` family);
+wiki-generate and notify-sync have their own. **No secret is in this repository**
+(`python scripts\test_no_secret_literals.py` fails if one appears; the old values
+were public here, which is why they are rotated).
+
+- **Functions** read it from their environment only (`supabase/functions/_shared/shared-secret.ts`):
+  `STUDIO_SYNC_SECRET`, plus `STUDIO_SYNC_LEGACY_SECRET`, accepted only while
+  `STUDIO_SYNC_ACCEPT_LEGACY=1` (the cutover switch). Same for `WIKI_GENERATE_*`
+  and `NOTIFY_SYNC_*`. Every function answers `{"action":"ping"}` with
+  `via: current|legacy` and does nothing else.
+- **This PC's callers** (Studio Sync `sync-dj-drops.py` + `dj_sync_mail.py`, the
+  gmail watcher, `send-dj-reminder.py`, `send-dj-setup.py`, `send-dj-temppass.py`,
+  `fix-dj-login.py`) all read it through `scripts\studio_sync_secret.py`:
+  `C:\AirSuite\secrets\studio-sync.dpapi` (DPAPI, user wccg1) -> env
+  `WCCG_STUDIO_SYNC_SECRET` -> `studio-sync.secret` in the watcher config dir ->
+  (until the first rotation only) the retired value read from git history.
+- **Rotate** (the owner, as wccg1, not Sunday 06:00-15:00):
+  `powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\wccg1\dev\wccg-new-platform\scripts\rotate-shared-secrets.ps1`
+  It generates new secrets, sets them (old one still accepted), deploys the four
+  functions, stores the DPAPI file, pings every caller, blanks the retired :8108
+  Production Suite copy, then turns the old secret off and proves it gets 403.
+  `-DryRun` shows every step and changes nothing. Log: `D:\WCCG\sync-logs\secret-rotation.log`.
+- **Rollback** (a forgotten caller still needs the old secret):
+  `rotate-shared-secrets.ps1 -Rollback` re-enables the legacy switch with the
+  previous value; running the script again without a switch rotates cleanly.
+- **Check any time:** `python scripts\studio_sync_secret.py --ping` (source + both
+  functions), `python scripts\sync-dj-drops.py --ping`. Neither prints a secret.
+
 ## Checking on it
 
 - Logs: `D:\WCCG\sync-logs\studio-sync-YYYYMMDD.log` (one file per day).
@@ -103,7 +133,7 @@ DJ uploads in the web portal (My -> Mixshows, or DJ portal drag-drop)
      each part via studio-sync "ingest"/"ingested" (source=email)
   -> Supabase storage (dj-drops bucket) + dj_drops row (status=uploaded)
     -> THIS WATCHER (<=5 min): air-date folder + M:\JBMusic, marks published
-      -> website: mix is now publicly playable (archive + DJ profile)
+      -> website: public on the archive + DJ profile from its show's air time (migration 119)
       -> RadioSpider 1:01 AM: stages the air-date folder to playout
         -> on air
 ```

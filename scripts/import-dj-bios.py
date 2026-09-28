@@ -88,10 +88,14 @@ json.dump(results,open(r"C:\Users\wccg1\dj_bios.json","w",encoding="utf-8"),inde
 print("WROTE")
 
 # ---- load step ----
-import json, re, subprocess
+import json, os, re, subprocess
 
 FN="https://irjiqbmoohklagdegezz.supabase.co/functions/v1/mint-sermon-upload"
-SECRET="0493a297c313da1dc41082e7189971725fe76f31aa3100f2"
+# RETIRED 2026-09-28: mint-sermon-upload is disabled (HTTP 410) and its secret
+# was removed from this repository (it had been public). Nothing reads it now.
+SECRET=os.environ.get("WCCG_MINT_SERMON_SECRET","")
+if not SECRET:
+    raise SystemExit("load step retired: mint-sermon-upload is disabled (410); edit DJ bios in the admin UI")
 d=json.load(open(r"C:\Users\wccg1\dj_bios.json",encoding="utf-8"))
 NAME=lambda s: re.sub(r'[^a-z0-9]','',s.lower())
 

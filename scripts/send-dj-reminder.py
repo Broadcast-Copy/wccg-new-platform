@@ -20,6 +20,7 @@ import time
 import urllib.request
 from datetime import datetime
 
+import studio_sync_secret
 import wccg_mailer
 
 LOGO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -29,8 +30,9 @@ CARSON_LOGO = os.path.join(LOGO_DIR, "carson-communications-logo.png")
 LOGOS = [("wccglogo", WCCG_LOGO), ("carsonlogo", CARSON_LOGO)]
 ADMIN_EMAIL = "biggleem@gmail.com"
 SUBJECT = "\U0001F3A7 Time to upload your mix — WCCG 104.5 FM"
-STUDIO_SYNC_URL = "https://irjiqbmoohklagdegezz.supabase.co/functions/v1/studio-sync"
-STUDIO_SYNC_SECRET = "c2040f1371c9265c538bdce3547346bd5ae53060"
+# Shared secret: scripts/studio_sync_secret.py (DPAPI / env / file; git-history
+# bridge until the rotation stores the new one). Never a literal here.
+STUDIO_SYNC_URL = studio_sync_secret.FN
 
 
 def html_for(dj_name: str) -> str:
@@ -63,10 +65,30 @@ def text_for(dj_name: str) -> str:
             "https://wccg1045fm.com/my/dj (.mp3, .wav, .m4a).")
 
 
+def _secret() -> str:
+    secret = studio_sync_secret.load(legacy=True)
+    if not secret:
+        raise RuntimeError("no studio-sync secret on this PC (run scripts\\rotate-shared-secrets.ps1)")
+    return secret
+
+
+def ping() -> int:
+    """`ping`: prove this script's secret + HTTP path work (rotation check); sends nothing."""
+    try:
+        secret = _secret()
+    except RuntimeError as e:
+        print(f"PING send-dj-reminder fail {e}")
+        return 1
+    line = studio_sync_secret.describe_ping(
+        "send-dj-reminder", *studio_sync_secret.post(STUDIO_SYNC_URL, {"secret": secret, "action": "ping"}))
+    print(line)
+    return 0 if line.startswith("PING send-dj-reminder ok ") or line.endswith("accepted-old-code") else 1
+
+
 def fetch_roster() -> list:
     req = urllib.request.Request(
         STUDIO_SYNC_URL,
-        data=json.dumps({"secret": STUDIO_SYNC_SECRET, "action": "roster"}).encode(),
+        data=json.dumps({"secret": _secret(), "action": "roster"}).encode(),
         headers={"Content-Type": "application/json"}, method="POST")
     with urllib.request.urlopen(req, timeout=60) as resp:
         payload = json.loads(resp.read().decode())
@@ -78,6 +100,8 @@ def fetch_roster() -> list:
 def main():
     args = sys.argv[1:]
 
+    if args and args[0] == "ping":
+        sys.exit(ping())
     if args and args[0] == "blast":
         include_admin = "--include-admin" in args
         logpath = r"D:\WCCG\sync-logs\dj-reminder.log"

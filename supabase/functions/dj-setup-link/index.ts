@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { checkSecret } from "../_shared/shared-secret.ts";
 
 // dj-setup-link (verify_jwt=false, shared-secret gated).
 // Actions, all server-side via the service-role key (never exposed):
@@ -17,8 +18,10 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 //     passwords of DJs who had since logged in. Always ask the server.
 //     Verification logins are excluded via user_metadata.temppass_verified_at;
 //     without that they'd stamp last_sign_in_at and every DJ would look active.
+//   action "ping": {ok, via} -- proves a caller's secret works, touches nothing.
 // POST {secret, action?, email?, user_id?, redirectTo?, verify?}
-const SECRET = "c2040f1371c9265c538bdce3547346bd5ae53060";
+// Secret: the STUDIO_SYNC_* environment secrets shared with studio-sync (never in
+// code; ../_shared/shared-secret.ts, rotated by scripts/rotate-shared-secrets.ps1).
 type AuthUser = {
   id: string;
   email?: string;
@@ -37,7 +40,10 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
   let body: Record<string, unknown> = {};
   try { body = await req.json(); } catch { /* */ }
-  if (body.secret !== SECRET) return json({ error: "forbidden" }, 403);
+  const gate = checkSecret("STUDIO_SYNC", body.secret);
+  if (!gate.configured) return json({ error: "dj-setup-link is not configured (STUDIO_SYNC_SECRET)" }, 503);
+  if (!gate.match) return json({ error: "forbidden" }, 403);
+  if (body.action === "ping") return json({ ok: true, fn: "dj-setup-link", via: gate.match });
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const action = String(body.action ?? "recovery");
   const email = String(body.email ?? "").trim();
