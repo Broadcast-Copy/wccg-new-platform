@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Sliders,
   Truck,
+  Database,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { AIRSUITE_CONSOLE, BROADCAST_COPY_MANAGER } from "@/lib/site";
@@ -104,14 +105,24 @@ export const MODULES: ModuleDef[] = [
     unavailable: "Not yet published - it appears here the moment it is.",
   },
   {
+    pkg: "airsuite-library",
+    name: "AirSuite Library",
+    icon: Database,
+    body: "The Library & Programming service: the station's format database and all of its scheduling - categories, clocks, rules, the day's log and its validation. AirSuite Production is a client of it.",
+    needs: "Node.js 22.13 or newer (22 LTS or 24 LTS). Runs on the studio PC or on another PC on your network.",
+    manager: "Downloads it, checks its SHA-256 and installs it for the current user. On first start it creates a fresh, empty database, and every timed or outward-facing feature - the nightly log, e-mail, off-site backup, legacy imports - stays off until you set it up.",
+    availability: "public",
+    unavailable: "Not yet published - it appears here the moment it is.",
+  },
+  {
     pkg: "airsuite-production",
     name: "AirSuite Production",
     icon: Mic,
-    body: "The station's native Windows application: music scheduling, production, and the surfaces an operator touches on shift - the running log, hot keys, liners, voice tracking and the multitrack editor.",
-    needs: "An AirSuite Library & Programming service for it to talk to - the app is a client of that service.",
-    manager: "Will install it per user, with no administrator rights, and keep it updated - as soon as a build is published.",
-    availability: "review",
-    unavailable: "In review - its in-app guides are being made station-neutral before the first public build.",
+    body: "The station's native Windows application: music scheduling, production, and the surfaces an operator touches on shift - the running log, hot keys, liners, voice tracking and the multitrack editor, with a guide on every page.",
+    needs: "An AirSuite Library service for it to talk to - on this PC or another.",
+    manager: "Installs it per user, with no administrator rights. On a PC without the library, it offers to install the library first, each download verified on its own.",
+    availability: "public",
+    unavailable: "Not yet published - it appears here the moment it is.",
   },
   {
     pkg: "airsuite-onair",
@@ -121,7 +132,7 @@ export const MODULES: ModuleDef[] = [
     needs: "A dedicated on-air PC and an audio device for programme output.",
     manager: "Will install and update it like every other module once a public build exists. Nothing the Manager offers installs by itself: an update waits for a person to press Update.",
     availability: "onair",
-    unavailable: "Not a download yet - the public build is being prepared from the version on air.",
+    unavailable: "Not a download yet - the build on air still carries our flagship station's own settings, and a public build follows once they are moved out of its code.",
   },
   {
     pkg: "studio-agent",

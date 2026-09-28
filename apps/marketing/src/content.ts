@@ -142,11 +142,11 @@ export const ON_DEMAND_FEATURE = {
 
 export const WHATS_NEW = {
   released: "2026-09-28",
-  headline: "Broadcast Copy Manager 0.6.0 and AirSuite Sync",
+  headline: "AirSuite Production and the AirSuite Library are downloads",
   /** what fits beside NEW and the link on a phone */
-  short: "Manager 0.6.0 is out",
+  short: "Production is a download",
   summary:
-    "AirSuite Sync as a download, and MUSIC and SPORTS sections in the Production app.",
+    "install the app and its library service together from Broadcast Copy Manager 0.7.0.",
   href: "/changelog/",
 } as const;
 
