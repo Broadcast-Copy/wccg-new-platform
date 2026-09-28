@@ -1,24 +1,40 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import type { Metadata } from "next";
+import { ArrowLeft, ArrowRight, LockKeyhole } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import { GUIDES, type GuideSlug } from "@/content";
+import { GUIDES, memberDocUrl, type GuideSlug } from "@/content";
+import { SITE_URL } from "@/lib/site";
 
 /**
- * The frame for a task guide under /documentation. Title, audience and the
- * related-guide links all come from GUIDES in content.ts, so the index and
- * the guides cannot disagree about what a guide is called.
+ * A PUBLIC teaser for a member guide under /documentation/<slug>/.
+ *
+ * The full guides are members-only: they live in the bc_docs table behind
+ * row-level security and render at platform.broadcastcopy.ai/docs after
+ * sign-in. This page therefore carries only the teaser copy from GUIDES in
+ * content.ts — two or three sentences — and a sign-in link to the full guide.
+ * Never put a guide's own text in this static build: anyone can fetch it.
  */
-export function GuidePage({
-  slug,
-  lede,
-  children,
-}: {
-  slug: GuideSlug;
-  lede: string;
-  children: ReactNode;
-}) {
-  const guide = GUIDES.find((g) => g.slug === slug)!;
+
+function guideFor(slug: GuideSlug) {
+  const guide = GUIDES.find((g) => g.slug === slug);
+  if (guide === undefined) throw new Error(`unknown guide ${slug}`);
+  return guide;
+}
+
+export function guideMetadata(slug: GuideSlug): Metadata {
+  const guide = guideFor(slug);
+  const title = `${guide.title} — Broadcast Copy`;
+  const url = `${SITE_URL}/documentation/${slug}/`;
+  return {
+    title,
+    description: guide.teaser,
+    alternates: { canonical: url },
+    openGraph: { title, description: guide.teaser, type: "article", url },
+  };
+}
+
+export function GuideTeaser({ slug }: { slug: GuideSlug }) {
+  const guide = guideFor(slug);
   const related = GUIDES.filter((g) => g.slug !== slug);
 
   return (
@@ -32,16 +48,43 @@ export function GuidePage({
         </>
       }
       title={guide.title}
-      lede={lede}
+      lede={guide.teaser}
     >
-      <p className="-mt-8 mb-12 text-sm text-dim">
+      <p className="-mt-8 mb-10 text-sm text-dim">
         <span className="font-semibold text-fg">For:</span> {guide.who}
       </p>
 
-      <div className="max-w-3xl">{children}</div>
+      <section className="max-w-3xl rounded-2xl border border-line bg-surface p-6 sm:p-8">
+        <div className="flex items-center gap-3">
+          <LockKeyhole className="h-5 w-5 flex-none text-signal-ink" aria-hidden />
+          <h2 className="text-lg font-semibold tracking-tight">The full guide is for customers</h2>
+        </div>
+        <p className="mt-3 text-sm leading-relaxed text-dim">
+          Step-by-step guides live in the customer documentation, inside the Broadcast Copy
+          control plane. Sign in with your account to read this one.
+        </p>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <a
+            href={memberDocUrl(slug)}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-signal px-5 py-3 text-sm font-semibold text-fg transition hover:bg-signal-soft"
+          >
+            Customer documentation — sign in
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </a>
+          <p className="text-sm text-dim">
+            No account yet?{" "}
+            <Link
+              href="/platform#early-access"
+              className="font-semibold text-signal-ink underline-offset-2 hover:underline"
+            >
+              Join the waitlist
+            </Link>
+          </p>
+        </div>
+      </section>
 
       <section className="mt-16 border-t border-line pt-8">
-        <h2 className="text-sm font-semibold tracking-[0.14em] uppercase">Related guides</h2>
+        <h2 className="text-sm font-semibold tracking-[0.14em] uppercase">Other guides</h2>
         <ul className="mt-5 grid gap-3 sm:grid-cols-2">
           {related.map((g) => (
             <li key={g.slug}>
@@ -68,59 +111,4 @@ export function GuidePage({
       </section>
     </PageShell>
   );
-}
-
-/** One titled step of a guide. */
-export function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="mt-12 first:mt-0">
-      <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
-      <div className="mt-4 space-y-4 leading-relaxed text-dim">{children}</div>
-    </section>
-  );
-}
-
-/** Numbered steps — the numbers carry the accent, in its ink-safe shade. */
-export function Steps({ items }: { items: readonly ReactNode[] }) {
-  return (
-    <ol className="space-y-3">
-      {items.map((item, i) => (
-        <li key={i} className="flex gap-4">
-          <span className="mt-0.5 w-6 flex-none font-mono text-sm font-semibold text-signal-ink">
-            {String(i + 1).padStart(2, "0")}
-          </span>
-          <span className="min-w-0">{item}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-/** A term and what it means — the gate's checks, the traffic areas. */
-export function Terms({ items }: { items: readonly (readonly [string, ReactNode])[] }) {
-  return (
-    <dl className="divide-y divide-line rounded-xl border border-line bg-elevated">
-      {items.map(([term, body]) => (
-        <div key={term} className="grid gap-1 px-5 py-3.5 sm:grid-cols-[11rem_1fr] sm:gap-5">
-          <dt className="font-semibold text-fg">{term}</dt>
-          <dd className="text-sm leading-relaxed">{body}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-/** A boxed aside: a rule the product enforces, or what is not live yet. */
-export function Note({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <aside className="rounded-xl border border-signal/30 bg-signal/10 px-5 py-4">
-      <p className="text-xs font-semibold tracking-[0.14em] text-signal-ink uppercase">{title}</p>
-      <div className="mt-2 text-sm leading-relaxed text-fg">{children}</div>
-    </aside>
-  );
-}
-
-/** A button or menu name as it reads in the app. */
-export function Ui({ children }: { children: ReactNode }) {
-  return <span className="font-semibold text-fg">{children}</span>;
 }

@@ -226,7 +226,7 @@ export default function ProductSheetPage() {
             href="/documentation/"
             className="inline-flex items-center justify-center rounded-lg border border-line bg-elevated px-6 py-3 text-sm font-semibold transition hover:border-dim/40"
           >
-            Read the guides
+            Documentation
           </Link>
         </div>
       </main>
