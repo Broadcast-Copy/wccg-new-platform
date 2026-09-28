@@ -77,6 +77,7 @@ drop table if exists public.bc_devices            cascade;
 drop table if exists public.bc_releases  cascade;
 drop table if exists public.bc_changelog cascade;
 drop table if exists public.bc_features  cascade;
+drop table if exists public.bc_docs      cascade;
 
 -- ------------------------------------------------ BC sales & tenant directory --
 drop table if exists public.bc_leads             cascade;
@@ -114,7 +115,7 @@ begin
   where n.nspname = 'public' and c.relkind = 'r'
     and c.relname in ('bc_devices','bc_device_agents','bc_device_installs',
                       'bc_device_peripherals','bc_pair_codes','bc_releases',
-                      'bc_changelog','bc_features','bc_leads','bc_org_invites',
+                      'bc_changelog','bc_features','bc_docs','bc_leads','bc_org_invites',
                       'organization_members','station_domains','station_entitlements',
                       'platform_fees','airsuite_station_keys','airsuite_station_status',
                       'audit_log','impersonation_log','roles','permissions','role_permissions');

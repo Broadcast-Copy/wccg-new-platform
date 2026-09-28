@@ -1,0 +1,5 @@
+# Member-only content never enters this PUBLIC repository (see README.md).
+# A seed copied here by mistake stays untracked.
+*.sql
+*.md
+!README.md
