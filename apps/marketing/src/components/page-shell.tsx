@@ -37,7 +37,10 @@ export function PageShell({
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-5 py-10 text-sm text-faint sm:flex-row">
           <Wordmark px={2} className="text-dim" />
-          <p>Broadcast Copy · $49.99/mo per licensed station</p>
+          <p>
+            Broadcast Copy · pricing on request ·{" "}
+            <a href="/platform#early-access" className="underline underline-offset-2 hover:text-dim">join the waitlist</a>
+          </p>
         </div>
       </footer>
     </div>

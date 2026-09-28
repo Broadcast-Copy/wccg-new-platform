@@ -26,23 +26,6 @@ type Feature = {
   readonly icon: LucideIcon;
 };
 
-type Plan = {
-  readonly id: string;
-  readonly name: string;
-  readonly price: string;
-  readonly cadence: string;
-  readonly tagline: string;
-  readonly points: readonly string[];
-  readonly cta: string;
-  readonly featured: boolean;
-};
-
-type AddOn = {
-  readonly name: string;
-  readonly price: string;
-  readonly blurb: string;
-};
-
 type Faq = { readonly q: string; readonly a: string };
 
 type Stat = { readonly value: string; readonly label: string };
@@ -217,80 +200,6 @@ export const GUIDES = [
 ] as const satisfies readonly Guide[];
 
 export type GuideSlug = (typeof GUIDES)[number]["slug"];
-
-/* ------------------------------------------------------------------ */
-/*  Pricing                                                            */
-/* ------------------------------------------------------------------ */
-
-export const PLANS = [
-  {
-    id: "account",
-    name: "Account",
-    price: "$0",
-    cadence: "free forever",
-    tagline: "Create your organization and look around before you commit.",
-    featured: false,
-    points: [
-      "Organization + team accounts",
-      "Multi-station cockpit",
-      "Invite your GM, OM and staff",
-      "No card required",
-    ],
-    cta: "Start free",
-  },
-  {
-    id: "broadcast",
-    name: "Broadcast",
-    price: "$49.99",
-    cadence: "per licensed station / month",
-    tagline: "The full station OS for one FCC station.",
-    featured: true,
-    points: [
-      "Streaming, channels + restream",
-      "Programming, schedule + player",
-      "DJ operations and portals",
-      "Listener loyalty + community",
-      "Ad sales, traffic and A/R",
-      "Your own domain and theme",
-    ],
-    cta: "Get early access",
-  },
-  {
-    id: "group",
-    name: "Multi-station",
-    price: "Custom",
-    cadence: "groups & conglomerates",
-    tagline: "For operators running a cluster — or a hundred.",
-    featured: false,
-    points: [
-      "Declining per-station rate",
-      "Group-wide GM/OM cockpit",
-      "Onboarding + data migration",
-      "Priority support",
-    ],
-    cta: "Talk to us",
-  },
-] as const satisfies readonly Plan[];
-
-export const ADD_ONS = [
-  {
-    name: "FCC Compliance Pack",
-    price: "$29–49 / station / mo",
-    blurb:
-      "Public inspection file, EEO, political file and automated filing deadlines.",
-  },
-  {
-    name: "Agentic AI",
-    price: "from $99 / station / mo",
-    blurb:
-      "Metered or per-seat agent runs for copy, production, scheduling and compliance.",
-  },
-  {
-    name: "Extra streams & seats",
-    price: "à la carte",
-    blurb: "Additional streams, restream destinations and CRM seats.",
-  },
-] as const satisfies readonly AddOn[];
 
 /* ------------------------------------------------------------------ */
 /*  FAQ                                                                */

@@ -187,7 +187,7 @@ export function EarlyAccessForm() {
         className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-5 py-3 text-sm font-semibold text-fg transition hover:bg-signal-soft disabled:cursor-not-allowed disabled:opacity-60"
       >
         {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
-        {submitting ? "Sending…" : "Request early access"}
+        {submitting ? "Sending…" : "Join the waitlist"}
       </button>
 
       <p className="text-center text-xs text-faint">

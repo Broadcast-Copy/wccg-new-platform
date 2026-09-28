@@ -13,7 +13,6 @@ import { Wordmark } from "@/components/wordmark";
 const LINKS = [
   { href: "/download", label: "Download" },
   { href: "/developers", label: "Developers" },
-  { href: "/platform#pricing", label: "Pricing" },
   { href: "/documentation", label: "Documentation" },
 ];
 
@@ -46,7 +45,7 @@ export function SiteHeader({ sticky = true }: { sticky?: boolean }) {
           href="/platform#early-access"
           className="rounded-lg bg-signal px-4 py-2 text-sm font-semibold text-fg transition hover:bg-signal-soft"
         >
-          Get early access
+          Join the waitlist
         </Link>
       </nav>
     </header>

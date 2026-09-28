@@ -5,7 +5,7 @@ import { Wordmark } from "@/components/wordmark";
 import { EarlyAccessForm } from "@/components/early-access-form";
 import { Features } from "@/components/features";
 import { LiveOnAir } from "@/components/live-on-air";
-import { ADD_ONS, FAQS, PLANS, STATS } from "@/content";
+import { FAQS, STATS } from "@/content";
 import { FLAGSHIP_URL } from "@/lib/site";
 
 const STEPS = [
@@ -56,7 +56,7 @@ export default function Page() {
               href="#early-access"
               className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-6 py-3 text-sm font-semibold text-fg transition hover:bg-signal-soft sm:w-auto"
             >
-              Get early access <ArrowRight className="h-4 w-4" aria-hidden />
+              Join the waitlist <ArrowRight className="h-4 w-4" aria-hidden />
             </a>
             <a
               href={FLAGSHIP_URL}
@@ -69,7 +69,7 @@ export default function Page() {
           </div>
 
           <p className="mt-6 text-sm text-faint">
-            $49.99/mo per licensed station · free to create an account
+            Pricing on request — join the waitlist and we&rsquo;ll be in touch.
           </p>
 
           <LiveOnAir />
@@ -130,79 +130,6 @@ export default function Page() {
               </li>
             ))}
           </ol>
-        </div>
-      </section>
-
-      {/* ----------------------------------------------------- pricing */}
-      <section id="pricing" className="mx-auto max-w-6xl px-5 py-24">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-            Priced per station, not per seat.
-          </h2>
-          <p className="mt-4 text-lg text-dim text-pretty">
-            Create an account free. Pay only for the licensed stations you
-            actually put on the platform.
-          </p>
-        </div>
-
-        <div className="mt-14 grid gap-6 lg:grid-cols-3">
-          {PLANS.map((plan) => (
-            <div
-              key={plan.id}
-              className={
-                plan.featured
-                  ? "relative rounded-2xl border border-signal/50 bg-elevated p-7 shadow-[0_0_60px_-15px] shadow-signal/30"
-                  : "rounded-2xl border border-line bg-surface p-7"
-              }
-            >
-              {plan.featured && (
-                <span className="absolute -top-3 left-7 rounded-full bg-signal px-3 py-1 text-xs font-semibold text-fg">
-                  Most stations
-                </span>
-              )}
-              <h3 className="font-semibold">{plan.name}</h3>
-              <div className="mt-4 flex items-baseline gap-2">
-                <span className="text-4xl font-semibold tracking-tight">
-                  {plan.price}
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-faint">{plan.cadence}</p>
-              <p className="mt-4 text-sm text-dim">{plan.tagline}</p>
-              <ul className="mt-6 space-y-3">
-                {plan.points.map((point) => (
-                  <li key={point} className="flex items-start gap-2.5 text-sm">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-signal-ink" aria-hidden />
-                    <span className="text-dim">{point}</span>
-                  </li>
-                ))}
-              </ul>
-              <a
-                href="#early-access"
-                className={
-                  plan.featured
-                    ? "mt-8 block rounded-lg bg-signal px-5 py-3 text-center text-sm font-semibold text-fg transition hover:bg-signal-soft"
-                    : "mt-8 block rounded-lg border border-line px-5 py-3 text-center text-sm font-semibold transition hover:border-dim/40"
-                }
-              >
-                {plan.cta}
-              </a>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-10 rounded-2xl border border-line bg-surface p-7">
-          <h3 className="text-sm font-semibold tracking-wide text-dim uppercase">
-            Add-ons
-          </h3>
-          <div className="mt-5 grid gap-6 md:grid-cols-3">
-            {ADD_ONS.map((addOn) => (
-              <div key={addOn.name}>
-                <p className="font-medium">{addOn.name}</p>
-                <p className="mt-1 text-sm text-signal-ink">{addOn.price}</p>
-                <p className="mt-2 text-sm text-dim">{addOn.blurb}</p>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
