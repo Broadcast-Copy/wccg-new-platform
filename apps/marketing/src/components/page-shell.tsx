@@ -13,7 +13,8 @@ export function PageShell({
   lede,
   children,
 }: {
-  eyebrow: string;
+  /** a string, or a breadcrumb node on nested pages */
+  eyebrow: ReactNode;
   title: string;
   lede: string;
   children: ReactNode;

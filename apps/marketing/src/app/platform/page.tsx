@@ -267,6 +267,9 @@ export default function Page() {
           <a href="/changelog" className="transition hover:text-fg">
             Changelog
           </a>
+          <a href="/product-sheet/" className="transition hover:text-fg">
+            Product sheet
+          </a>
           <p>
             Flagship:{" "}
             <a

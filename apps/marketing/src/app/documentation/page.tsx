@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { PageShell, Panel, Row } from "@/components/page-shell";
+import { GUIDES } from "@/content";
 import { SITE_URL } from "@/lib/site";
 
 const title = "Documentation — Broadcast Copy";
 const description =
-  "How to run a station on Broadcast Copy: setup, the air chain, traffic, compliance, the API and the release changelog.";
+  "How to run a station on Broadcast Copy: setup, task guides for the daily log, traffic and imaging, the air chain, compliance, the API and the release changelog.";
 
 export const metadata: Metadata = {
   title,
@@ -33,6 +34,23 @@ export default function DocumentationPage() {
           title="Importing programming"
           body="Shows, hosts and the weekly grid. Your schedule becomes the source of truth for everything downstream."
         />
+        <Row
+          title="The product sheet"
+          body="The whole suite on one printable page, written for station GMs."
+          href="/product-sheet/"
+        />
+      </Panel>
+
+      <Panel title="Guides" note="task by task">
+        {GUIDES.map((g) => (
+          <Row
+            key={g.slug}
+            title={g.title}
+            body={g.blurb}
+            href={`/documentation/${g.slug}/`}
+            meta="Guide"
+          />
+        ))}
       </Panel>
 
       <Panel title="Running the air chain">
@@ -55,6 +73,7 @@ export default function DocumentationPage() {
         <Row
           title="Traffic and billing"
           body="Orders to flights to affidavits, and where proof of play comes from."
+          href="/documentation/traffic-basics/"
         />
         <Row
           title="Loyalty and listeners"

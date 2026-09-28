@@ -4,7 +4,10 @@ import {
   CalendarClock,
   Disc3,
   LineChart,
+  ListChecks,
   type LucideIcon,
+  Megaphone,
+  MonitorCog,
   PlayCircle,
   Radio,
   ShieldCheck,
@@ -80,10 +83,16 @@ export const FEATURES = [
       "Shows, hosts, dayparts and schedule blocks in one grid — which then drives your site, your player and your program guide automatically.",
   },
   {
+    name: "The daily log",
+    icon: ListChecks,
+    blurb:
+      "Tomorrow's log is built every evening from your clocks, music rules and the traffic file, then has to pass a validation gate — hours, hard times, restrictions, silent positions, booked spots — before it publishes. The PD edits it in a log editor that re-checks every change.",
+  },
+  {
     name: "DJ operations",
     icon: Disc3,
     blurb:
-      "Drop intake over FTP, mix libraries, record pool, DJ slots and per-DJ portals. The workflow your air staff already knows.",
+      "Drop intake over FTP, mix libraries, record pool, DJ slots and per-DJ portals — and Studio Sync, which lands each new mix in its cart checksum-verified and never swaps one that is on air.",
   },
   {
     name: "Listener loyalty",
@@ -98,6 +107,12 @@ export const FEATURES = [
       "Now-playing control, song history and EAS alert logging with an auditable trail your chief engineer can actually defend.",
   },
   {
+    name: "Studio Control",
+    icon: MonitorCog,
+    blurb:
+      "Every machine and service in the plant on one native board, with machine commands that take two presses. Plus a scheduled air-check recorder, the station command table, and library deletes that go to a recycle bin.",
+  },
+  {
     name: "FCC compliance",
     icon: ShieldCheck,
     blurb:
@@ -107,7 +122,13 @@ export const FEATURES = [
     name: "Ad sales & traffic",
     icon: LineChart,
     blurb:
-      "Advertisers, campaigns, avails, creative, invoices and A/R — sales and traffic living in the same system as the air product.",
+      "Orders, copy, avails, as-run import, make-goods, invoicing and A/R, political requests and reports — a traffic desk that runs beside your current traffic system until you switch it on to feed the log.",
+  },
+  {
+    name: "Promotions & imaging",
+    icon: Megaphone,
+    blurb:
+      "Promotions calendars checked against the year's dates and exported to Word in their own layout. Imaging by category with a holiday calendar and an order-by date for each occasion — and an optional AI writer for draft scripts.",
   },
   {
     name: "Community & audience",
@@ -129,6 +150,73 @@ export const ON_DEMAND_FEATURE = {
   blurb:
     "Podcasts, video and sermon archives with RSS feeds and shareable per-item pages.",
 } as const satisfies Feature;
+
+/* ------------------------------------------------------------------ */
+/*  What's new — the home-page strip. Points at the changelog, which   */
+/*  carries the full, dated list (bc_changelog 0.18.0-beta).           */
+/* ------------------------------------------------------------------ */
+
+export const WHATS_NEW = {
+  released: "2026-09-27",
+  headline: "Broadcast Copy Manager 0.5.0",
+  /** what fits beside NEW and the link on a phone */
+  short: "Manager 0.5.0 is out",
+  summary:
+    "the daily log and its validation gate, a traffic desk, promotions and imaging calendars, and Studio Control in a native window.",
+  href: "/changelog",
+} as const;
+
+/* ------------------------------------------------------------------ */
+/*  Task guides under /documentation — one definition drives the       */
+/*  index rows and each guide's "related" links.                       */
+/* ------------------------------------------------------------------ */
+
+type Guide = {
+  readonly slug: string;
+  readonly title: string;
+  readonly blurb: string;
+  readonly who: string;
+};
+
+export const GUIDES = [
+  {
+    slug: "build-and-publish-a-days-log",
+    title: "Build and publish a day's log",
+    blurb:
+      "How tomorrow's log is generated from your clocks, what the validation gate checks, and what happens when a check fails.",
+    who: "Program director · operations",
+  },
+  {
+    slug: "inserting-traffic",
+    title: "Inserting traffic",
+    blurb:
+      "How booked spots reach a day's log — at generation, or into a day you are editing with a dry run first.",
+    who: "Traffic · program director",
+  },
+  {
+    slug: "editing-and-validating-a-log",
+    title: "Editing and validating a log (PD)",
+    blurb:
+      "The log editor: what you can change, what it refuses, and how every saved edit is re-checked by the gate.",
+    who: "Program director",
+  },
+  {
+    slug: "imaging-ai-script-writer",
+    title: "Imaging with the AI script writer",
+    blurb:
+      "Imaging categories, the holiday calendar and its order-by dates, and drafting scripts with the optional AI writer.",
+    who: "Production · program director",
+  },
+  {
+    slug: "traffic-basics",
+    title: "Traffic section basics",
+    blurb:
+      "Orders, copy, the as-run, make-goods, invoicing and reports — and how the desk runs beside your current traffic system.",
+    who: "Traffic · business office",
+  },
+] as const satisfies readonly Guide[];
+
+export type GuideSlug = (typeof GUIDES)[number]["slug"];
 
 /* ------------------------------------------------------------------ */
 /*  Pricing                                                            */
