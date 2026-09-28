@@ -64,6 +64,43 @@ drop function if exists public.bc_list_invites(text);
 drop function if exists public.bc_revoke_invite(text);
 drop function if exists public.bc_invite_preview(text);
 drop function if exists public.bc_accept_invite(text);
+drop function if exists public.bc_update_station(text, text, text, text);
+
+-- The back office (migrations 115-118): admin RPCs, the licence-key functions
+-- and the audit writer. bc_update_org/bc_update_station above also write to the
+-- audit trail, which is why neither may survive in a station database.
+drop function if exists public.bc_admin_licenses();
+drop function if exists public.bc_admin_license_activations(text);
+drop function if exists public.bc_admin_license_issue(text, text, text[], integer, timestamptz, text, text);
+drop function if exists public.bc_admin_license_update(text, jsonb);
+drop function if exists public.bc_admin_license_revoke(text, text);
+drop function if exists public.bc_admin_license_rotate(text, text);
+drop function if exists public.bc_admin_license_release_activation(text);
+drop function if exists public.bc_license_validate(text, text, text, text, text);
+drop function if exists public.bc_license_generate();
+drop function if exists public.bc_license_canonical(text);
+drop function if exists public.bc_license_hash(text);
+drop function if exists public.bc_license_display(text);
+drop function if exists public.bc_license_status(timestamptz, timestamptz);
+drop function if exists public.bc_license_clean_packages(text[]);
+drop function if exists public.bc_admin_users(text, boolean, integer, integer);
+drop function if exists public.bc_admin_grant_super_admin(uuid);
+drop function if exists public.bc_admin_revoke_super_admin(uuid);
+drop function if exists public.bc_admin_orgs();
+drop function if exists public.bc_admin_org_detail(text);
+drop function if exists public.bc_admin_set_org_status(text, text);
+drop function if exists public.bc_admin_set_station_status(text, text);
+drop function if exists public.bc_admin_station_keys();
+drop function if exists public.bc_station_is_live(text);
+drop function if exists public.bc_require_platform_admin();
+
+-- The last-super-admin guard (117) sits on user_roles, which a station database
+-- KEEPS (identity is per-database). The rule belongs to the control plane, so
+-- the triggers go and user_roles stays.
+drop trigger if exists bc_guard_last_super_admin    on public.user_roles;
+drop trigger if exists bc_guard_user_roles_truncate on public.user_roles;
+drop function if exists public.bc_guard_last_super_admin();
+drop function if exists public.bc_guard_user_roles_truncate();
 
 -- ----------------------------------------------------------- fleet & product --
 -- bc_device_agents / bc_device_installs / bc_device_peripherals / bc_pair_codes
@@ -78,6 +115,12 @@ drop table if exists public.bc_releases  cascade;
 drop table if exists public.bc_changelog cascade;
 drop table if exists public.bc_features  cascade;
 drop table if exists public.bc_docs      cascade;
+
+-- Software licence keys (116). Activations FK to keys, so children first.
+drop function if exists public.bc_license_public(public.bc_license_keys);
+drop table if exists public.bc_license_activations cascade;
+drop table if exists public.bc_license_throttle    cascade;
+drop table if exists public.bc_license_keys        cascade;
 
 -- ------------------------------------------------ BC sales & tenant directory --
 drop table if exists public.bc_leads             cascade;
@@ -96,6 +139,13 @@ drop table if exists public.airsuite_station_status cascade;
 -- ------------------------------------------------------------ platform audit --
 drop table if exists public.audit_log         cascade;
 drop table if exists public.impersonation_log cascade;
+
+-- The back-office audit trail (115) and the functions that write it. The row
+-- triggers that called bc_audit_row_change went with their tables above.
+drop table if exists public.bc_admin_audit cascade;
+drop function if exists public.bc_audit_row_change() cascade;
+drop function if exists public.bc_audit(text, text, text, jsonb, jsonb, text);
+drop function if exists public.bc_admin_audit_append_only();
 
 -- ---------------------------------------------------------------- dead RBAC --
 -- 94 rows of fully populated role/permission tables that NOTHING reads: no RLS
@@ -118,7 +168,8 @@ begin
                       'bc_changelog','bc_features','bc_docs','bc_leads','bc_org_invites',
                       'organization_members','station_domains','station_entitlements',
                       'platform_fees','airsuite_station_keys','airsuite_station_status',
-                      'audit_log','impersonation_log','roles','permissions','role_permissions');
+                      'audit_log','impersonation_log','roles','permissions','role_permissions',
+                      'bc_admin_audit','bc_license_keys','bc_license_activations','bc_license_throttle');
   if leftover is not null then
     raise exception 'control-plane tables survived the strip: %', leftover;
   end if;
