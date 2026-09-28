@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import { ChangelogList } from "@/components/changelog-list";
 import { SITE_URL } from "@/lib/site";
 
@@ -16,24 +15,21 @@ export const metadata: Metadata = {
   openGraph: { title, description, type: "website", url: `${SITE_URL}/changelog` },
 };
 
+/** Reached from the footer on every page and from the home page's "New" line. */
 export default function ChangelogPage() {
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen flex-col">
       <SiteHeader />
 
-      <main className="mx-auto max-w-3xl px-5 py-16">
+      <main className="mx-auto w-full max-w-3xl flex-1 px-5 pt-10 pb-16 sm:pt-16">
         <span className="inline-flex items-center gap-2 rounded-full border border-signal/30 bg-signal/10 px-3.5 py-1.5 text-xs font-medium tracking-wide text-signal-ink uppercase">
           <span className="bc-pulse h-1.5 w-1.5 rounded-full bg-signal" aria-hidden />
           Updated in real time
         </span>
-        <p className="mt-6 text-xs tracking-[0.24em] text-faint uppercase">
-          <Link href="/documentation" className="transition hover:text-fg">
-            Documentation
-          </Link>
-          <span className="px-2">/</span>Changelog
-        </p>
-        <h1 className="mt-3 text-4xl font-semibold tracking-tight">Changelog</h1>
-        <p className="mt-3 max-w-xl text-lg text-dim text-pretty">
+        <h1 className="mt-5 text-[2rem] leading-tight font-semibold tracking-tight sm:text-4xl">
+          Changelog
+        </h1>
+        <p className="mt-3 max-w-xl text-base text-dim text-pretty sm:text-lg">
           Every release of Broadcast Copy. The flagship, WCCG 104.5 FM, runs on
           the same builds — so what ships to air shows up here, versioned.
         </p>
@@ -41,22 +37,7 @@ export default function ChangelogPage() {
         <ChangelogList />
       </main>
 
-      <footer className="border-t border-line">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-8 text-sm text-faint">
-          <Link href="/documentation" className="inline-flex items-center gap-1.5 transition hover:text-fg">
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            Documentation
-          </Link>
-          <a
-            href="https://wccg1045fm.com"
-            target="_blank"
-            rel="noreferrer"
-            className="transition hover:text-fg"
-          >
-            See it live
-          </a>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { ArrowRight, Check } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Partners } from "@/components/partners";
-import { Wordmark } from "@/components/wordmark";
+import { SiteFooter } from "@/components/site-footer";
 import { EarlyAccessForm } from "@/components/early-access-form";
 import { Features } from "@/components/features";
 import { LiveOnAir } from "@/components/live-on-air";
@@ -36,17 +36,17 @@ export default function Page() {
       {/* -------------------------------------------------------- hero */}
       <section id="top" className="relative overflow-hidden bc-glow">
         <div className="pointer-events-none absolute inset-0 bc-grid" aria-hidden />
-        <div className="relative mx-auto max-w-6xl px-5 pt-20 pb-16 text-center sm:pt-28">
+        <div className="relative mx-auto max-w-6xl px-5 pt-12 pb-14 text-center sm:pt-28 sm:pb-16">
           <span className="inline-flex items-center gap-2 rounded-full border border-signal/30 bg-signal/10 px-3.5 py-1.5 text-xs font-medium tracking-wide text-signal-ink uppercase">
             <span className="bc-pulse h-1.5 w-1.5 rounded-full bg-signal" aria-hidden />
             Live on air today
           </span>
 
-          <h1 className="mx-auto mt-7 max-w-4xl text-4xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-6xl">
+          <h1 className="mx-auto mt-7 max-w-4xl text-[2.25rem] leading-[1.08] font-semibold tracking-tight text-balance sm:text-6xl">
             The operating system for modern radio.
           </h1>
 
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-dim text-pretty">
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-dim text-pretty sm:text-lg">
             Broadcast Copy runs your FCC station end to end — streaming,
             programming, DJ operations, listener loyalty, compliance and ad sales
             — with an agentic layer that handles the busywork.
@@ -55,7 +55,7 @@ export default function Page() {
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
               href="#early-access"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-6 py-3 text-sm font-semibold text-fg transition hover:bg-signal-soft sm:w-auto"
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-signal px-6 text-sm font-semibold text-fg transition hover:bg-signal-soft sm:w-auto"
             >
               Join the waitlist <ArrowRight className="h-4 w-4" aria-hidden />
             </a>
@@ -63,13 +63,13 @@ export default function Page() {
               href={FLAGSHIP_URL}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex w-full items-center justify-center rounded-lg border border-line bg-elevated px-6 py-3 text-sm font-semibold transition hover:border-dim/40 sm:w-auto"
+              className="inline-flex min-h-12 w-full items-center justify-center rounded-lg border border-line bg-elevated px-6 text-sm font-semibold transition hover:border-dim/40 sm:w-auto"
             >
               See a real station
             </a>
           </div>
 
-          <p className="mt-6 text-sm text-faint">
+          <p className="mt-6 text-sm text-dim">
             Pricing on request — join the waitlist and we&rsquo;ll be in touch.
           </p>
 
@@ -80,7 +80,7 @@ export default function Page() {
       {/* ------------------------------------------------------- proof */}
       <section className="border-y border-line bg-surface">
         <div className="mx-auto max-w-6xl px-5 py-10">
-          <p className="text-center text-xs tracking-[0.2em] text-faint uppercase">
+          <p className="text-center text-xs tracking-[0.2em] text-dim uppercase">
             Running in production at WCCG 104.5 FM · Fayetteville, NC
           </p>
           <dl className="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-4">
@@ -102,7 +102,7 @@ export default function Page() {
       <Partners />
 
       {/* ---------------------------------------------------- platform */}
-      <section id="platform" className="mx-auto max-w-6xl px-5 py-24">
+      <section id="platform" className="mx-auto max-w-6xl px-5 py-16 sm:py-24">
         <div className="max-w-2xl">
           <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
             Everything a station actually runs on.
@@ -121,7 +121,7 @@ export default function Page() {
 
       {/* ------------------------------------------------------- steps */}
       <section className="border-y border-line bg-surface">
-        <div className="mx-auto max-w-6xl px-5 py-24">
+        <div className="mx-auto max-w-6xl px-5 py-16 sm:py-24">
           <h2 className="max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
             You are not left alone with a setup wizard.
           </h2>
@@ -139,7 +139,7 @@ export default function Page() {
 
       {/* --------------------------------------------------------- faq */}
       <section id="faq" className="border-t border-line bg-surface">
-        <div className="mx-auto max-w-3xl px-5 py-24">
+        <div className="mx-auto max-w-3xl px-5 py-16 sm:py-24">
           <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
             Questions we get from GMs.
           </h2>
@@ -155,7 +155,7 @@ export default function Page() {
       </section>
 
       {/* ------------------------------------------------ early access */}
-      <section id="early-access" className="mx-auto max-w-6xl px-5 py-24">
+      <section id="early-access" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-16 sm:py-24">
         <div className="grid gap-14 lg:grid-cols-2 lg:items-start">
           <div>
             <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
@@ -186,34 +186,7 @@ export default function Page() {
         </div>
       </section>
 
-      {/* ------------------------------------------------------ footer */}
-      <footer className="border-t border-line">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-10 text-sm text-faint sm:flex-row">
-          <p className="flex items-center">
-            <Wordmark px={2} className="text-dim" />
-          </p>
-          <a href="/" className="transition hover:text-fg">
-            Station tour
-          </a>
-          <a href="/changelog" className="transition hover:text-fg">
-            Changelog
-          </a>
-          <a href="/product-sheet/" className="transition hover:text-fg">
-            Product sheet
-          </a>
-          <p>
-            Flagship:{" "}
-            <a
-              className="text-dim transition hover:text-fg"
-              href={FLAGSHIP_URL}
-              target="_blank"
-              rel="noreferrer"
-            >
-              WCCG 104.5 FM
-            </a>
-          </p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

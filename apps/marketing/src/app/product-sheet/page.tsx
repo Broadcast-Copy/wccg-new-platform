@@ -4,6 +4,7 @@ import { ArrowDown, ArrowRight, Check } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Wordmark } from "@/components/wordmark";
 import { PrintButton } from "@/components/print-button";
+import { SiteFooter } from "@/components/site-footer";
 import { BROADCAST_COPY_MANAGER, SITE_URL } from "@/lib/site";
 
 const title = "Product sheet — Broadcast Copy";
@@ -93,6 +94,7 @@ const MOVE_OVER = [
 ] as const;
 
 const GUARDS = [
+  "Every page of the Production app has a Guide (F1) that says first what the page does to air.",
   "Writes that matter take two presses: the first shows exactly what will change.",
   "A day's log publishes only if it passes the gate, as a numbered, checksummed revision.",
   "A newly installed console writes silence until you turn its outputs on.",
@@ -101,7 +103,6 @@ const GUARDS = [
 
 const COMING = [
   "A Music section for the Music Director, with playlists sent to each DJ.",
-  "A guided walkthrough on every page of the Production app.",
   "A guided Build a Day's Log flow, from traffic in to publish.",
 ] as const;
 
@@ -112,7 +113,7 @@ export default function ProductSheetPage() {
         <SiteHeader />
       </div>
 
-      <main className="mx-auto max-w-5xl px-5 pt-14 pb-20 print:max-w-none print:px-0 print:pt-0 print:pb-0">
+      <main className="mx-auto max-w-5xl px-5 pt-10 pb-16 sm:pt-14 sm:pb-20 print:max-w-none print:px-0 print:pt-0 print:pb-0">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <p className="text-xs tracking-[0.24em] text-dim uppercase">
             Product sheet · for station GMs
@@ -120,10 +121,10 @@ export default function ProductSheetPage() {
           <PrintButton />
         </div>
 
-        <h1 className="mt-4 text-4xl font-semibold tracking-tight text-balance sm:text-5xl print:text-3xl">
+        <h1 className="mt-4 text-[2rem] leading-tight font-semibold tracking-tight text-balance sm:text-5xl print:text-3xl">
           Broadcast Copy, on one page.
         </h1>
-        <p className="mt-5 max-w-3xl text-lg leading-relaxed text-dim text-pretty print:text-base">
+        <p className="mt-5 max-w-3xl text-base leading-relaxed text-dim text-pretty sm:text-lg print:text-base">
           One system for the air product, the back office and the compliance file. Studio
           machines run native Windows apps from a single download; the platform behind them
           runs your streams, your site, your listeners and your paperwork.
@@ -210,33 +211,34 @@ export default function ProductSheetPage() {
         {/* ------------------------------------------------------ CTAs */}
         <div className="mt-12 flex flex-col gap-3 sm:flex-row print:hidden">
           <Link
-            href="/platform#early-access"
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-signal px-6 py-3 text-sm font-semibold text-fg transition hover:bg-signal-soft"
+            href="/platform/#early-access"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-signal px-6 text-sm font-semibold text-fg transition hover:bg-signal-soft"
           >
             Get early access <ArrowRight className="h-4 w-4" aria-hidden />
           </Link>
           <Link
             href="/download/"
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-elevated px-6 py-3 text-sm font-semibold transition hover:border-dim/40"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-line bg-elevated px-6 text-sm font-semibold transition hover:border-dim/40"
           >
             <ArrowDown className="h-4 w-4" aria-hidden />
             Download the Manager
           </Link>
           <Link
             href="/documentation/"
-            className="inline-flex items-center justify-center rounded-lg border border-line bg-elevated px-6 py-3 text-sm font-semibold transition hover:border-dim/40"
+            className="inline-flex min-h-12 items-center justify-center rounded-lg border border-line bg-elevated px-6 text-sm font-semibold transition hover:border-dim/40"
           >
             Documentation
           </Link>
         </div>
       </main>
 
-      <footer className="border-t border-line">
-        <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-5 py-8 text-sm text-dim sm:flex-row print:px-0 print:py-3 print:text-xs">
+      <div className="hidden border-t border-line print:block print:py-3 print:text-xs">
+        <div className="flex items-center justify-between">
           <Wordmark px={2} className="text-dim" />
           <p>broadcastcopy.ai · as of 27 September 2026</p>
         </div>
-      </footer>
+      </div>
+      <SiteFooter className="print:hidden" />
     </div>
   );
 }

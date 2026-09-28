@@ -27,8 +27,8 @@ type State =
   | { status: "ready"; entries: Entry[] };
 
 const CHANNEL_STYLE: Record<Channel, string> = {
-  alpha: "bg-[#a855f7]/15 text-[#c084fc] border-[#a855f7]/40",
-  beta: "bg-amber/15 text-amber border-amber/40",
+  alpha: "bg-[#a855f7]/15 text-[#7e22ce] border-[#a855f7]/40",
+  beta: "bg-amber/15 text-[#7a4f0e] border-amber/40",
   stable: "bg-signal/15 text-signal-ink border-signal/40",
 };
 
@@ -63,7 +63,7 @@ export function ChangelogList() {
   }, []);
 
   if (state.status === "loading") {
-    return <p className="mt-10 text-sm text-faint">Loading changelog…</p>;
+    return <p className="mt-10 text-sm text-dim">Loading changelog…</p>;
   }
 
   if (state.status === "error") {
@@ -81,7 +81,7 @@ export function ChangelogList() {
         const latest = idx === 0;
         const changes = Array.isArray(entry.changes) ? entry.changes : [];
         return (
-          <article key={entry.version} className="relative pl-10">
+          <article key={entry.version} className="relative pl-10 sm:pl-12">
             <div
               className={`absolute left-0 top-1 flex h-8 w-8 items-center justify-center rounded-full border-2 bg-surface ${
                 latest ? "border-signal" : "border-line"
@@ -91,23 +91,23 @@ export function ChangelogList() {
             </div>
 
             <div
-              className={`rounded-2xl border bg-surface p-6 ${
+              className={`rounded-2xl border bg-surface p-4 sm:p-6 ${
                 latest ? "border-signal/30" : "border-line"
               }`}
             >
               <div className="flex flex-wrap items-center gap-3">
                 <h2 className="text-lg font-semibold">v{entry.version}</h2>
                 <span
-                  className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase ${CHANNEL_STYLE[entry.channel]}`}
+                  className={`rounded-full border px-2.5 py-0.5 text-xs font-bold tracking-wider uppercase ${CHANNEL_STYLE[entry.channel]}`}
                 >
                   {entry.channel}
                 </span>
                 {latest && (
-                  <span className="rounded-full bg-signal/15 px-2 py-0.5 text-[10px] font-bold tracking-wider text-signal-ink uppercase">
+                  <span className="rounded-full bg-signal/15 px-2 py-0.5 text-xs font-bold tracking-wider text-signal-ink uppercase">
                     Latest
                   </span>
                 )}
-                <span className="text-xs text-faint">{fmtDate(entry.released_on)}</span>
+                <span className="text-xs text-dim">{fmtDate(entry.released_on)}</span>
               </div>
 
               {entry.title && (
