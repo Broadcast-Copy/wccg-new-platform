@@ -1,14 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { Radio, LogOut } from "lucide-react";
+import { Radio, LogOut, ShieldCheck } from "lucide-react";
 import { useSession } from "@/hooks/use-session";
+import { useIsPlatformAdmin } from "@/hooks/use-platform-admin";
 import { supabase } from "@/lib/supabase";
 
-/** Chrome for authed pages: top bar with brand, signed-in email, sign out. */
+/**
+ * Chrome for authed pages: top bar with brand, signed-in email, sign out, and
+ * an Admin link for platform admins only. The link is a convenience: /admin
+ * checks again, and the database refuses every admin call from anyone else.
+ */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const state = useSession();
   const email = state.status === "authed" ? (state.session.user.email ?? "") : "";
+  const isAdmin = useIsPlatformAdmin(state.status === "authed" ? state.session.user.id : null);
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -47,6 +53,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           </nav>
           <div className="flex items-center gap-4 text-sm">
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="inline-flex items-center gap-1.5 font-medium text-signal-ink transition hover:text-fg"
+              >
+                <ShieldCheck className="h-4 w-4" aria-hidden />
+                <span className="sr-only sm:not-sr-only">Admin</span>
+              </Link>
+            )}
             {email && <span className="hidden max-w-[16rem] truncate text-dim lg:inline">{email}</span>}
             <button
               type="button"
