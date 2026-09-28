@@ -26,8 +26,9 @@ import wccg_mailer
 
 SUPA = "https://irjiqbmoohklagdegezz.supabase.co"
 FN = f"{SUPA}/functions/v1/studio-sync"
-# same lookup as sync-dj-drops.py; the legacy constant is the fallback until rotated
-SECRET = studio_sync_secret.load() or "c2040f1371c9265c538bdce3547346bd5ae53060"
+# same lookup as sync-dj-drops.py (DPAPI / env / file; git-history bridge until rotated)
+SECRET = studio_sync_secret.load(legacy=True)
+NO_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
 PORTAL_URL = "https://wccg1045fm.com/my/dj"
 ADMIN_EMAIL = "biggleem@gmail.com"
 SUBJECT = "\U0001F3A7 Your mix is in the rotation — WCCG 104.5 FM"
@@ -42,9 +43,9 @@ def roster() -> dict:
     """slug -> {name, email} for active mixshow DJs (service role; PII fetched at runtime)."""
     r = subprocess.run(
         ["curl", "-s", "--max-time", "60", "-X", "POST", FN,
-         "-H", "Content-Type: application/json",
-         "-d", json.dumps({"secret": SECRET, "action": "roster"})],
-        capture_output=True)
+         "-H", "Content-Type: application/json", "--data-binary", "@-"],
+        input=json.dumps({"secret": SECRET, "action": "roster"}).encode(),  # stdin, not argv
+        capture_output=True, creationflags=NO_WINDOW)
     try:
         data = json.loads(r.stdout.decode("utf-8", "replace"))
     except Exception:  # noqa: BLE001

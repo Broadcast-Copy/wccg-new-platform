@@ -1293,7 +1293,7 @@ def handle_dj_pack(gmail, drive, msg, mid, spec, state, now=None):
         label = f"transfernow/{tn_slug(ref)}" if kind == "transfernow" else kind
         try:
             if not secret:
-                raise PackRetry("no studio-sync secret (env / studio-sync.secret / sync-dj-drops.py)")
+                raise PackRetry("no studio-sync secret (C:\\AirSuite\\secrets\\studio-sync.dpapi / env / studio-sync.secret)")
             status, lines, key = run_pack(kind, ref, air, spec, drive, sess, secret, done_packs)
         except PackError as e:
             status, lines, key = "manual", [f"{label}: {e}"], None
@@ -1386,7 +1386,7 @@ def transfernow_cli(url, dj_slug=None, air_arg=None, dry_run=True):
         return 1
     secret = None if dry_run else studio_sync_secret.load(legacy=True)
     if not dry_run and not secret:
-        print("  no studio-sync secret found (env WCCG_STUDIO_SYNC_SECRET / studio-sync.secret / sync-dj-drops.py)")
+        print("  no studio-sync secret found (C:\\AirSuite\\secrets\\studio-sync.dpapi / env WCCG_STUDIO_SYNC_SECRET / studio-sync.secret)")
         return 1
     try:
         status, lines, _ = run_pack("transfernow", url, air, spec, None, sess, secret, {}, pack=pack, dry_run=dry_run)
@@ -1694,6 +1694,29 @@ def sunday_folder_files(since, until=None, root=None):
     return sorted(out, key=lambda x: (x[1], x[0]))
 
 
+def ping_studio_sync():
+    """--ping-studio-sync: the watcher's two studio-sync paths with the secrets they
+    really use (DJ packs: legacy bridge allowed; sermons: never). Sends action "ping"
+    only - no mail, no download, no queue. Never prints a secret."""
+    rc = 0
+    for label, secret, call in (("gmail-watcher dj-packs", studio_sync_secret.load(legacy=True), studio_sync),
+                                ("gmail-watcher sermons", studio_sync_secret.load(), site_call)):
+        if not secret:
+            print(f"PING {label} fail no secret on this PC")
+            rc = 1
+            continue
+        try:
+            body = call(secret, {"action": "ping"})
+            print(f"PING {label} ok {body.get('via', '?')}")
+        except (PackError, PackRetry, SiteRetry, SiteSkip) as e:
+            if any(x in str(e) for x in studio_sync_secret.OLD_CODE_ERRORS):
+                print(f"PING {label} accepted-old-code")   # secret accepted by pre-rotation code
+                continue
+            print(f"PING {label} fail {str(e)[:100]}")
+            rc = 1
+    return rc
+
+
 def sermon_site_cli(args):
     """--publish-sermon / --withdraw-sermon / --backfill-sermons. Returns the exit code.
     None of them touches the Sunday folders' air copies or M:\\JBMusic."""
@@ -1825,6 +1848,8 @@ def main():
     ap.add_argument("--until", metavar="YYYY-MM-DD", help="with --backfill-sermons: last Sunday")
     ap.add_argument("--church", metavar="CODE", help="sermon code for the website modes, e.g. pmb1")
     ap.add_argument("--checksum", metavar="SHA256", help="with --withdraw-sermon: also clear that upload")
+    ap.add_argument("--ping-studio-sync", action="store_true",
+                    help="rotation check: ping studio-sync through the DJ-pack and the sermon paths")
     ap.add_argument("--site-dry-run", action="store_true",
                     help="daemon: website uploads only log what they would do")
     args = ap.parse_args()
@@ -1832,6 +1857,9 @@ def main():
     if args.authorize:
         authorize()
         return
+
+    if args.ping_studio_sync:
+        sys.exit(ping_studio_sync())
 
     if args.publish_sermon or args.withdraw_sermon or args.backfill_sermons:
         # website only: no Gmail token needed, the air carts are never touched

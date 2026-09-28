@@ -24,6 +24,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 
+import studio_sync_secret
 import wccg_mailer
 
 LOGO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -32,8 +33,10 @@ WCCG_LOGO = os.path.join(LOGO_DIR, "wccg-logo.png")
 CARSON_LOGO = os.path.join(LOGO_DIR, "carson-communications-logo.png")
 ADMIN_EMAIL = "biggleem@gmail.com"
 SUBJECT = "\U0001F510 Your WCCG 104.5 FM DJ Portal set-up code"
-SETUP_LINK_URL = "https://irjiqbmoohklagdegezz.supabase.co/functions/v1/dj-setup-link"
-SECRET = "c2040f1371c9265c538bdce3547346bd5ae53060"
+SETUP_LINK_URL = studio_sync_secret.SETUP_LINK_FN
+# Shared secret: scripts/studio_sync_secret.py (DPAPI / env / file; git-history
+# bridge until the rotation stores the new one). Never a literal here.
+SECRET = studio_sync_secret.load(legacy=True)
 PORTAL_BASE = "https://wccg1045fm.com/reset-password"
 
 ROSTER = [

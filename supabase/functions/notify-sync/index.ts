@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { checkSecret } from "../_shared/shared-secret.ts";
 
 // notify-sync (verify_jwt=false, shared-secret gated). A small mailer the
 // scheduled email-mix-sermon watch task calls at the end of a run to email a
@@ -11,14 +12,20 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 //
 // POST {secret, subject, text}  ->  emails the summary. `text` is plain text;
 // newlines become <br>. Returns {ok, resend_status}.
-
-const SECRET = "a9cb4759107247736bb11de8c8de0d00304c3726";
+// POST {secret, action:"ping"}  ->  {ok, via}: proves the secret works, sends nothing.
+//
+// Secret: NOTIFY_SYNC_SECRET in the function environment (never in code;
+// ../_shared/shared-secret.ts, rotated by scripts/rotate-shared-secrets.ps1). No
+// caller holds it since the hourly Claude watch task moved to Gmail (2026-06-14).
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ ok: false, error: "POST only" }, 405);
   let body: Record<string, unknown> = {};
   try { body = await req.json(); } catch { /* empty */ }
-  if (body.secret !== SECRET) return json({ ok: false, error: "forbidden" }, 403);
+  const gate = checkSecret("NOTIFY_SYNC", body.secret);
+  if (!gate.configured) return json({ ok: false, error: "notify-sync is not configured (NOTIFY_SYNC_SECRET)" }, 503);
+  if (!gate.match) return json({ ok: false, error: "forbidden" }, 403);
+  if (body.action === "ping") return json({ ok: true, fn: "notify-sync", via: gate.match }, 200);
 
   const subject = (typeof body.subject === "string" && body.subject.trim()) || "WCCG sync update";
   const text = typeof body.text === "string" ? body.text : "";

@@ -37,10 +37,12 @@ else (late, early, wrong parts, expired link) gets a "manual look" mail. A
 transient failure retries every 15 min (one alert). Plan a pack without touching
 anything: `python scripts\gmail-watcher.py --transfernow-dry-run <dl link>`; push
 one by hand: `--ingest-transfernow <dl link> --dj dj-tony-neal --air-date MMDDYYYY`.
-The studio-sync secret is read by `scripts\studio_sync_secret.py` (env
-`WCCG_STUDIO_SYNC_SECRET` → `C:\AirSuite\secrets\studio-sync.dpapi` (DPAPI,
-ConvertFrom-SecureString format) → `studio-sync.secret` in the config dir → legacy
-constant in sync-dj-drops.py). Tests: `python scripts\test_gmail_watcher_transfernow.py`.
+The studio-sync secret is read by `scripts\studio_sync_secret.py`
+(`C:\AirSuite\secrets\studio-sync.dpapi` (DPAPI) → env `WCCG_STUDIO_SYNC_SECRET` →
+`studio-sync.secret` in the config dir → until the first rotation, the retired value
+from git history); rotate it with `scripts\rotate-shared-secrets.ps1` (see
+STUDIO-SYNC-RUNBOOK.md). `--ping-studio-sync` checks both watcher paths.
+Tests: `python scripts\test_gmail_watcher_transfernow.py`.
 
 **Sermons on the church's website profile (since 2026-09-28).** Owner: "sermons
 and mixes should land in the profile of the entity, once they air, or

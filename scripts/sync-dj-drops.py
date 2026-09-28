@@ -75,9 +75,10 @@ import studio_sync_secret
 
 SUPA = "https://irjiqbmoohklagdegezz.supabase.co"
 FN = f"{SUPA}/functions/v1/studio-sync"
-# env / ~/.wccg-gmail-watcher/studio-sync.secret first; the legacy constant keeps
-# the sync running until that exists (it's committed — rotate it, then drop it).
-SECRET = studio_sync_secret.load() or "c2040f1371c9265c538bdce3547346bd5ae53060"
+# C:\AirSuite\secrets\studio-sync.dpapi (scripts\rotate-shared-secrets.ps1) / env /
+# config-dir file; legacy=True bridges to the retired value from git history only
+# until the rotation stores the new one. Never a literal here.
+SECRET = studio_sync_secret.load(legacy=True)
 BUCKET_PUBLIC = f"{SUPA}/storage/v1/object/public/dj-drops"
 ARCHIVE_ROOT = r"D:\WCCG\b-mixshows"
 ONAIR_FLAT = r"M:\JBMusic"
@@ -140,9 +141,10 @@ def log(m):
         f.write(line + "\n")
 
 def api(payload):
+    # the body (with the secret) goes through stdin: never visible on a command line
     r = subprocess.run(["curl", "-s", "--max-time", "60", "-X", "POST", FN,
-        "-H", "Content-Type: application/json", "-d", json.dumps(payload)],
-        capture_output=True, creationflags=NO_WINDOW)
+        "-H", "Content-Type: application/json", "--data-binary", "@-"],
+        input=json.dumps(payload).encode(), capture_output=True, creationflags=NO_WINDOW)
     try: return json.loads(r.stdout.decode("utf-8", "replace"))
     except Exception: return {"error": r.stdout.decode("utf-8", "replace")[:120]}
 
@@ -903,5 +905,23 @@ def run_sync():
     print("SUMMARY dj-drops: new=" + str(len(synced)) + " | " + ("; ".join(synced) if synced else "none")
           + f" | deferred={run['deferred']} | two-file carts={len(run['two_file'])}")
 
+def ping():
+    """--ping: prove this script's own secret + HTTP path work (rotation check).
+    No lock, no downloads, nothing written; never prints the secret."""
+    if not SECRET:
+        print("PING sync-dj-drops fail no secret on this PC")
+        return 1
+    res = api({"secret": SECRET, "action": "ping"})
+    if res.get("ok"):
+        print(f"PING sync-dj-drops ok {res.get('via', '?')}")
+        return 0
+    if str(res.get("error", "")) in studio_sync_secret.OLD_CODE_ERRORS:
+        print("PING sync-dj-drops accepted-old-code")
+        return 0
+    print(f"PING sync-dj-drops fail {str(res.get('error', ''))[:80]}")
+    return 1
+
 if __name__ == "__main__":
+    if "--ping" in sys.argv[1:]:
+        sys.exit(ping())
     main()

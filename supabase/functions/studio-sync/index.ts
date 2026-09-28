@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { checkSecret } from "../_shared/shared-secret.ts";
 
 // studio-sync (verify_jwt=false, shared-secret gated). Lets the broadcast PC's
 // hourly sync pull DJ portal uploads to local disk + playout WITHOUT the admin
@@ -52,27 +53,18 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // A sermon row that aired more than 7 days ago is never replaced here (the
 // archive); a missing past Sunday may still be filled in (backfill).
 //
-// SECRETS. The sermon actions accept ONLY the secret in the function's
-// environment (STUDIO_SYNC_SECRET, set with `supabase secrets set`; never in
-// code). The older actions accept that secret OR the legacy literal below, which
-// has been public in this repository since June and is kept only until every
-// caller (Studio Sync, the reminders, dj-setup-link, the watcher) reads the new
-// one; deleting LEGACY_SECRET is the last step of that rotation.
+// POST {secret, action:"ping"}         -> {ok, via:"current"|"legacy"}: proves a caller's
+//                                        secret works, touches nothing (rotation checks).
+//
+// SECRETS (never in code; ../_shared/shared-secret.ts): STUDIO_SYNC_SECRET, plus
+// STUDIO_SYNC_LEGACY_SECRET accepted only while STUDIO_SYNC_ACCEPT_LEGACY=1 during
+// a rotation (scripts/rotate-shared-secrets.ps1). The sermon actions never accept
+// the legacy one. dj-setup-link shares the same STUDIO_SYNC_* secrets.
 
-const LEGACY_SECRET = "c2040f1371c9265c538bdce3547346bd5ae53060";
+
 const SERMON_ACTIONS = new Set(["sermon", "sermon_uploaded", "sermon_withdraw"]);
 
 function json(o: unknown, s = 200) { return new Response(JSON.stringify(o), { status: s, headers: { "Content-Type": "application/json" } }); }
-
-/** Constant-time string compare (no early exit on the first differing byte). */
-function safeEqual(a: string, b: string): boolean {
-  const ea = new TextEncoder().encode(a);
-  const eb = new TextEncoder().encode(b);
-  let diff = ea.length ^ eb.length;
-  const n = Math.max(ea.length, eb.length);
-  for (let i = 0; i < n; i++) diff |= (ea[i] ?? 0) ^ (eb[i] ?? 0);
-  return diff === 0;
-}
 
 const CODE_RE = /^DJB_\d{5}$/;
 const WEEK_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -305,18 +297,15 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
   let body: Record<string, unknown> = {};
   try { body = await req.json(); } catch { /* */ }
-  const given = typeof body.secret === "string" ? body.secret : "";
-  const envSecret = (Deno.env.get("STUDIO_SYNC_SECRET") ?? "").trim();
-  const envUsable = envSecret.length >= 32 && envSecret !== LEGACY_SECRET;
-  const byEnv = envUsable && safeEqual(given, envSecret);
+  const gate = checkSecret("STUDIO_SYNC", body.secret);
   const action = String(body.action ?? "");
-  if (SERMON_ACTIONS.has(action)) {
-    // Fail closed: no environment secret (or the leaked one) -> no sermon writes at all.
-    if (!envUsable) return json({ error: "sermon actions are not configured (STUDIO_SYNC_SECRET)" }, 503);
-    if (!byEnv) return json({ error: "forbidden" }, 403);
-  } else if (!byEnv && !safeEqual(given, LEGACY_SECRET)) {
+  // Fail closed: no secret in the environment -> nothing is served at all.
+  if (!gate.configured) return json({ error: "studio-sync is not configured (STUDIO_SYNC_SECRET)" }, 503);
+  // The sermon actions never accept the legacy secret, even during a cutover.
+  if (!gate.match || (SERMON_ACTIONS.has(action) && gate.match !== "current")) {
     return json({ error: "forbidden" }, 403);
   }
+  if (action === "ping") return json({ ok: true, fn: "studio-sync", via: gate.match });
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
   if (SERMON_ACTIONS.has(action)) return await handleSermon(supabase, action, body);

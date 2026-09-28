@@ -35,11 +35,14 @@ import time
 import urllib.request
 from datetime import datetime
 
+import studio_sync_secret
 import wccg_mailer
 
 SUPA_URL = "https://irjiqbmoohklagdegezz.supabase.co"
-FN_URL = f"{SUPA_URL}/functions/v1/dj-setup-link"
-SECRET = "c2040f1371c9265c538bdce3547346bd5ae53060"
+FN_URL = studio_sync_secret.SETUP_LINK_FN
+# Shared secret: scripts/studio_sync_secret.py (DPAPI / env / file; git-history
+# bridge until the rotation stores the new one). Never a literal here.
+SECRET = studio_sync_secret.load(legacy=True)
 # ?next= is honored by the login form (login-form.tsx), so signing in drops the
 # DJ straight onto the upload page instead of the homepage.
 LOGIN_URL = "https://wccg1045fm.com/login?next=/my/dj"

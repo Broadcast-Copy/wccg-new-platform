@@ -13,7 +13,9 @@ from datetime import datetime
 ROOT = r"D:\WCCG\f-programming - 50000 - 89999\a-dayparts (70000)\j-sun-am - (gospel)"
 FN = "https://irjiqbmoohklagdegezz.supabase.co/functions/v1/mint-sermon-upload"
 STORE = "https://irjiqbmoohklagdegezz.supabase.co/storage/v1/object/upload/sign/sermons"
-SECRET = "0493a297c313da1dc41082e7189971725fe76f31aa3100f2"
+# RETIRED 2026-09-28: mint-sermon-upload is disabled (HTTP 410) and its secret
+# was removed from this repository (it had been public). Nothing reads it now.
+SECRET = os.environ.get("WCCG_MINT_SERMON_SECRET", "")
 LOG = r"D:\WCCG\sync-logs\sermon-upload.log"
 CODES = {"gpn1", "thm1", "dvp1", "pmb1", "lcc1"}
 CTYPE = {"mp3": "audio/mpeg", "m4a": "audio/mp4", "wav": "audio/wav"}
@@ -36,6 +38,9 @@ def post(payload):
         return {"error": r.stdout.decode("utf-8", "replace")[:120]}
 
 def main():
+    if not SECRET:
+        sys.exit("retired: mint-sermon-upload is disabled (410). Use "
+                 "scripts\\gmail-watcher.py --backfill-sermons YYYY-MM-DD instead.")
     os.makedirs(os.path.dirname(LOG), exist_ok=True)
     # discover work
     work = []

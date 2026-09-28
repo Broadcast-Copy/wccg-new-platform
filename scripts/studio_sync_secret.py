@@ -1,55 +1,84 @@
-"""
-studio_sync_secret — the ONE place the scripts read the studio-sync edge
-function's shared secret (and its URL) from.
+r"""
+studio_sync_secret - the ONE place the Production PC's scripts read the shared
+secret for the studio-sync and dj-setup-link edge functions (and their URLs).
+No secret is ever written in this repository (tests/test_no_secret_literals.py
+fails the build if one appears).
 
 Lookup order:
-  1. env WCCG_STUDIO_SYNC_SECRET
-  2. C:\\AirSuite\\secrets\\studio-sync.dpapi — DPAPI (CurrentUser), the station's
+  1. C:\AirSuite\secrets\studio-sync.dpapi - DPAPI (CurrentUser), the station's
      convention for secrets (same format as typesafe-jev.dpapi: the hex string
-     PowerShell's ConvertFrom-SecureString writes). Store it with:
-       $s = Read-Host -AsSecureString   # paste the value, never echoed
-       ConvertFrom-SecureString $s | Set-Content C:\\AirSuite\\secrets\\studio-sync.dpapi
-     Only the Windows user who stored it can read it.
+     PowerShell's ConvertFrom-SecureString writes). scripts\rotate-shared-secrets.ps1
+     writes it; only the Windows user who stored it (wccg1, the user every task
+     runs as) can read it.
+  2. env WCCG_STUDIO_SYNC_SECRET
   3. the file studio-sync.secret in the gmail-watcher config dir
-     (C:\\Users\\wccg1\\.wccg-gmail-watcher — outside the repo, never committed)
-  4. legacy=True only: the SECRET constant still hardcoded in sync-dj-drops.py,
-     read with `ast` (never executed, never copied anywhere else).
+     (C:\Users\wccg1\.wccg-gmail-watcher - outside the repo, never committed)
+  4. legacy=True only, and only while 1-3 are all empty: the RETIRED shared
+     secret, read from a pinned commit of this repository's own git history
+     (BRIDGE_COMMIT). It keeps the 5-minute DJ-mix filing working between the
+     merge that removed the literals and the owner running the rotation (Jev
+     0.91, 2026-09-28). The functions stop accepting that value when the
+     rotation turns STUDIO_SYNC_ACCEPT_LEGACY off, and a stored new secret (1)
+     always wins, so after the rotation the bridge is never used. Delete it in a
+     later cleanup.
 
-The literal still lives in sync-dj-drops.py / dj_sync_mail.py (and the edge
-function) for now, so nothing breaks before the file/env exists. It has been
-public in this repository, so the edge function accepts it ONLY for the old
-DJ-drop actions; the sermon actions need the new secret from 1-3 (the function
-reads its copy from STUDIO_SYNC_SECRET). Rotating = new value in the function's
-STUDIO_SYNC_SECRET + one of 1-3 here, then drop the constants.
+Self-check (never prints a secret):
+  python scripts\studio_sync_secret.py --source    which source a caller would use
+  python scripts\studio_sync_secret.py --ping      ping studio-sync + dj-setup-link
+                                                   with it; exit 0 only when both
+                                                   answer ok via the CURRENT secret
 """
 
 import ast
+import json
 import os
+import shutil
+import subprocess
+import sys
+import urllib.error
+import urllib.request
 
-FN = "https://irjiqbmoohklagdegezz.supabase.co/functions/v1/studio-sync"
+SUPA = "https://irjiqbmoohklagdegezz.supabase.co"
+FN = f"{SUPA}/functions/v1/studio-sync"
+SETUP_LINK_FN = f"{SUPA}/functions/v1/dj-setup-link"
 ENV = "WCCG_STUDIO_SYNC_SECRET"
 DPAPI_FILE = os.environ.get("WCCG_STUDIO_SYNC_DPAPI", r"C:\AirSuite\secrets\studio-sync.dpapi")
 FILE = os.path.join(os.environ.get("WCCG_GMAIL_DIR", r"C:\Users\wccg1\.wccg-gmail-watcher"),
                     "studio-sync.secret")
-LEGACY_SOURCE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sync-dj-drops.py")
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# The last origin/main commit whose scripts still carried the retired literal.
+BRIDGE_COMMIT = "2111fe00a5ddb12741f8aeb79363661addc3cd86"
+BRIDGE_PATH = "scripts/sync-dj-drops.py"
+
+NO_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0  # callers run under pythonw
+_bridge_cache = {}
 
 
-def load(legacy=False):
-    """The secret, or None if none of the sources has it."""
-    v = (os.environ.get(ENV) or "").strip()
-    if v:
-        return v
+def resolve(legacy=False):
+    """(secret, source name) - source is dpapi / env / file / history-bridge, or (None, None)."""
     v = dpapi_secret()
     if v:
-        return v
+        return v, "dpapi"
+    v = (os.environ.get(ENV) or "").strip()
+    if v:
+        return v, "env"
     try:
         with open(FILE, encoding="utf-8") as fh:
             v = fh.read().strip()
         if v:
-            return v
+            return v, "file"
     except OSError:
         pass
-    return legacy_constant() if legacy else None
+    if legacy:
+        v = legacy_from_history()
+        if v:
+            return v, "history-bridge"
+    return None, None
+
+
+def load(legacy=False):
+    """The secret, or None if none of the sources has it."""
+    return resolve(legacy)[0]
 
 
 def dpapi_secret(path=None):
@@ -104,13 +133,34 @@ def _dpapi_unprotect(blob):
         kernel32.LocalFree(ctypes.cast(out.pbData, ctypes.c_void_p))
 
 
-def legacy_constant(path=LEGACY_SOURCE):
-    """The string in sync-dj-drops.py's module-level `SECRET = ...` assignment
-    (plain literal, or `load() or "<literal>"`), parsed — not imported."""
+def _git():
+    return shutil.which("git") or r"C:\Program Files\Git\cmd\git.exe"
+
+
+def legacy_from_history(commit=None, path=None, repo=None):
+    """The retired secret from `git show <commit>:<path>` (a module-level
+    `SECRET = ...` assignment, parsed - never executed), or None. Cached."""
+    commit, path, repo = commit or BRIDGE_COMMIT, path or BRIDGE_PATH, repo or REPO
+    key = (commit, path, repo)
+    if key not in _bridge_cache:
+        value = None
+        try:
+            r = subprocess.run([_git(), "-C", repo, "show", f"{commit}:{path}"],
+                               capture_output=True, timeout=20, creationflags=NO_WINDOW)
+            if r.returncode == 0:
+                value = legacy_constant_from_source(r.stdout.decode("utf-8", "replace"))
+        except (OSError, subprocess.SubprocessError):
+            value = None
+        _bridge_cache[key] = value
+    return _bridge_cache[key]
+
+
+def legacy_constant_from_source(text):
+    """The string in a module-level `SECRET = ...` assignment (plain literal, or
+    `load() or "<literal>"`), parsed with ast - not executed."""
     try:
-        with open(path, encoding="utf-8") as fh:
-            tree = ast.parse(fh.read())
-    except (OSError, SyntaxError):
+        tree = ast.parse(text)
+    except SyntaxError:
         return None
     for node in tree.body:
         if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "SECRET"
@@ -119,3 +169,66 @@ def legacy_constant(path=LEGACY_SOURCE):
                 if isinstance(n, ast.Constant) and isinstance(n.value, str) and n.value.strip():
                     return n.value.strip()
     return None
+
+
+def legacy_constant(path):
+    """legacy_constant_from_source() for a file on disk (tests)."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return legacy_constant_from_source(fh.read())
+    except OSError:
+        return None
+
+
+def post(url, payload, timeout=60):
+    """(HTTP status, JSON body or {}) - the body carries the secret, never a URL or argv."""
+    req = urllib.request.Request(url, data=json.dumps(payload).encode(),
+                                 headers={"Content-Type": "application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.status, json.loads(resp.read().decode() or "{}")
+    except urllib.error.HTTPError as e:
+        try:
+            return e.code, json.loads(e.read().decode() or "{}")
+        except ValueError:
+            return e.code, {}
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        return 0, {"error": type(e).__name__}
+
+
+# What the pre-rotation function code answers to "ping" once it has ACCEPTED the
+# secret: studio-sync has no such action; dj-setup-link falls through to its
+# recovery branch and stops at the missing email. Neither does anything.
+OLD_CODE_ERRORS = ("unknown action", "no email")
+
+
+def describe_ping(name, status, body):
+    """One line for a ping answer. 400 'unknown action' = function code from before
+    the rotation, which accepted the secret but has no ping yet."""
+    if status == 200 and body.get("ok"):
+        return f"PING {name} ok {body.get('via', '?')}"
+    if status == 400 and str(body.get("error", "")) in OLD_CODE_ERRORS:
+        return f"PING {name} accepted-old-code"
+    return f"PING {name} fail HTTP {status} {str(body.get('error', ''))[:80]}"
+
+
+def _main(argv):
+    secret, src = resolve(legacy=True)
+    if "--source" in argv:
+        print(f"SOURCE {src or 'none'}")
+        return 0 if secret else 1
+    if "--ping" in argv:
+        print(f"SOURCE {src or 'none'}")
+        if not secret:
+            print("PING studio-sync fail no secret on this PC")
+            return 1
+        lines = [describe_ping("studio-sync", *post(FN, {"secret": secret, "action": "ping"})),
+                 describe_ping("dj-setup-link", *post(SETUP_LINK_FN, {"secret": secret, "action": "ping"}))]
+        print("\n".join(lines))
+        return 0 if all(line.endswith(" ok current") for line in lines) else 1
+    print(__doc__)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(_main(sys.argv[1:]))
