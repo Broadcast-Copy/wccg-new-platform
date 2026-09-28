@@ -40,7 +40,7 @@ function Mark({ p }: { p: Partner }) {
         {p.name}
       </span>
       {p.place ? (
-        <span className="mt-1 text-[10px] tracking-[0.22em] text-faint uppercase">
+        <span className="mt-1 text-xs tracking-[0.2em] text-dim uppercase">
           {p.place}
         </span>
       ) : null}
@@ -53,7 +53,7 @@ export function Partners() {
   return (
     <section className="border-y border-line bg-surface">
       <div className="mx-auto max-w-6xl px-5 py-12">
-        <p className="text-center text-xs tracking-[0.24em] text-faint uppercase">
+        <p className="text-center text-xs tracking-[0.24em] text-dim uppercase">
           Partners
         </p>
 

@@ -15,7 +15,7 @@ type FormState =
   | { status: "success" };
 
 const FIELD =
-  "w-full rounded-lg border border-line bg-ink px-3 py-2.5 text-sm text-fg placeholder:text-faint outline-none transition focus:border-signal/60 focus:ring-2 focus:ring-signal/20";
+  "min-h-11 w-full rounded-lg border border-line bg-ink px-3 py-2.5 text-base text-fg sm:text-sm placeholder:text-faint outline-none transition focus:border-signal/60 focus:ring-2 focus:ring-signal/20";
 const LABEL = "block text-xs font-medium tracking-wide text-dim uppercase";
 
 export function EarlyAccessForm() {
@@ -184,13 +184,13 @@ export function EarlyAccessForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-5 py-3 text-sm font-semibold text-fg transition hover:bg-signal-soft disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-signal px-5 text-sm font-semibold text-fg transition hover:bg-signal-soft disabled:cursor-not-allowed disabled:opacity-60"
       >
         {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
         {submitting ? "Sending…" : "Join the waitlist"}
       </button>
 
-      <p className="text-center text-xs text-faint">
+      <p className="text-center text-xs text-dim">
         No card required. We&rsquo;ll only use this to talk to you about your station.
       </p>
     </form>

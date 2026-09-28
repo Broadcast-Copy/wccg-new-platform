@@ -13,6 +13,12 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
 RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
 
+# The five public guide teasers under /documentation/<slug>/ were removed on
+# 2026-09-27 (the guides are members-only, behind sign-in on the platform).
+# Old links land on the documentation overview: with or without the trailing
+# slash, and the exported index.html itself.
+RewriteRule ^documentation/(build-and-publish-a-days-log|editing-and-validating-a-log|imaging-ai-script-writer|inserting-traffic|traffic-basics)(/|/index\.html)?$ /documentation/ [R=301,L]
+
 # Serve index.html for directories that have one
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteCond %{REQUEST_FILENAME}/index.html -f

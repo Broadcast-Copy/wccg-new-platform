@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { writeSignedInHint } from "@/lib/signed-in-hint";
 
 /**
  * Browser Supabase client for the control plane. Public-by-design fallbacks
@@ -14,3 +15,10 @@ export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || FALLBACK_SUPABASE_ANON_KEY,
   { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } },
 );
+
+// Keep broadcastcopy.ai's "signed in" hint (initials only, never a token) in
+// step with this session: written on every auth event, deleted on sign-out.
+// The session itself stays in localStorage. See lib/signed-in-hint.ts.
+if (typeof window !== "undefined") {
+  supabase.auth.onAuthStateChange((_event, session) => writeSignedInHint(session));
+}

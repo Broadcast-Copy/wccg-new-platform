@@ -119,10 +119,13 @@ export function ProductVideo({
         <button
           type="button"
           onClick={() => setPaused((p) => !p)}
-          className="absolute right-2.5 bottom-2.5 flex h-8 w-8 items-center justify-center rounded-full border border-line bg-elevated/90 text-fg opacity-80 shadow-sm transition group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-signal-ink"
+          className="absolute right-1 bottom-1 flex h-11 w-11 items-center justify-center rounded-full opacity-80 transition group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-signal-ink"
           aria-label={paused ? `Play: ${video.title}` : `Pause: ${video.title}`}
         >
-          {paused ? <Play className="ml-0.5 h-3.5 w-3.5" aria-hidden /> : <Pause className="h-3.5 w-3.5" aria-hidden />}
+          {/* a 44 px tap target around the 32 px visible button */}
+          <span className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-elevated/90 text-fg shadow-sm">
+            {paused ? <Play className="ml-0.5 h-3.5 w-3.5" aria-hidden /> : <Pause className="h-3.5 w-3.5" aria-hidden />}
+          </span>
         </button>
       )}
     </div>
