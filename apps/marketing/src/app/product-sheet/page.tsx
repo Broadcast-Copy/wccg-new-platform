@@ -142,7 +142,7 @@ export default function ProductSheetPage() {
                 <ul className="mt-3 space-y-2">
                   {d.points.map((p) => (
                     <li key={p} className="flex items-start gap-2 text-sm leading-relaxed text-dim print:text-xs">
-                      <Check className="mt-1 h-3.5 w-3.5 flex-none text-signal" aria-hidden />
+                      <Check className="mt-1 h-3.5 w-3.5 flex-none text-signal-ink" aria-hidden />
                       <span>{p}</span>
                     </li>
                   ))}
@@ -188,7 +188,7 @@ export default function ProductSheetPage() {
             <ul className="mt-4 space-y-2">
               {GUARDS.map((g) => (
                 <li key={g} className="flex items-start gap-2 text-sm leading-relaxed text-dim print:text-xs">
-                  <Check className="mt-1 h-3.5 w-3.5 flex-none text-signal" aria-hidden />
+                  <Check className="mt-1 h-3.5 w-3.5 flex-none text-signal-ink" aria-hidden />
                   <span>{g}</span>
                 </li>
               ))}
@@ -211,7 +211,7 @@ export default function ProductSheetPage() {
         <div className="mt-12 flex flex-col gap-3 sm:flex-row print:hidden">
           <Link
             href="/platform#early-access"
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-signal px-6 py-3 text-sm font-semibold text-white transition hover:bg-signal-soft"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-signal px-6 py-3 text-sm font-semibold text-fg transition hover:bg-signal-soft"
           >
             Get early access <ArrowRight className="h-4 w-4" aria-hidden />
           </Link>

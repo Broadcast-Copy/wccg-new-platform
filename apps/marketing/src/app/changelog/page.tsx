@@ -22,7 +22,7 @@ export default function ChangelogPage() {
       <SiteHeader />
 
       <main className="mx-auto max-w-3xl px-5 py-16">
-        <span className="inline-flex items-center gap-2 rounded-full border border-signal/30 bg-signal/10 px-3.5 py-1.5 text-xs font-medium tracking-wide text-signal-soft uppercase">
+        <span className="inline-flex items-center gap-2 rounded-full border border-signal/30 bg-signal/10 px-3.5 py-1.5 text-xs font-medium tracking-wide text-signal-ink uppercase">
           <span className="bc-pulse h-1.5 w-1.5 rounded-full bg-signal" aria-hidden />
           Updated in real time
         </span>

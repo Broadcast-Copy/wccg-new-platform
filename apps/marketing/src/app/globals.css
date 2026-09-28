@@ -19,7 +19,7 @@
   --color-dim: #6b6459;
   --color-faint: #96907f;
   --color-signal: #ff4a1c;
-  --color-signal-soft: #e63f14;
+  --color-signal-soft: #ff6a3d; /* hover FILL under dark type: fg 5.61:1 (was #e63f14: 3.87 as a fill, 3.43 as words) */
   /* Signal orange is a FILL colour: as type it measures 2.80:1 on the paper
      ground. Words that carry the accent use this ink-safe shade instead —
      5.71:1 on ink, 6.14:1 on surface, 6.86:1 on elevated, 5.09:1 on a

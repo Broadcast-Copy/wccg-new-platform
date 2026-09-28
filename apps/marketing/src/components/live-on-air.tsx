@@ -84,7 +84,7 @@ export function LiveOnAir() {
       className="mx-auto mt-8 inline-flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-full border border-line bg-elevated/70 px-4 py-2 text-sm"
       aria-live="polite"
     >
-      <span className="inline-flex items-center gap-2 font-medium text-signal-soft">
+      <span className="inline-flex items-center gap-2 font-medium text-signal-ink">
         <span className="bc-pulse h-2 w-2 rounded-full bg-signal" aria-hidden />
         ON AIR NOW
       </span>

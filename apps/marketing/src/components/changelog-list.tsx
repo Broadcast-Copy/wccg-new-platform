@@ -29,7 +29,7 @@ type State =
 const CHANNEL_STYLE: Record<Channel, string> = {
   alpha: "bg-[#a855f7]/15 text-[#c084fc] border-[#a855f7]/40",
   beta: "bg-amber/15 text-amber border-amber/40",
-  stable: "bg-signal/15 text-signal-soft border-signal/40",
+  stable: "bg-signal/15 text-signal-ink border-signal/40",
 };
 
 function fmtDate(iso: string): string {
@@ -87,7 +87,7 @@ export function ChangelogList() {
                 latest ? "border-signal" : "border-line"
               }`}
             >
-              <Tag className={`h-3.5 w-3.5 ${latest ? "text-signal" : "text-faint"}`} aria-hidden />
+              <Tag className={`h-3.5 w-3.5 ${latest ? "text-signal-ink" : "text-faint"}`} aria-hidden />
             </div>
 
             <div
@@ -103,7 +103,7 @@ export function ChangelogList() {
                   {entry.channel}
                 </span>
                 {latest && (
-                  <span className="rounded-full bg-signal/15 px-2 py-0.5 text-[10px] font-bold tracking-wider text-signal-soft uppercase">
+                  <span className="rounded-full bg-signal/15 px-2 py-0.5 text-[10px] font-bold tracking-wider text-signal-ink uppercase">
                     Latest
                   </span>
                 )}

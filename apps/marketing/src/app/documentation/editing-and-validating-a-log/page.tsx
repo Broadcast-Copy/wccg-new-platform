@@ -39,7 +39,7 @@ export default function Page() {
       </Section>
 
       <Section title="What you can change">
-        <ul className="list-disc space-y-2 pl-5 marker:text-signal">
+        <ul className="list-disc space-y-2 pl-5 marker:text-signal-ink">
           <li>Insert from a library search or by drag-and-drop.</li>
           <li>Move, delete, cut, copy and paste — across hours and across days.</li>
           <li>Replace a row, choosing from ranked suggestions.</li>

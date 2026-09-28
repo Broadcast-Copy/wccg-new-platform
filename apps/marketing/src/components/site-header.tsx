@@ -44,7 +44,7 @@ export function SiteHeader({ sticky = true }: { sticky?: boolean }) {
 
         <Link
           href="/platform#early-access"
-          className="rounded-lg bg-signal px-4 py-2 text-sm font-semibold text-white transition hover:bg-signal-soft"
+          className="rounded-lg bg-signal px-4 py-2 text-sm font-semibold text-fg transition hover:bg-signal-soft"
         >
           Get early access
         </Link>

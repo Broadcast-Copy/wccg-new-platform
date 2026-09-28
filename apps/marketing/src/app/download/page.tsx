@@ -117,7 +117,7 @@ function StatePill({ state, href, name }: { state: State; href?: string; name: s
       <a
         href={href}
         download
-        className="inline-flex flex-none items-center gap-1.5 rounded-full bg-signal px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-signal-soft"
+        className="inline-flex flex-none items-center gap-1.5 rounded-full bg-signal px-3.5 py-1.5 text-xs font-semibold text-fg transition hover:bg-signal-soft"
       >
         <ArrowDown className="h-3.5 w-3.5" aria-hidden />
         Download
@@ -132,7 +132,7 @@ function StatePill({ state, href, name }: { state: State; href?: string; name: s
       </span>
     );
   return (
-    <span className="inline-flex flex-none items-center rounded-full border border-signal/40 bg-signal/10 px-3.5 py-1.5 text-xs font-semibold text-signal">
+    <span className="inline-flex flex-none items-center rounded-full border border-signal/40 bg-signal/10 px-3.5 py-1.5 text-xs font-semibold text-signal-ink">
       Planned
     </span>
   );
@@ -176,7 +176,7 @@ export default function DownloadPage() {
       <section className="relative overflow-hidden bc-glow">
         <div className="pointer-events-none absolute inset-0 bc-grid" aria-hidden />
         <div className="relative mx-auto max-w-6xl px-5 pt-20 pb-14 text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-signal/30 bg-signal/10 px-3.5 py-1.5 text-xs font-medium tracking-wide text-signal-soft uppercase">
+          <span className="inline-flex items-center gap-2 rounded-full border border-signal/30 bg-signal/10 px-3.5 py-1.5 text-xs font-medium tracking-wide text-signal-ink uppercase">
             <span className="bc-pulse h-1.5 w-1.5 rounded-full bg-signal" aria-hidden />
             One installer
           </span>
@@ -196,7 +196,7 @@ export default function DownloadPage() {
             <a
               href={BROADCAST_COPY_MANAGER.href}
               download
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-6 py-3 text-sm font-semibold text-white transition hover:bg-signal-soft sm:w-auto"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-6 py-3 text-sm font-semibold text-fg transition hover:bg-signal-soft sm:w-auto"
             >
               <ArrowDown className="h-4 w-4" aria-hidden />
               Download Broadcast Copy Manager
@@ -245,7 +245,7 @@ export default function DownloadPage() {
                     <li
                       key={item}
                       className={`rounded-lg px-3 py-2 ${
-                        i === 0 ? "bg-signal/10 font-semibold text-signal" : "text-dim"
+                        i === 0 ? "bg-signal/10 font-semibold text-signal-ink" : "text-dim"
                       }`}
                     >
                       {item}
@@ -271,7 +271,7 @@ export default function DownloadPage() {
                       className="mt-0.5 flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-line bg-ink"
                       aria-hidden
                     >
-                      <Icon className="h-5 w-5 text-signal" />
+                      <Icon className="h-5 w-5 text-signal-ink" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -327,7 +327,7 @@ export default function DownloadPage() {
               <a
                 href={BROADCAST_COPY_MANAGER.href}
                 download
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-6 py-3 text-sm font-semibold text-white transition hover:bg-signal-soft sm:w-auto"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-6 py-3 text-sm font-semibold text-fg transition hover:bg-signal-soft sm:w-auto"
               >
                 <ArrowDown className="h-4 w-4" aria-hidden />
                 Download for Windows
@@ -393,7 +393,7 @@ export default function DownloadPage() {
               <a
                 href={AIRSUITE_CONSOLE.href}
                 download
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-6 py-3 text-sm font-semibold text-white transition hover:bg-signal-soft sm:w-auto"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-6 py-3 text-sm font-semibold text-fg transition hover:bg-signal-soft sm:w-auto"
               >
                 <ArrowDown className="h-4 w-4" aria-hidden />
                 Download for Windows
@@ -444,7 +444,7 @@ export default function DownloadPage() {
                   className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-ink"
                   aria-hidden
                 >
-                  <Icon className="h-5 w-5 text-signal" />
+                  <Icon className="h-5 w-5 text-signal-ink" />
                 </span>
                 <h3 className="mt-4 font-semibold">{p.name}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-dim">{p.body}</p>
@@ -453,7 +453,7 @@ export default function DownloadPage() {
                     href={p.link.href}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-3 inline-block text-sm font-semibold text-signal hover:text-signal-soft"
+                    className="mt-3 inline-block text-sm font-semibold text-signal-ink hover:text-signal-ink"
                   >
                     {p.link.label} →
                   </a>
@@ -468,7 +468,7 @@ export default function DownloadPage() {
       <section className="mx-auto max-w-5xl px-5 pt-14">
         <div className="rounded-2xl border border-line bg-elevated p-6 sm:p-8">
           <div className="flex items-center gap-3">
-            <ShieldCheck className="h-5 w-5 flex-none text-signal" aria-hidden />
+            <ShieldCheck className="h-5 w-5 flex-none text-signal-ink" aria-hidden />
             <h2 className="text-xl font-semibold tracking-tight">
               What it does to the machine
             </h2>

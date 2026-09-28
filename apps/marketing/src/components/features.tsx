@@ -88,7 +88,7 @@ export function Features() {
           key={feature.name}
           className="w-full rounded-2xl border border-line bg-surface p-6 transition hover:border-signal/30 sm:w-[calc(50%-0.625rem)] lg:w-[calc(33.333%-0.834rem)]"
         >
-          <feature.Icon className="h-6 w-6 text-signal" aria-hidden />
+          <feature.Icon className="h-6 w-6 text-signal-ink" aria-hidden />
           <h3 className="mt-4 font-semibold">{feature.name}</h3>
           <p className="mt-2 text-sm leading-relaxed text-dim">{feature.blurb}</p>
         </article>
