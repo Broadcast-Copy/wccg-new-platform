@@ -8,12 +8,28 @@
    motion work impossible to capture. */
 const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches
   && !/(\?|&)motion=1\b/.test(location.search);
-/* Ambient life (cars, pedestrians, meters, beacons) runs regardless of the
-   reduced-motion flag — embedded panes and headless browsers report `reduce`
-   unasked, freezing the whole diorama. REDUCED still governs camera moves and
-   parallax, which are the actual vestibular triggers. ?motion=0 stills all. */
-const ANIM = !/(\?|&)motion=0\b/.test(location.search);
+/* Ambient life (cars, pedestrians, water, clouds, meters, beacons). Owner,
+   2026-09-27: "honour prefers-reduced-motion everywhere" — a visitor who asks
+   for reduced motion gets a still diorama, parked mid-scene, with every light
+   and label intact. ?motion=1 turns it all back on (the QA override for
+   headless browsers and embedded panes, which report reduce unasked), and
+   ?motion=0 stills everything for anyone. */
+const ANIM = !REDUCED && !/(\?|&)motion=0\b/.test(location.search);
 if(THREE.ColorManagement) THREE.ColorManagement.legacyMode = false;
+/* query flags. The QA ones: ?tod=day|dusk|auto picks the lighting, ?intro=1
+   forces the opening sequence (it otherwise runs once per visit), ?intro=0
+   skips it, ?introAt=<seconds> freezes it on one frame so a headless browser
+   can photograph it, ?quality=high|low overrides the automatic tier. */
+const QP = k => { const m = location.search.match(new RegExp("[?&]" + k + "=([^&#]*)"));
+  return m ? decodeURIComponent(m[1]) : null; };
+/* storage can throw (private windows, blocked site data, sandboxed frames),
+   so every read and write goes through these and fails soft */
+const store = {
+  get(k){ try{ return window.sessionStorage.getItem(k); }catch(e){ return null; } },
+  set(k, v){ try{ window.sessionStorage.setItem(k, v); }catch(e){} },
+};
+/* the water line of the bay; the boats, surf and viaduct piers key off it */
+const SEA_Y = -1.62;
 
 /* ---------- plan constants: every floor is a 2x2 quadrant plate ------ */
 const PX0 = -17, PX1 = 17;      // plate extent X   (34 wide)
@@ -192,7 +208,29 @@ const GROUPS = ["Studios","Operations","Front Office","Creative","Field","Audien
 const stage = document.getElementById("stage");
 const canvas = document.getElementById("gl");
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+/* Quality tier. Low-end hardware, software GL and phones get a lighter
+   pipeline: pixel ratio 1, smaller shadow maps and slower shadow refresh for
+   the upper plates. The look (materials, layout, the lighting rig) is the same
+   either way. An fps check after load can also step down to it — see
+   `governor` in the loop. ?quality=high|low overrides. */
+const QUALITY = (()=>{
+  const q = QP("quality");
+  if(q === "high" || q === "low") return q;
+  let weak = false;
+  try{
+    const gl = renderer.getContext();
+    const ext = gl.getExtension("WEBGL_debug_renderer_info");
+    const name = ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : "";
+    if(/swiftshader|llvmpipe|softpipe|software|basic render|microsoft basic/i.test(name)) weak = true;
+    if(gl.getParameter(gl.MAX_TEXTURE_SIZE) < 8192) weak = true;
+  }catch(e){ weak = true; }
+  if((navigator.hardwareConcurrency || 8) <= 4) weak = true;
+  if(navigator.deviceMemory && navigator.deviceMemory <= 4) weak = true;
+  if(/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)) weak = true;
+  return weak ? "low" : "high";
+})();
+let LOW = QUALITY === "low";
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, LOW ? 1 : 2));
 renderer.setClearColor(0xd2cfc7);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -218,8 +256,10 @@ const cam = new THREE.PerspectiveCamera(30, 1.4, 0.5, 500);
   scene.environment = pm.fromScene(es, 0.04).texture;
 }
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.14));
-scene.add(new THREE.HemisphereLight(0xffffff, 0xc6c0b4, 0.3));
+const AMB = new THREE.AmbientLight(0xffffff, 0.14);
+scene.add(AMB);
+const HEMI = new THREE.HemisphereLight(0xffffff, 0xc6c0b4, 0.3);
+scene.add(HEMI);
 const rim = new THREE.DirectionalLight(0xdce7f2, 0.34);
 rim.position.set(-38, 20, -28);
 scene.add(rim);
@@ -231,7 +271,7 @@ const SUN_DIR = new THREE.Vector3(20, 74, 54).normalize();
 for(let i=0;i<4;i++){
   const s = new THREE.DirectionalLight(0xfff6e9, 1.5);
   s.castShadow = true;
-  s.shadow.mapSize.set(2048, 2048);
+  s.shadow.mapSize.set(LOW ? 1024 : 2048, LOW ? 1024 : 2048);
   s.shadow.camera.left = -26; s.shadow.camera.right = 26;
   s.shadow.camera.top = 24;   s.shadow.camera.bottom = -24;
   s.shadow.camera.near = 1;   s.shadow.camera.far = 130;
@@ -241,8 +281,12 @@ for(let i=0;i<4;i++){
     s.shadow.camera.left = -66; s.shadow.camera.right = 66;
     s.shadow.camera.top = 64;   s.shadow.camera.bottom = -130;
     s.shadow.camera.far = 250;
-    s.shadow.mapSize.set(4096, 4096);
+    s.shadow.mapSize.set(LOW ? 2048 : 4096, LOW ? 2048 : 4096);
   }
+  /* the upper plates hold nothing that moves much (meters, tallies), so their
+     shadow maps refresh on a schedule instead of every frame; the loop asks
+     for a refresh whenever the plates themselves move */
+  if(i > 0) s.shadow.autoUpdate = false;
   s.layers.set(i+1);
   s.shadow.camera.layers.set(i+1);
   scene.add(s.target);
@@ -255,9 +299,11 @@ function std(hex, o){ return Object.assign(new THREE.MeshStandardMaterial(
   {color:hex, roughness:0.88, metalness:0, envMapIntensity:0.6}), o||{}); }
 const MAT = {
   white:  () => std(0xffffff, {roughness:0.7}),
-  wall:   () => std(0xffffff, {roughness:0.93, envMapIntensity:0.42}),
+  // white walls carry a little warm light of their own at dusk, so the
+  // building still reads white when the sky goes lilac
+  wall:   () => night(std(0xffffff, {roughness:0.93, envMapIntensity:0.42}), 0xffe2c4, 0.17),
   wallTop:() => std(0xf4f1ea, {roughness:0.95, envMapIntensity:0.4}),
-  slab:   () => std(0xf2efe8, {roughness:0.94, envMapIntensity:0.38}),
+  slab:   () => night(std(0xf2efe8, {roughness:0.94, envMapIntensity:0.38}), 0xffe2c4, 0.09),
   soft:   () => std(0xebe8e1, {roughness:0.92}),
   ink:    () => std(0x2a261e, {roughness:0.4, metalness:0.55, envMapIntensity:1.0}),
   inkFlat:() => std(0x211e18, {roughness:0.34, metalness:0.7, envMapIntensity:1.05}),
@@ -272,6 +318,73 @@ const MAT = {
   chrome: () => std(0xcfccc5, {roughness:0.22, metalness:0.9, envMapIntensity:1.3}),
 };
 const emissive = hex => new THREE.MeshBasicMaterial({color:hex, toneMapped:false});
+function dirtyShadows(){ for(let i=1;i<LEVEL_SUNS.length;i++) LEVEL_SUNS[i].shadow.needsUpdate = true; }
+
+/* ---- time of day: what changes at dusk -------------------------------
+   Three tags, read by applyTod() once everything is built. They ride along
+   through reg()'s material clones, since Material.copy copies userData.
+   night(m, hex, k[, op]) — a lit material that picks up a warm emissive at
+                            dusk (windows, floors, white walls), optionally
+                            becoming more opaque (glass reads lit, not clear)
+   lamp(off, on)          — an unlit bulb that is dark by day and on at dusk
+   glowMat(tex, hex)      — an additive halo whose strength follows the dusk
+   The building must still read WHITE at dusk: the walls get a little warm
+   light of their own rather than going grey with the sky. */
+function night(m, hex, k, op){ m.userData.night = {c:hex, k, op}; return m; }
+function lamp(off, on){
+  const m = new THREE.MeshBasicMaterial({color:off, toneMapped:false});
+  m.userData.lamp = {off, on}; return m;
+}
+const GLOW_TEX = tex(64, 64, (x,w,h)=>{
+  const gr = x.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
+  gr.addColorStop(0, "rgba(255,255,255,1)");
+  gr.addColorStop(0.28, "rgba(255,255,255,0.55)");
+  gr.addColorStop(1, "rgba(255,255,255,0)");
+  x.fillStyle = gr; x.fillRect(0,0,w,h);
+});
+/* day = strength by daylight (0 for a lamp that is simply off), dusk = at dusk */
+function glowMat(hex, day, dusk, map){
+  const m = new THREE.MeshBasicMaterial({color:hex, map:map || GLOW_TEX, transparent:true, opacity:day,
+    blending:THREE.AdditiveBlending, depthWrite:false, toneMapped:false});
+  m.userData.glow = {day, dusk}; m.userData.noDim = true;
+  return m;
+}
+/* white shingles: faint courses parallel to the ridge, so a white roof still
+   reads as a roof and not as more wall */
+const SHINGLE_TEX = tex(128, 96, (x, w, h)=>{
+  x.fillStyle = "#ffffff"; x.fillRect(0, 0, w, h);
+  for(let r = 0; r < 12; r++){
+    const y = r * h/12;
+    x.fillStyle = "rgba(60,52,40,0.07)"; x.fillRect(0, y, w, 1.2);
+    x.fillStyle = "rgba(60,52,40,0.045)";
+    for(let c = (r % 2) * 8; c < w; c += 16) x.fillRect(c, y, 1, h/12);
+  }
+});
+/* a scalloped valance: a band with a row of half-discs hanging below */
+function scallopGeo(w, r, band = 0.24){
+  const sh = new THREE.Shape(), n = Math.max(1, Math.round(w / (2*r))), rr2 = w / (2*n);
+  sh.moveTo(-w/2, 0);
+  for(let i=0;i<n;i++) sh.absarc(-w/2 + rr2 + i*2*rr2, 0, rr2, Math.PI, 0, false);
+  sh.lineTo(w/2, band); sh.lineTo(-w/2, band); sh.closePath();
+  return new THREE.ShapeGeometry(sh, 4);
+}
+/* windows that light warm at dusk */
+const litGlass = () => night(MAT.glass(), 0xffb466, 1.5, 0.94);
+/* a halo: a soft glow card squared to the view. The view direction never
+   changes (only pan, zoom and a few degrees of drift), so the cards are built
+   facing it and stay static — which lets the batcher fold them together.
+   `billboard` ones (on moving things) are turned to the lens every frame. */
+const HALOS = [];
+const VIEW_D = new THREE.Vector3(0.80, 0.86, 1.0).normalize();
+const _Z = new THREE.Vector3(0, 0, 1);
+function halo(g, hex, size, x, y, z, day, dusk, billboard){
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), glowMat(hex, day, dusk));
+  m.position.set(x, y, z); m.renderOrder = 3; m.userData.noBounds = true;
+  m.quaternion.setFromUnitVectors(_Z, VIEW_D);
+  m.castShadow = m.receiveShadow = false;
+  if(billboard){ m.userData.dyn = true; HALOS.push(m); }
+  g.add(m); return m;
+}
 
 /* ---------- primitives (y = bottom) ---------- */
 function Bo(g, w,h,d, mat, x,y,z, ry=0, rz=0, rx=0){
@@ -343,6 +456,22 @@ const BLOB = tex(128,128,(x,w,h)=>{
   gr.addColorStop(1, "rgba(38,33,25,0)");
   x.fillStyle = gr; x.fillRect(0,0,w,h);
 });
+const AO_TEX = tex(128, 128, (x, w, h)=>{
+  // nested rounded rectangles, each faint: dark at the wall, fading outward
+  // (no canvas filter, which not every browser draws)
+  for(let i = 0; i < 14; i++){
+    const ins = 30 - i*2.1;
+    x.fillStyle = "rgba(38,33,25,0.075)"; rr(x, ins, ins, w - 2*ins, h - 2*ins, 8 + i*1.2); x.fill();
+  }
+});
+/* footprint w x d (the building's own size); the decal runs a margin past it */
+function aoDecal(parent, x, z, w, d, ry = 0, k = 1, y = 0.04){
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.3 + 1.6, d * 1.3 + 1.6),
+    new THREE.MeshBasicMaterial({map:AO_TEX, transparent:true, opacity:0.55 * k, depthWrite:false, toneMapped:false}));
+  m.rotation.set(-Math.PI/2, 0, ry); m.position.set(x, y, z);
+  m.renderOrder = 1; m.userData.noBounds = true; m.castShadow = m.receiveShadow = false;
+  parent.add(m); return m;
+}
 function mkBlobShadow(parent, w, d, y){
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d),
     new THREE.MeshBasicMaterial({map:BLOB, transparent:true, depthWrite:false, toneMapped:false}));
@@ -446,6 +575,25 @@ const TX = {
     [[16,64],[34,30],[50,86],[66,42],[82,72],[98,24],[114,84],[130,50],[146,70],[162,36],[178,62],[194,58]]
       .forEach((p,i)=> i? x.lineTo(p[0],p[1]) : x.moveTo(p[0],p[1])); x.stroke();
   }),
+  // a playout waveform: mirrored bars, a played portion and a vermilion playhead
+  waveBars: tex(210, 120, (x,w,h)=>{
+    x.fillStyle="#191712"; x.fillRect(0,0,w,h);
+    x.fillStyle="rgba(255,255,255,.18)"; x.fillRect(12, 14, w-24, 6);
+    x.fillStyle="rgba(255,255,255,.5)"; x.fillRect(12, 14, 62, 6);
+    const mid = h*0.58, n = 46;
+    for(let i=0;i<n;i++){
+      const a = Math.abs(Math.sin(i*0.47)*0.55 + Math.sin(i*1.31)*0.3 + Math.sin(i*0.13)*0.25);
+      const bh = 6 + a*34, bx = 12 + i*(w-24)/n;
+      x.fillStyle = bx < 96 ? "rgba(255,255,255,.82)" : "rgba(255,255,255,.34)";
+      x.fillRect(bx, mid - bh/2, (w-24)/n - 1.2, bh);
+    }
+    x.fillStyle="#ff4a1c"; x.fillRect(96, 26, 2.4, h-36);
+  }),
+  onairLit: tex(200, 58, (x,w,h)=>{
+    x.fillStyle="#ff4a1c"; rr(x,1,1,w-2,h-2,8); x.fill();
+    x.fillStyle="#fff7f2"; x.font="800 32px "+F; x.textAlign="center"; x.textBaseline="middle";
+    x.letterSpacing="7px"; x.fillText("ON AIR", w/2+3, h/2+2);
+  }),
   rackFront: tex(120, 300, (x,w,h)=>{
     x.fillStyle="#fbfaf7"; x.fillRect(0,0,w,h);
     x.strokeStyle="#231f18"; x.lineWidth=3; x.strokeRect(1.5,1.5,w-3,h-3);
@@ -511,6 +659,7 @@ function reg(group){
 function applyDim(rec){
   rec.mats.forEach(m=>{
     if(m.userData.noDim) return;
+    m.userData.dimK = rec.dim*0.8;          // the day/dusk pass re-applies lamps with it
     m.color.copy(m.userData.base).lerp(GHOST, rec.dim*0.8);
     if(m.map){ m.transparent = true; m.opacity = m.userData.baseOpacity*(1 - rec.dim*0.85); }
   });
@@ -569,8 +718,224 @@ let groundH = () => 0;      // set by the terrain build below
 let tickClouds = () => {};  // set by the cloud build below
 let tickSea = () => {};     // set by the sea build below
 let tickSky = () => {};     // set by the aircraft build below
+let skyClear = false;       // the opening sequence clears clouds, boats and planes for its close shot
+let fadeCut = false;        // fades cut instantly (a frozen frame of the sequence must be exact)
 let westH = () => 0;        // set by the west headland build below
+/* handles the day/dusk system reaches into, filled in as the world is built */
+const ENV = {clouds:[], skyDusk:null, water:null, surf:null};
+let flatAt = () => 1;       // 1 where the ground is built on (roads, lots), set by the terrain
+let surfAt = () => 0;       // the island mesh surface itself, rim included
+/* the forest: every tree, shrub and rock is an instance in one of a handful of
+   InstancedMeshes, filled by tree()/conifer()/scatter and built once */
+const FOREST = {pines:[], rounds:[], shrubs:[], rocks:[]};
 function markNoBounds(g){ g.traverse(o=>{ if(o.isMesh) o.userData.noBounds = true; }); }
+const sstepG = (e0, e1, v) => { const t = Math.max(0, Math.min(1, (v-e0)/(e1-e0))); return t*t*(3-2*t); };
+
+/* ---- static batching --------------------------------------------------
+   The model is built from thousands of little boxes, and every one was its
+   own draw call — ~5,000 a frame plus the shadow passes, which is what held
+   a mid laptop under 60 fps. batchStatic(root) merges every static mesh under
+   `root` that shares a material look (and shadow flags, bounds flag and render
+   order) into one mesh, in root's own space. Anything animated is flagged
+   `userData.dyn` where it is built and left alone; a subgroup flagged
+   `userData.own` is skipped here and batched on its own (the house roofs lift
+   separately from their walls, so each part is its own batch). Run it before
+   reg(), so the dimming registry sees the merged materials. */
+function matSig(m){
+  return [m.type, m.color ? m.color.getHexString() : "", m.roughness, m.metalness, m.envMapIntensity,
+    m.map ? m.map.uuid : "", m.transparent ? 1 : 0, m.opacity, m.side, m.vertexColors ? 1 : 0,
+    m.toneMapped ? 1 : 0, m.emissive ? m.emissive.getHexString() : "", m.emissiveIntensity,
+    m.flatShading ? 1 : 0, m.depthWrite ? 1 : 0, m.blending, m.alphaMap ? m.alphaMap.uuid : "",
+    JSON.stringify(m.userData)].join("|");
+}
+const _bm = new THREE.Matrix4(), _bn = new THREE.Matrix3(), _bv = new THREE.Vector3();
+function batchStatic(root){
+  root.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  const buckets = new Map();
+  const walk = (o) => {
+    for(const c of o.children){
+      if(c.userData.dyn || c.userData.own || !c.visible) continue;
+      if(c.isMesh && !c.isInstancedMesh && c.children.length === 0 && !Array.isArray(c.material)
+         && c.geometry && c.geometry.attributes.position && c.geometry.attributes.normal){
+        const vc = !!c.material.vertexColors;
+        if(vc && !c.geometry.attributes.color) continue;
+        const key = matSig(c.material) + "#" + (c.castShadow ? 1 : 0) + (c.receiveShadow ? 1 : 0) +
+          (c.userData.noBounds ? 1 : 0) + ":" + c.renderOrder + ":" + c.layers.mask;
+        let b = buckets.get(key);
+        if(!b){ b = {list:[], mat:c.material, cast:c.castShadow, recv:c.receiveShadow,
+                     nb:!!c.userData.noBounds, ro:c.renderOrder, layers:c.layers.mask, vc}; buckets.set(key, b); }
+        b.list.push(c);
+      }
+      if(c.children.length) walk(c);
+    }
+  };
+  walk(root);
+  let merged = 0;
+  for(const b of buckets.values()){
+    if(b.list.length < 2) continue;
+    let nv = 0, ni = 0;
+    for(const m of b.list){
+      const g = m.geometry;
+      nv += g.attributes.position.count;
+      ni += g.index ? g.index.count : g.attributes.position.count;
+    }
+    const P = new Float32Array(nv*3), N = new Float32Array(nv*3), U = new Float32Array(nv*2);
+    const C = b.vc ? new Float32Array(nv*3) : null;
+    const I = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
+    let vo = 0, io = 0;
+    for(const m of b.list){
+      const g = m.geometry, pa = g.attributes.position, na = g.attributes.normal, ua = g.attributes.uv;
+      _bm.multiplyMatrices(inv, m.matrixWorld);
+      _bn.getNormalMatrix(_bm);
+      for(let i=0;i<pa.count;i++){
+        _bv.fromBufferAttribute(pa, i).applyMatrix4(_bm); P.set([_bv.x, _bv.y, _bv.z], (vo+i)*3);
+        _bv.fromBufferAttribute(na, i).applyMatrix3(_bn).normalize(); N.set([_bv.x, _bv.y, _bv.z], (vo+i)*3);
+        if(ua) U.set([ua.getX(i), ua.getY(i)], (vo+i)*2);
+        if(C){ const ca = g.attributes.color; C.set([ca.getX(i), ca.getY(i), ca.getZ(i)], (vo+i)*3); }
+      }
+      // a mirrored transform flips the triangle winding; put it back
+      const flip = _bm.determinant() < 0;
+      if(g.index){
+        const ix = g.index.array;
+        for(let i=0;i<ix.length;i+=3){
+          I[io++] = ix[i] + vo;
+          if(flip){ I[io++] = ix[i+2] + vo; I[io++] = ix[i+1] + vo; }
+          else    { I[io++] = ix[i+1] + vo; I[io++] = ix[i+2] + vo; }
+        }
+      } else {
+        for(let i=0;i<pa.count;i+=3){
+          I[io++] = vo + i;
+          if(flip){ I[io++] = vo + i + 2; I[io++] = vo + i + 1; }
+          else    { I[io++] = vo + i + 1; I[io++] = vo + i + 2; }
+        }
+      }
+      vo += pa.count;
+      m.parent.remove(m);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(P, 3));
+    geo.setAttribute("normal", new THREE.BufferAttribute(N, 3));
+    geo.setAttribute("uv", new THREE.BufferAttribute(U, 2));
+    if(C) geo.setAttribute("color", new THREE.BufferAttribute(C, 3));
+    geo.setIndex(new THREE.BufferAttribute(I, 1));
+    geo.computeBoundingSphere(); geo.computeBoundingBox();
+    const mesh = new THREE.Mesh(geo, b.mat);
+    mesh.castShadow = b.cast; mesh.receiveShadow = b.recv; mesh.renderOrder = b.ro;
+    mesh.layers.mask = b.layers;
+    if(b.nb) mesh.userData.noBounds = true;
+    root.add(mesh);
+    merged += b.list.length;
+  }
+  return merged;
+}
+/* flag helpers for the batcher */
+const dyn = o => { o.userData.dyn = true; return o; };
+const own = o => { o.userData.own = true; return o; };
+/* deterministic scatter: the same trees and rocks land in the same places on
+   every load, so screenshots and the owner's memory of the model agree */
+function prng(seed){
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+/* the rail alignment, shared by the railway and by the scatter that keeps
+   trees off the line */
+const RAIL_Z = x => 15 - 54*sstepG(-140, -25, x) + 4*Math.sin(x*0.09) + 60*sstepG(35, 100, x);
+
+/* ---- limestone cliff skirt -------------------------------------------
+   The island (and the headland) end in a cliff of pale stratified limestone
+   rather than a slope into the void. One low-poly band follows the rim — a
+   superellipse — down through a stack of strata: each layer a vertical face
+   with a small ledge or recess at its foot, a turf lip overhanging the top,
+   and the lower layers stepping inward so the underside tapers like the
+   bottom of a lifted diorama. Faceted on purpose (flat normals), with
+   per-layer warm off-white tones. A cap closes the bottom so no sight line
+   can ever reach the inside. Returns the rim points for things that follow
+   the edge (shrubs, surf). */
+const CLIFF_TONES = { turf:0xdfd9ce, turf2:0xe7e1d5, A:0xf1ebe0, B:0xe5dccd, C:0xf5f0e7, D:0xdcd2c1 };
+function cliffSkirt(parent, o){
+  const rnd = prng(o.seed || 7);
+  // dense superellipse (n = 4), then resampled to an even step along its length
+  const dense = [], N0 = 3000;
+  for(let i=0;i<=N0;i++){
+    const th = i/N0*Math.PI*2, c = Math.cos(th), s = Math.sin(th);
+    dense.push([o.cx + o.a*Math.sign(c)*Math.sqrt(Math.abs(c)), o.cz + o.b*Math.sign(s)*Math.sqrt(Math.abs(s))]);
+  }
+  const cum = [0];
+  for(let i=1;i<dense.length;i++) cum.push(cum[i-1] + Math.hypot(dense[i][0]-dense[i-1][0], dense[i][1]-dense[i-1][1]));
+  const L = cum[cum.length-1], NC = Math.max(60, Math.round(L / (o.step || 1.7)));
+  const ring = [];
+  for(let k=0, j=0; k<NC; k++){
+    const s = k/NC*L;
+    while(j < cum.length-2 && cum[j+1] < s) j++;
+    const f = (s - cum[j]) / Math.max(1e-6, cum[j+1]-cum[j]);
+    ring.push([dense[j][0] + (dense[j+1][0]-dense[j][0])*f, dense[j][1] + (dense[j+1][1]-dense[j][1])*f]);
+  }
+  const rim = ring.map((p, k)=>{
+    const a = ring[(k-1+NC)%NC], b = ring[(k+1)%NC];
+    let nx = b[1]-a[1], nz = -(b[0]-a[0]);
+    const m = Math.hypot(nx, nz) || 1; nx /= m; nz /= m;
+    if(nx*(p[0]-o.cx) + nz*(p[1]-o.cz) < 0){ nx = -nx; nz = -nz; }
+    return {x:p[0], z:p[1], nx, nz};
+  });
+  // the strata, top to bottom: [depth below the lip, horizontal offset (out +), tone]
+  // the first row starts tucked under the grass, so the turf strip rolls out
+  // from beneath the terrain edge and there is never a seam to see through
+  const PROF = o.profile || [
+    [0.02, -0.8, "turf"], [-0.12, 0.42, "turf"], [0.34, 0.30, "turf2"], [0.5, 0.05, "A"], [2.2, -0.2, "A"],
+    [2.45, 0.22, "B"], [4.3, -0.05, "B"], [4.55, -0.42, "C"], [6.6, -0.62, "C"],
+    [6.85, -0.2, "D"], [9.1, -0.85, "D"], [9.4, -1.35, "A"], [12.2, -2.3, "A"],
+    [12.5, -2.8, "B"], [15.6, -4.6, "B"], [16.1, -5.4, "C"], [19.4, -8.2, "C"],
+    [19.9, -9.2, "D"], [23.5, -13.5, "D"]];
+  const R = PROF.length;
+  // coherent per-column wobble: the face breaks into vertical buttresses and
+  // fissures instead of jittering vertex by vertex
+  const colW = rim.map((_, k)=> Math.sin(k*0.61 + (o.seed||0)) * 0.22 + Math.sin(k*1.73) * 0.14 + (rnd()-0.5)*0.18);
+  const bottomJag = rim.map((_, k)=> 1.2 + 3.4*Math.abs(Math.sin(k*0.37 + 1.3)*Math.sin(k*0.11)) + rnd()*1.6);
+  const V = [];   // [x,y,z] per (k, r)
+  for(let k=0;k<NC;k++){
+    const p = rim[k];
+    for(let r=0;r<R;r++){
+      const [d, off] = PROF[r];
+      const lower = Math.max(0, Math.min(1, d / 6));
+      const w = r < 3 ? 0 : colW[k] * (0.5 + lower) + (rnd()-0.5) * 0.16 * lower;
+      const dd = r === R-1 ? d + bottomJag[k] : d;
+      V.push([p.x + p.nx*(off + w), o.top - dd, p.z + p.nz*(off + w)]);
+    }
+  }
+  const pos = [], col = [], cc = new THREE.Color(), cv = new THREE.Color();
+  const vtx = (k, r) => V[(k % NC)*R + r];
+  const push3 = (a, b, c, color) => { pos.push(...a, ...b, ...c); for(let i=0;i<3;i++) col.push(color.r, color.g, color.b); };
+  for(let k=0;k<NC;k++){
+    // blocky tonal variation: a few neighbouring columns share a shade
+    const block = Math.sin(Math.floor(k/3)*2.3 + (o.seed||0)) * 0.035;
+    for(let r=0;r<R-1;r++){
+      cc.setHex(CLIFF_TONES[PROF[r][2]]);
+      const shade = 1 + block - (r > 3 ? Math.min(0.1, r*0.006) : 0);
+      cv.copy(cc).multiplyScalar(shade);
+      const a = vtx(k, r), b = vtx(k+1, r), c = vtx(k, r+1), d = vtx(k+1, r+1);
+      // outward-facing winding: the rim runs with increasing angle, so a–b–c
+      // and b–d–c face out (checked against the cross product)
+      push3(a, b, c, cv); push3(b, d, c, cv);
+    }
+  }
+  // bottom cap: a fan to a point under the middle, facing down
+  const bot = [o.cx, o.top - PROF[R-1][0] - 6, o.cz];
+  cv.setHex(0xcfc6b5);
+  for(let k=0;k<NC;k++) push3(vtx(k, R-1), vtx(k+1, R-1), bot, cv);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  geo.computeVertexNormals();          // non-indexed, so the normals come out flat
+  const mat = std(0xffffff, {roughness:0.96, envMapIntensity:0.34, vertexColors:true, flatShading:true});
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = false; mesh.receiveShadow = true;
+  mesh.userData.noBounds = true;
+  parent.add(mesh);
+  return rim;
+}
 
 /* =====================================================================
    SHELL — ground + four exploded quadrant plates
@@ -588,7 +953,9 @@ scene.add(shellG);
      hills elsewhere, a flat-topped crown for the transmitter, and a soft
      island rim dropping to the void. Nothing floats. */
   {
-    const GW = 128, GD = 200, GN = 150, GCX = 2, GCZ = 45;
+    // the rim is a superellipse on fixed axes (RA, RB); the mesh is sized a
+    // little past it so the clamped outline always has vertices to use
+    const GW = 130, GD = 208, GN = 152, GCX = 2, GCZ = 45, RA = 60, RB = 96, R4E = 1.25;
     const HILLS = [
       [-41, 26, 2.4, 4.2], [-22.5, 11.5, 2.6, 3.8], [-19.5, 27, 1.9, 3.6], [-38, 9.5, 1.7, 3.8],
       [-44, -3, 1.6, 5], [-34, -17, 1.3, 3.4], [-10, -29, 1.8, 5.5], [16, -29, 1.5, 5],
@@ -612,13 +979,7 @@ scene.add(shellG);
       }
       return 1 - sstep(3.4, 6.5, Math.sqrt(best));
     };
-    const hAt = (x, z) => {
-      // transmitter crown: flat top, then falls away
-      const dTx = Math.hypot(x+30, z-20);
-      let h = dTx <= 5 ? 5.4 : 5.4 * Math.exp(-((dTx-5)*(dTx-5)) / (2*6.5*6.5));
-      for(const [hx, hz, amp, sig] of HILLS)
-        h += amp * Math.exp(-(((x-hx)*(x-hx)) + ((z-hz)*(z-hz))) / (2*sig*sig));
-      const flat = Math.max(
+    const flatOf = (x, z) => Math.max(
         rectMask(x, z, -21, 21, -16, 21, 5),        // station + front walk
         rectMask(x, z, 22, 49, -12, 21, 5),         // field kit
         rectMask(x, z, 10, 18, 32.6, 36.6, 4),      // parking pull-off by the front road
@@ -638,26 +999,54 @@ scene.add(shellG);
         rectMask(x, z, -27, -3, 94, 108, 4),
         rectMask(x, z, 6, 32, 90, 112, 4),          // the park: stage + crowd
         roadMask(x, z));
-      return h * (1 - flat);
+    const hAt = (x, z) => {
+      // transmitter crown: flat top, then falls away
+      const dTx = Math.hypot(x+30, z-20);
+      let h = dTx <= 5 ? 5.4 : 5.4 * Math.exp(-((dTx-5)*(dTx-5)) / (2*6.5*6.5));
+      for(const [hx, hz, amp, sig] of HILLS)
+        h += amp * Math.exp(-(((x-hx)*(x-hx)) + ((z-hz)*(z-hz))) / (2*sig*sig));
+      return h * (1 - flatOf(x, z));
     };
+    flatAt = flatOf;
     groundH = hAt;
     const geo = new THREE.PlaneGeometry(GW, GD, GN, GN);
     geo.rotateX(-Math.PI/2);
     const pos = geo.attributes.position;
+    const surf = (x, z) => {
+      const r4 = Math.pow((x-GCX)/RA, 4) + Math.pow((z-GCZ)/RB, 4);
+      return hAt(x, z) * (1 - sstep(0.75, 1.0, r4)) - sstep(0.8, R4E, r4) * 2.8 - 0.02;
+    };
+    surfAt = surf;
     for(let i=0;i<pos.count;i++){
-      const x = pos.getX(i) + GCX, z = pos.getZ(i) + GCZ;
-      const r4 = Math.pow((x-GCX)/(GW/2-4), 4) + Math.pow((z-GCZ)/(GD/2-4), 4);
-      pos.setY(i, hAt(x, z) * (1 - sstep(0.75, 1.0, r4)) - sstep(0.8, 1.25, r4) * 2.8);
+      let x = pos.getX(i) + GCX, z = pos.getZ(i) + GCZ;
+      const r4 = Math.pow((x-GCX)/RA, 4) + Math.pow((z-GCZ)/RB, 4);
+      // anything past the rim is pulled onto it, so the island outline is the
+      // superellipse and not the square edge of the mesh
+      if(r4 > R4E){
+        const f = Math.pow(R4E / r4, 0.25);
+        x = GCX + (x-GCX)*f; z = GCZ + (z-GCZ)*f;
+        pos.setX(i, x - GCX); pos.setZ(i, z - GCZ);
+        pos.setY(i, -2.8);
+      } else pos.setY(i, hAt(x, z) * (1 - sstep(0.75, 1.0, r4)) - sstep(0.8, R4E, r4) * 2.8);
     }
     geo.computeVertexNormals();
+    // where the rim faces open air rather than the bay, a limestone skirt
+    // closes the island; under the water it is simply never seen
+    cliffSkirt(levelG[0], {cx:GCX, cz:GCZ, a:RA*Math.pow(R4E, 0.25), b:RB*Math.pow(R4E, 0.25),
+      top:-2.84, seed:11});
     // topographic shading: valleys stay pale, rises deepen, slopes shade
     {
       const lo = new THREE.Color(0xe6e1d7), hi = new THREE.Color(0xc6bfae);
       const nrm = geo.attributes.normal, cols = new Float32Array(pos.count*3);
       const cc = new THREE.Color();
+      const sand = new THREE.Color(0xeee6d4);
       for(let i=0;i<pos.count;i++){
-        const hgt = Math.max(0, Math.min(1, pos.getY(i)/7));
+        const y = pos.getY(i);
+        const hgt = Math.max(0, Math.min(1, y/7));
         cc.copy(lo).lerp(hi, hgt);
+        // a pale strand where the ground slips under the bay
+        const beach = Math.max(0, 1 - Math.abs(y + 1.45) / 0.55);
+        if(beach > 0) cc.lerp(sand, Math.min(1, beach * 1.4));
         const shade = 0.86 + 0.14*Math.max(0, nrm.getY(i));
         cols[i*3] = cc.r*shade; cols[i*3+1] = cc.g*shade; cols[i*3+2] = cc.b*shade;
       }
@@ -770,19 +1159,146 @@ scene.add(shellG);
     streets.traverse(o=>{ if(o.material) o.material.userData.noDim = true; });
     markNoBounds(streets);
 
+    /* ---- street furniture: curbs, sidewalks, lamps, benches, trees ------
+       The grid streets get proper edges: a white curb on each side, a pale
+       sidewalk beyond it, and junction corners the sidewalks wrap around.
+       Lamp posts line the sidewalks (they light up at dusk and throw a warm
+       pool on the road), benches sit along the shop rows and the park, and
+       street trees stand in square pits along the shopping streets. Every
+       piece is static, so the batcher folds the lot into a few draw calls. */
+    {
+      const furn = new THREE.Group(); levelG[0].add(furn);
+      const HALF = 1.8, CURB = 0.14, WALK = 1.5, WALK_C = HALF + CURB + WALK/2;
+      const curbM = () => std(0xf6f3ec, {roughness:0.88});
+      const paveM = () => std(0xece8df, {roughness:0.96, envMapIntensity:0.3});
+      // the grid: axis is the direction the street runs; c its centreline; a..b its extent
+      const GRID = [
+        {axis:"z", c:-6, a:40.2, b:113.8},     // Maple Ave, ring to belt
+        {axis:"x", c:56, a:-51.8, b:57.8},     // Signal St, belt to belt
+        {axis:"z", c:22, a:40.2, b:86.1},      // Second Ave, ring to Third St
+        {axis:"x", c:88, a:-51.8, b:57.8},     // Third St, belt to belt
+      ];
+      // cut [p - r, p + r] out of a run wherever a crossing street passes the line
+      const runs = (st, line, r) => {
+        let out = [[st.a, st.b]];
+        for(const o of GRID){
+          if(o.axis === st.axis) continue;
+          if(line < o.a - 3.5 || line > o.b + 3.5) continue;   // that street never reaches this line
+          const lo = o.c - r, hi = o.c + r;
+          out = out.flatMap(([u, v]) => (hi <= u || lo >= v) ? [[u, v]]
+            : [[u, lo], [hi, v]].filter(([p, q]) => q - p > 0.2));
+        }
+        return out;
+      };
+      const band = (st, off, w, h, y, mat, r) => {
+        for(const [u, v] of runs(st, st.c + off, r)){
+          const m = st.axis === "z"
+            ? Bo(furn, w, h, v - u, mat(), st.c + off, y, (u + v)/2)
+            : Bo(furn, v - u, h, w, mat(), (u + v)/2, y, st.c + off);
+          m.castShadow = false;
+        }
+      };
+      for(const st of GRID){
+        for(const sd of [-1, 1]){
+          // the x-running streets own the corner squares, so the two sidewalks
+          // never overlap at a junction
+          band(st, sd*(HALF + CURB/2), CURB, 0.13, 0, curbM, HALF + 0.02);
+          band(st, sd*WALK_C, WALK, 0.1, 0, paveM, st.axis === "x" ? HALF + CURB : HALF + CURB + WALK);
+        }
+      }
+
+      // lamp posts: a slim pole, an arm over the road, a head with a lens that
+      // lights at dusk, and a warm pool on the asphalt beneath it
+      const poleM = () => std(0xdcd7cd, {roughness:0.5, metalness:0.3, envMapIntensity:0.9});
+      const lampPost = (x, z, dx, dz) => {
+        Cy(furn, 0.05, 0.075, 3.3, poleM(), x, 0.1, z, 8);
+        Cy(furn, 0.11, 0.13, 0.22, poleM(), x, 0.1, z, 8);                   // base collar
+        const ax = x + dx*0.55, az = z + dz*0.55;
+        Bo(furn, Math.abs(dx)*1.1 + 0.07, 0.06, Math.abs(dz)*1.1 + 0.07, poleM(), ax, 3.34, az);
+        const hx = x + dx*1.1, hz = z + dz*1.1;
+        Bo(furn, 0.46, 0.1, 0.24, poleM(), hx, 3.3, hz, Math.atan2(dx, dz));
+        const lens = Bo(furn, 0.36, 0.03, 0.17, lamp(0xeee9df, 0xffe2b0), hx, 3.27, hz, Math.atan2(dx, dz));
+        lens.castShadow = false;
+        halo(furn, 0xffcf8f, 1.5, hx, 3.2, hz, 0, 0.8);
+        const pool = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 4.6), glowMat(0xffc27a, 0, 0.34));
+        pool.rotation.x = -Math.PI/2; pool.position.set(hx, 0.07, hz); pool.renderOrder = 2;
+        pool.userData.noBounds = true; furn.add(pool);
+      };
+      // along the grid, alternating sides, clear of the junctions
+      for(const st of GRID){
+        let side = 1;
+        for(let p = st.a + 6; p < st.b - 3; p += 12.5){
+          if(GRID.some(o => o.axis !== st.axis && Math.abs(p - o.c) < 6 &&
+             st.c >= o.a - 3.5 && st.c <= o.b + 3.5)) continue;
+          const off = side * (WALK_C + 0.55);
+          if(st.axis === "z") lampPost(st.c + off, p, -side, 0);
+          else lampPost(p, st.c + off, 0, -side);
+          side = -side;
+        }
+      }
+      // and along the ring road in front of the station
+      for(const lx of [-30, -20, -8, 3, 30]) lampPost(lx, 35.3, 0, 1);
+
+      // benches: a slatted seat and back on two frames
+      const bench = (x, z, ry) => {
+        const b = new THREE.Group(); b.position.set(x, 0.1, z); b.rotation.y = ry; furn.add(b);
+        const slat = std(0xf8f6f1, {roughness:0.8});
+        for(let i=0;i<3;i++) Bo(b, 1.5, 0.05, 0.12, slat, 0, 0.42, -0.14 + i*0.14);
+        for(let i=0;i<2;i++) Bo(b, 1.5, 0.12, 0.05, slat, 0, 0.6 + i*0.17, -0.27, 0, 0, 0.18);
+        for(const sx of [-0.62, 0.62]){
+          Bo(b, 0.06, 0.42, 0.44, poleM(), sx, 0, -0.05);
+          Bo(b, 0.06, 0.42, 0.05, poleM(), sx, 0.42, -0.27);
+        }
+      };
+      bench(39.4, 53.4, Math.PI); bench(47.6, 53.4, Math.PI);
+      bench(40.6, 58.7, 0); bench(49.0, 58.7, 0);
+      bench(-1.8, 53.2, Math.PI); bench(12.5, 58.9, 0);
+      bench(5.2, 97.5, Math.PI/2); bench(28.8, 103.5, -Math.PI/2);
+
+      // street trees in square pits along the shopping streets
+      const pitM = () => std(0x7c766b, {roughness:0.98});
+      const pit = (x, z) => {
+        Bo(furn, 1.0, 0.03, 1.0, pitM(), x, 0.1, z).castShadow = false;
+        FOREST.rounds.push([x, 0.1, z, 0.66]);
+      };
+      for(const px of [35.2, 43.6, 51.6]) pit(px, 53.55);          // shop row one
+      for(const px of [38.6, 46.8, 55.2]) pit(px, 58.45);          // across the street
+      for(const px of [36.2, 44.2, 52.2]) pit(px, 85.55);          // Third St shops
+      for(const px of [-1.5, 8.5, 16.5]) pit(px, 58.45);           // Signal St, by the homes
+      markNoBounds(furn);
+    }
+
     // far blocks: scenery homes carrying the suburb off the frame
+    /* far blocks: scenery homes, detailed to the same standard as the five
+       in the Connected Homes zoom — gables, shingles, a mullioned window
+       that lights at dusk, a porch lantern and a picket-fenced front yard */
     const farHouse = (x, z, ry) => {
       const h = new THREE.Group(); h.position.set(x, 0, z); h.rotation.y = ry;
       levelG[0].add(h);
+      const trim = std(0xf4f1ea, {roughness:0.9});
+      aoDecal(h, 0, 0.2, 5.0, 4.4, 0, 0.9);
       Bo(h, 5.0, 2.8, 4.0, MAT.wall(), 0, 0, 0);
-      const sh2 = std(0xffffff, {roughness:0.82, envMapIntensity:0.4});
-      const ra = Bo(h, 5.5, 0.17, 2.6, sh2, 0, 3.2, -1.08); ra.rotation.x = -0.52;
-      const rb = Bo(h, 5.5, 0.17, 2.6, sh2, 0, 3.2, 1.08);  rb.rotation.x = 0.52;
-      Bo(h, 5.5, 0.15, 0.2, std(0xf4f1ea), 0, 3.76, 0);
-      Bo(h, 1.0, 1.95, 0.1, std(0x9a8d79), 1.4, 0, 2.02);
-      Bo(h, 1.9, 1.35, 0.08, MAT.inkFlat(), -1.1, 0.7, 2.0);
-      Bo(h, 1.7, 1.15, 0.06, MAT.screen(), -1.1, 0.8, 2.04);
+      const sh2 = std(0xffffff, {roughness:0.82, envMapIntensity:0.4, map:SHINGLE_TEX});
+      const ra = Bo(h, 5.6, 0.17, 2.62, sh2, 0, 3.2, -1.08); ra.rotation.x = -0.52;
+      const rb = Bo(h, 5.6, 0.17, 2.62, sh2, 0, 3.2, 1.08);  rb.rotation.x = 0.52;
+      Bo(h, 5.6, 0.15, 0.2, trim, 0, 3.76, 0);
+      for(const sx of [-1, 1]){
+        const gm = new THREE.Mesh(gableGeo(4.0, 0.98, 0.14), MAT.wall());
+        gm.position.set(sx*2.43, 2.8, 0); gm.castShadow = gm.receiveShadow = true; h.add(gm);
+      }
+      Bo(h, 1.0, 1.95, 0.1, std(0x9a8d79), 1.4, 0.18, 2.02);
+      Bo(h, 1.9, 0.18, 0.7, trim, 1.4, 0, 2.3);                         // step
+      Bo(h, 1.9, 1.35, 0.08, trim, -1.1, 0.7, 2.0);
+      Bo(h, 1.7, 1.15, 0.06, litGlass(), -1.1, 0.8, 2.04);
+      Bo(h, 0.07, 1.15, 0.09, trim, -1.1, 0.8, 2.07);                    // mullions
+      Bo(h, 1.7, 0.07, 0.09, trim, -1.1, 1.36, 2.07);
+      Bo(h, 0.1, 0.15, 0.1, lamp(0xefe9dc, 0xffd79a), 0.62, 1.9, 2.07).castShadow = false;
+      halo(h, 0xffcf8f, 1.1, 0.62, 1.97, 2.26, 0, 0.85);
+      Bo(h, 0.07, 1.1, 1.3, trim, 2.52, 0.9, -0.3);                       // side window
+      Bo(h, 0.05, 0.9, 1.1, litGlass(), 2.55, 1.0, -0.3);
       Bo(h, 0.55, 1.4, 0.55, std(0x9a8d79), -1.6, 2.9, -0.5);
+      Bo(h, 0.68, 0.12, 0.68, trim, -1.6, 4.3, -0.5);
+      picketFence(h, [[-2.55, 1.8, -2.55, 4.1], [2.55, 1.8, 2.55, 4.1], [-2.55, 4.1, 0.85, 4.1], [1.95, 4.1, 2.55, 4.1]]);
       markNoBounds(h);
     };
     // lots sit between the streets — a 5.5-wide roof on a 3.6-wide street
@@ -792,23 +1308,9 @@ scene.add(shellG);
     // the block east of Maple is the park — the concert stands there
 
     // trees on the hills
-    const tree = (x, z, s, blob) => {
-      const y = hAt(x, z);
-      const tg2 = new THREE.Group(); tg2.position.set(x, y-0.05, z); tg2.scale.setScalar(s);
-      levelG[0].add(tg2);
-      Cy(tg2, 0.09, 0.13, 0.9, std(0x8a7f6e, {roughness:0.95}), 0, 0, 0, 10);
-      if(blob){
-        Sp(tg2, 0.85, MAT.leaf(), 0, 1.6, 0, 1.15);
-        Sp(tg2, 0.6, MAT.leaf(), 0.45, 1.25, 0.2, 1.0);
-        Sp(tg2, 0.5, MAT.leaf(), -0.45, 1.35, -0.15, 1.0);
-      } else {
-        const c1 = new THREE.Mesh(new THREE.ConeGeometry(0.85, 1.7, 10), MAT.leaf());
-        c1.position.y = 1.55; c1.castShadow = true; tg2.add(c1);
-        const c2 = new THREE.Mesh(new THREE.ConeGeometry(0.62, 1.3, 10), MAT.leaf());
-        c2.position.y = 2.45; c2.castShadow = true; tg2.add(c2);
-      }
-      markNoBounds(tg2);
-    };
+    // trees on the hills: each call is one instance in the shared forest
+    const tree = (x, z, s, blob) =>
+      (blob ? FOREST.rounds : FOREST.pines).push([x, hAt(x, z) - 0.06, z, s]);
     tree(-41, 29, 1.25, false); tree(-45, 14, 1.1, true); tree(-30, 33.5, 1.0, false);
     tree(-36, 7.5, 0.95, true); tree(-44, -4, 1.15, false); tree(-34, -17, 0.9, true);
     tree(-9, -29.5, 1.2, false); tree(17, -29.5, 1.05, true); tree(44, -16, 1.1, false);
@@ -863,7 +1365,8 @@ scene.add(shellG);
     const slab = Bo(L, (PX1-PX0)+1.0, ST, (PZ1-PZ0)+1.0, MAT.slab(),
       (PX0+PX1)/2, y-ST, (PZ0+PZ1)/2);
     slab.castShadow = (i === 0);
-    const fmat = std(0xffffff, {roughness:0.5, envMapIntensity:0.7});
+    // the tiles glow warm at dusk: the lights are on in every room
+    const fmat = night(std(0xffffff, {roughness:0.5, envMapIntensity:0.7}), 0xffd6a0, 0.26);
     fmat.map = TILE.clone(); fmat.map.needsUpdate = true;
     fmat.map.wrapS = fmat.map.wrapT = THREE.RepeatWrapping;
     fmat.map.repeat.set((PX1-PX0)/2.6, (PZ1-PZ0)/2.6);
@@ -878,30 +1381,58 @@ scene.add(shellG);
     wallZ(L, y, PX1-WT/2, PZ0, PZ1);
     // facade glazing — the closed building reads as a real office block
     {
-      const wg = std(0xa4b4bd, {roughness:0.16, metalness:0.4, envMapIntensity:1.5});
-      const win = (x, z, ry2) => {
-        const f = noCast(Bo(L, 2.3, 1.9, 0.1, MAT.white(), x, y+0.8, z, ry2));
-        noCast(Bo(L, 2.05, 1.65, 0.08, wg, x, y+0.92, z, ry2)).position.add(
-          new THREE.Vector3(Math.sin(ry2)*0.03, 0, Math.cos(ry2)*0.03));
-        noCast(Bo(L, 0.07, 1.65, 0.12, MAT.white(), x, y+0.92, z, ry2)).position.add(
-          new THREE.Vector3(Math.sin(ry2)*0.04, 0, Math.cos(ry2)*0.04));
+      /* A curtain wall on every floor: a continuous band of tinted glass
+         set just proud of the wall, split by white mullion fins every 1.54
+         with a transom line, a head and a sill; solid white piers at the
+         corners and white spandrels between the floors. The lobby (ground
+         floor, front-left) is glazed full height. The glass takes warm light
+         at dusk. */
+      const wg = night(std(0xa7b6be, {roughness:0.1, metalness:0.45, envMapIntensity:1.65}), 0xffc07a, 0.95);
+      const finM = MAT.white;
+      // one face: axis "x" runs along x at z = c (n = outward sign), "z" along z at x = c
+      const cw = (axis, c, n, a, b, y0, y1, step) => {
+        const len = b - a, mid = (a + b)/2, H = y1 - y0;
+        const at = (u, d) => axis === "x" ? [u, c + n*d] : [c + n*d, u];
+        const box = (w, h, dp, u, yy, d) => {
+          const [px, pz] = at(u, d);
+          return noCast(axis === "x" ? Bo(L, w, h, dp, finM(), px, yy, pz) : Bo(L, dp, h, w, finM(), px, yy, pz));
+        };
+        { const [px, pz] = at(mid, 0.03);
+          noCast(axis === "x" ? Bo(L, len, H, 0.05, wg, px, y0, pz) : Bo(L, 0.05, H, len, wg, px, y0, pz)); }
+        const nf = Math.max(1, Math.round(len / step));
+        for(let k=0;k<=nf;k++) box(0.08, H + 0.02, 0.2, a + k*len/nf, y0 - 0.01, 0.1);
+        box(len + 0.1, 0.1, 0.16, mid, y1, 0.08);                  // head
+        box(len + 0.16, 0.1, 0.22, mid, y0 - 0.1, 0.11);           // sill
+        if(H > 2.4) box(len, 0.06, 0.14, mid, y0 + H*0.72, 0.08);  // transom on tall glazing
       };
-      for(let wx2=-15.4; wx2<=15.5; wx2+=3.08){
-        if(!(wx2 > -4.7 && wx2 < 1.9)) win(wx2, PZ1-WT/2+0.09, 0);   // skip the door bay
-        win(wx2, PZ0+WT/2-0.09, Math.PI);
-      }
-      for(let wz2=-11.2; wz2<=11.3; wz2+=3.2){
-        win(PX0+WT/2-0.09, wz2, -Math.PI/2);
-        win(PX1-WT/2+0.09, wz2, Math.PI/2);
-      }
+      const zf = PZ1 - 0.0, zb = PZ0, xl = PX0, xr = PX1;
       if(i === 0){
-        // glass entrance in the door bay
+        cw("x", zf, 1, -16.1, -3.5, y + 0.12, y + 3.28, 1.52);    // the lobby, full height
+        cw("x", zf, 1, 1.9, 16.1, y + 0.85, y + 2.85, 1.54);
+        // glass doors in the entrance bay, a white surround, and the canopy
         noCast(Bo(L, 3.8, 2.9, 0.12, MAT.white(), -1.4, y, PZ1-WT/2+0.06));
         noCast(Bo(L, 3.3, 2.55, 0.1, wg, -1.4, y, PZ1-WT/2+0.12));
         noCast(Bo(L, 0.08, 2.55, 0.14, MAT.white(), -1.4, y, PZ1-WT/2+0.13));
-        noCast(Bo(L, 4.6, 0.16, 1.9, MAT.white(), -1.4, y+2.95, PZ1+0.5));  // canopy
+        for(const dx of [-0.35, 0.35]) noCast(Bo(L, 0.05, 0.5, 0.05, MAT.chrome(), -1.4 + dx, y + 1.05, PZ1 + 0.02));
+        // a cantilevered canopy: slab, a fine ink fascia line, two slim posts
+        noCast(Bo(L, 7.6, 0.2, 2.8, MAT.white(), -1.4, y + 3.02, PZ1 + 1.36));
+        noCast(Bo(L, 7.64, 0.07, 0.05, MAT.inkFlat(), -1.4, y + 3.08, PZ1 + 2.78));
+        for(const px of [-4.8, 2.0]) Cy(L, 0.06, 0.06, 3.02, MAT.chrome(), px, y, PZ1 + 2.45, 10);
+        // downlights under the canopy that glow at dusk
+        for(const px of [-3.6, -1.4, 0.8]){
+          noCast(Bo(L, 0.34, 0.03, 0.34, lamp(0xefeae0, 0xffe0b0), px, y + 3.0, PZ1 + 1.4));
+          const pool = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 3.2), glowMat(0xffd49a, 0, 0.3));
+          pool.rotation.x = -Math.PI/2; pool.position.set(px, y + 0.05, PZ1 + 1.4);
+          pool.userData.noBounds = true; pool.renderOrder = 2; L.add(pool);
+        }
+      } else {
+        cw("x", zf, 1, -16.1, 16.1, y + 0.85, y + 2.85, 1.54);
       }
+      cw("x", zb, -1, -16.1, 16.1, y + 0.85, y + 2.85, 1.54);
+      cw("z", xr, 1, -12.1, 12.1, y + 0.85, y + 2.85, 1.51);
+      cw("z", xl, -1, -12.1, 12.1, y + 0.85, y + 2.85, 1.51);
     }
+    if(i === 0) aoDecal(L, 0, 0, PX1 - PX0 + 1, PZ1 - PZ0 + 1, 0, 1.1, 0.03);
     // the cross
     wallX(L, y, MZ, PX0, PX1, CROSS_GAPS);
     wallZ(L, y, MX, PZ0, PZ1, SPINE_GAPS);
@@ -926,6 +1457,7 @@ scene.add(shellG);
   dish.position.set(13, ty+1.85, 4.0); dish.rotation.set(0.42, 0, -0.75);
   dish.castShadow = true; g2.add(dish);
 }
+for(let i=0;i<4;i++) batchStatic(levelG[i]);
 const shellRec = reg(shellG);
 
 /* ---- clouds: soft puffs drifting under the island edge and across the
@@ -935,6 +1467,8 @@ const shellRec = reg(shellG);
   const puff = (cx, cy, cz, s, tint) => {
     const c = new THREE.Group(); c.position.set(cx, cy, cz); scene.add(c);
     const m = new THREE.MeshBasicMaterial({color:tint, transparent:true, opacity:0.94, toneMapped:false});
+    // at dusk the puffs pick up the sunset: peach on the high ones, lilac low
+    ENV.clouds.push({m, day:new THREE.Color(tint), dusk:new THREE.Color(cy > 44 ? 0xf1c9b8 : 0xd8c6dc)});
     const lobes = [[0,0,0,2.6],[2.2,0.35,0.4,1.9],[-2.3,0.28,-0.3,2.0],[0.9,0.75,-0.5,1.5],[-1.1,0.65,0.5,1.4]];
     lobes.forEach(([lx,ly,lz,r])=>{
       const sp = new THREE.Mesh(new THREE.SphereGeometry(r, 18, 12), m);
@@ -942,6 +1476,7 @@ const shellRec = reg(shellG);
       sp.userData.noBounds = true; c.add(sp);
     });
     c.scale.setScalar(s);
+    batchStatic(c);
     clouds.push({c, m, sp: 0.5 + Math.abs(cx % 5)/8, y0: cy, ph: cx});
     return c;
   };
@@ -970,11 +1505,11 @@ const shellRec = reg(shellG);
      Fade them out for the length of the zoom and bring them back at overview. */
   let op = 0.94;
   tickClouds = dt => {
-    const goal = active >= 0 ? 0 : 0.94;
+    const goal = (active >= 0 || skyClear) ? 0 : 0.94;
     if(Math.abs(op - goal) < 0.004) return;
     // REDUCED cuts instead of fading — headless and reduced-motion starve rAF,
     // so a tween here would never settle and the clouds would stay put
-    op = REDUCED ? goal : op + (goal - op) * Math.min(1, dt * 4);
+    op = (REDUCED || fadeCut) ? goal : op + (goal - op) * Math.min(1, dt * 4);
     clouds.forEach(cl=>{ cl.m.opacity = op; cl.c.visible = op > 0.02; });
   };
 }
@@ -1004,7 +1539,26 @@ const shellRec = reg(shellG);
   sky.lookAt(sky.position.clone().add(vdir));
   sky.renderOrder = -3;
   sky.userData.noBounds = true;
+  sky.material.fog = false;
   scene.add(sky);
+  /* the dusk sky: lavender overhead to peach at the horizon line, laid over
+     the day gradient and faded in by the time-of-day blend */
+  const duskTex = tex(64, 256, (x,w,h)=>{
+    const gr = x.createLinearGradient(0, 0, 0, h);
+    gr.addColorStop(0, "#9d93b9");
+    gr.addColorStop(0.34, "#b9a3bd");
+    gr.addColorStop(0.6, "#dcb3ae");
+    gr.addColorStop(0.82, "#efc4a4");
+    gr.addColorStop(1, "#f3cfb0");
+    x.fillStyle = gr; x.fillRect(0,0,w,h);
+  });
+  const dusk = new THREE.Mesh(sky.geometry, new THREE.MeshBasicMaterial({map:duskTex,
+    toneMapped:false, depthWrite:false, transparent:true, opacity:0, fog:false}));
+  dusk.position.copy(sky.position).addScaledVector(vdir, 0.5);
+  dusk.quaternion.copy(sky.quaternion);
+  dusk.renderOrder = -3; dusk.userData.noBounds = true; dusk.visible = false;
+  scene.add(dusk);
+  ENV.skyDusk = dusk;
 }
 
 /* ---- the sea: the campus is an island, so put water around it ---------
@@ -1034,10 +1588,66 @@ const shellRec = reg(shellG);
     fade(w, 0, w*0.84, 0);      // out to sea
     fade(0, h, 0, h*0.84);
   });
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200),
-    new THREE.MeshBasicMaterial({color:0xb9c5c9, map:seaTex, transparent:true,
-      depthWrite:false, toneMapped:false}));
+  /* The bay moves: four travelling ripple trains perturb the normal, a soft
+     highlight comes off the bright sky beyond the island (the sun sits behind
+     the lens, so it can not glint), the water pales toward the fresnel sky at
+     grazing angles, the shallows are lighter near the island, and a fine
+     shimmer rides on top. The mask keeps the old fades, so the coastline is
+     still the island's own rim. At dusk the highlights warm and the sky it
+     reflects turns lilac. Frozen under reduced motion. */
+  const WU = THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
+    uMask:{value:null}, uTime:{value:0}, uSpecK:{value:1},
+    uColor:{value:new THREE.Color(0xb9c5c9)}, uDeep:{value:new THREE.Color(0xa6b5bb)},
+    uSky:{value:new THREE.Color(0xe4e8e8)}, uSpec:{value:new THREE.Color(0xffffff)},
+  }]);
+  WU.uMask.value = seaTex;
+  const waterMat = new THREE.ShaderMaterial({
+    uniforms: WU, transparent:true, depthWrite:false, fog:true, toneMapped:false,
+    vertexShader: `varying vec2 vUv; varying vec3 vW;
+      #include <fog_pars_vertex>
+      void main(){
+        vUv = uv; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz;
+        vec4 mvPosition = viewMatrix * w; gl_Position = projectionMatrix * mvPosition;
+        #include <fog_vertex>
+      }`,
+    fragmentShader: `uniform sampler2D uMask; uniform float uTime, uSpecK;
+      uniform vec3 uColor, uDeep, uSky, uSpec;
+      varying vec2 vUv; varying vec3 vW;
+      #include <fog_pars_fragment>
+      vec2 dw(vec2 p, vec2 d, float k, float a, float s){ return d * (a * k * cos(dot(p, d) * k + uTime * s)); }
+      void main(){
+        float a = texture2D(uMask, vUv).a;
+        vec2 p = vW.xz;
+        // six trains at odd angles and lengths, so the glints never line up
+        // into a lattice
+        vec2 g = dw(p, vec2(0.6, 0.8), 0.9, 0.05, 0.8) + dw(p, vec2(-0.72, 0.69), 1.7, 0.03, 1.3)
+               + dw(p, vec2(0.93, -0.37), 2.9, 0.018, 1.9) + dw(p, vec2(0.2, 0.98), 4.7, 0.011, 2.6)
+               + dw(p, vec2(-0.35, -0.94), 3.7, 0.012, 2.1) + dw(p, vec2(0.99, 0.12), 6.9, 0.007, 3.4);
+        vec3 N = normalize(vec3(-g.x, 1.0, -g.y));
+        vec3 V = normalize(cameraPosition - vW);
+        vec3 L = normalize(vec3(-0.53, 0.57, -0.66));
+        float spec = pow(max(dot(reflect(-L, N), V), 0.0), 48.0);
+        float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+        float r4 = pow((vW.x - 2.0) / 60.0, 4.0) + pow((vW.z - 45.0) / 96.0, 4.0);
+        float shallow = 1.0 - smoothstep(1.03, 1.7, r4);
+        vec3 col = mix(uDeep, uColor, 0.45 + 0.55 * shallow);
+        col = mix(col, uSky, clamp(fres * 0.65, 0.0, 0.6));
+        col += uSpec * spec * 0.2 * uSpecK;
+        gl_FragColor = vec4(col, a);
+        #include <encodings_fragment>
+        #include <fog_fragment>
+      }`,
+  });
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200), waterMat);
   water.rotation.x = -Math.PI/2;
+  ENV.water = {color: WU.uColor.value};
+  ENV.waterTod = e => {
+    WU.uDeep.value.setHex(0xa6b5bb).lerp(new THREE.Color(0x8e8aa8), e);
+    WU.uSky.value.setHex(0xe4e8e8).lerp(new THREE.Color(0xd6b8c8), e);
+    WU.uSpec.value.setHex(0xffffff).lerp(new THREE.Color(0xffc48e), e);
+    WU.uSpecK.value = 1 + e * 0.8;
+  };
+  if(ANIM) anims.push(t => { WU.uTime.value = t; });
   water.position.set(580, -1.62, 530);
   water.renderOrder = -2;
   sea.add(water);
@@ -1064,6 +1674,7 @@ const shellRec = reg(shellG);
     new THREE.MeshBasicMaterial({map:surfTex, transparent:true,
       depthWrite:false, toneMapped:false}));
   surf.rotation.x = -Math.PI/2; surf.position.set(2, -1.55, 45);
+  ENV.surf = surf.material;
   surf.renderOrder = -1;
   sea.add(surf);
 
@@ -1076,20 +1687,70 @@ const shellRec = reg(shellG);
   };
   const sailMat = () => new THREE.MeshStandardMaterial({color:0xfbf9f4,
     roughness:0.85, side:THREE.DoubleSide, envMapIntensity:0.9});
+  /* A sloop, bow toward +x (the way it sails): a hull drawn in plan and
+     extruded up with a rounded edge, an ink boot-top at the waterline, a pale
+     deck and coachroof, a chrome mast and boom, and sails with real camber -
+     each a small curved sheet, not a flat triangle. */
+  const hullShape = new THREE.Shape();
+  hullShape.moveTo(-2.0, -0.5); hullShape.quadraticCurveTo(-0.4, -0.72, 0.9, -0.52);
+  hullShape.quadraticCurveTo(1.9, -0.28, 2.25, 0); hullShape.quadraticCurveTo(1.9, 0.28, 0.9, 0.52);
+  hullShape.quadraticCurveTo(-0.4, 0.72, -2.0, 0.5); hullShape.closePath();
+  const plan = (sh, h, bevel, y0, s = 1) => {
+    const g2 = new THREE.ExtrudeGeometry(sh, {depth:h, bevelEnabled:bevel > 0, bevelThickness:bevel,
+      bevelSize:bevel, bevelSegments:2, curveSegments:10});
+    g2.rotateX(-Math.PI/2); g2.scale(s, 1, s); g2.translate(0, y0, 0); return g2;
+  };
+  function sailGeo(pts, camber, n){
+    // a triangle (tack, head, clew) subdivided, bellied along its chord
+    const [A, B, C] = pts.map(p => new THREE.Vector3(...p));
+    const pos = [], idx = [];
+    for(let i=0;i<=n;i++) for(let j=0;j<=n-i;j++){
+      const u = i/n, v = j/n, w = 1 - u - v;
+      const p = new THREE.Vector3().addScaledVector(A, w).addScaledVector(B, v).addScaledVector(C, u);
+      p.z += camber * Math.sin(Math.PI * Math.min(1, u / Math.max(0.001, 1 - v))) * (1 - v);
+      pos.push(p.x, p.y, p.z);
+    }
+    const id = (i, j) => { let k = 0; for(let a=0;a<i;a++) k += n - a + 1; return k + j; };
+    for(let i=0;i<n;i++) for(let j=0;j<n-i;j++){
+      idx.push(id(i, j), id(i, j+1), id(i+1, j));
+      if(j < n-i-1) idx.push(id(i, j+1), id(i+1, j+1), id(i+1, j));
+    }
+    const g2 = new THREE.BufferGeometry();
+    g2.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    g2.setIndex(idx); g2.computeVertexNormals();
+    g2.setAttribute("uv", new THREE.BufferAttribute(new Float32Array(pos.length/3*2), 2));
+    return g2;
+  }
   function mkBoat(){
     const h = new THREE.Group();
-    Bo(h, 4.0, 0.62, 1.25, std(0xf4f1ea, {roughness:0.72}), 0, -0.24, 0);
-    Bo(h, 4.1, 0.16, 1.33, MAT.inkFlat(), 0, 0.34, 0);          // sheer stripe
-    Bo(h, 1.5, 0.3, 0.95, std(0xe4e0d6, {roughness:0.8}), 0.9, 0.5, 0);
-    Cy(h, 0.045, 0.055, 5.2, MAT.chrome(), -0.5, 0.5, 0, 8);    // mast
-    Cy(h, 0.035, 0.035, 2.3, MAT.chrome(), 0.65, 0.72, 0, 8, 0, 0, Math.PI/2);
-    const main = new THREE.Mesh(sailShape(2.5, 4.6), sailMat());
-    main.position.set(-0.45, 0.72, 0); main.rotation.y = -0.12;
-    const jib = new THREE.Mesh(sailShape(-1.7, 3.1), sailMat());
-    jib.position.set(-0.55, 0.72, 0); jib.rotation.y = 0.16;
-    h.add(main, jib);
+    const hullM = std(0xf8f6f0, {roughness:0.5, envMapIntensity:1.0});
+    const hull = new THREE.Mesh(plan(hullShape, 0.72, 0.08, -0.52), hullM); h.add(hull);
+    const boot = new THREE.Mesh(plan(hullShape, 0.1, 0.02, -0.34, 1.012), MAT.inkFlat()); h.add(boot);
+    const deck = new THREE.Mesh(plan(hullShape, 0.04, 0, 0.3, 0.93), std(0xe8e2d6, {roughness:0.85})); h.add(deck);
+    Bo(h, 1.6, 0.34, 0.86, hullM, -0.35, 0.32, 0);                           // coachroof
+    Bo(h, 1.3, 0.12, 0.88, MAT.screen(), -0.3, 0.44, 0);                     // its ports
+    Cy(h, 0.045, 0.06, 5.4, MAT.chrome(), 0.6, 0.34, 0, 8);                   // mast
+    Cy(h, 0.035, 0.035, 2.5, MAT.chrome(), -0.62, 1.02, 0, 8, Math.PI/2).position.y = 1.02;   // boom
+    const sm = sailMat();
+    h.add(new THREE.Mesh(sailGeo([[0.6, 1.05, 0], [0.6, 5.55, 0], [-1.85, 1.05, 0]], 0.28, 6), sm));
+    h.add(new THREE.Mesh(sailGeo([[2.1, 0.55, 0], [0.62, 4.6, 0], [0.35, 0.8, 0]], 0.2, 5), sm.clone()));
+    Sp(h, 0.05, emissive(0xff4a1c), 0.6, 5.78, 0);                           // masthead, tuned in
+    h.traverse(o => { if(o.isMesh){ o.castShadow = true; } });
+    batchStatic(h);
     return h;
   }
+  const WAKE = tex(128, 64, (x, w, h)=>{
+    x.strokeStyle = "rgba(255,255,255,0.9)"; x.lineCap = "round";
+    for(const [lw, al] of [[5, 0.35], [2.2, 0.9]]){
+      x.lineWidth = lw; x.globalAlpha = al;
+      x.beginPath(); x.moveTo(w, h/2); x.quadraticCurveTo(w*0.5, h*0.36, 0, h*0.04); x.stroke();
+      x.beginPath(); x.moveTo(w, h/2); x.quadraticCurveTo(w*0.5, h*0.64, 0, h*0.96); x.stroke();
+    }
+    x.globalAlpha = 1; x.globalCompositeOperation = "destination-in";
+    const gr = x.createLinearGradient(0, 0, w, 0);
+    gr.addColorStop(0, "rgba(0,0,0,0)"); gr.addColorStop(1, "rgba(0,0,0,1)");
+    x.fillStyle = gr; x.fillRect(0, 0, w, h);
+  });
   // clustered where open water actually shows in the frame — off the west
   // shore and across the south bay
   // offshore in the south-east quadrant, working along the coast
@@ -1109,6 +1770,11 @@ const shellRec = reg(shellG);
     const g0 = new THREE.Group(); g0.position.set(b.x, -1.35, b.z);
     g0.rotation.y = b.ry; g0.scale.setScalar(b.s); sea.add(g0);
     const hull = mkBoat(); g0.add(hull);
+    // the wake stays flat on the water while the hull rides the swell
+    const wk = new THREE.Mesh(new THREE.PlaneGeometry(7, 2.6), new THREE.MeshBasicMaterial({map:WAKE,
+      transparent:true, opacity:0.55, depthWrite:false, toneMapped:false}));
+    wk.material.userData.op0 = 0.55;
+    wk.rotation.x = -Math.PI/2; wk.position.set(-5.3, (SEA_Y + 0.03 + 1.35) / b.s, 0); wk.renderOrder = -1; g0.add(wk);
     // a hull's length runs along its local x, so that — not local z — is the
     // way it goes; the old vector had them all crabbing sideways
     return {g0, hull, home: new THREE.Vector3(b.x, -1.35, b.z),
@@ -1126,10 +1792,10 @@ const shellRec = reg(shellG);
   }));
   let sop = 1;
   tickSea = dt => {
-    const goal = active >= 0 ? 0 : 1;
+    const goal = (active >= 0 || skyClear) ? 0 : 1;
     if(Math.abs(sop - goal) < 0.004) return;
-    sop = REDUCED ? goal : sop + (goal - sop) * Math.min(1, dt * 4);
-    boatMats.forEach(m=> m.opacity = sop);
+    sop = (REDUCED || fadeCut) ? goal : sop + (goal - sop) * Math.min(1, dt * 4);
+    boatMats.forEach(m=> m.opacity = sop * (m.userData.op0 != null ? m.userData.op0 : 1));
     boats.forEach(b=> b.g0.visible = sop > 0.02);
   };
   if(ANIM) anims.push((t, dt)=> boats.forEach(b=>{
@@ -1153,7 +1819,7 @@ const shellRec = reg(shellG);
    is higher there and wins, which is what hides the seam, so no blending
    code is needed. The mountains on it are just tall hills in the field. --- */
 {
-  const GW2 = 152, GD2 = 214, GN2 = 112, CX2 = -118, CZ2 = -10;
+  const GW2 = 158, GD2 = 224, GN2 = 116, CX2 = -118, CZ2 = -10, RA2 = 72, RB2 = 103, R4E2 = 1.25;
   /* Peaks sit off the rail alignment, not on it, so the line threads between
      them instead of climbing over the summits — each one contributes under a
      unit of height at the track. */
@@ -1174,11 +1840,18 @@ const shellRec = reg(shellG);
   geo.rotateX(-Math.PI/2);
   const pos = geo.attributes.position;
   for(let i=0;i<pos.count;i++){
-    const x = pos.getX(i) + CX2, z = pos.getZ(i) + CZ2;
-    const r4 = Math.pow((x-CX2)/(GW2/2-4), 4) + Math.pow((z-CZ2)/(GD2/2-4), 4);
-    pos.setY(i, hAt2(x, z) * (1 - sstep2(0.75, 1.0, r4)) - sstep2(0.8, 1.25, r4) * 3.0);
+    let x = pos.getX(i) + CX2, z = pos.getZ(i) + CZ2;
+    const r4 = Math.pow((x-CX2)/RA2, 4) + Math.pow((z-CZ2)/RB2, 4);
+    if(r4 > R4E2){                          // onto the rim, like the island
+      const f = Math.pow(R4E2 / r4, 0.25);
+      x = CX2 + (x-CX2)*f; z = CZ2 + (z-CZ2)*f;
+      pos.setX(i, x - CX2); pos.setZ(i, z - CZ2);
+      pos.setY(i, -3.0);
+    } else pos.setY(i, hAt2(x, z) * (1 - sstep2(0.75, 1.0, r4)) - sstep2(0.8, R4E2, r4) * 3.0);
   }
   geo.computeVertexNormals();
+  cliffSkirt(levelG[0], {cx:CX2, cz:CZ2, a:RA2*Math.pow(R4E2, 0.25), b:RB2*Math.pow(R4E2, 0.25),
+    top:-3.06, seed:23});
   {
     const lo = new THREE.Color(0xe4dfd4), hi = new THREE.Color(0xa9a18e);
     const nrm = geo.attributes.normal, cols = new Float32Array(pos.count*3);
@@ -1197,16 +1870,7 @@ const shellRec = reg(shellG);
   land2.userData.noBounds = true;
   levelG[0].add(land2);
   // conifers up the slopes
-  const conifer = (x, z, s) => {
-    const t = new THREE.Group(); t.position.set(x, hAt2(x, z) - 0.1, z); t.scale.setScalar(s);
-    levelG[0].add(t);
-    Cy(t, 0.1, 0.14, 0.9, std(0x8a7f6e, {roughness:0.95}), 0, 0, 0, 8);
-    for(const [cy, cr] of [[0.7, 1.15], [1.5, 0.9], [2.2, 0.62]]){
-      const c = new THREE.Mesh(new THREE.ConeGeometry(cr, 1.5, 8), MAT.leaf());
-      c.position.y = cy + 0.75; c.castShadow = true; t.add(c);
-    }
-    markNoBounds(t);
-  };
+  const conifer = (x, z, s) => FOREST.pines.push([x, hAt2(x, z) - 0.1, z, s * 1.12]);
   /* Forest across the headland. Kept clear of the rail alignment, which runs
      roughly z 16 at x −178 down to z −24 at x −60. */
   for(const [tx, tz, ts] of [[-104, -34, 1.5], [-88, -30, 1.3], [-132, 24, 1.6],
@@ -1229,6 +1893,156 @@ const shellRec = reg(shellG);
       [-92, 84, 1.25], [-68, 88, 1.4],  [-116, 70, 1.5], [-124, 50, 1.3],
       [-130, 66, 1.2], [-112, 86, 1.4], [-80, 80, 1.3],  [-50, 62, 1.15]])
     conifer(tx, tz, ts);
+}
+
+/* merge a list of [geometry, matrix] parts into one BufferGeometry — used to
+   compose instanced shapes (a pine is four cones) and small props */
+function mergeGeos(parts){
+  let nv = 0, ni = 0;
+  for(const [g] of parts){ nv += g.attributes.position.count; ni += g.index ? g.index.count : g.attributes.position.count; }
+  const P = new Float32Array(nv*3), N = new Float32Array(nv*3), UV = new Float32Array(nv*2);
+  const I = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
+  const nm = new THREE.Matrix3(), v = new THREE.Vector3();
+  let vo = 0, io = 0;
+  for(const [g, m] of parts){
+    nm.getNormalMatrix(m);
+    const pa = g.attributes.position, na = g.attributes.normal, ua = g.attributes.uv;
+    for(let i=0;i<pa.count;i++){
+      v.fromBufferAttribute(pa, i).applyMatrix4(m); P.set([v.x, v.y, v.z], (vo+i)*3);
+      v.fromBufferAttribute(na, i).applyMatrix3(nm).normalize(); N.set([v.x, v.y, v.z], (vo+i)*3);
+      if(ua) UV.set([ua.getX(i), ua.getY(i)], (vo+i)*2);
+    }
+    if(g.index) for(let i=0;i<g.index.count;i++) I[io++] = g.index.array[i] + vo;
+    else for(let i=0;i<pa.count;i++) I[io++] = vo + i;
+    vo += pa.count;
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute("position", new THREE.BufferAttribute(P, 3));
+  out.setAttribute("normal", new THREE.BufferAttribute(N, 3));
+  out.setAttribute("uv", new THREE.BufferAttribute(UV, 2));
+  out.setIndex(new THREE.BufferAttribute(I, 1));
+  return out;
+}
+function M4(x=0, y=0, z=0, sx=1, sy=1, sz=1, ry=0, rx=0, rz=0){   // hoisted: used while the terrain builds
+  return new THREE.Matrix4().compose(new THREE.Vector3(x, y, z),
+    new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new THREE.Vector3(sx, sy, sz));
+}
+
+/* ---- the forest ---------------------------------------------------------
+   Dark sage pines in layered tiers, rounded trees, low shrubs and pale
+   rocks, all instanced: a few hundred trees for a handful of draw calls.
+   The hand-placed trees above feed it, and a seeded scatter fills the open
+   hills — only where the ground is not built on (no roads, lots or yards),
+   off the rail line and the transmitter crown, and inside the rim, so every
+   tree stands on the real ground height. */
+{
+  const rnd = prng(2027);
+  const railOK = (x, z) => x < -178 || x > 112 || Math.abs(z - RAIL_Z(x)) > 4.6;
+  const r4I = (x, z) => Math.pow((x-2)/60, 4) + Math.pow((z-45)/96, 4);
+  const r4W = (x, z) => Math.pow((x+118)/72, 4) + Math.pow((z+10)/103, 4);
+  const extBoxes = ROOMS.filter(r => r.ext).map(r => r.ext);
+  const inExt = (x, z, m) => extBoxes.some(e =>
+    Math.abs(x - e.cx) < e.w/2 + m && Math.abs(z - e.cz) < e.d/2 + m);
+  const near = (list, x, z, d) => list.some(p => (p[0]-x)*(p[0]-x) + (p[2]-z)*(p[2]-z) < d*d);
+  // island hills: groves, not a sprinkle — a slow field decides where trees gather
+  const grove = (x, z) => 0.5 + 0.5*Math.sin(x*0.13 + 1.7)*Math.cos(z*0.11 - 0.6);
+  let tries = 0;
+  while(tries++ < 9000 && FOREST.pines.length + FOREST.rounds.length < 330){
+    const x = -44 + rnd()*104, z = -50 + rnd()*186;
+    if(r4I(x, z) > 0.7 || flatAt(x, z) > 0.02 || !railOK(x, z)) continue;
+    if(Math.hypot(x + 30, z - 20) < 10 || inExt(x, z, 1.5)) continue;
+    if(rnd() > grove(x, z) * 0.9) continue;
+    if(near(FOREST.pines, x, z, 1.9) || near(FOREST.rounds, x, z, 2.1)) continue;
+    const y = groundH(x, z) - 0.08;
+    if(rnd() < 0.78) FOREST.pines.push([x, y, z, 0.78 + rnd()*0.62]);
+    else FOREST.rounds.push([x, y, z, 0.8 + rnd()*0.4]);
+  }
+  // the headland carries on as forest, thicker toward the mountains
+  tries = 0;
+  const start = FOREST.pines.length;
+  while(tries++ < 7000 && FOREST.pines.length - start < 190){
+    const x = -196 + rnd()*134, z = -108 + rnd()*196;
+    if(r4W(x, z) > 0.7 || !railOK(x, z) || x > -62) continue;
+    const h = westH(x, z);
+    if(h > 22 && rnd() < 0.7) continue;            // bald summits
+    if(near(FOREST.pines, x, z, 2.2)) continue;
+    FOREST.pines.push([x, h - 0.1, z, 1.0 + rnd()*0.7]);
+  }
+  // shrubs at the woods' edges and along the hills
+  tries = 0;
+  while(tries++ < 5000 && FOREST.shrubs.length < 170){
+    const x = -44 + rnd()*104, z = -50 + rnd()*186;
+    if(r4I(x, z) > 0.74 || flatAt(x, z) > 0.05 || !railOK(x, z) || inExt(x, z, 1)) continue;
+    if(Math.hypot(x + 30, z - 20) < 8.5) continue;
+    if(near(FOREST.pines, x, z, 1.1) || near(FOREST.rounds, x, z, 1.3)) continue;
+    FOREST.shrubs.push([x, groundH(x, z) - 0.05, z, 0.55 + rnd()*0.55]);
+  }
+  // pale rocks: a scatter in the grass, and a rocky shore where the bay meets
+  // the island — the strand is the terrain's own sand band
+  tries = 0;
+  while(tries++ < 3000 && FOREST.rocks.length < 60){
+    const x = -44 + rnd()*104, z = -50 + rnd()*186;
+    if(r4I(x, z) > 0.72 || flatAt(x, z) > 0.03 || !railOK(x, z) || inExt(x, z, 1)) continue;
+    FOREST.rocks.push([x, groundH(x, z) - 0.12, z, 0.35 + rnd()*0.5]);
+  }
+  for(let i=0;i<220;i++){
+    const th = rnd()*Math.PI*2, c = Math.cos(th), s = Math.sin(th);
+    const sc = 0.98 + rnd()*0.06;                   // around the waterline band
+    const x = 2 + 60*sc*Math.sign(c)*Math.sqrt(Math.abs(c)), z = 45 + 96*sc*Math.sign(s)*Math.sqrt(Math.abs(s));
+    // only the bay shore: east of the fade and south of the viaduct's landing
+    if(!(x > 36 && z > -30) && !(z > 120 && x > 10)) continue;
+    const y = surfAt(x, z);
+    if(y > -0.6 || y < -2.4) continue;
+    FOREST.rocks.push([x, y - 0.1, z, 0.45 + rnd()*0.8]);
+  }
+
+  // shapes
+  const pineGeo = mergeGeos([[1.05, 1.35, 0.55], [0.86, 1.2, 1.2], [0.64, 1.05, 1.8], [0.4, 0.9, 2.35]]
+    .map(([r, h, y]) => [new THREE.ConeGeometry(r, h, 8), M4(0, y + h/2, 0)]));
+  const roundGeo = mergeGeos([
+    [new THREE.IcosahedronGeometry(0.95, 1), M4(0, 1.78, 0, 1, 1.08, 1)],
+    [new THREE.IcosahedronGeometry(0.62, 1), M4(0.55, 1.45, 0.2)],
+    [new THREE.IcosahedronGeometry(0.56, 1), M4(-0.5, 1.58, -0.25)]]);
+  const trunkGeo = new THREE.CylinderGeometry(0.08, 0.13, 1, 6); trunkGeo.translate(0, 0.5, 0);
+  const shrubGeo = new THREE.IcosahedronGeometry(0.5, 1); shrubGeo.scale(1, 0.72, 1); shrubGeo.translate(0, 0.3, 0);
+  const rockGeo = new THREE.DodecahedronGeometry(0.6, 0); rockGeo.scale(1, 0.62, 0.86); rockGeo.translate(0, 0.2, 0);
+  const leaf = std(0xffffff, {roughness:0.92, envMapIntensity:0.3});
+  const bark = std(0x8a7f6e, {roughness:0.95});
+  const stone = std(0xffffff, {roughness:0.96, envMapIntensity:0.3, flatShading:true});
+  const dummy = new THREE.Object3D(), col = new THREE.Color();
+  const forest = new THREE.Group(); levelG[0].add(forest);
+  function inst(geo, mat, list, place, tint){
+    if(!list.length) return null;
+    const im = new THREE.InstancedMesh(geo, mat, list.length);
+    list.forEach((p, i)=>{ place(p, i); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix);
+      if(tint){ tint(p, i, col); im.setColorAt(i, col); } });
+    im.castShadow = true; im.receiveShadow = true; im.userData.noBounds = true;
+    im.instanceMatrix.needsUpdate = true; if(im.instanceColor) im.instanceColor.needsUpdate = true;
+    forest.add(im); return im;
+  }
+  const hash = i => { const x = Math.sin(i*127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  // dark sage, each tree a shade apart so a stand reads as many trees
+  const sage = (i, c, base) => c.setHex(base).offsetHSL((hash(i)-0.5)*0.03, (hash(i+7)-0.5)*0.06, (hash(i+3)-0.5)*0.07);
+  inst(pineGeo, leaf, FOREST.pines, ([x, y, z, s], i)=>{
+    dummy.position.set(x, y, z); dummy.rotation.set(0, hash(i)*6.28, 0);
+    dummy.scale.set(s*(0.92 + hash(i+2)*0.16), s*(0.9 + hash(i+5)*0.3), s*(0.92 + hash(i+2)*0.16));
+  }, (p, i, c)=> sage(i, c, 0x4c574a));
+  inst(roundGeo, leaf.clone(), FOREST.rounds, ([x, y, z, s], i)=>{
+    dummy.position.set(x, y, z); dummy.rotation.set(0, hash(i+11)*6.28, 0); dummy.scale.setScalar(s);
+  }, (p, i, c)=> sage(i + 40, c, 0x5d6955));
+  // trunks: pines on a short stem, round trees on a taller one
+  const trunks = FOREST.pines.map(p => [p[0], p[1], p[2], p[3], 0.75])
+    .concat(FOREST.rounds.map(p => [p[0], p[1], p[2], p[3], 1.35]));
+  inst(trunkGeo, bark, trunks, ([x, y, z, s, h])=>{
+    dummy.position.set(x, y, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(s, s*h, s);
+  });
+  inst(shrubGeo, leaf.clone(), FOREST.shrubs, ([x, y, z, s], i)=>{
+    dummy.position.set(x, y, z); dummy.rotation.set(0, hash(i+17)*6.28, 0); dummy.scale.set(s, s*(0.8 + hash(i)*0.4), s);
+  }, (p, i, c)=> sage(i + 90, c, 0x66725d));
+  inst(rockGeo, stone, FOREST.rocks, ([x, y, z, s], i)=>{
+    dummy.position.set(x, y, z); dummy.rotation.set(hash(i)*0.4, hash(i+1)*6.28, hash(i+2)*0.3);
+    dummy.scale.set(s*(0.8 + hash(i+3)*0.5), s*(0.7 + hash(i+4)*0.5), s);
+  }, (p, i, c)=> c.setHex(0xe9e4d9).offsetHSL(0, 0, (hash(i+9)-0.5)*0.06));
 }
 
 /* ---- the ridge: a radio operator working the high ground. This side of the
@@ -1403,7 +2217,7 @@ const shellRec = reg(shellG);
     }
   }
   function glazing(g2, len, paint){
-    Bo(g2, len, 0.5, 1.3, MAT.screen(), 0, 1.06, 0);
+    Bo(g2, len, 0.5, 1.3, night(std(0x2e3136, {roughness:0.2, metalness:0.4, envMapIntensity:1.2}), 0xffc47e, 1.2), 0, 1.06, 0);
     for(let mx = -len/2 + 0.75; mx < len/2 - 0.3; mx += 1.15)
       Bo(g2, 0.13, 0.52, 1.33, paint, mx, 1.05, 0);              // mullions
   }
@@ -1420,6 +2234,7 @@ const shellRec = reg(shellG);
     bogie(g2, -2.35); bogie(g2, 2.35);
     mkBlobShadow(g2, 8.4, 2.0, 0.02);
     markNoBounds(g2);
+    batchStatic(g2); dyn(g2);
     return g2;
   }
   function mkLoco(){
@@ -1440,6 +2255,7 @@ const shellRec = reg(shellG);
     bogie(g2, -2.0); bogie(g2, 2.0);
     mkBlobShadow(g2, 7.6, 2.0, 0.02);
     markNoBounds(g2);
+    batchStatic(g2); dyn(g2);
     return g2;
   }
   /* A hill swallows each end of the line. That is what stops the train
@@ -1478,18 +2294,48 @@ const shellRec = reg(shellG);
     const h = p.y - 0.45 - FOOT;
     if(h < 1.4) continue;
     const nx = -p.tz, nz = p.tx, ry = Math.atan2(p.tx, p.tz);
-    for(const off of [1.3, -1.3])          // a pair of legs per bay
-      Bo(rail, 0.8, h, 0.8, pierMat, p.x + nx*off, FOOT, p.z + nz*off, ry)
-        .castShadow = false;
-    Bo(rail, 3.6, 0.45, 1.0, pierMat, p.x, p.y - 0.52, p.z, ry).castShadow = false;
+    // a pair of slender round columns per bay, with a capital and a cap beam
+    for(const off of [1.25, -1.25]){
+      Cy(rail, 0.34, 0.42, h - 0.3, pierMat, p.x + nx*off, FOOT, p.z + nz*off, 16).castShadow = true;
+      Cy(rail, 0.5, 0.36, 0.3, pierMat, p.x + nx*off, FOOT + h - 0.3, p.z + nz*off, 16);
+    }
+    Bo(rail, 3.9, 0.5, 1.15, pierMat, p.x, p.y - 0.62, p.z, ry).castShadow = false;
   }
-  for(let s = 0; s < RAIL_L; s += 2.0){    // parapet along the flying deck
+  /* the flying deck: a slab with fascias both sides and an underside, then a
+     continuous parapet with a coping rail and a post rhythm - swept along
+     the line wherever the deck leaves the ground */
+  const flying = p => p.y - Math.max(groundH(p.x, p.z), westH(p.x, p.z)) >= 1.4;
+  const sweep = (off0, off1, y0, y1, mat) => {
+    const v = [], ix = [];
+    let run = false;
+    for(let i=0;i<pts.length;i++){
+      const p = pts[i];
+      if(!flying(p)){ run = false; continue; }
+      const b = v.length/3;
+      v.push(p.x + p.nx*off0, p.y + y0, p.z + p.nz*off0, p.x + p.nx*off1, p.y + y1, p.z + p.nz*off1);
+      if(run) ix.push(b-2, b-1, b, b-1, b+1, b);
+      run = true;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(v, 3));
+    geo.setIndex(ix); geo.computeVertexNormals();
+    geo.setAttribute("uv", new THREE.BufferAttribute(new Float32Array(v.length/3*2), 2));
+    const m = new THREE.Mesh(geo, mat); m.material.side = THREE.DoubleSide;
+    m.castShadow = false; m.receiveShadow = true; rail.add(m); return m;
+  };
+  const deckM = std(0xe9e6de, {roughness:0.9, envMapIntensity:0.35});
+  sweep(2.05, 2.05, 0.08, -0.55, deckM);           // fascias
+  sweep(-2.05, -2.05, 0.08, -0.55, deckM);
+  sweep(2.05, -2.05, -0.55, -0.55, deckM);         // underside
+  sweep(2.0, 2.0, 0.02, 0.52, pierMat);            // parapet walls
+  sweep(-2.0, -2.0, 0.02, 0.52, pierMat);
+  sweep(2.08, 1.92, 0.54, 0.54, MAT.white());      // coping
+  sweep(-1.92, -2.08, 0.54, 0.54, MAT.white());
+  for(let s = 0; s < RAIL_L; s += 3.0){
     const p = railAt(s);
-    if(p.y - Math.max(groundH(p.x, p.z), westH(p.x, p.z)) < 1.9) continue;
+    if(!flying(p)) continue;
     const nx = -p.tz, nz = p.tx, ry = Math.atan2(p.tx, p.tz);
-    for(const off of [1.86, -1.86])
-      Bo(rail, 0.3, 0.42, 2.1, pierMat, p.x + nx*off, p.y + 0.02, p.z + nz*off, ry)
-        .castShadow = false;
+    for(const off of [2.02, -2.02]) Bo(rail, 0.16, 0.6, 0.26, MAT.white(), p.x + nx*off, p.y + 0.02, p.z + nz*off, ry).castShadow = false;
   }
 
   const consist = [mkLoco(), mkCoach(), mkCoach(), mkCoach()];
@@ -1508,6 +2354,7 @@ const shellRec = reg(shellG);
     });
   };
   markNoBounds(rail);
+  batchStatic(rail);          // sleepers, piers, parapet; the consist is dyn
   placeTrain(0);
   if(ANIM) anims.push(t => placeTrain(t));
 }
@@ -1575,9 +2422,9 @@ const shellRec = reg(shellG);
   air.traverse(o=>{ if(o.isMesh && o.material){ o.material.transparent = true; airMats.push(o.material); } });
   let aop = 1;
   tickSky = dt => {
-    const goal = active >= 0 ? 0 : 1;
+    const goal = (active >= 0 || skyClear) ? 0 : 1;
     if(Math.abs(aop - goal) < 0.004) return;
-    aop = REDUCED ? goal : aop + (goal - aop) * Math.min(1, dt * 4);
+    aop = (REDUCED || fadeCut) ? goal : aop + (goal - aop) * Math.min(1, dt * 4);
     airMats.forEach(m=> m.opacity = aop);
     planes.forEach(a=> a.g0.visible = aop > 0.02);
   };
@@ -1665,7 +2512,7 @@ function mkCamera(g, x, fy, z, ry=0){
   const c = new THREE.Group(); c.position.set(x, top, z); c.rotation.y = ry; g.add(c);
   Bo(c, 0.38,0.4,0.62, MAT.white(), 0, 0, 0);
   Cy(c, 0.13,0.13,0.24, MAT.inkFlat(), 0, 0.2, 0.4, 16, 0, Math.PI/2);
-  const tally = Sp(c, 0.055, emissive(0xff4a1c), 0, 0.38, -0.22);
+  const tally = dyn(Sp(c, 0.055, emissive(0xff4a1c), 0, 0.38, -0.22));
   if(ANIM) anims.push(t=>{ tally.material.transparent = true;
     tally.material.opacity = 0.35+0.65*Math.abs(Math.sin(t*2.4)); });
   return c;
@@ -1775,6 +2622,268 @@ function mkBoard(g, txr, w, h, x, y, z, face){
 }
 
 /* =====================================================================
+   PEOPLE AND CARS — modelled once, drawn as instances
+   Every car on the map is one set of InstancedMeshes (body, glass, running
+   gear, head and tail lamps, contact shadow, dusk light pools); every
+   pedestrian another (torso, head, swinging legs and arms, phone and its lit
+   screen, shadow). The simulations still move plain Object3D "holders" —
+   the same position/rotation/visible API the old meshes had — and sync()
+   copies each holder's transform into the instances once a frame. Thirty
+   cars and a hundred walkers cost fourteen draw calls instead of ~400,
+   which is what pays for rounder bodies and real walk cycles.
+   ===================================================================== */
+/* merge parts that each carry a flat colour into one vertex-coloured shape */
+function mergeTinted(parts){
+  const geo = mergeGeos(parts.map(([g, m]) => [g, m]));
+  const cols = new Float32Array(geo.attributes.position.count * 3);
+  const c = new THREE.Color();
+  let o = 0;
+  for(const [g, , hex] of parts){
+    c.setHex(hex);
+    for(let i=0;i<g.attributes.position.count;i++){ cols[o++] = c.r; cols[o++] = c.g; cols[o++] = c.b; }
+  }
+  geo.setAttribute("color", new THREE.BufferAttribute(cols, 3));
+  return geo;
+}
+function extrudeZ(shape, depth, bevel){
+  const g = new THREE.ExtrudeGeometry(shape, {depth, bevelEnabled: bevel > 0, bevelThickness: bevel,
+    bevelSize: bevel, bevelSegments: 2, curveSegments: 6});
+  g.translate(0, 0, -depth/2);
+  g.deleteAttribute("uv"); g.setAttribute("uv", new THREE.BufferAttribute(new Float32Array(g.attributes.position.count*2), 2));
+  return mergeGeos([[g, new THREE.Matrix4()]]);          // indexed, uniform attributes
+}
+/* dusk light on the road: a headlight fan ahead of the car, fading forward */
+const BEAM_TEX = tex(96, 48, (x, w, h)=>{
+  const gr = x.createLinearGradient(0, 0, w, 0);
+  gr.addColorStop(0, "rgba(255,255,255,0.95)"); gr.addColorStop(0.35, "rgba(255,255,255,0.45)");
+  gr.addColorStop(1, "rgba(255,255,255,0)");
+  x.fillStyle = gr; x.beginPath(); x.moveTo(0, h*0.36); x.lineTo(w, 0); x.lineTo(w, h); x.lineTo(0, h*0.64); x.closePath(); x.fill();
+});
+
+/* signalled junctions on the grid. One clock, each junction offset so the
+   four never switch together: north-south green 8 s, amber 2, all-red 1,
+   east-west green 8, amber 2, all-red 1. A pedestrian may cross the
+   north-south street while east-west traffic has the green, and vice versa. */
+const SIGNALS = {
+  t: 0, PERIOD: 22,
+  J: [[-6, 56], [22, 56], [-6, 88], [22, 88]],
+  at(i){
+    const c = ((this.t + i*5.5) % this.PERIOD + this.PERIOD) % this.PERIOD;
+    return {ns: c < 8 ? "go" : c < 10 ? "amber" : "stop",
+            ew: c < 11 ? "stop" : c < 19 ? "go" : c < 21 ? "amber" : "stop",
+            // seconds of green left, so nobody steps out as the light changes
+            nsLeft: c < 8 ? 8 - c : 0, ewLeft: c >= 11 && c < 19 ? 19 - c : 0};
+  },
+  // may someone start across the street that runs along `axis` at junction i?
+  walk(i, axis){ const p = this.at(i); return axis === "ns" ? p.ewLeft > 3 : p.nsLeft > 3; },
+};
+
+/* ---- house details shared by the neighbourhood and the far blocks ---- */
+/* a gable end: the triangle closing the roof over a side wall */
+function gableGeo(depth, rise, thick){
+  const sh = new THREE.Shape();
+  sh.moveTo(-depth/2, 0); sh.lineTo(depth/2, 0); sh.lineTo(0, rise); sh.closePath();
+  const g = extrudeZ(sh, thick, 0);
+  g.rotateY(Math.PI/2);
+  return g;
+}
+/* a white picket fence along runs [[x0,z0,x1,z1], ...] in the parent's
+   space: pickets and two rails, one merged mesh */
+function picketFence(parent, runs, h = 0.62){
+  const parts = [];
+  for(const [x0, z0, x1, z1] of runs){
+    const L = Math.hypot(x1 - x0, z1 - z0), ry = Math.atan2(x1 - x0, z1 - z0) - Math.PI/2;
+    const n = Math.max(1, Math.round(L / 0.2));
+    for(let i=0;i<=n;i++){
+      const k = i/n, px = x0 + (x1-x0)*k, pz = z0 + (z1-z0)*k;
+      parts.push([new THREE.BoxGeometry(0.06, h, 0.045), M4(px, h/2, pz, 1,1,1, ry)]);
+    }
+    for(const ry2 of [0.2, h - 0.14])
+      parts.push([new THREE.BoxGeometry(L, 0.05, 0.035), M4((x0+x1)/2, ry2, (z0+z1)/2, 1,1,1, ry)]);
+  }
+  const m = new THREE.Mesh(mergeGeos(parts), std(0xfbfaf6, {roughness:0.8}));
+  m.castShadow = true; m.receiveShadow = true; m.userData.noBounds = true;
+  parent.add(m); return m;
+}
+
+function makeFleet(room){
+  // ---- the car, nose along +x ----
+  const lower = new THREE.Shape();
+  lower.moveTo(-0.9, 0.14); lower.lineTo(0.88, 0.14);
+  lower.quadraticCurveTo(0.98, 0.14, 0.98, 0.27); lower.lineTo(0.97, 0.42);
+  lower.quadraticCurveTo(0.95, 0.54, 0.74, 0.565); lower.lineTo(0.36, 0.6);
+  lower.lineTo(-0.88, 0.6); lower.quadraticCurveTo(-0.98, 0.585, -0.98, 0.5);
+  lower.lineTo(-0.98, 0.27); lower.quadraticCurveTo(-0.98, 0.14, -0.9, 0.14);
+  const roofS = new THREE.Shape();
+  roofS.moveTo(0.1, 0.915); roofS.lineTo(-0.64, 0.915); roofS.lineTo(-0.7, 0.975); roofS.lineTo(0.05, 0.975); roofS.closePath();
+  const greenhouse = new THREE.Shape();
+  greenhouse.moveTo(0.41, 0.585); greenhouse.lineTo(0.1, 0.93); greenhouse.lineTo(-0.66, 0.93);
+  greenhouse.lineTo(-0.93, 0.585); greenhouse.closePath();
+  const I = new THREE.Matrix4();
+  const bodyG = mergeGeos([[extrudeZ(lower, 0.84, 0.06), I], [extrudeZ(roofS, 0.8, 0.035), I],
+    [new THREE.BoxGeometry(0.08, 0.07, 0.1), M4(0.3, 0.63, 0.52)],                  // mirrors
+    [new THREE.BoxGeometry(0.08, 0.07, 0.1), M4(0.3, 0.63, -0.52)]]);
+  const glassG = extrudeZ(greenhouse, 0.86, 0.025);
+  const wheel = [];
+  for(const [wx, wz] of [[0.6, 0.43], [-0.6, 0.43], [0.6, -0.43], [-0.6, -0.43]]){
+    wheel.push([new THREE.CylinderGeometry(0.2, 0.2, 0.15, 14), M4(wx, 0.2, wz, 1,1,1, 0, Math.PI/2), 0x24211c]);
+    wheel.push([new THREE.CylinderGeometry(0.1, 0.1, 0.16, 10), M4(wx, 0.2, wz, 1,1,1, 0, Math.PI/2), 0xc9c5bd]);
+  }
+  const detailG = mergeTinted([...wheel,
+    [new THREE.BoxGeometry(0.03, 0.1, 0.5), M4(0.99, 0.3, 0), 0x3a362f],             // grille
+    [new THREE.BoxGeometry(0.05, 0.06, 0.9), M4(0.99, 0.18, 0), 0xdedad2],           // bumpers
+    [new THREE.BoxGeometry(0.05, 0.06, 0.9), M4(-0.99, 0.18, 0), 0xdedad2],
+    [new THREE.CylinderGeometry(0.011, 0.011, 0.44, 5), M4(-0.74, 1.2, -0.3), 0x2a261e],   // whip
+    [new THREE.SphereGeometry(0.045, 8, 6), M4(-0.74, 1.43, -0.3), 0xff4a1c]]);             // tuned in
+  const headG = mergeGeos([[new THREE.BoxGeometry(0.04, 0.085, 0.2), M4(0.975, 0.41, 0.28)],
+                           [new THREE.BoxGeometry(0.04, 0.085, 0.2), M4(0.975, 0.41, -0.28)]]);
+  const tailG = mergeGeos([[new THREE.BoxGeometry(0.04, 0.08, 0.22), M4(-0.985, 0.47, 0.3)],
+                           [new THREE.BoxGeometry(0.04, 0.08, 0.22), M4(-0.985, 0.47, -0.3)]]);
+  const flat = (w, d, x, y) => { const g = new THREE.PlaneGeometry(w, d); g.rotateX(-Math.PI/2); g.translate(x, y, 0); return g; };
+  const shadowG = flat(2.6, 1.45, 0, 0.012);
+  const beamG = flat(3.6, 1.9, 2.75, 0.05);
+  const tailGlowG = flat(1.9, 1.1, -1.55, 0.045);
+
+  const holders = [];
+  const parts = [];
+  const part = (geo, mat, cast, colorFn) => { parts.push({geo, mat, cast, colorFn}); };
+  const paint = std(0xffffff, {roughness:0.36, metalness:0.08, envMapIntensity:1.1});
+  part(bodyG, paint, true, h => h.userData.color);
+  part(glassG, std(0x2e3338, {roughness:0.12, metalness:0.5, envMapIntensity:1.4}), true);
+  part(detailG, std(0xffffff, {roughness:0.6, vertexColors:true}), true);
+  part(headG, lamp(0xf1eee6, 0xfff4da), false);
+  part(tailG, lamp(0xb4493a, 0xff3a22), false);
+  const blob = new THREE.MeshBasicMaterial({map:BLOB, transparent:true, depthWrite:false, toneMapped:false});
+  part(shadowG, blob, false);
+  part(beamG, glowMat(0xffe6bf, 0, 0.42, BEAM_TEX), false);
+  part(tailGlowG, glowMat(0xff4a2a, 0, 0.3), false);
+  const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
+  const col = new THREE.Color();
+  let ims = null;
+  return {
+    holders,
+    add(color){
+      const h = new THREE.Object3D(); h.userData.color = color; room.add(h); holders.push(h); return h;
+    },
+    build(){
+      ims = parts.map(p => {
+        const im = new THREE.InstancedMesh(p.geo, p.mat, Math.max(1, holders.length));
+        im.frustumCulled = false; im.castShadow = p.cast; im.receiveShadow = true;
+        im.userData.noBounds = true; im.userData.dyn = true;
+        im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        if(p.colorFn) holders.forEach((h, i) => im.setColorAt(i, col.setHex(p.colorFn(h))));
+        if(p.mat === blob || p.mat.blending === THREE.AdditiveBlending) im.renderOrder = 2;
+        room.add(im); return im;
+      });
+      this.sync();
+    },
+    sync(){
+      if(!ims) return;
+      for(let i=0;i<holders.length;i++){
+        const h = holders[i]; h.updateMatrix();
+        const M = h.visible ? h.matrix : ZERO;
+        for(const im of ims) im.setMatrixAt(i, M);
+      }
+      for(const im of ims) im.instanceMatrix.needsUpdate = true;
+    },
+  };
+}
+
+function makeWalkers(room){
+  const S = 0.9;                                        // the figures stand ~1.45 tall
+  const torsoG = mergeGeos([
+    [new THREE.CylinderGeometry(0.155, 0.195, 0.56, 10), M4(0, 0.92*S, 0, S, S, S*0.82)],
+    [new THREE.SphereGeometry(0.2, 10, 6), M4(0, 1.17*S, 0, S, S*0.42, S*0.78)]]);
+  const headG = mergeGeos([[new THREE.SphereGeometry(0.16, 12, 9), M4(0, 1.41*S, 0, S, S*1.06, S)],
+    [new THREE.CylinderGeometry(0.06, 0.07, 0.1, 8), M4(0, 1.27*S, 0, S, S, S)]]);
+  const legG = new THREE.BoxGeometry(0.12*S, 0.64*S, 0.14*S); legG.translate(0, -0.32*S, 0);
+  const armG = new THREE.BoxGeometry(0.085*S, 0.5*S, 0.1*S); armG.translate(0, -0.25*S, 0);
+  const phoneG = new THREE.BoxGeometry(0.1, 0.17, 0.022);
+  const screenG = new THREE.PlaneGeometry(0.084, 0.145); screenG.translate(0, 0, 0.013);
+  const shadowG = new THREE.PlaneGeometry(0.85, 0.6); shadowG.rotateX(-Math.PI/2); shadowG.translate(0, 0.015, 0);
+  const holders = [];
+  const cloth = std(0xffffff, {roughness:0.9, envMapIntensity:0.5});
+  let ims = null, nPhone = 0, nShadow = 0;
+  const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
+  const _m = new THREE.Matrix4(), _r = new THREE.Matrix4(), _t = new THREE.Matrix4(), col = new THREE.Color();
+  const HIP = 0.64*S, SHO = 1.15*S;
+  return {
+    holders,
+    add(color, phone, groundShadow){
+      const h = new THREE.Object3D();
+      h.userData = {color, phone: !!phone, shadow: !groundShadow, phase: holders.length*1.37, moving:false, pose:"stand"};
+      room.add(h); holders.push(h); return h;
+    },
+    build(){
+      const n = Math.max(1, holders.length);
+      const mk = (geo, mat, count, cast) => {
+        const im = new THREE.InstancedMesh(geo, mat, Math.max(1, count));
+        im.frustumCulled = false; im.castShadow = !!cast; im.receiveShadow = true;
+        im.userData.noBounds = true; im.userData.dyn = true;
+        im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        room.add(im); return im;
+      };
+      nPhone = holders.filter(h => h.userData.phone).length;
+      nShadow = holders.filter(h => h.userData.shadow).length;
+      ims = {
+        torso: mk(torsoG, cloth, n, true),
+        head: mk(headG, std(0xf3eee6, {roughness:0.85}), n, true),
+        leg: mk(legG, cloth.clone(), n*2, true),
+        arm: mk(armG, cloth.clone(), n*2, true),
+        phone: mk(phoneG, MAT.inkFlat(), nPhone, false),
+        screen: mk(screenG, lamp(0xfff0da, 0xfff6e6), nPhone, false),
+        shadow: mk(shadowG, new THREE.MeshBasicMaterial({map:BLOB, transparent:true, depthWrite:false, toneMapped:false}), nShadow, false),
+      };
+      ims.shadow.renderOrder = 2;
+      holders.forEach((h, i) => {
+        const c = h.userData.color;
+        ims.torso.setColorAt(i, col.setHex(c));
+        ims.arm.setColorAt(i*2, col.setHex(c)); ims.arm.setColorAt(i*2+1, col.setHex(c));
+        col.setHex(c).multiplyScalar(0.9);             // trousers a shade under the top
+        ims.leg.setColorAt(i*2, col); ims.leg.setColorAt(i*2+1, col);
+      });
+      this.sync();
+    },
+    sync(){
+      if(!ims) return;
+      let ip = 0, is = 0;
+      for(let i=0;i<holders.length;i++){
+        const h = holders[i], u = h.userData;
+        h.updateMatrix();
+        const vis = h.visible;
+        const M = vis ? h.matrix : ZERO;
+        ims.torso.setMatrixAt(i, M); ims.head.setMatrixAt(i, M);
+        // a walk cycle: legs scissor about the hip, arms counter-swing
+        const sw = u.moving ? Math.sin(u.phase) * 0.52 : 0;
+        for(const [k, sgn] of [[0, 1], [1, -1]]){
+          _t.makeTranslation(sgn*0.085*S, HIP, 0); _r.makeRotationX(sw * sgn);
+          _m.multiplyMatrices(M, _t).multiply(_r); ims.leg.setMatrixAt(i*2 + k, _m);
+          let ax = -sw * sgn * 0.7, az = sgn * 0.07;
+          if(u.pose === "cheer") { ax = -2.75; az = sgn * 0.25; }                 // both hands up
+          if(u.phone && sgn > 0 && u.pose !== "cheer") ax = -1.15;                 // phone held out front
+          if(u.phone && u.pose === "cheer" && sgn > 0) ax = -2.95;                 // phone held high
+          _t.makeTranslation(sgn*0.235*S, SHO, 0); _r.makeRotationX(ax);
+          _m.multiplyMatrices(M, _t).multiply(_r).multiply(_t.makeRotationZ(az)); ims.arm.setMatrixAt(i*2 + k, _m);
+        }
+        if(u.phone){
+          if(u.pose === "cheer") _t.makeTranslation(0.24*S, 1.82*S, 0.1);
+          else _t.makeTranslation(0.2*S, 0.96*S, 0.42*S);
+          _r.makeRotationX(u.pose === "cheer" ? 0.25 : -0.95);
+          _m.multiplyMatrices(M, _t).multiply(_r);
+          ims.phone.setMatrixAt(ip, _m); ims.screen.setMatrixAt(ip, _m); ip++;
+        }
+        if(u.shadow){
+          // the shadow stays on the ground even when the figure bounces
+          _m.copy(M); if(vis) _m.elements[13] = h.position.y > 0.3 ? h.position.y : 0.05;
+          ims.shadow.setMatrixAt(is++, _m);
+        }
+      }
+      for(const k in ims) ims[k].instanceMatrix.needsUpdate = true;
+    },
+  };
+}
+
+/* =====================================================================
    ROOMS
    ===================================================================== */
 const roomRecs = {};
@@ -1814,28 +2923,61 @@ const RIGHTW = PX1 - WT - 0.03;
 /* --- On-Air Studio (F3, back-left) --- */
 {
   const room = RM("onair"), {g, pin} = roomGroup(room), fy = 0;
+  /* The desk position the style frame asked for: a pair of monitors (the log
+     and a live waveform drawn on canvas), the console, a mug, headphones
+     down on the desk, the boom mic, speakers on floor stands either side,
+     greige acoustic panels on the back and side walls, and a lit ON AIR box
+     over it all that glows harder at dusk. */
   const sy = mkDesk(g, -10.5, fy, -8.4, 5.6, 2.1);
-  mkMonitor(g, -12.0, sy, -8.8, TX.logScreen, 1.0);
-  mkMonitor(g, -10.4, sy, -9.0, TX.siteScreen, 0.95, 0.14);
+  mkMonitor(g, -12.2, sy, -8.95, TX.logScreen, 1.0, 0.1);
+  mkMonitor(g, -10.4, sy, -9.0, TX.waveBars, 1.0, -0.06);
   mkConsole(g, -8.3, sy, -8.2, 1.1);
   mkKeyboard(g, -11.2, sy, -7.7);
   mkMug(g, -9.6, sy, -7.6);
   mkMicBoom(g, -13.0, sy, -8.2, -0.5);
   mkChair(g, -10.2, fy, -6.6, Math.PI);
-  mkBoard(g, TX.onair, 3.2, 1.05, -6.0, fy+2.7, BACKW, "n");
+  // headphones, down on the desk
+  {
+    const hp = new THREE.Group(); hp.position.set(-12.35, sy + 0.02, -7.65); hp.rotation.y = 0.5; g.add(hp);
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.03, 8, 20, Math.PI), MAT.inkFlat());
+    band.rotation.x = -Math.PI/2; band.position.y = 0.05; hp.add(band);
+    for(const sx of [-0.21, 0.21]) Cy(hp, 0.1, 0.1, 0.08, MAT.inkFlat(), sx, 0, 0.02, 16);
+    for(const sx of [-0.21, 0.21]) Cy(hp, 0.07, 0.07, 0.085, std(0x4a453d, {roughness:0.9}), sx, 0.005, 0.02, 14);
+  }
+  // acoustic panels: back wall either side of the sign, and two on the side wall
+  const felt = () => std(0xdbd4c7, {roughness:1, envMapIntensity:0.25});
+  for(const px of [-15.5, -14.1, -7.0, -5.6, -4.2])
+    Bo(g, 1.2, 1.8, 0.12, felt(), px, fy + 0.95, BACKW + 0.06);
+  for(const pz of [-10.8, -9.3, -7.8])
+    Bo(g, 0.12, 1.8, 1.25, felt(), LEFTW + 0.06, fy + 0.95, pz);
+  // the lit ON AIR box above the desk
+  {
+    const box = Bo(g, 2.05, 0.6, 0.26, MAT.inkFlat(), -10.5, fy + 2.72, BACKW + 0.14);
+    box.castShadow = false;
+    const face = Pl(g, 1.9, 0.5, signMat(TX.onairLit), -10.5, fy + 3.02, BACKW + 0.28);
+    const glow = halo(g, 0xff4a1c, 3.4, -10.5, fy + 3.02, BACKW + 0.5, 0.22, 0.75);
+    ENV.onairGlow = glow.material;
+    Bo(g, 0.05, 0.5, 0.05, MAT.inkFlat(), -11.2, fy + 3.32, BACKW + 0.14);   // hangers
+    Bo(g, 0.05, 0.5, 0.05, MAT.inkFlat(), -9.8, fy + 3.32, BACKW + 0.14);
+  }
   // watchdog rack
   const rx = -2.4, rz = -10.6;
   Bo(g, 1.4, 3.1, 1.15, MAT.white(), rx, fy, rz);
   Pl(g, 1.2, 2.9, signMat(TX.rackFront), rx, fy+1.6, rz+0.59);
   const vus = [];
   for(let i=0;i<4;i++)
-    vus.push(Bo(g, 0.11, 0.6, 0.06, emissive(0xff4a1c), rx-0.36+i*0.24, fy+1.8, rz+0.61));
+    vus.push(dyn(Bo(g, 0.11, 0.6, 0.06, emissive(0xff4a1c), rx-0.36+i*0.24, fy+1.8, rz+0.61)));
   if(ANIM) anims.push(t=> vus.forEach((b,i)=>{
     const s = 0.3+0.7*Math.abs(Math.sin(t*(2.1+i*0.6)+i*1.7));
     b.scale.y = s; b.position.y = fy+1.8+0.3*s;
   }));
-  mkNearfield(g, -14.0, fy+2.3, -11.4, 0.5);
-  mkNearfield(g, -7.0, fy+2.3, -11.4, -0.5);
+  // speakers on floor stands, toed in toward the chair
+  for(const [sx, sz, ry] of [[-14.3, -10.7, 0.5], [-6.7, -10.7, -0.5]]){
+    Cy(g, 0.32, 0.36, 0.05, MAT.inkFlat(), sx, fy, sz, 18);
+    Cy(g, 0.04, 0.04, 1.9, MAT.inkFlat(), sx, fy + 0.05, sz, 8);
+    Bo(g, 0.46, 0.05, 0.42, MAT.inkFlat(), sx, fy + 1.93, sz);
+    mkNearfield(g, sx, fy + 1.98, sz, ry);
+  }
   mkPlant(g, -15.2, fy, -1.8, 1.1);
   mkCabinet(g, -15.4, fy, -6.0, Math.PI/2);
   // guest / listening side of the studio
@@ -1849,7 +2991,7 @@ const RIGHTW = PX1 - WT - 0.03;
   pin(-8.3, sy+0.6, -8.2);
   pin(-12.0, sy+0.9, -7.9);
   pin(rx, fy+2.4, rz+0.7);
-  pin(-6.0, fy+2.7, BACKW+0.4);
+  pin(-10.5, fy+3.05, BACKW+0.5);
 }
 
 /* --- Production Studio (F3, back-right) --- */
@@ -1872,7 +3014,7 @@ const RIGHTW = PX1 - WT - 0.03;
   Cy(g, 0.022,0.022,1.4, MAT.inkFlat(), bx, fy+2.4, bz, 8);
   Sp(g, 0.16, MAT.inkFlat(), bx, fy+2.34, bz);
   Torus(g, 0.26, 0.028, MAT.gray(), bx-0.4, fy+2.0, bz, 0);
-  const rec = Sp(g, 0.08, emissive(0xff4a1c), bx+2.3, fy+3.2, bz-2.3);
+  const rec = dyn(Sp(g, 0.08, emissive(0xff4a1c), bx+2.3, fy+3.2, bz-2.3));
   if(ANIM) anims.push(t=>{ rec.material.transparent = true;
     rec.material.opacity = 0.3+0.7*Math.abs(Math.sin(t*2.2)); });
   mkStool(g, bx, fy, bz+1.4);
@@ -1937,7 +3079,7 @@ const RIGHTW = PX1 - WT - 0.03;
     mkChair(g, dx, fy, 4.6, Math.PI);
   }
   // LIVE tally + acoustic panels on the cross wall
-  const live = Pl(g, 1.5, 0.62, signMat(TX.live), -3.2, fy+2.8, WT/2+0.04);
+  const live = dyn(Pl(g, 1.5, 0.62, signMat(TX.live), -3.2, fy+2.8, WT/2+0.04));
   if(ANIM) anims.push(t=>{ live.material.opacity = 0.55+0.45*Math.abs(Math.sin(t*1.9)); });
   Bo(g, 1.0, 1.4, 0.1, std(0xf0ece4, {roughness:0.98}), -15.2, fy+1.5, WT/2+0.05);
   Bo(g, 1.0, 1.4, 0.1, std(0xf0ece4, {roughness:0.98}), -2.0, fy+1.1, WT/2+0.05);
@@ -1969,7 +3111,7 @@ const RIGHTW = PX1 - WT - 0.03;
     Cy(g, 0.56,0.56,0.12, MAT.white(), cx2, fy+2.7, BACKW+0.06, 26, 0, Math.PI/2);
     Torus(g, 0.56, 0.038, MAT.inkFlat(), cx2, fy+2.7, BACKW+0.12, 0);
     Bo(g, 0.05,0.4,0.035, MAT.inkFlat(), cx2, fy+2.7, BACKW+0.14, 0, (i-1)*0.9);
-    const hand = Bo(g, 0.045,0.48,0.035, MAT.accent(), cx2, fy+2.7, BACKW+0.16);
+    const hand = dyn(Bo(g, 0.045,0.48,0.035, MAT.accent(), cx2, fy+2.7, BACKW+0.16));
     hand.geometry.translate(0,-0.24,0); hand.position.y = fy+2.7+0.24;
     if(ANIM) anims.push(t=>{ hand.rotation.z = -t*0.7 - i; });
   }
@@ -2103,7 +3245,7 @@ const RIGHTW = PX1 - WT - 0.03;
   const room = RM("promotions"), {g, pin} = roomGroup(room), fy = 0;
   const wx2 = 5.0, wz = -8.4;
   const wg = new THREE.Group(); wg.position.set(wx2, fy+2.3, wz); g.add(wg);
-  const wheel = new THREE.Group(); wg.add(wheel);
+  const wheel = dyn(new THREE.Group()); wg.add(wheel);
   const disc = new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.6,0.18,40), MAT.white());
   disc.rotation.x = Math.PI/2; disc.castShadow = disc.receiveShadow = true; wheel.add(disc);
   for(let i=0;i<8;i++){
@@ -2230,7 +3372,7 @@ const RIGHTW = PX1 - WT - 0.03;
   Pl(g, 1.35, 3.1, signMat(TX.rackFront), rx, fy+1.7, rz+0.61);
   const leds = [];
   for(let u=0;u<5;u++)
-    leds.push(Sp(g, 0.06, emissive(0xff4a1c), rx+0.48, fy+0.62+u*0.62, rz+0.63));
+    leds.push(dyn(Sp(g, 0.06, emissive(0xff4a1c), rx+0.48, fy+0.62+u*0.62, rz+0.63)));
   if(ANIM) anims.push(t=> leds.forEach((l,i)=>{
     l.material.transparent = true;
     l.material.opacity = (Math.sin(t*2.4+i*2.1) > 0.15) ? 1 : 0.12;
@@ -2327,7 +3469,7 @@ const RIGHTW = PX1 - WT - 0.03;
     Cy(s, 0.035,0.035,2.5, MAT.inkFlat(), 0, 0.62, 0, 8);
     const head = new THREE.Group(); head.position.set(0, 2.9, 0); head.rotation.x = -0.3; s.add(head);
     Bo(head, 1.1,1.1,0.45, MAT.inkFlat(), 0, -0.55, -0.25);
-    const face = Pl(head, 0.94,0.94, new THREE.MeshBasicMaterial({color:0xfff4e0, toneMapped:false}), 0, 0, 0.02);
+    const face = dyn(Pl(head, 0.94,0.94, new THREE.MeshBasicMaterial({color:0xfff4e0, toneMapped:false}), 0, 0, 0.02));
     face.position.set(0, -0.02, 0.02);
     if(ANIM) anims.push(t=>{ face.material.color.setHSL(0.1, 0.4, 0.9+0.05*Math.sin(t*1.1+x)); });
   }
@@ -2364,28 +3506,67 @@ const RIGHTW = PX1 - WT - 0.03;
   const PEAK = groundH(SX, SZ);      // crown of the shared terrain
 
   // self-supporting lattice mast — legs converge inward to the apex
-  const MH = 20, SEGS = 6, R0 = 1.85, R1 = 0.14;
+  /* A slender self-supporting lattice: four legs converging on the apex,
+     X-braced on every face in eight panels, belts at each panel, two small
+     service platforms, three panel antennas and a pair of microwave drums
+     near the top, then the whip and the beacon. Obstruction lamps sit at
+     mid-height; the beacon blinks, and all of them glow at dusk. */
+  const MH = 20, SEGS = 8, R0 = 1.85, R1 = 0.16;
   const ringAt = t => {
     const r = R0 + (R1 - R0) * t, y = PEAK + MH * t;
     return [[1,1],[1,-1],[-1,-1],[-1,1]].map(([sx,sz]) => [SX + sx*r, y, SZ + sz*r]);
   };
+  const lat = MAT.inkFlat();
   for(let s=0; s<SEGS; s++){
     const c0 = ringAt(s/SEGS), c1 = ringAt((s+1)/SEGS);
-    const legR = 0.085 - s*0.008;
+    const legR = 0.09 - s*0.007;
     for(let i=0;i<4;i++){
       const j = (i+1) % 4;
-      strut(g, c0[i], c1[i], legR, MAT.inkFlat());        // leg
-      strut(g, c1[i], c1[j], legR*0.55, MAT.inkFlat());   // horizontal belt
-      strut(g, c0[i], c1[j], legR*0.42, MAT.inkFlat());   // diagonal brace
+      strut(g, c0[i], c1[i], legR, lat);                  // leg
+      strut(g, c1[i], c1[j], legR*0.5, lat);              // belt
+      strut(g, c0[i], c1[j], legR*0.36, lat);             // X-brace
+      strut(g, c0[j], c1[i], legR*0.36, lat);
     }
   }
-  for(let i=0;i<4;i++) strut(g, ringAt(0)[i], ringAt(0)[(i+1)%4], 0.05, MAT.inkFlat());
-  Cy(g, 0.06,0.06,2.6, MAT.inkFlat(), SX, PEAK + MH, SZ, 10);
-  Sp(g, 0.3, emissive(0xff4a1c), SX, PEAK + MH + 2.9, SZ);
+  for(let i=0;i<4;i++) strut(g, ringAt(0)[i], ringAt(0)[(i+1)%4], 0.05, lat);
+  for(let i=0;i<4;i++){                                   // footings
+    const f = ringAt(0)[i];
+    Bo(g, 0.7, 0.35, 0.7, MAT.slab(), f[0], f[1] - 0.2, f[2]);
+  }
+  for(const tp of [0.5, 0.82]){                          // service platforms
+    const r = R0 + (R1 - R0) * tp + 0.35, y = PEAK + MH * tp;
+    Bo(g, r*2, 0.06, r*2, std(0xcfcac0, {roughness:0.6, metalness:0.4}), SX, y, SZ);
+    for(const [dx, dz, w, d] of [[0, r, r*2, 0.03], [0, -r, r*2, 0.03], [r, 0, 0.03, r*2], [-r, 0, 0.03, r*2]])
+      Bo(g, w, 0.03, d, lat, SX + dx, y + 0.42, SZ + dz);
+  }
+  const panelM = std(0xf6f4ef, {roughness:0.5, envMapIntensity:0.9});
+  for(const [dx, dz, ry] of [[0.62, 0, Math.PI/2], [-0.31, 0.54, -Math.PI/6], [-0.31, -0.54, Math.PI/6*7]])
+    Bo(g, 0.34, 1.5, 0.12, panelM, SX + dx, PEAK + MH*0.86, SZ + dz, ry);
+  for(const [dx, dz, ry] of [[0.55, 0.35, 0.6], [-0.1, -0.6, -1.9]]){
+    const drum = Cy(g, 0.36, 0.36, 0.22, panelM, SX + dx, PEAK + MH*0.66, SZ + dz, 20);
+    drum.rotation.set(Math.PI/2, 0, ry); drum.position.y = PEAK + MH*0.66 + 0.4;
+  }
+  Cy(g, 0.06,0.06,2.6, lat, SX, PEAK + MH, SZ, 10);
+  const beacon = dyn(Sp(g, 0.3, lamp(0xd9523c, 0xff3a1e), SX, PEAK + MH + 2.9, SZ));
+  const beaconHalo = halo(g, 0xff4a1c, 3.2, SX, PEAK + MH + 2.9, SZ, 0.18, 0.9, true);
+  const obs = [];
+  for(const tp of [0.45]){
+    const pts = ringAt(tp);
+    for(const [px, py, pz] of pts) obs.push(Sp(g, 0.1, lamp(0xc2584a, 0xff3322), px, py + 0.1, pz));
+  }
+  // the beacon: steady by day, a slow red blink at dusk (a real obstruction beacon flashes)
+  if(ANIM) anims.push(t => {
+    const on = (t % 1.6) < 0.8 ? 1 : 0.18;
+    beacon.scale.setScalar(0.9 + 0.2*on);
+    beaconHalo.material.opacity = (beaconHalo.material.userData.glow.day +
+      (beaconHalo.material.userData.glow.dusk - beaconHalo.material.userData.glow.day) * Math.max(0, TOD.k)) * on;
+  });
+  ENV.mastTop = new THREE.Vector3(SX, PEAK + MH + 2.9, SZ);
+  ENV.mastBase = new THREE.Vector3(SX, PEAK, SZ);
   for(let i=0;i<3;i++){
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.05, 8, 44),
       new THREE.MeshBasicMaterial({color:0xff4a1c, transparent:true, opacity:0, toneMapped:false}));
-    ring.position.set(SX, PEAK + MH + 2.9, SZ); g.add(ring);
+    ring.position.set(SX, PEAK + MH + 2.9, SZ); g.add(dyn(ring));
     if(ANIM) anims.push(t=>{
       const p = ((t*0.4 + i/3) % 1);
       ring.scale.setScalar(0.4 + p*3.6);
@@ -2423,11 +3604,27 @@ const RIGHTW = PX1 - WT - 0.03;
 {
   const room = RM("van"), {g, pin} = roomGroup(room);
   const vg = new THREE.Group(); vg.position.set(32, 0, -4); vg.rotation.y = -0.5; g.add(vg);
-  Bo(vg, 8.2, 3.0, 3.5, MAT.white(), -0.4, 0.85, 0);
-  Bo(vg, 2.0, 1.8, 3.4, MAT.white(), 4.6, 0.85, 0);
-  const ws = Bo(vg, 0.16, 1.25, 3.2, MAT.glass(), 3.95, 2.25, 0);
-  ws.rotation.z = -0.5;
-  Bo(vg, 1.8, 1.15, 3.46, MAT.glass(), 2.6, 2.1, 0);
+  /* the body in one rounded side profile: the tall box, the cab dropping in
+     front of it and a raked windscreen, extruded with a soft edge */
+  {
+    const sh = new THREE.Shape();
+    sh.moveTo(-4.3, 0.85); sh.lineTo(5.25, 0.85); sh.quadraticCurveTo(5.62, 0.85, 5.62, 1.2);
+    sh.lineTo(5.6, 1.82); sh.lineTo(4.92, 2.64); sh.lineTo(3.72, 2.68);
+    sh.lineTo(3.72, 3.5); sh.quadraticCurveTo(3.72, 3.85, 3.36, 3.85);
+    sh.lineTo(-4.14, 3.85); sh.quadraticCurveTo(-4.5, 3.85, -4.5, 3.5);
+    sh.lineTo(-4.5, 1.2); sh.quadraticCurveTo(-4.5, 0.85, -4.3, 0.85);
+    const body = new THREE.Mesh(extrudeZ(sh, 3.36, 0.08), MAT.white());
+    body.castShadow = body.receiveShadow = true; vg.add(body);
+    // windscreen along the rake, cab side windows, and a body window behind them
+    const glassM = std(0x2e3338, {roughness:0.1, metalness:0.5, envMapIntensity:1.4});
+    const ws = Bo(vg, 0.06, 1.02, 3.2, glassM, 5.31, 1.72, 0); ws.rotation.z = 0.69;   // raked back
+    for(const sz of [1.73, -1.73]) Bo(vg, 1.1, 0.72, 0.04, glassM, 4.6, 1.86, sz);
+    for(const sz of [1.73, -1.73]) Bo(vg, 1.7, 0.95, 0.04, night(MAT.glass(), 0xffc98a, 1.0, 0.9), 2.55, 2.25, sz);
+    for(const lz of [1.1, -1.1]){
+      Bo(vg, 0.05, 0.22, 0.46, lamp(0xf1eee6, 0xfff4da), 5.64, 1.3, lz).castShadow = false;
+      Bo(vg, 0.05, 0.3, 0.3, lamp(0xb4493a, 0xff3a22), -4.55, 1.5, lz).castShadow = false;
+    }
+  }
   Pl(vg, 2.3, 0.94, signMat(TX.live), -1.9, 2.15, 1.76);
   Pl(vg, 3.8, 0.56, signMat(TX.vanword), -1.7, 1.4, 1.76);
   Pl(vg, 2.3, 0.94, signMat(TX.live), -1.9, 2.15, -1.76, Math.PI);
@@ -2448,7 +3645,7 @@ const RIGHTW = PX1 - WT - 0.03;
   for(let i=0;i<2;i++){
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.5,0.045,8,36),
       new THREE.MeshBasicMaterial({color:0xff4a1c, transparent:true, opacity:0, toneMapped:false}));
-    ring.position.set(-3.2, 9.2, 0); vg.add(ring);
+    ring.position.set(-3.2, 9.2, 0); vg.add(dyn(ring));
     if(ANIM) anims.push(t=>{
       const p = ((t*0.5 + i/2) % 1);
       ring.scale.setScalar(0.4 + p*3.0);
@@ -2553,6 +3750,7 @@ const RIGHTW = PX1 - WT - 0.03;
 {
   const room = RM("datacenter"), {g, pin} = roomGroup(room);
   const dc = new THREE.Group(); dc.position.set(-16, 0, 30); dc.rotation.y = 0.12; g.add(dc);
+  aoDecal(dc, 0, 0, 11.0, 8.8, 0, 1.0);
 
   /* Stacked, like the station across the lot: each floor is a body with a
      slightly proud slab on top, so the building reads as plates rather than
@@ -2566,12 +3764,13 @@ const RIGHTW = PX1 - WT - 0.03;
     if(f > 0){                                   // window band per upper floor
       for(const [wz, wd] of [[4.46, 0.08], [-4.46, 0.08]]){
         Bo(dc, 9.4, 1.35, wd, MAT.inkFlat(), 0, y + 0.75, wz);
-        Bo(dc, 9.0, 1.1, 0.05, MAT.glass(), 0, y + 0.87, wz + (wz > 0 ? 0.05 : -0.05));
+        Bo(dc, 9.0, 1.1, 0.05, night(MAT.glass(), 0xdce7ff, 1.0, 0.9), 0, y + 0.87, wz + (wz > 0 ? 0.05 : -0.05));
         for(let m = -3; m <= 3; m++)
           Bo(dc, 0.14, 1.14, 0.07, MAT.white(), m*1.3, y + 0.85, wz + (wz > 0 ? 0.06 : -0.06));
       }
       Bo(dc, 0.08, 1.35, 7.6, MAT.inkFlat(), 5.56, y + 0.75, 0);
-      Bo(dc, 0.05, 1.1, 7.2, MAT.glass(), 5.61, y + 0.87, 0);
+      Bo(dc, 0.05, 1.1, 7.2, night(MAT.glass(), 0xdce7ff, 1.0, 0.9), 5.61, y + 0.87, 0);
+      for(let m = -3; m <= 3; m++) Bo(dc, 0.07, 1.14, 0.14, MAT.white(), 5.66, y + 0.85, m*1.08);
     }
   }
   const TOP = FLOORS * FH;
@@ -2588,6 +3787,13 @@ const RIGHTW = PX1 - WT - 0.03;
   }
   for(const vx of [-4.6, 4.2])
     Cy(dc, 0.32, 0.38, 1.4, std(0xe4e0d6, {roughness:0.9}), vx, TOP, 2.4, 12);
+  // a louvred screen around the plant, as on a real plant deck
+  for(let lx = -4.8; lx <= 4.2; lx += 0.3) Bo(dc, 0.06, 1.05, 0.22, std(0xf1eee7, {roughness:0.8}), lx, TOP, -3.05);
+  for(let lz = -2.9; lz <= 0.1; lz += 0.3) Bo(dc, 0.22, 1.05, 0.06, std(0xf1eee7, {roughness:0.8}), 4.55, TOP, lz);
+  Bo(dc, 9.4, 0.08, 0.3, MAT.white(), -0.3, TOP + 1.05, -3.05);
+  // aircraft-style red obstruction lamp on the roof corner, lit at dusk
+  Cy(dc, 0.03, 0.03, 0.9, MAT.inkFlat(), 5.2, TOP, 4.2, 6);
+  Sp(dc, 0.09, lamp(0xc2584a, 0xff3322), 5.2, TOP + 0.95, 4.2);
 
   /* the ground floor is glazed and the racks are behind it — the whole point
      of putting a window in a building nobody is meant to walk into */
@@ -2649,47 +3855,49 @@ const RIGHTW = PX1 - WT - 0.03;
 {
   const room = RM("drive"), {g, pin} = roomGroup(room);
   g.userData.idx = ROOMS.indexOf(room); pickExtras.push(g);
-  function mkCar(color){
-    const c = new THREE.Group(); g.add(c);
-    const paint = std(color, {roughness:0.42, envMapIntensity:1.0});
-    Bo(c, 1.9, 0.5, 0.95, paint, 0, 0.22, 0);
-    Bo(c, 1.05, 0.44, 0.86, paint, -0.1, 0.7, 0);
-    Bo(c, 0.98, 0.28, 0.9, MAT.screen(), -0.1, 0.76, 0);
-    for(const [wx,wz] of [[-0.62,0.46],[0.62,0.46],[-0.62,-0.46],[0.62,-0.46]]){
-      const t = new THREE.Mesh(new THREE.CylinderGeometry(0.21,0.21,0.15,14), MAT.rubber());
-      t.rotation.x = Math.PI/2; t.position.set(wx, 0.21, wz); t.castShadow = true; c.add(t);
-    }
-    Cy(c, 0.015,0.015,0.4, MAT.inkFlat(), -0.75, 0.9, -0.3, 6);
-    Sp(c, 0.05, emissive(0xff4a1c), -0.75, 1.34, -0.3);   // radio whip — tuned in
-    mkBlobShadow(c, 2.6, 1.5, 0.012);                     // grounds the car
-    markNoBounds(c);
-    return c;
-  }
-  /* A transit bus — same footprint logic as the cars but longer, with a glazed
-     band down the side and a rolling destination sign, which is one more screen
-     the traffic log feeds. */
+  /* the cars are instances (see makeFleet); mkCar hands back a holder the
+     simulation moves exactly as it moved the old meshes */
+  const FLEET = makeFleet(g);
+  const mkCar = color => FLEET.add(color);
+  const rrShape = (x, y, w, h, r) => { const sh = new THREE.Shape();
+    sh.moveTo(x + r, y); sh.lineTo(x + w - r, y); sh.quadraticCurveTo(x + w, y, x + w, y + r);
+    sh.lineTo(x + w, y + h - r); sh.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    sh.lineTo(x + r, y + h); sh.quadraticCurveTo(x, y + h, x, y + h - r);
+    sh.lineTo(x, y + r); sh.quadraticCurveTo(x, y, x + r, y); return sh; };
+  /* A transit bus: a long body with rounded ends, a continuous glazed band
+     broken by pillars, a vermilion livery line, a roof pod and a lit
+     destination blind — one more screen the traffic log feeds. */
   function mkBus(color, dest){
     const c = new THREE.Group(); g.add(c);
-    const paint = std(color, {roughness:0.45, envMapIntensity:0.95});
-    Bo(c, 4.6, 1.5, 1.35, paint, 0, 0.3, 0);
-    Bo(c, 4.64, 0.5, 1.39, MAT.screen(), 0, 1.02, 0);        // window band
-    Bo(c, 4.7, 0.16, 1.42, paint, 0, 1.62, 0);               // roof cap
-    Bo(c, 0.06, 0.42, 1.2, MAT.glass(), 2.32, 0.42, 0);      // windscreen
-    Pl(c, 1.05, 0.3, signMat(tex(160, 44, (x,w,h)=>{
+    const paint = std(color, {roughness:0.38, metalness:0.06, envMapIntensity:1.05});
+    const body = new THREE.Mesh(extrudeZ(rrShape(-2.35, 0.26, 4.7, 1.74, 0.24), 1.26, 0.06), paint);
+    body.castShadow = body.receiveShadow = true; c.add(body);
+    Bo(c, 4.42, 0.56, 1.42, MAT.screen(), -0.1, 1.02, 0);                // window band
+    for(let px = -1.9; px < 1.8; px += 0.92) Bo(c, 0.1, 0.58, 1.44, paint, px, 1.01, 0);
+    Bo(c, 0.06, 0.9, 1.18, std(0x2e3338, {roughness:0.1, metalness:0.5}), 2.36, 0.72, 0);  // windscreen
+    Bo(c, 4.76, 0.1, 1.43, MAT.accent(), 0, 0.74, 0);                   // livery line
+    Bo(c, 1.7, 0.2, 0.92, paint, -0.7, 2.0, 0);                          // roof pod
+    Pl(c, 0.95, 0.24, signMat(tex(160, 40, (x,w,h)=>{
       x.fillStyle = "#26211a"; x.fillRect(0, 0, w, h);
-      x.fillStyle = "#ffd9a8"; x.font = "800 22px "+F;
+      x.fillStyle = "#ffd9a8"; x.font = "800 20px "+F;
       x.textAlign = "center"; x.textBaseline = "middle";
       x.fillText(dest, w/2, h/2 + 1);
-    })), 2.36, 1.35, 0, Math.PI/2);
-    Bo(c, 4.66, 0.1, 1.37, MAT.accent(), 0, 0.72, 0);        // livery stripe
-    for(const [wx,wz] of [[-1.55,0.66],[1.6,0.66],[-1.55,-0.66],[1.6,-0.66]]){
-      const t = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,0.2,14), MAT.rubber());
-      t.rotation.x = Math.PI/2; t.position.set(wx, 0.3, wz); t.castShadow = true; c.add(t);
+    })), 2.42, 1.62, 0, Math.PI/2);
+    for(const [wx,wz] of [[-1.5,0.63],[1.55,0.63],[-1.5,-0.63],[1.55,-0.63]]){
+      Cy(c, 0.3, 0.3, 0.2, MAT.rubber(), wx, 0.3, wz, 14, 0, Math.PI/2).position.y = 0.3;
+      Cy(c, 0.14, 0.14, 0.21, MAT.chrome(), wx, 0.3, wz, 10, 0, Math.PI/2).position.y = 0.3;
     }
-    Cy(c, 0.015, 0.015, 0.4, MAT.inkFlat(), -1.9, 1.78, -0.4, 6);
-    Sp(c, 0.05, emissive(0xff4a1c), -1.9, 2.22, -0.4);       // tuned in, same as the cars
+    for(const lz of [0.42, -0.42]){
+      Bo(c, 0.04, 0.12, 0.24, lamp(0xf1eee6, 0xfff4da), 2.39, 0.42, lz).castShadow = false;
+      Bo(c, 0.04, 0.14, 0.2, lamp(0xb4493a, 0xff3a22), -2.39, 0.5, lz).castShadow = false;
+    }
+    const beam = new THREE.Mesh(new THREE.PlaneGeometry(3.8, 2.2), glowMat(0xffe6bf, 0, 0.42, BEAM_TEX));
+    beam.rotation.x = -Math.PI/2; beam.position.set(4.25, 0.05, 0); beam.renderOrder = 2; c.add(beam);
+    Cy(c, 0.015, 0.015, 0.4, MAT.inkFlat(), -1.9, 2.0, -0.4, 6);
+    Sp(c, 0.05, emissive(0xff4a1c), -1.9, 2.44, -0.4);       // tuned in, same as the cars
     mkBlobShadow(c, 5.6, 2.1, 0.012);
     markNoBounds(c);
+    batchStatic(c); dyn(c);
     return c;
   }
   const lanes = [
@@ -2793,29 +4001,51 @@ const RIGHTW = PX1 - WT - 0.03;
   const parked = mkCar(0xffffff);
   parked.position.set(14, 0.035, 34.8); parked.rotation.y = 0.06;
   Bo(parked, 0.3, 0.12, 0.5, emissive(0xffe9d2), 0.28, 0.62, 0);
-  /* Stop signs on the grid, and local traffic that actually obeys them: a
-     route is a timeline of runs and dwells rather than a constant sweep, so
-     a car rolls up to each junction, sits for a beat and pulls away. */
-  const STOP_TEX = tex(128, 128, (x, w, h)=>{
-    x.fillStyle = "#fdfbf6"; x.font = "800 40px "+F;
-    x.textAlign = "center"; x.textBaseline = "middle";
-    x.fillText("STOP", w/2, h/2 + 1);
-  });
+  /* Signal posts at the four grid junctions — vermilion poles, a vehicle
+     head up top and a pedestrian head at hand height. Each lens is one mesh
+     per junction and role, recoloured from the signal clock every frame:
+     white for go (and walk), warm amber, vermilion for stop. The posts are
+     turned toward the lens so the state reads from the overview. */
   const FACE_CAM = Math.atan2(0.80, 1.0);
-  const stopSign = (x, z) => {
-    const s = new THREE.Group(); s.position.set(x, 0, z); s.rotation.y = FACE_CAM; g.add(s);
-    Cy(s, 0.05, 0.065, 1.55, MAT.chrome(), 0, 0, 0, 8);
-    const oct = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.07, 8), MAT.accent());
-    oct.rotation.x = Math.PI/2; oct.position.set(0, 1.68, 0.02);
-    oct.castShadow = true; s.add(oct);
-    Pl(s, 0.66, 0.66, signMat(STOP_TEX), 0, 1.68, 0.07);
-    markNoBounds(s);
-  };
-  for(const [ix, iz] of [[-6, 56], [22, 56], [-6, 88], [22, 88]]){
-    stopSign(ix - 2.7, iz - 2.7);
-    stopSign(ix + 2.7, iz + 2.7);
-  }
-  stopSign(33.5, 52.4); stopSign(33.5, 59.9);
+  const LENS = {go:new THREE.Color(0xf6f3ea), amber:new THREE.Color(0xffb35a), stop:new THREE.Color(0xff4a1c)};
+  const sigLens = [];
+  SIGNALS.J.forEach(([ix, iz], ji) => {
+    const roles = {vNS:[], vEW:[], pNS:[], pEW:[]};
+    [[-1,-1,"NS"], [1,-1,"EW"], [-1,1,"EW"], [1,1,"NS"]].forEach(([sx, sz, ax]) => {
+      // Second Ave stops at Third St: no posts on the missing southern corners
+      if(ji === 3 && sz > 0) return;
+      const px = ix + sx*2.75, pz = iz + sz*2.75;
+      const s = new THREE.Group(); s.position.set(px, 0.1, pz); s.rotation.y = FACE_CAM; g.add(s);
+      Cy(s, 0.055, 0.07, 2.35, MAT.accent(), 0, 0, 0, 8);
+      Bo(s, 0.28, 0.56, 0.22, MAT.accent(), 0, 2.2, 0.05);           // vehicle head
+      Bo(s, 0.36, 0.08, 0.26, MAT.accent(), 0, 2.76, 0.05);          // its hood
+      Bo(s, 0.22, 0.28, 0.18, MAT.accent(), 0.16, 1.28, 0.05);       // pedestrian head
+      Bo(s, 0.14, 0.18, 0.18, MAT.inkFlat(), 0.16, 0.98, 0.02);      // push button
+      markNoBounds(s);
+      s.updateMatrixWorld(true);
+      const at = (x, y, z) => M4(x, y, z).premultiply(s.matrix);
+      roles["v" + ax].push([new THREE.BoxGeometry(0.17, 0.17, 0.02), at(0, 2.48, 0.17)]);
+      roles["p" + ax].push([new THREE.BoxGeometry(0.14, 0.16, 0.02), at(0.16, 1.43, 0.15)]);
+    });
+    const m = {};
+    for(const k in roles){
+      if(!roles[k].length) continue;
+      const mat = new THREE.MeshBasicMaterial({color:0xf6f3ea, toneMapped:false});
+      mat.userData.noDim = true;
+      const mesh = dyn(new THREE.Mesh(mergeGeos(roles[k]), mat));
+      mesh.userData.noBounds = true; g.add(mesh); m[k] = mat;
+    }
+    sigLens.push(m);
+  });
+  const paintSignals = () => sigLens.forEach((m, i) => {
+    const p = SIGNALS.at(i);
+    if(m.vNS) m.vNS.color.copy(LENS[p.ns]);
+    if(m.vEW) m.vEW.color.copy(LENS[p.ew]);
+    // walk is white while it is safe to start, then vermilion
+    if(m.pNS) m.pNS.color.copy(SIGNALS.walk(i, "ns") ? LENS.go : LENS.stop);
+    if(m.pEW) m.pEW.color.copy(SIGNALS.walk(i, "ew") ? LENS.go : LENS.stop);
+  });
+  paintSignals();
 
   /* ---- local streets --------------------------------------------------
      Two rules make the grid behave. A car halts at the STOP LINE, short of
@@ -2870,23 +4100,22 @@ const RIGHTW = PX1 - WT - 0.03;
       if(d > 0 && d < ENGAGE && d < aheadD){ want = g.i; aheadD = d; }
     }
     if(L.claim !== want) releaseLocal(L);
+    const light = want >= 0 ? SIGNALS.at(want)[L.axis] : "go";
+    const room = aheadD - STOP_BACK;
+    // a car waiting at a red must not hold the box against the green street
+    if(L.claim >= 0 && aheadD > 0 && light !== "go" && room > 1.2) releaseLocal(L);
     let holds = L.claim === want && want >= 0;
-    if(want >= 0 && !holds && (owner[want] === null || owner[want] === L.axis)){
+    // the box is claimed on the green (or from inside it), never on a red
+    if(want >= 0 && !holds && (light === "go" || aheadD === 0) &&
+       (owner[want] === null || owner[want] === L.axis)){
       owner[want] = L.axis; users[want]++; L.claim = want; holds = true;
     }
 
     let target = L.vmax;
     if(want >= 0 && aheadD > 0){
-      // stop at the line if the box is spoken for, or for the sign itself,
-      // which is obeyed once per approach — `cleared` remembers we did
-      if(!holds || L.cleared !== want){
-        const room = aheadD - STOP_BACK;
-        target = Math.max(0, Math.min(L.vmax, room * 1.5));
-        if(room < 0.3 && L.v < 0.25){
-          L.wait += dt;
-          if(holds && L.wait > 0.8){ L.cleared = want; L.wait = 0; }
-        }
-      }
+      // through on green; on amber only when already too close to stop well
+      const mayGo = holds && (light === "go" || (light === "amber" && room < 1.2));
+      if(!mayGo) target = Math.max(0, Math.min(L.vmax, room * 1.25));
     }
     L.v = Math.max(0, L.v + Math.max(-10*dt, Math.min(4.2*dt, target - L.v)));
     L.s += L.dir * L.v * dt;
@@ -2940,6 +4169,7 @@ const RIGHTW = PX1 - WT - 0.03;
     clockEl.innerHTML = b > 0.72 ? stamp + " &nbsp;<b>· drive time</b>" : stamp;
   };
   const setRush = (t, dt) => {
+    SIGNALS.t = t; paintSignals();
     const b = busyAt(hourAt(t));
     stepRing(dt || 0.016, b);
     rushLocals.forEach(L => {
@@ -2955,6 +4185,9 @@ const RIGHTW = PX1 - WT - 0.03;
   pin(0, 1.1, 36.95);
   pin(14, 1.1, 34.8);
   pin(6, 1.1, 39.05);
+  // every car on the map, drawn in one go; sync runs after the simulations
+  FLEET.build();
+  anims.push(() => FLEET.sync());
 }
 
 /* --- Mobile Listeners: pedestrians on the front walk --- */
@@ -2963,18 +4196,10 @@ const RIGHTW = PX1 - WT - 0.03;
   g.userData.idx = ROOMS.indexOf(room); pickExtras.push(g);
   // groundShadow: the jumpers get their contact shadow left behind on the
   // grass instead of carried with them, or it reads as a floating smudge
-  function mkPed(color, phone, groundShadow){
-    const p = new THREE.Group(); g.add(p);
-    Cy(p, 0.2, 0.27, 1.0, std(color, {roughness:0.92}), 0, 0, 0, 12);
-    Sp(p, 0.2, std(0xe9dfd2, {roughness:0.9}), 0, 1.22, 0);
-    if(phone){
-      Bo(p, 0.05, 0.26, 0.16, MAT.inkFlat(), 0.3, 0.78, 0.1, 0, 0, -0.45);
-      Bo(p, 0.02, 0.2, 0.12, emissive(0xfff0da), 0.335, 0.815, 0.1, 0, 0, -0.45);
-    }
-    if(!groundShadow) mkBlobShadow(p, 0.85, 0.6, -0.03);
-    markNoBounds(p);
-    return p;
-  }
+  // figures are instances (see makeWalkers): torso, head, swinging legs and
+  // arms, and a lit phone for the ones glued to the stream
+  const WALK = makeWalkers(g);
+  const mkPed = (color, phone, groundShadow) => WALK.add(color, phone, groundShadow);
   const walkers = [
     {A:[-14, 17.6], B:[13, 17.6],  c:0xffffff, phone:true,  sp:1.35, ph:0.0},
     {A:[10, 17.4],  B:[-12, 17.4], c:0xd8d3c9, phone:false, sp:1.1,  ph:0.45},
@@ -3009,10 +4234,12 @@ const RIGHTW = PX1 - WT - 0.03;
     {A:[-20, 42.6], B:[6, 42.6],   c:0xbdb8ae, phone:true,  sp:1.15, ph:0.65},  // in front of the homes
     // using the crossings — the local traffic stops at these junctions, so the
     // two read as one piece of choreography
-    {A:[-11.6, 52.6],B:[-0.4, 52.6],c:0xffffff, phone:false, sp:1.0, ph:0.12},  // over Maple
-    {A:[-9.1, 50.4], B:[-9.1, 61.6],c:0xf0ede6, phone:true,  sp:0.9, ph:0.58},  // over Signal
-    {A:[16.4, 52.6], B:[27.6, 52.6],c:0xd8d3c9, phone:false, sp:1.05,ph:0.34},  // over Second Ave
-    {A:[-9.1, 84.4], B:[-9.1, 91.6],c:0xbdb8ae, phone:true,  sp:0.85,ph:0.77},  // over Third St
+    {A:[-11.6, 52.6],B:[-0.4, 52.6],c:0xffffff, phone:false, sp:1.0, ph:0.12, cross:[0, "ns", -6]},   // over Maple
+    {A:[-9.1, 50.4], B:[-9.1, 61.6],c:0xf0ede6, phone:true,  sp:0.9, ph:0.58, cross:[0, "ew", 56]},   // over Signal
+    {A:[16.4, 52.6], B:[27.6, 52.6],c:0xd8d3c9, phone:false, sp:1.05,ph:0.34, cross:[1, "ns", 22]},   // over Second Ave
+    {A:[-9.1, 84.4], B:[-9.1, 91.6],c:0xbdb8ae, phone:true,  sp:0.85,ph:0.77, cross:[2, "ew", 88]},   // over Third St
+    {A:[16.4, 59.4], B:[27.6, 59.4],c:0xffffff, phone:true,  sp:0.95,ph:0.5,  cross:[1, "ns", 22]},   // Second Ave, south side
+    {A:[-11.6, 84.6],B:[-0.4, 84.6],c:0xf0ede6, phone:false, sp:1.1, ph:0.2,  cross:[2, "ns", -6]},   // Maple at Third
   ].map(w => ({...w, ped: mkPed(w.c, w.phone),
     len: Math.hypot(w.B[0]-w.A[0], w.B[1]-w.A[1])}));
   // a pair chatting by the entrance
@@ -3022,16 +4249,60 @@ const RIGHTW = PX1 - WT - 0.03;
   /* ---- station stage: the concert in the park, crowd facing it ---- */
   const CX = 17, CZ = 96;                    // stage center; the crowd fills +z of it
   const stg = new THREE.Group(); stg.position.set(CX, 0, CZ); g.add(stg);
+  aoDecal(stg, 0, 0, 10, 4.6, 0, 0.9);
   Bo(stg, 10, 0.9, 4.6, MAT.white(), 0, 0, 0);
   Bo(stg, 10.06, 0.26, 4.66, MAT.inkFlat(), 0, 0.06, 0);            // skirt band
   Bo(stg, 9.6, 3.4, 0.22, MAT.wall(), 0, 0.9, -2.05);               // scrim
   Bo(stg, 9.6, 0.26, 0.26, MAT.accent(), 0, 0.94, -2.05);
   Pl(stg, 4.8, 0.66, signMat(TX.wordwall), 0, 3.2, -1.9);
-  for(const px of [-4.6, 4.6]) for(const pz of [-2.0, 2.0])
-    Cy(stg, 0.05, 0.05, 3.9, MAT.chrome(), px, 0.9, pz, 10);
-  const sroof = Bo(stg, 10.5, 0.18, 5.3, MAT.white(), 0, 4.8, -0.05);
-  sroof.rotation.x = -0.05; sroof.castShadow = false;
-  for(const px of [-3.2, 0, 3.2]) Sp(stg, 0.09, emissive(0xf7b757), px, 4.6, 1.75);
+  /* The events pavilion: a white barrel-vaulted membrane on four white
+     posts, a box truss front and back, a scalloped valance along the open
+     front, and a rig of stage cans hanging from the front truss — at dusk
+     they throw warm shafts of light down onto the deck. The vault is shallow
+     so the stage still reads from the overview, under the front eave. */
+  for(const px of [-4.9, 4.9]) for(const pz of [-2.35, 2.35])
+    Cy(stg, 0.08, 0.1, 3.9, MAT.white(), px, 0.9, pz, 12);
+  const R = 4.5, half = Math.asin(2.75 / R);
+  const vaultGeo = new THREE.CylinderGeometry(R, R, 10.9, 28, 1, true, Math.PI/2 - half, half*2);
+  vaultGeo.rotateZ(Math.PI/2);
+  const membrane = std(0xfdfcf8, {roughness:0.78, envMapIntensity:0.6});
+  membrane.side = THREE.DoubleSide;
+  const vault = new THREE.Mesh(vaultGeo, membrane);
+  vault.position.set(0, 4.8 - R*Math.cos(half), -0.05);
+  vault.castShadow = true; vault.receiveShadow = true; stg.add(vault);
+  // ribs over the vault
+  for(let rx = -5.2; rx <= 5.21; rx += 2.6){
+    const rib = new THREE.Mesh(new THREE.TorusGeometry(R + 0.03, 0.045, 6, 24, half*2), MAT.white());
+    rib.rotation.set(0, Math.PI/2, Math.PI/2 - half); rib.position.set(rx, vault.position.y, -0.05);
+    stg.add(rib);
+  }
+  const truss = (z) => {
+    Cy(stg, 0.05, 0.05, 10.2, MAT.chrome(), 0, 4.55, z, 8, Math.PI/2).position.y = 4.55;
+    Cy(stg, 0.05, 0.05, 10.2, MAT.chrome(), 0, 4.95, z, 8, Math.PI/2).position.y = 4.95;
+    for(let k=0;k<12;k++){
+      const x0 = -5.1 + k*0.85;
+      strut(stg, [x0, 4.55, z], [x0 + 0.85, 4.95, z], 0.022, MAT.chrome());
+    }
+  };
+  truss(2.4); truss(-2.45);
+  const val = new THREE.Mesh(scallopGeo(10.4, 0.2, 0.3), membrane);
+  val.position.set(0, 4.28, 2.62); val.castShadow = false; stg.add(val);
+  const SHAFT = tex(16, 64, (x, w, h)=>{
+    const gr = x.createLinearGradient(0, 0, 0, h);
+    gr.addColorStop(0, "rgba(255,255,255,0.9)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+    x.fillStyle = gr; x.fillRect(0, 0, w, h);
+  });
+  for(const px of [-3.4, -1.1, 1.1, 3.4]){
+    const can = new THREE.Group(); can.position.set(px, 4.45, 2.3); can.rotation.x = -0.5; stg.add(can);
+    Cy(can, 0.13, 0.17, 0.42, MAT.inkFlat(), 0, -0.42, 0, 12);
+    Cy(can, 0.14, 0.14, 0.02, lamp(0xf1ebdc, 0xffd79a), 0, -0.44, 0, 12);
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 1.1, 3.4, 16, 1, true),
+      glowMat(0xffd49a, 0, 0.2, SHAFT));
+    shaft.material.side = THREE.DoubleSide; shaft.position.y = -2.15; shaft.renderOrder = 3;
+    shaft.castShadow = false; can.add(shaft);
+  }
+  // the old festoon bulbs stay, now lamps that brighten at dusk
+  for(const px of [-4.4, -2.2, 0, 2.2, 4.4]) Sp(stg, 0.08, lamp(0xf7d7a0, 0xffc873), px, 4.35, 2.66);
   // monitors + mic + DJ rig (the same AirSuite surface, on a milk crate stage)
   Bo(stg, 0.85, 0.3, 0.5, MAT.inkFlat(), -1.6, 0.9, 1.85, 0, 0, 0).rotation.x = 0.5;
   Bo(stg, 0.85, 0.3, 0.5, MAT.inkFlat(), 1.9, 0.9, 1.85, 0, 0, 0).rotation.x = 0.5;
@@ -3075,6 +4346,8 @@ const RIGHTW = PX1 - WT - 0.03;
   spots.forEach(([px,pz], i)=>{
     const col = i%7===0 ? 0xff4a1c : [0xffffff,0xd8d3c9,0xbdb8ae,0xf0ede6][i%4];
     const p = mkPed(col, i%3===0, true);
+    // phones up, and every few a pair of hands in the air
+    p.userData.pose = (i%3 === 0 || i%4 === 1) ? "cheer" : "stand";
     const ry = Math.atan2(CX - px, CZ - pz);      // face the stage
     const s0 = 0.88 + (i%4)*0.06;
     p.position.set(px, 0.05, pz); p.rotation.y = ry;
@@ -3109,17 +4382,56 @@ const RIGHTW = PX1 - WT - 0.03;
     perf.scale.y = 1.12 * j.sq;
     perf.rotation.y = Math.sin(t*0.9)*0.4;
   });
+  /* feet on the right surface: the grid sidewalks stand 0.1 proud of the road */
+  const onWalk = (x, z) => {
+    const band = (d) => d >= 1.9 && d <= 3.46;
+    return (band(Math.abs(x + 6)) && z > 40 && z < 114) || (band(Math.abs(x - 22)) && z > 40 && z < 86.2) ||
+           (band(Math.abs(z - 56)) && x > -52 && x < 58) || (band(Math.abs(z - 88)) && x > -52 && x < 58);
+  };
   const placePed = (w, t) => {
     const cyc = (t * w.sp / w.len + w.ph) % 1;
     const k = 1 - Math.abs(2*cyc - 1);            // ping-pong
     const fwd = cyc < 0.5 ? 1 : -1;
     const x = w.A[0] + (w.B[0]-w.A[0]) * k;
     const z = w.A[1] + (w.B[1]-w.A[1]) * k;
-    w.ped.position.set(x, 0.05 + 0.045*Math.abs(Math.sin(t*6 + w.ph*9)), z);
+    const u = w.ped.userData;
+    u.moving = true; u.phase = t * w.sp * 5.4 + w.ph * 20;
+    w.ped.position.set(x, (onWalk(x, z) ? 0.1 : 0.02) + 0.03*Math.abs(Math.sin(u.phase)), z);
     w.ped.rotation.y = Math.atan2((w.B[0]-w.A[0]) * fwd, (w.B[1]-w.A[1]) * fwd);
   };
-  walkers.forEach(w => placePed(w, 0.6));
-  if(ANIM) anims.push(t => walkers.forEach(w => placePed(w, t)));
+  /* Crossers wait at the kerb for the walk signal. Each knows the junction
+     and the street it crosses; the road band along its path is found once.
+     They only ever stop BEFORE stepping off — a figure already on the zebra
+     keeps going — and turn around after a short pause at either end. */
+  walkers.filter(w => w.cross).forEach(w => {
+    const [ji, axis, c] = w.cross;
+    const ux = (w.B[0]-w.A[0]) / w.len, uz = (w.B[1]-w.A[1]) / w.len;
+    // the street band |coord - c| <= 2.0, as distance along the path
+    const along = axis === "ns" ? [(c - 2.0 - w.A[0]) / ux, (c + 2.0 - w.A[0]) / ux]
+                                : [(c - 2.0 - w.A[1]) / uz, (c + 2.0 - w.A[1]) / uz];
+    w.s0 = Math.min(...along); w.s1 = Math.max(...along);
+    w.ux = ux; w.uz = uz; w.s = w.ph * w.len; w.dir = 1; w.pause = 0;
+  });
+  const stepCrosser = (w, dt) => {
+    const u = w.ped.userData, [ji, axis] = w.cross;
+    let next = w.s + w.dir * w.sp * dt;
+    const entering = w.dir > 0 ? (w.s <= w.s0 && next > w.s0) : (w.s >= w.s1 && next < w.s1);
+    let held = false;
+    if(w.pause > 0){ w.pause -= dt; held = true; next = w.s; }
+    else if(entering && !SIGNALS.walk(ji, axis)){ held = true; next = w.s; }
+    if(next >= w.len){ next = w.len; w.dir = -1; w.pause = 1.4; }
+    if(next <= 0){ next = 0; w.dir = 1; w.pause = 1.4; }
+    w.s = next;
+    u.moving = !held;
+    if(!held) u.phase += w.sp * 5.4 * dt;
+    const x = w.A[0] + w.ux * w.s, z = w.A[1] + w.uz * w.s;
+    w.ped.position.set(x, (onWalk(x, z) ? 0.1 : 0.02) + (held ? 0 : 0.03*Math.abs(Math.sin(u.phase))), z);
+    w.ped.rotation.y = Math.atan2(w.ux * w.dir, w.uz * w.dir);
+  };
+  walkers.forEach(w => w.cross ? stepCrosser(w, 0) : placePed(w, 0.6));
+  if(ANIM) anims.push((t, dt) => walkers.forEach(w => w.cross ? stepCrosser(w, dt) : placePed(w, t)));
+  WALK.build();
+  anims.push(() => WALK.sync());
   pin(CX - 6.5, 2.0, CZ + 4.2);    // phones up in the front rank
   pin(CX + 7.5, 1.9, CZ + 9.4);    // the crowd, checked in at the gate
   pin(CX, 5.6, CZ + 2.6);          // the stage — clear of its own canopy
@@ -3128,9 +4440,10 @@ const RIGHTW = PX1 - WT - 0.03;
 /* --- Connected Homes: TV apps + smart speakers across the road --- */
 {
   const room = RM("homes"), {g, pin} = roomGroup(room);
-  function house(x, z, ry, dining, dishNotAerial){
+  function house(x, z, ry, dining, dishNotAerial, fenceZ){
     const h = new THREE.Group(); h.position.set(x, 0, z); h.rotation.y = ry; g.add(h);
     const W2 = 5.2, D2 = 4.2, WHh = 2.9, T = 0.16;
+    aoDecal(h, 0, 0.3, W2, D2 + 0.8, 0, 0.9);
     // hollow shell: floor + three fixed walls
     Bo(h, W2-0.1, 0.08, D2-0.1, std(0xf2efe8, {roughness:0.9}), 0, 0.01, 0);
     Bo(h, W2, WHh, T, MAT.wall(), 0, 0, -D2/2+T/2);
@@ -3139,28 +4452,37 @@ const RIGHTW = PX1 - WT - 0.03;
     // front wall: full version (traditional face) vs open-house stub
     const shutter = std(0x5b665a, {roughness:0.9});
     const trim = std(0xf4f1ea, {roughness:0.9});
-    const full = new THREE.Group(); h.add(full);
+    const full = own(new THREE.Group()); h.add(full);
     Bo(full, W2, WHh, T, MAT.wall(), 0, 0, D2/2-T/2);
-    // paneled door with step + stoop light
-    Bo(full, 1.15, 2.1, 0.08, trim, 1.5, 0, D2/2);
-    Bo(full, 0.95, 1.95, 0.1, std(0x9a8d79, {roughness:0.85}), 1.5, 0, D2/2+0.03);
-    Sp(full, 0.035, MAT.inkFlat(), 1.85, 1.0, D2/2+0.1);
-    Bo(full, 1.3, 0.14, 0.6, trim, 1.5, -0.02, D2/2+0.35);
+    // paneled door, and a porch lantern beside it that lights at dusk
+    Bo(full, 1.15, 2.1, 0.08, trim, 1.5, 0.26, D2/2);
+    Bo(full, 0.95, 1.95, 0.1, std(0x9a8d79, {roughness:0.85}), 1.5, 0.26, D2/2+0.03);
+    Bo(full, 0.5, 0.36, 0.04, trim, 1.5, 1.62, D2/2+0.1);                 // door lite frame
+    Bo(full, 0.38, 0.26, 0.03, litGlass(), 1.5, 1.67, D2/2+0.12);
+    Bo(full, 0.14, 0.24, 0.12, MAT.inkFlat(), 0.72, 1.92, D2/2+0.1);
+    Bo(full, 0.1, 0.16, 0.13, lamp(0xefe9dc, 0xffd79a), 0.72, 1.96, D2/2+0.11).castShadow = false;
+    halo(full, 0xffcf8f, 1.2, 0.72, 2.03, D2/2+0.3, 0, 0.9);
     // six-pane window with shutters + sill
     Bo(full, 2.1, 1.5, 0.07, trim, -1.1, 0.72, D2/2);
-    Bo(full, 1.85, 1.25, 0.07, MAT.glass(), -1.1, 0.82, D2/2+0.03);
+    Bo(full, 1.85, 1.25, 0.07, litGlass(), -1.1, 0.82, D2/2+0.03);
     Bo(full, 0.08, 1.25, 0.1, trim, -1.1, 0.82, D2/2+0.04);
     Bo(full, 1.85, 0.08, 0.1, trim, -1.1, 1.4, D2/2+0.04);
     Bo(full, 2.3, 0.1, 0.24, trim, -1.1, 0.62, D2/2+0.08);
     Bo(full, 0.42, 1.5, 0.06, shutter, -2.35, 0.72, D2/2+0.02);
     Bo(full, 0.42, 1.5, 0.06, shutter, 0.15, 0.72, D2/2+0.02);
-    const stub = new THREE.Group(); stub.visible = false; h.add(stub);
+    const stub = own(new THREE.Group()); stub.visible = false; h.add(stub);
     Bo(stub, W2, 0.95, T, MAT.wall(), 0, 0, D2/2-T/2);
     Bo(stub, W2+0.04, 0.07, T+0.04, trim, 0, 0.95, D2/2-T/2);
     // roof assembly (lifts away when the house opens) — shingled tone, eaves,
     // fascia boards, chimney, porch canopy over the door
-    const shingle = std(0xffffff, {roughness:0.82, envMapIntensity:0.4});
-    const roof = new THREE.Group(); h.add(roof);
+    const shingle = std(0xffffff, {roughness:0.82, envMapIntensity:0.4, map:SHINGLE_TEX});
+    const roof = own(new THREE.Group()); h.add(roof);
+    // gable ends close the attic over the side walls
+    for(const sx of [-1, 1]){
+      const gm = new THREE.Mesh(gableGeo(D2, 1.0, T), MAT.wall());
+      gm.position.set(sx*(W2/2 - T/2), WHh, 0); gm.castShadow = gm.receiveShadow = true; roof.add(gm);
+    }
+    Bo(roof, 0.6, 0.42, 0.06, trim, W2/2 + 0.02, WHh + 0.28, 0, Math.PI/2);    // attic vent
     const rA = Bo(roof, 6.1, 0.18, 2.85, shingle, 0, 3.32, -1.18); rA.rotation.x = -0.52;
     const rB = Bo(roof, 6.1, 0.18, 2.85, shingle, 0, 3.32, 1.18);  rB.rotation.x = 0.52;
     Bo(roof, 6.1, 0.16, 0.24, trim, 0, 3.92, 0);
@@ -3182,10 +4504,29 @@ const RIGHTW = PX1 - WT - 0.03;
       strut(roof, [-1.9, 4.9, 0], [-1.3, 4.9, 0], 0.02, MAT.inkFlat());
     }
     homesState.parts.push({roof, full, stub, g: h, k: 0, t: 0});
+    // side window on the +x wall the camera sees: frame, glass, cross mullions, sill
+    Bo(h, 0.07, 1.3, 1.5, trim, W2/2 + 0.02, 0.9, -0.2);
+    Bo(h, 0.05, 1.08, 1.28, litGlass(), W2/2 + 0.05, 1.01, -0.2);
+    Bo(h, 0.07, 1.08, 0.06, trim, W2/2 + 0.07, 1.01, -0.2);
+    Bo(h, 0.07, 0.06, 1.28, trim, W2/2 + 0.07, 1.52, -0.2);
+    Bo(h, 0.2, 0.08, 1.7, trim, W2/2 + 0.08, 0.84, -0.2);
+    // porch: a deck across the door bay, one step down, a railing each side
+    Bo(h, 2.7, 0.26, 0.95, trim, 1.5, 0, D2/2 + 0.47);
+    Bo(h, 1.1, 0.13, 0.4, trim, 1.5, 0, D2/2 + 1.12);
+    for(const [r0, r1] of [[0.16, 0.8], [2.2, 2.84]]){
+      Bo(h, r1 - r0, 0.05, 0.05, trim, (r0 + r1)/2, 0.84, D2/2 + 0.9);
+      for(let bx = r0 + 0.08; bx < r1; bx += 0.16) Bo(h, 0.035, 0.58, 0.035, trim, bx, 0.26, D2/2 + 0.9);
+    }
+    // a white picket fence closing the front yard (sides only where the yard
+    // is too shallow for a front run before the sidewalk)
+    const fz = fenceZ == null ? D2/2 + 2.3 : fenceZ, fx = 2.95;
+    const fRuns = [[-fx, D2/2 - 0.2, -fx, fz], [fx, D2/2 - 0.2, fx, fz]];
+    if(fz - D2/2 > 1.5){ fRuns.push([-fx, fz, 0.95, fz]); fRuns.push([2.05, fz, fx, fz]); }
+    picketFence(h, fRuns);
     // ---- interior, Sims-style ----
     mkRug(h, -0.2, 0.05, 0.3, 3.2, 2.2);
     const tvWall = Bo(h, 2.2, 1.3, 0.1, MAT.inkFlat(), -0.6, 0.9, -D2/2+T+0.08);
-    const tvGlow = Bo(h, 2.0, 1.1, 0.04, emissive(0xcfe2f4), -0.6, 1.0, -D2/2+T+0.15);
+    const tvGlow = dyn(Bo(h, 2.0, 1.1, 0.04, emissive(0xcfe2f4), -0.6, 1.0, -D2/2+T+0.15));
     if(ANIM) anims.push(t => {
       tvGlow.material.transparent = true;
       tvGlow.material.opacity = 0.55 + 0.45*Math.abs(Math.sin(t*8.7 + x)*Math.sin(t*2.3));
@@ -3213,11 +4554,11 @@ const RIGHTW = PX1 - WT - 0.03;
   }
   // the neighborhood: five homes on the far side of the street, on their own
   // blocks around the Maple Ave / Signal St intersections
-  house(-18, 48.5, 0.08, false, false);      // Signal St, north side
-  house(-27.5, 49.2, 0.2, true, true);
-  house(4, 47.6, -0.08, true, false);
-  house(28.6, 47.2, -0.18, false, true);   // clear of the Second Ave curb
-  house(-15.5, 62.5, 0.1, true, false);      // below Signal St
+  house(-18, 48.5, 0.08, false, false, 3.8);      // Signal St, north side
+  house(-27.5, 49.2, 0.2, true, true, 3.1);
+  house(4, 47.6, -0.08, true, false, 4.7);
+  house(28.6, 47.2, -0.18, false, true, 5.0);   // clear of the Second Ave curb
+  house(-15.5, 62.5, 0.1, true, false);         // below Signal St
   mkPlant(g, -21.6, 0, 51.4, 1.15);
   mkPlant(g, 0.4, 0, 50.2, 0.95);
   mkPlant(g, -10.4, 0, 64.6, 1.0);
@@ -3230,18 +4571,37 @@ const RIGHTW = PX1 - WT - 0.03;
 {
   const room = RM("ooh"), {g, pin} = roomGroup(room);
   // digital billboard angled at the road
+  /* the board: two ink columns on footings, a braced back frame, a deep
+     white bezel round the screen, a catwalk with a rail, and three lamp arms
+     that throw light down the face at dusk */
   const bb = new THREE.Group(); bb.position.set(23.2, 0, 29.6); bb.rotation.y = 0.22; g.add(bb);
-  Cy(bb, 0.1,0.12,3.1, MAT.inkFlat(), -1.7, 0, 0, 10);
-  Cy(bb, 0.1,0.12,3.1, MAT.inkFlat(), 1.7, 0, 0, 10);
-  Bo(bb, 5.7, 2.75, 0.2, MAT.white(), 0, 3.1, 0);
-  Pl(bb, 5.3, 2.4, signMat(TX.billboard), 0, 4.47, 0.12);
+  for(const px of [-1.7, 1.7]){
+    Bo(bb, 0.62, 0.22, 0.62, MAT.slab(), px, 0, 0);                         // footing
+    Cy(bb, 0.12, 0.15, 3.15, MAT.inkFlat(), px, 0.2, -0.1, 10);
+  }
+  strut(bb, [-1.7, 0.9, -0.1], [1.7, 2.9, -0.1], 0.045, MAT.inkFlat());       // back bracing
+  strut(bb, [1.7, 0.9, -0.1], [-1.7, 2.9, -0.1], 0.045, MAT.inkFlat());
+  Bo(bb, 5.9, 2.9, 0.26, MAT.white(), 0, 3.05, 0);                            // bezel
+  Bo(bb, 5.5, 2.52, 0.04, MAT.screen(), 0, 3.24, 0.13);
+  Pl(bb, 5.3, 2.4, signMat(TX.billboard), 0, 4.47, 0.16);
+  Bo(bb, 5.9, 0.08, 0.9, MAT.chrome(), 0, 3.0, 0.52);                          // catwalk
+  for(let px = -2.8; px <= 2.81; px += 0.7) Cy(bb, 0.015, 0.015, 0.55, MAT.chrome(), px, 3.08, 0.94, 5);
+  Bo(bb, 5.9, 0.04, 0.04, MAT.chrome(), 0, 3.62, 0.94);
+  for(const px of [-2.0, 0, 2.0]){
+    strut(bb, [px, 6.0, 0.1], [px, 6.3, 0.75], 0.03, MAT.inkFlat());
+    Bo(bb, 0.36, 0.12, 0.2, MAT.inkFlat(), px, 6.22, 0.78, 0, 0, -0.5);
+    Bo(bb, 0.28, 0.03, 0.14, lamp(0xe9e4d9, 0xfff0d0), px, 6.2, 0.8).castShadow = false;
+    halo(bb, 0xfff0d8, 1.6, px, 5.3, 0.4, 0, 0.45);
+  }
   Bo(bb, 0.9, 0.7, 0.5, std(0xe4e0d6), 2.5, 0, 0.3);          // proof-of-play cabinet
+  Bo(bb, 0.1, 0.08, 0.06, lamp(0xff8a66, 0xff4a1c), 2.5, 0.58, 0.56);          // its status lamp
   // partner storefront with an in-window reel
   const st = new THREE.Group(); st.position.set(31.8, 0, 30.4); st.rotation.y = 0.24; g.add(st);
+  aoDecal(st, 0, 0, 4.8, 3.6, 0, 0.9);
   Bo(st, 4.8, 3.1, 3.6, MAT.wall(), 0, 0, 0);
   Bo(st, 5.2, 0.3, 4.0, MAT.slab(), 0, 3.1, 0);
   Bo(st, 1.1, 2.2, 0.12, std(0xdcd7cc), 1.5, 0, 1.82);        // door
-  Bo(st, 2.3, 1.35, 0.1, MAT.glass(), -0.7, 0.85, 1.84);      // window
+  Bo(st, 2.3, 1.35, 0.1, litGlass(), -0.7, 0.85, 1.84);       // window
   Pl(st, 1.95, 1.05, signMat(TX.siteScreen), -0.7, 1.5, 1.92); // the reel
   Pl(st, 2.9, 0.4, signMat(TX.wordwall), 0.1, 2.7, 1.87);
   const awn = Bo(st, 3.2, 0.08, 1.15, MAT.accent(), -0.5, 2.28, 2.28);
@@ -3261,17 +4621,57 @@ const RIGHTW = PX1 - WT - 0.03;
     x.textAlign = "center"; x.textBaseline = "middle";
     x.fillText(label.split("").join(" "), w/2, h/2+1);
   });
+  /* A shopfront, dressed: pilasters at the corners, a cornice under the
+     parapet, a storefront whose interior is a warm lit room behind the glass
+     (it glows at dusk) with the window reel in it, a transomed door, and an
+     awning finished with a scalloped valance. */
+  const scallops = (w, r) => scallopGeo(w, r);
+  // an awning: sloped canvas, a valance hanging at its lip with scallops, and
+  // two thin arms back to the wall. zF is the wall face, dir +1 faces +z.
+  const awning = (s, x, w, zF, dir, awnMat) => {
+    const depth = 1.3, tilt = 0.42, y = 2.46;
+    const a = Bo(s, w, 0.06, depth, awnMat, x, y, zF + dir*depth/2*Math.cos(tilt));
+    a.rotation.x = dir*tilt;
+    const lipZ = zF + dir*depth*Math.cos(tilt), lipY = y + 0.03 - depth*Math.sin(tilt)/2 - 0.02;
+    const val = new THREE.Mesh(scallops(w, 0.15), awnMat);
+    val.position.set(x, lipY - 0.26, lipZ); if(dir < 0) val.rotation.y = Math.PI;
+    val.castShadow = true; s.add(val);
+    for(const ax of [x - w/2 + 0.2, x + w/2 - 0.2])
+      strut(s, [ax, y - 0.55, zF], [ax, lipY - 0.02, lipZ], 0.018, MAT.inkFlat());
+  };
+  const dress = (s, W, H, D, face) => {
+    // pilasters and cornice on the faces the camera reads (+z front, +x side)
+    for(const px of [-W/2 + 0.16, W/2 - 0.16])
+      Bo(s, 0.32, H - 0.2, 0.12, MAT.white(), px, 0, face*(D/2 + 0.05));
+    Bo(s, W + 0.24, 0.2, 0.2, MAT.white(), 0, H - 0.24, face*(D/2 + 0.08));
+    Bo(s, 0.2, 0.2, D + 0.24, MAT.white(), W/2 + 0.08, H - 0.24, 0);
+    Bo(s, W + 0.14, 0.06, 0.12, std(0xe9e5dc), 0, H - 0.32, face*(D/2 + 0.14));   // dentil line
+  };
+  const interior = (s, x, w, zGlass, dir) => {
+    // the lit room behind the glass: back panel, a counter, a shelf of stock
+    const zi = zGlass - dir*0.5;
+    Bo(s, w, 1.5, 0.04, night(std(0xf4efe6, {roughness:0.9}), 0xffdcae, 0.95), x, 0.5, zi - dir*0.3);
+    Bo(s, w*0.45, 0.62, 0.36, MAT.white(), x + w*0.18, 0.05, zi);
+    for(let i=0;i<5;i++) Bo(s, 0.2, 0.26 + (i%3)*0.06, 0.16, std([0xdcd6ca, 0xc9c2b5, 0xe7e2d8][i%3]), x - w*0.35 + i*0.26, 1.18, zi - dir*0.22);
+    Bo(s, w*0.62, 0.04, 0.3, MAT.white(), x - w*0.2, 1.16, zi - dir*0.2);
+  };
   const shop = (x0, name, awnMat, z0 = 48.5) => {
     const s = new THREE.Group(); s.position.set(x0, 0, z0); g.add(s);
+    aoDecal(s, 0, 0, 6.6, 5.0, 0, 0.95, 0.08);
     Bo(s, 6.6, 3.2, 5.0, MAT.wall(), 0, 0, 0);
     Bo(s, 6.9, 0.26, 5.3, MAT.slab(), 0, 3.2, 0);                 // parapet
     Bo(s, 0.95, 0.5, 0.7, std(0xe4e0d6), -1.6, 3.46, -0.9);       // rooftop unit
+    Bo(s, 1.2, 0.36, 0.8, std(0xe4e0d6), 1.4, 3.46, -1.2);
+    dress(s, 6.6, 3.2, 5.0, 1);
     Bo(s, 5.9, 1.8, 0.1, MAT.inkFlat(), -0.35, 0.4, 2.46);        // storefront frame
+    interior(s, -0.35, 5.4, 2.46, 1);
     Bo(s, 5.6, 1.55, 0.06, MAT.glass(), -0.35, 0.52, 2.52);       // glazing
+    for(const mx of [-2.2, 1.5]) Bo(s, 0.06, 1.55, 0.09, MAT.inkFlat(), mx, 0.52, 2.53);
     Pl(s, 2.0, 1.05, signMat(TX.siteScreen), -1.75, 1.25, 2.56);  // the window reel
+    halo(s, 0xfff0d8, 2.4, -1.75, 1.25, 2.7, 0, 0.35);
     Bo(s, 1.12, 2.25, 0.1, std(0xdcd7cc), 2.45, 0, 2.48);         // door
-    const awn = Bo(s, 6.0, 0.07, 1.25, awnMat, -0.3, 2.42, 3.0);
-    awn.rotation.x = 0.42;
+    Bo(s, 1.12, 0.3, 0.08, litGlass(), 2.45, 2.3, 2.5);           // transom
+    awning(s, -0.3, 6.0, 2.52, 1, awnMat);
     Pl(s, 3.6, 0.6, signMat(shopSign(name)), 0, 2.85, 2.72);      // fascia sign
     Cy(s, 0.1, 0.12, 0.3, MAT.inkFlat(), 2.95, 2.5, 2.42, 10);    // wall speaker
     Sp(s, 0.045, emissive(0xff4a1c), 2.95, 2.72, 2.5);            //   live ring
@@ -3288,6 +4688,7 @@ const RIGHTW = PX1 - WT - 0.03;
      faces the lens. Same trick a real corner block uses. */
   const shopAcross = (x0, name, awnMat) => {
     const s = new THREE.Group(); s.position.set(x0, 0, 63.5); g.add(s);
+    aoDecal(s, 0, 0, 6.6, 5.2, 0, 0.95, 0.08);
     Bo(s, 6.6, 3.4, 5.2, MAT.wall(), 0, 0, 0);
     Bo(s, 6.9, 0.28, 5.5, MAT.slab(), 0, 3.4, 0);                 // parapet
     Bo(s, 0.9, 0.55, 0.75, std(0xe4e0d6), 1.7, 3.68, 0.4);        // rooftop unit
@@ -3295,11 +4696,13 @@ const RIGHTW = PX1 - WT - 0.03;
     Bo(s, 5.9, 1.85, 0.1, MAT.inkFlat(), 0.35, 0.4, -2.61);
     Bo(s, 5.6, 1.6, 0.06, MAT.glass(), 0.35, 0.52, -2.67);
     Bo(s, 1.12, 2.3, 0.1, std(0xdcd7cc), -2.45, 0, -2.63);
-    const awnN = Bo(s, 6.0, 0.07, 1.3, awnMat, 0.3, 2.5, -3.18);
-    awnN.rotation.x = -0.42;
+    awning(s, 0.3, 6.0, -2.7, -1, awnMat);
+    dress(s, 6.6, 3.4, 5.2, 1);
     // camera side: rear entrance, window reel and the name
     Bo(s, 4.4, 1.6, 0.1, MAT.inkFlat(), -0.7, 0.35, 2.66);
+    interior(s, -0.7, 3.9, 2.66, 1);
     Bo(s, 4.1, 1.35, 0.06, MAT.glass(), -0.7, 0.47, 2.72);
+    halo(s, 0xfff0d8, 2.2, -0.7, 1.15, 2.9, 0, 0.35);
     Pl(s, 1.9, 1.0, signMat(TX.siteScreen), -0.7, 1.15, 2.76);
     Bo(s, 1.05, 2.2, 0.1, std(0xdcd7cc), 2.3, 0, 2.68);
     Pl(s, 3.5, 0.58, signMat(shopSign(name)), -0.2, 3.0, 2.79);
@@ -3368,6 +4771,8 @@ const RIGHTW = PX1 - WT - 0.03;
   pin(42.3, 3.0, 81.6);       // and again down on Third St
 }
 
+homesState.parts.forEach(p=>{ batchStatic(p.full); batchStatic(p.stub); batchStatic(p.roof); });
+Object.values(roomRecs).forEach(r=> batchStatic(r.group));
 Object.values(roomRecs).forEach(r=> r.rec = reg(r.group));
 
 /* assign each plate (and its rooms) to its own light layer, then aim its sun */
@@ -3492,11 +4897,17 @@ function levelBoxes(){
   if(!BOX_LOCAL){
     BOX_LOCAL = levelG.map((L,i)=>{
       const b = new THREE.Box3(), one = new THREE.Box3();
+      L.updateMatrixWorld(true);
       L.traverse(o=>{
         if(!o.isMesh || o.userData.noBounds) return;
         one.setFromObject(o); b.union(one);
       });
-      return b.translate(OFF(i).clone().negate());
+      /* The overview framing the owner signed off on was measured before any
+         world matrix existed, so each upper plate's box landed at its local
+         position less its cascade offset. The batcher refreshes the matrices,
+         which would silently re-frame the hero; subtracting the offset twice
+         keeps the approved camera exactly where it was. */
+      return b.translate(OFF(i).clone().multiplyScalar(-2));
     });
   }
   return BOX_LOCAL;
@@ -3563,6 +4974,7 @@ function setDims(activeId){
 /* peel away the plates stacked above the room being inspected */
 function setLevelVisibility(activeLvl){
   levelG.forEach((L,i)=> L.visible = (activeLvl == null) ? true : i <= activeLvl);
+  dirtyShadows();
 }
 
 function activate(i, fromTour){
@@ -3575,10 +4987,13 @@ function activate(i, fromTour){
   }
   active = i;
   if(!fromTour){ stopTour(); stopReel(); }
+  // the transmitter broadcasts while it is inspected; a still set under reduced motion
+  if(ANIM) RINGS.setMode(room.id === "transmitter" ? "transmitter" : "idle");
+  else RINGS.still(room.id === "transmitter");
   revealGroup(room.group);
   document.getElementById("backBtn").textContent = "← Whole building";
   document.body.classList.add("zoomed");
-  hitboxes.forEach(h=> h.userData.outline.visible = false);
+  hitboxes.forEach(h=> fadeOutline(h.userData.outline, false));
   goCam(roomFrame(room));
   setLevelVisibility(roomRecs[room.id].lvl);
   setDims(room.id);
@@ -3607,6 +5022,7 @@ function activate(i, fromTour){
 }
 function overview(){
   active = -1; stopTour();
+  if(ANIM) RINGS.setMode("idle"); else RINGS.still(false);
   document.body.classList.remove("zoomed");
   pinsEl.classList.remove("show");
   setPins(null); setDims(null); setLevelVisibility(null);
@@ -3658,11 +5074,25 @@ function pickRoom(){
   while(o && o.userData.idx === undefined) o = o.parent;
   return o ? hitboxes[o.userData.idx] : null;
 }
+/* outlines fade in and out (instantly under reduced motion) rather than snap */
+const fadingOutlines = new Set();
+function fadeOutline(ol, on){
+  ol.userData.goal = on ? 0.95 : 0;
+  if(REDUCED){ ol.material.opacity = ol.userData.goal; ol.visible = on; return; }
+  ol.visible = true; fadingOutlines.add(ol);
+}
+function tickOutlines(dt){
+  for(const ol of fadingOutlines){
+    const g = ol.userData.goal || 0, m = ol.material;
+    m.opacity += (g - m.opacity) * Math.min(1, dt * 12);
+    if(Math.abs(g - m.opacity) < 0.01){ m.opacity = g; if(g === 0) ol.visible = false; fadingOutlines.delete(ol); }
+  }
+}
 function setHover(hb){
   if(hovered === hb) return;
-  if(hovered) hovered.userData.outline.visible = false;
+  if(hovered) fadeOutline(hovered.userData.outline, false);
   hovered = hb;
-  if(hovered){ hovered.userData.outline.visible = true; canvas.style.cursor = "pointer"; }
+  if(hovered){ fadeOutline(hovered.userData.outline, true); canvas.style.cursor = "pointer"; }
   else canvas.style.cursor = dragging ? "grabbing" : "grab";
 }
 /* ---- grab to pan, wheel to zoom -------------------------------------
@@ -3716,6 +5146,7 @@ canvas.addEventListener("pointerup", ev=>{
   const moved = Math.hypot(ev.clientX-downAt[0], ev.clientY-downAt[1]);
   downAt = null;
   if(moved > 6) return;
+  if(performance.now() < INTRO.swallowUntil) return;
   ray.setFromCamera(mouse, cam);
   // inside the homes zoom, clicking a house lifts (or closes) its own roof
   if(document.body.classList.contains("zoomed") && active >= 0 && ROOMS[active].id === "homes"){
@@ -3831,6 +5262,22 @@ const roofCap = Bo(levelG[3], (PX1-PX0)+1.0, 0.5, (PZ1-PZ0)+1.0, MAT.slab(),
 roofCap.castShadow = false;
 roofCap.layers.enable(4);
 Cy(roofCap, 0.5, 0.5, 0.4, MAT.gray(), -10, 0.5, -6, 18).layers.enable(4);
+{
+  // parapet round the roof, a stair bulkhead and a row of rooftop plant
+  const RW = (PX1-PX0)+1.0, RD = (PZ1-PZ0)+1.0, top = 0.25;
+  for(const [w, d, x, z] of [[RW, 0.3, 0, RD/2 - 0.15], [RW, 0.3, 0, -RD/2 + 0.15],
+                             [0.3, RD, RW/2 - 0.15, 0], [0.3, RD, -RW/2 + 0.15, 0]])
+    Bo(roofCap, w, 0.42, d, MAT.white(), x, top, z).castShadow = false;
+  Bo(roofCap, 4.2, 2.1, 3.2, MAT.wall(), -11.5, top, 6.5);                  // stair bulkhead
+  Bo(roofCap, 4.5, 0.18, 3.5, MAT.slab(), -11.5, top + 2.1, 6.5);
+  for(const [px, pz] of [[7, -7], [10.2, -7], [13.4, -7]]){
+    Bo(roofCap, 2.6, 1.1, 2.2, std(0xe6e2d9, {roughness:0.85}), px, top, pz);
+    Cy(roofCap, 0.72, 0.72, 0.08, MAT.inkFlat(), px, top + 1.1, pz, 20);
+    Cy(roofCap, 0.62, 0.62, 0.1, std(0xf1eee7), px, top + 1.12, pz, 20);
+  }
+  Bo(roofCap, 9.6, 0.5, 0.5, std(0xe6e2d9), 10.2, top + 0.3, -5.1);        // duct run
+  roofCap.traverse(o => o.layers.enable(4));
+}
 
 /* Call letters on the roof. They ride the cap, so they are part of the closed
    building and step aside the moment it opens — the same rule the cap follows.
@@ -3916,6 +5363,7 @@ function applyExpand(){
     L.position.lerpVectors(OFF_C(i), OFF(i), e(kk));
   });
   roofCap.visible = expandK < 0.1;
+  dirtyShadows();               // the plates moved, so their shadow maps must too
   const col = expandK < 0.4;
   bldgHit.visible = col;
   if(!col) bldgOutline.visible = false;
@@ -3946,6 +5394,7 @@ function openBuilding(){
 }
 function collapse(){
   active = -1; stopTour(); stopReel();
+  if(ANIM) RINGS.setMode("idle"); else RINGS.still(false);
   document.body.classList.remove("zoomed");
   pinsEl.classList.remove("show");
   setPins(null); setDims(null); setLevelVisibility(null);
@@ -3989,6 +5438,553 @@ if(reelBtn) reelBtn.addEventListener("click", ()=>{
   if(reelTimer) { stopReel(); overview(); } else startReel();
 });
 
+/* =====================================================================
+   signal rings — the transmitter broadcasting across the island
+   Vermilion rings expand from the mast top, dropping toward the ground as
+   they spread (the wavefront coming down off the antenna) and fading as they
+   go. Each is one flat quad with a ring drawn in its shader: a soft band of
+   fixed world width, additive, depth-tested so hills and buildings cut it.
+   A slow single ring at the overview, a steady pulse in the Transmitter
+   zoom, a burst in the opening sequence; a still set under reduced motion.
+   ===================================================================== */
+const RINGS = (()=>{
+  const TOP = ENV.mastTop, N = 7, MAXR = 120;
+  const mk = () => {
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {uR:{value:1}, uW:{value:0.3}, uS:{value:2}, uOp:{value:0}, uC:{value:new THREE.Color(0xff4a1c)}},
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, toneMapped:false,
+      vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+      fragmentShader: `uniform float uR, uW, uS, uOp; uniform vec3 uC; varying vec2 vUv;
+        void main(){
+          float d = length(vUv - 0.5) * 2.0 * uS;
+          float k = 1.0 - smoothstep(0.0, uW, abs(d - uR));
+          float core = 1.0 - smoothstep(0.0, uW * 0.35, abs(d - uR));
+          gl_FragColor = vec4(uC * (0.55 * k + 0.6 * core), 1.0) * uOp;
+        }`});
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat);
+    m.rotation.x = -Math.PI/2; m.visible = false; m.renderOrder = 4; m.frustumCulled = false;
+    m.userData.noBounds = true; scene.add(m);
+    return {m, age:-1};
+  };
+  const pool = Array.from({length:N}, mk);
+  const SPEED = 26;                                  // world units a second
+  const place = (r, m, op) => {
+    const k = Math.min(1, r / 44), y = TOP.y + (1.4 - TOP.y) * (k*k*(3 - 2*k));
+    const w = 0.35 + r * 0.012;
+    m.position.set(TOP.x, y, TOP.z);
+    const S = r + w * 2; m.scale.set(S, S, 1);
+    const u = m.material.uniforms; u.uR.value = r; u.uW.value = w; u.uS.value = S;
+    u.uOp.value = op * Math.min(1, r / 3) * Math.pow(1 - r / MAXR, 1.4);
+    m.visible = u.uOp.value > 0.003;
+  };
+  let mode = "idle", clock = 0, stillSet = false;
+  return {
+    spawn(strength = 1){
+      const f = pool.find(p => p.age < 0) || pool.reduce((a, b) => a.age > b.age ? a : b);
+      f.age = 0; f.k = strength;
+    },
+    setMode(m){ mode = m; clock = 0; },
+    // frozen rings for reduced motion or a still frame: radii spread across the island
+    still(on, strength = 1){
+      stillSet = on;
+      pool.forEach((p, i) => { p.age = -1; if(on && i < 5) place(8 + i*17, p.m, 0.9*strength); else p.m.visible = false; });
+    },
+    tick(dt){
+      if(stillSet) return;
+      clock += dt;
+      const hide = active >= 0 && ROOMS[active].id !== "transmitter";
+      if(mode === "transmitter" && clock > 0.9){ clock = 0; this.spawn(1); }
+      if(mode === "idle" && clock > 6.5 && !hide){ clock = 0; this.spawn(0.55); }
+      for(const p of pool){
+        if(p.age < 0) continue;
+        p.age += dt;
+        const r = p.age * SPEED;
+        if(r > MAXR){ p.age = -1; p.m.visible = false; continue; }
+        place(r, p.m, hide ? 0 : p.k);
+      }
+    },
+    // for a frozen frame of the opening sequence: rings born at these times
+    at(tNow, births){
+      pool.forEach(p => { p.age = -1; p.m.visible = false; });
+      births.forEach((b, i) => { if(tNow >= b && i < pool.length){ pool[i].age = tNow - b; pool[i].k = 1;
+        const r = pool[i].age * SPEED; if(r <= MAXR) place(r, pool[i].m, 1); } });
+    },
+  };
+})();
+
+/* ---- drifting fog over the hills: soft cards that wander slowly across the
+   headland and the rail hills, thicker at dusk; they clear with the clouds */
+{
+  const FOG_TEX = tex(128, 128, (x, w, h)=>{
+    const gr = x.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
+    gr.addColorStop(0, "rgba(255,255,255,0.85)"); gr.addColorStop(0.45, "rgba(255,255,255,0.4)");
+    gr.addColorStop(1, "rgba(255,255,255,0)");
+    x.fillStyle = gr; x.fillRect(0, 0, w, h);
+  });
+  const banks = [];
+  const bank = (x, y, z, s, ph) => {
+    const m = new THREE.SpriteMaterial({map:FOG_TEX, color:0xffffff, transparent:true, opacity:0.4,
+      depthWrite:false, fog:true});
+    const sp = new THREE.Sprite(m); sp.position.set(x, y, z); sp.scale.set(s, s*0.42, 1);
+    sp.userData.noBounds = true; sp.renderOrder = 1; scene.add(sp);
+    ENV.clouds.push({m, day:new THREE.Color(0xffffff), dusk:new THREE.Color(0xdccbe0)});
+    banks.push({sp, m, x0:x, ph, s});
+  };
+  bank(-96, 9, -28, 46, 0.0); bank(-132, 12, 18, 54, 1.3); bank(-78, 7, 40, 38, 2.1);
+  bank(-150, 14, -64, 60, 2.8); bank(-110, 8, 66, 44, 3.6); bank(-4, 5, -44, 40, 4.4);
+  bank(30, 4.5, -40, 36, 5.2); bank(-40, 6, -36, 34, 0.7);
+  let op = 1;
+  anims.push((t, dt) => {
+    const goal = (active >= 0 || skyClear) ? 0 : 1;
+    op += (goal - op) * ((REDUCED || fadeCut) ? 1 : Math.min(1, dt * 3));
+    banks.forEach(b => {
+      if(ANIM) b.sp.position.x = b.x0 + Math.sin(t * 0.03 + b.ph) * 14;
+      b.m.opacity = op * (0.28 + 0.12 * Math.sin(t * 0.11 + b.ph)) * (0.9 + 0.35 * Math.max(0, TOD.k));
+      b.sp.visible = b.m.opacity > 0.01;
+    });
+  });
+}
+
+/* ---- birds: now and then a small loose V crosses the sky, wings beating,
+   then gliding. Two instanced wing cards per bird, one draw call. Never under
+   reduced motion, and never while a room is being inspected. */
+{
+  const N = 9;
+  const wing = new THREE.BufferGeometry();
+  // body along +x (the way it flies), one wing reaching out along +z
+  wing.setAttribute("position", new THREE.Float32BufferAttribute([0.18,0,0, -0.12,0,0, 0.02,0,0.95], 3));
+  wing.setIndex([0, 1, 2]); wing.computeVertexNormals();
+  const im = new THREE.InstancedMesh(wing, new THREE.MeshBasicMaterial({color:0x3a352d, side:THREE.DoubleSide,
+    transparent:true, opacity:0.85, fog:true}), N*2);
+  im.frustumCulled = false; im.userData.noBounds = true; im.visible = false; scene.add(im);
+  const off = Array.from({length:N}, (_, i) => {
+    const row = Math.ceil(i/2), side = i % 2 ? 1 : -1;
+    return [-row*1.6 - (i*0.37 % 0.5), side*row*1.3 + (i*0.53 % 0.4), (i*0.71 % 0.6) - 0.3, i*0.9];
+  });
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), s = new THREE.Vector3(1, 1, 1);
+  const w = new THREE.Matrix4(), R = new THREE.Matrix4();
+  let next = 9, fl = null;
+  if(ANIM) anims.push((t, dt) => {
+    if(!fl){
+      if(t < next || active >= 0 || skyClear){ im.visible = false; return; }
+      // a pass from lower left to upper right, high over the headland side
+      fl = {t0:t, dur:15, a:new THREE.Vector3(-150, 30, 70), b:new THREE.Vector3(10, 44, -70)};
+    }
+    const k = (t - fl.t0) / fl.dur;
+    if(k > 1 || active >= 0){ fl = null; next = t + 32 + (t * 7.3 % 14); im.visible = false; return; }
+    im.visible = true;
+    im.material.opacity = 0.85 * Math.min(1, k * 6, (1 - k) * 6);
+    const dir = new THREE.Vector3().subVectors(fl.b, fl.a).normalize();
+    const hd = Math.atan2(-dir.z, dir.x);
+    off.forEach(([ox, oz, oy, ph], i) => {
+      p.lerpVectors(fl.a, fl.b, k);
+      const c = Math.cos(hd), sn = Math.sin(hd);
+      p.x += ox*c + oz*sn; p.z += -ox*sn + oz*c; p.y += oy + Math.sin(t*1.3 + ph)*0.3;
+      // beat for a while, then glide, in a staggered rhythm
+      const beat = (Math.sin(t * 0.7 + ph) > -0.2) ? Math.sin(t * 11 + ph) * 0.65 : 0.12;
+      for(const sd of [1, -1]){
+        e.set(sd > 0 ? 0 : Math.PI, hd, 0, "YXZ"); q.setFromEuler(e);   // mirror, then heading
+        m.compose(p, q, s);
+        R.makeRotationX(beat * sd * -1);
+        w.multiplyMatrices(m, R);
+        im.setMatrixAt(i*2 + (sd > 0 ? 0 : 1), w);
+      }
+    });
+    im.instanceMatrix.needsUpdate = true;
+  });
+}
+
+/* =====================================================================
+   atmosphere — edge haze, day / dusk, the miniature lens
+   ===================================================================== */
+/* aerial haze: things far from the lens soften into the paper tone. Near and
+   far follow the camera distance, so a room zoom stays crisp while the hills
+   behind it drift back; the sky plane opts out and keeps its gradient. */
+scene.fog = new THREE.Fog(0xdcd8d0, 220, 560);
+function tickFog(){
+  const d = cam.position.distanceTo(camTarget);
+  scene.fog.near = d * 1.12;
+  scene.fog.far = d * 3.3;
+}
+
+/* Time of day. k runs 0 (day) → 1 (dusk); everything that changes reads it.
+   The building stays WHITE at dusk: the suns turn warm and low-energy, the
+   hemisphere goes lilac, and the white walls, floors and windows get warm
+   light of their own (the night() tags), so it reads as a lit white model
+   under a sunset sky, not a dark one. */
+const TOD = (()=>{
+  const nights = [], lamps = [], glows = [], seen = new Set();
+  scene.traverse(o=>{
+    if(!o.material) return;
+    (Array.isArray(o.material) ? o.material : [o.material]).forEach(m=>{
+      if(seen.has(m)) return; seen.add(m);
+      const u = m.userData;
+      if(u.night && m.emissive){
+        m.emissive.setHex(u.night.c);
+        nights.push({m, k:u.night.k, op:u.night.op, op0:m.opacity});
+      }
+      if(u.lamp) lamps.push({m, off:new THREE.Color(u.lamp.off), on:new THREE.Color(u.lamp.on)});
+      if(u.glow) glows.push({m, day:u.glow.day, dusk:u.glow.dusk});
+    });
+  });
+  const C = h => new THREE.Color(h);
+  const P = {
+    // dusk is deeper than day so the lamps, windows and signs carry the scene
+    clear:[C(0xd2cfc7), C(0xaa9ab4)], fog:[C(0xdcd8d0), C(0xbba7b8)],
+    hemiS:[C(0xffffff), C(0xa293c8)], hemiG:[C(0xc6c0b4), C(0x584848)], hemiI:[0.3, 0.36],
+    ambC:[C(0xffffff), C(0xcdb8de)], ambI:[0.14, 0.07],
+    rimC:[C(0xdce7f2), C(0x8c98de)], rimI:[0.34, 0.5],
+    sunC:[C(0xfff6e9), C(0xffa066)], sunI:[1.5, 0.8],
+    water:[C(0xb9c5c9), C(0x9f98b4)], surf:[C(0xffffff), C(0xf6dccf)],
+    exp:[1.0, 0.93],
+  };
+  const tc = new THREE.Color();
+  const L = (a, k) => a[0] + (a[1] - a[0]) * k;
+  const LC = (a, k, out) => (out || tc).copy(a[0]).lerp(a[1], k);
+  const fadeEl = document.getElementById("fade");
+  const cssMix = (a, b, k) => {
+    const A = C(a), B = C(b); A.lerp(B, k);
+    return `${Math.round(A.r*255)},${Math.round(A.g*255)},${Math.round(A.b*255)}`;
+  };
+  let k = -1;
+  function apply(v){
+    k = v;
+    const e = v*v*(3 - 2*v);                    // eased, so the midpoint is a real dusk
+    renderer.setClearColor(LC(P.clear, e));
+    scene.fog.color.copy(LC(P.fog, e));
+    HEMI.color.copy(LC(P.hemiS, e)); HEMI.groundColor.copy(LC(P.hemiG, e)); HEMI.intensity = L(P.hemiI, e);
+    AMB.color.copy(LC(P.ambC, e)); AMB.intensity = L(P.ambI, e);
+    rim.color.copy(LC(P.rimC, e)); rim.intensity = L(P.rimI, e);
+    LEVEL_SUNS.forEach(s=>{ s.color.copy(LC(P.sunC, e)); s.intensity = L(P.sunI, e); });
+    renderer.toneMappingExposure = L(P.exp, e);
+    if(ENV.water) ENV.water.color.copy(LC(P.water, e));
+    if(ENV.waterTod) ENV.waterTod(e);
+    if(ENV.surf) ENV.surf.color.copy(LC(P.surf, e));
+    if(ENV.skyDusk){ ENV.skyDusk.material.opacity = e; ENV.skyDusk.visible = e > 0.004; }
+    ENV.clouds.forEach(c=> c.m.color.copy(c.day).lerp(c.dusk, e));
+    nights.forEach(n=>{
+      n.m.emissiveIntensity = n.k * e;
+      if(n.op != null){ n.m.opacity = n.op0 + (n.op - n.op0) * e; }
+    });
+    lamps.forEach(l=>{
+      tc.copy(l.off).lerp(l.on, e);
+      if(l.m.userData.base) l.m.userData.base.copy(tc);
+      l.m.color.copy(tc).lerp(GHOST, l.m.userData.dimK || 0);
+    });
+    glows.forEach(g=>{ g.m.opacity = g.day + (g.dusk - g.day) * e; g.m.visible = g.m.opacity > 0.003; });
+    if(fadeEl){
+      const top = cssMix(0xffffff, 0xe6dcea, e), bot = cssMix(0xffffff, 0xefe2df, e);
+      fadeEl.style.background = `linear-gradient(to bottom,
+        rgb(${top}) 0%, rgba(${top},0.72) 5%, rgba(${top},0) 17%,
+        rgba(${bot},0) 62%, rgba(${bot},0.45) 78%, rgba(${bot},0.88) 88%, rgb(${bot}) 96%)`;
+    }
+    document.body.classList.toggle("dusk", e > 0.5);
+  }
+  /* the automatic cycle: a long day, a slow turn into dusk, a shorter dusk and
+     back — minutes, not seconds, so it never competes with the model */
+  const CYCLE = 96, cycleAt = t => {
+    const c = t % CYCLE, s = x => x*x*(3-2*x);
+    if(c < 44) return 0;
+    if(c < 56) return s((c - 44) / 12);
+    if(c < 84) return 1;
+    return 1 - s((c - 84) / 12);
+  };
+  let mode = "day", goal = 0, autoT = 0, held = false;
+  const bar = document.getElementById("todbar");
+  const btns = bar ? [...bar.querySelectorAll("[data-tod]")] : [];
+  // a slow cycle is motion the viewer did not ask for: reduced motion drops it
+  if(REDUCED) btns.forEach(b=>{ if(b.dataset.tod === "auto") b.style.display = "none"; });
+  function setMode(m){
+    if(REDUCED && m === "auto") m = "day";
+    mode = m; store.set("bc-tod", m);
+    btns.forEach(b=> b.classList.toggle("on", b.dataset.tod === m));
+    if(m === "day") goal = 0;
+    if(m === "dusk") goal = 1;
+    if(m === "auto") autoT = 0;
+  }
+  btns.forEach(b=> b.addEventListener("click", ()=> setMode(b.dataset.tod)));
+  const q = QP("tod"), saved = store.get("bc-tod");
+  setMode(q === "day" || q === "dusk" || q === "auto" ? q : (saved === "dusk" || saved === "auto" ? saved : "day"));
+  apply(goal);
+  return {
+    get k(){ return k; }, get mode(){ return mode; }, setMode, apply,
+    // the opening sequence drives the light itself while it runs
+    hold(v){ held = v; },
+    tick(dt){
+      if(held) return;
+      if(mode === "auto") { autoT += dt; goal = cycleAt(autoT); }
+      if(Math.abs(k - goal) < 0.0005){ if(k !== goal) apply(goal); return; }
+      // a toggle is a slow, even dissolve (about three seconds); reduced motion cuts
+      apply(REDUCED ? goal : k + Math.sign(goal - k) * Math.min(Math.abs(goal - k), dt / 3.0));
+    },
+  };
+})();
+
+/* camera-facing halos: turned to the lens every frame, correcting for any
+   rotated parent (the houses sit at slight angles) */
+const _hq = new THREE.Quaternion();
+function tickHalos(){
+  for(const h of HALOS){
+    if(!h.material.visible) continue;
+    h.parent.getWorldQuaternion(_hq).invert();
+    h.quaternion.copy(_hq).multiply(cam.quaternion);
+  }
+}
+
+/* ---- the miniature lens: tilt-shift depth of field ---------------------
+   The frame is rendered as usual, copied off the (already antialiased,
+   already tone-mapped) screen, blurred at half size in two separable passes
+   whose radius grows with distance from the focus band, and composited back
+   so the middle stays razor sharp and the top and bottom go soft — the
+   tabletop-model look. High tier only; the governor below turns it off if the
+   frame rate cannot carry it, and the HQ chip toggles it. WebGL2 only. */
+const POST = (()=>{
+  const ok = renderer.capabilities.isWebGL2 && !!THREE.FramebufferTexture;
+  const pscene = new THREE.Scene(), pcam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2)); quad.frustumCulled = false; pscene.add(quad);
+  const VS = "varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }";
+  // the band keeps the whole station sharp; only the foreground lawns and the
+  // far hills soften
+  const U = () => ({focus:{value:0.52}, band:{value:0.27}, ramp:{value:0.3}});
+  const blur = dir => new THREE.ShaderMaterial({
+    uniforms: Object.assign(U(), {tex:{value:null}, texel:{value:new THREE.Vector2()},
+      dir:{value:dir}, maxR:{value:1.9}}),
+    vertexShader: VS, depthTest:false, depthWrite:false, toneMapped:false,
+    fragmentShader: `uniform sampler2D tex; uniform vec2 texel, dir; uniform float focus, band, ramp, maxR;
+      varying vec2 vUv;
+      void main(){
+        float r = maxR * smoothstep(band, band + ramp, abs(vUv.y - focus));
+        vec2 st = dir * texel * r;
+        vec4 c = texture2D(tex, vUv) * 0.2270270270;
+        c += texture2D(tex, vUv + st * 1.3846153846) * 0.3162162162;
+        c += texture2D(tex, vUv - st * 1.3846153846) * 0.3162162162;
+        c += texture2D(tex, vUv + st * 3.2307692308) * 0.0702702703;
+        c += texture2D(tex, vUv - st * 3.2307692308) * 0.0702702703;
+        gl_FragColor = c;
+      }`});
+  const bh = blur(new THREE.Vector2(1, 0)), bv = blur(new THREE.Vector2(0, 1));
+  const comp = new THREE.ShaderMaterial({
+    uniforms: Object.assign(U(), {sharp:{value:null}, soft:{value:null}, amount:{value:1}}),
+    vertexShader: VS, depthTest:false, depthWrite:false, toneMapped:false,
+    fragmentShader: `uniform sampler2D sharp, soft; uniform float focus, band, ramp, amount;
+      varying vec2 vUv;
+      void main(){
+        float k = amount * smoothstep(band, band + ramp * 0.8, abs(vUv.y - focus));
+        vec3 a = texture2D(sharp, vUv).rgb, b = texture2D(soft, vUv).rgb;
+        gl_FragColor = vec4(mix(a, b, k), 1.0);
+      }`});
+  let fb = null, rtA = null, rtB = null, W = 0, H = 0, amount = 1;
+  const v2 = new THREE.Vector2(), v0 = new THREE.Vector2(0, 0);
+  function ensure(){
+    renderer.getDrawingBufferSize(v2);
+    if(v2.x === W && v2.y === H && fb) return;
+    W = v2.x; H = v2.y;
+    if(fb) fb.dispose(); if(rtA) rtA.dispose(); if(rtB) rtB.dispose();
+    fb = new THREE.FramebufferTexture(W, H, THREE.RGBAFormat);
+    fb.minFilter = fb.magFilter = THREE.LinearFilter;
+    const hw = Math.max(1, W >> 1), hh = Math.max(1, H >> 1);
+    const opt = {depthBuffer:false, stencilBuffer:false, minFilter:THREE.LinearFilter, magFilter:THREE.LinearFilter};
+    rtA = new THREE.WebGLRenderTarget(hw, hh, opt);
+    rtB = new THREE.WebGLRenderTarget(hw, hh, opt);
+    bh.uniforms.texel.value.set(1/hw, 1/hh); bv.uniforms.texel.value.set(1/hw, 1/hh);
+  }
+  return {
+    ok, on: false,
+    render(){
+      renderer.render(scene, cam);
+      if(!this.on || !ok) return;
+      ensure();
+      // softer while zoomed into a room: the room fills the frame
+      const want = active >= 0 ? 0.55 : 1;
+      amount += (want - amount) * 0.08;
+      renderer.copyFramebufferToTexture(v0, fb);
+      quad.material = bh; bh.uniforms.tex.value = fb;
+      renderer.setRenderTarget(rtA); renderer.render(pscene, pcam);
+      quad.material = bv; bv.uniforms.tex.value = rtA.texture;
+      renderer.setRenderTarget(rtB); renderer.render(pscene, pcam);
+      quad.material = comp; comp.uniforms.sharp.value = fb; comp.uniforms.soft.value = rtB.texture;
+      comp.uniforms.amount.value = amount;
+      renderer.setRenderTarget(null); renderer.render(pscene, pcam);
+    },
+  };
+})();
+
+/* ---- quality: one switch for the lens, the pixel ratio and the shadows ---
+   Auto-detected at load (QUALITY), stepped down by the governor if the frame
+   rate sags under ~50 fps, and toggled by the HQ chip. Stepping down never
+   changes the look of the model, only how finely it is drawn. */
+const QUAL = (()=>{
+  const chip = document.getElementById("hqBtn");
+  let userSet = false;
+  function setShadowSizes(low){
+    LEVEL_SUNS.forEach((s, i)=>{
+      const n = i === 0 ? (low ? 2048 : 4096) : (low ? 1024 : 2048);
+      if(s.shadow.mapSize.x === n) return;
+      s.shadow.mapSize.set(n, n);
+      if(s.shadow.map){ s.shadow.map.dispose(); s.shadow.map = null; }
+    });
+    dirtyShadows();
+  }
+  function set(high, byUser){
+    if(byUser) userSet = true;
+    LOW = !high;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, high ? 2 : 1));
+    setShadowSizes(!high);
+    POST.on = high && POST.ok && QP("tiltshift") !== "0";
+    if(chip){ chip.classList.toggle("on", high); chip.setAttribute("aria-pressed", high ? "true" : "false"); }
+    store.set("bc-hq", high ? "1" : "0");
+    resize();
+  }
+  if(chip) chip.addEventListener("click", ()=> set(LOW, true));
+  // governor: average the frame time once things settle; one step down at most
+  let samples = [], armedAt = 0, done = false;
+  return {
+    set, get high(){ return !LOW; },
+    arm(now){ armedAt = now + 1500; samples = []; done = false; },
+    sample(now, frameMs){
+      if(done || userSet || now < armedAt || document.hidden) return;
+      samples.push(frameMs);
+      if(samples.length < 120) return;
+      samples.sort((a, b)=> a - b);
+      const med = samples[samples.length >> 1];
+      done = true;
+      if(med > 20.5 && !LOW){ set(false); }        // under ~50 fps: drop the lens and the extra pixels
+    },
+  };
+})();
+
+/* =====================================================================
+   the opening sequence — once per visit, under eight seconds
+   The storyboard, in the scene itself: the closed building in a soft dawn
+   light with the clouds drifting; the camera sinks in as the floors lift into
+   the cascade; it cranes to the on-air studio while every other room ghosts
+   and the ON AIR box brightens; it pulls back high as signal rings pulse
+   out of the mast across the island; and it settles on the open building
+   with the day come up. Any click, scroll, touch or key skips straight to
+   the end. It runs once per visit (sessionStorage), never under reduced
+   motion, never over a deep link. ?intro=1 forces it; ?introAt=<s> freezes
+   it on one frame for a headless capture.
+   ===================================================================== */
+const INTRO = (()=>{
+  const DUR = 7.8, BIRTHS = [5.0, 5.3, 5.6, 5.9, 6.2];
+  const q = QP("intro"), qa = QP("introAt");
+  const frozen = qa != null && isFinite(parseFloat(qa)) ? Math.max(0, Math.min(DUR, parseFloat(qa))) : null;
+  let on = false, t = 0, F = null, nextBirth = 0, swallowUntil = 0;
+  const ease = x => x < 0.5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3)/2;
+  const sm = (a, b, x) => { const k = Math.max(0, Math.min(1, (x - a)/(b - a))); return k*k*(3 - 2*k); };
+  const bump = (a, b, c, d, x) => sm(a, b, x) * (1 - sm(c, d, x));
+  const _p = new THREE.Vector3(), _q = new THREE.Vector3(), _m = new THREE.Vector3();
+  function frames(){
+    const was = expandedTarget;
+    expandedTarget = false; const closed = overviewFrame();
+    expandedTarget = true; const open = overviewFrame();
+    expandedTarget = was;
+    const d0 = closed.pos.distanceTo(closed.tgt);
+    // the establishing shot: further out and a touch higher, the building small
+    const start = {tgt: closed.tgt.clone().add(new THREE.Vector3(0, 3, 0)),
+                   pos: closed.tgt.clone().addScaledVector(VIEW, d0 * 1.42).add(new THREE.Vector3(0, 10, 0))};
+    const b = RM("onair")._box;
+    const onair = fitBox(boxOf(b.cx + 0.5, b.cy + 1.0, b.cz - 0.5, b.w + 3.5, b.h + 3.5, b.d + 3.5), 1.0);
+    const wide = fitBox(new THREE.Box3(new THREE.Vector3(-64, -2, -26), new THREE.Vector3(46, 34, 62)), 1.02);
+    return {start, closed, open, onair, wide, end: open};
+  }
+  // a lifted arc from A to B, like the room-to-room crane
+  function arc(A, B, k, lift){
+    const span = A.pos.distanceTo(B.pos);
+    _m.copy(A.pos).lerp(B.pos, 0.5); _m.y += span * lift;
+    const u = 1 - k;
+    _p.copy(A.pos).multiplyScalar(u*u).addScaledVector(_m, 2*u*k).addScaledVector(B.pos, k*k);
+    _q.copy(A.tgt).lerp(B.tgt, k);
+    cam.position.copy(_p); camTarget.copy(_q); cam.lookAt(camTarget);
+  }
+  function dimAll(k){
+    Object.values(roomRecs).forEach(r => {
+      r.rec.target = 0; r.rec.dim = r.room.id === "onair" ? 0 : k; applyDim(r.rec);
+    });
+    shellRec.target = 0; shellRec.dim = 0.6 * k; applyDim(shellRec);
+  }
+  function apply(s){
+    // floors lift, staggered by the existing cascade easing
+    expandK = sm(1.35, 3.0, s);
+    applyExpand();
+    expandedTarget = s > 1.6;
+    // camera beats
+    if(s < 3.1) arc(F.start, F.open, ease(s / 3.1), 0.04);
+    else if(s < 4.9) arc(F.open, F.onair, ease((s - 3.1) / 1.8), 0.14);
+    else if(s < 6.5) arc(F.onair, F.wide, ease((s - 4.9) / 1.6), 0.12);
+    else arc(F.wide, F.end, ease(Math.min(1, (s - 6.5) / 1.3)), 0.03);
+    // everything but the on-air studio ghosts for its close shot
+    dimAll(bump(3.15, 3.7, 4.85, 5.35, s));
+    skyClear = s > 2.9 && s < 5.2;
+    // a soft dawn that comes up to day
+    TOD.apply(0.5 * (1 - sm(3.0, 7.3, s)));
+    // the ON AIR box brightens while we are there
+    if(ENV.onairGlow){
+      const u = ENV.onairGlow.userData.glow;
+      ENV.onairGlow.opacity = u.day + (u.dusk - u.day) * TOD.k + 0.7 * bump(3.5, 4.0, 4.9, 5.4, s);
+      ENV.onairGlow.visible = true;
+    }
+  }
+  function onSkip(ev){
+    if(!on || frozen != null) return;
+    if(ev.type === "wheel"){ ev.preventDefault(); ev.stopPropagation(); }
+    if(ev.type === "pointerdown" && ev.target === canvas) swallowUntil = performance.now() + 700;
+    finish(true);
+  }
+  const EVTS = ["pointerdown", "wheel", "keydown", "touchstart"];
+  function finish(skipped){
+    if(!on) return;
+    on = false; skyClear = false;
+    EVTS.forEach(e => window.removeEventListener(e, onSkip, {capture:true}));
+    dimAll(0);
+    expandCb = null; expandedTarget = true; expandK = 1; applyExpand();
+    document.body.classList.add("expanded");
+    document.body.classList.remove("intro");
+    setHint("Select a department — or click any room");
+    document.getElementById("backBtn").textContent = "▣ Close the building";
+    TOD.hold(false);
+    if(ENV.onairGlow){ const u = ENV.onairGlow.userData.glow; ENV.onairGlow.opacity = u.day + (u.dusk - u.day)*TOD.k; }
+    const f = overviewFrame();
+    if(skipped) goCam(f, 700);
+    else { cam.position.copy(f.pos); camTarget.copy(f.tgt); cam.lookAt(camTarget); camBase = f; }
+    camBase = f;
+    QUAL.arm(performance.now());
+  }
+  function start(){
+    F = frames();
+    on = true; t = frozen != null ? frozen : 0; nextBirth = 0;
+    document.body.classList.add("intro");
+    TOD.hold(true);
+    fadeCut = frozen != null;
+    if(frozen == null){
+      store.set("bc-intro", "1");
+      EVTS.forEach(e => window.addEventListener(e, onSkip, {capture:true, passive:false}));
+    }
+    apply(t);
+    if(frozen != null) RINGS.at(t, BIRTHS);
+  }
+  return {
+    get on(){ return on; },
+    get swallowUntil(){ return swallowUntil; },
+    maybeStart(){
+      const deep = !!location.hash.replace("#", "") || /(\?|&)open=1\b/.test(location.search);
+      const run = frozen != null || q === "1" ||
+        (q !== "0" && !REDUCED && !deep && store.get("bc-intro") !== "1");
+      if(run) start();
+    },
+    tick(dt){
+      if(!on) return false;
+      if(frozen == null){
+        t += dt;
+        while(nextBirth < BIRTHS.length && t >= BIRTHS[nextBirth]){ RINGS.spawn(1); nextBirth++; }
+      }
+      apply(Math.min(t, DUR));
+      if(frozen == null && t >= DUR) finish(false);
+      return true;
+    },
+  };
+})();
+
 /* ---------- loop ---------- */
 function resize(){
   const w = stage.clientWidth, h = stage.clientHeight;
@@ -4004,10 +6000,15 @@ window.addEventListener("resize", resize);
    the stage box directly */
 if(window.ResizeObserver) new ResizeObserver(()=> resize()).observe(stage);
 
-let last = performance.now();
+let last = performance.now(), frameNo = 0;
 function tick(now){
+  // upper-plate shadows refresh on a schedule (see the suns); level 0 is live
+  if(++frameNo % (LOW ? 6 : 3) === 0) dirtyShadows();
+  if(!INTRO.on) QUAL.sample(now, now - last);
   const t = now/1000, dt = Math.min(0.05, (now-last)/1000); last = now;
-  tickExpand(dt);
+  TOD.tick(dt);
+  const intro = INTRO.tick(dt);
+  if(!intro) tickExpand(dt);
   tickClouds(dt);
   tickSea(dt);
   tickSky(dt);
@@ -4017,8 +6018,8 @@ function tick(now){
     });
     applyHomes();
   }
-  tickCam(now);
-  if(!camTween && active < 0 && camBase && !REDUCED){
+  if(!intro) tickCam(now);
+  if(!intro && !camTween && active < 0 && camBase && !REDUCED){
     // slow ambient orbit + pointer parallax while the whole model is shown
     const a = Math.sin(t*0.075)*0.05;
     const dx = camBase.pos.x - camTarget.x, dz = camBase.pos.z - camTarget.z;
@@ -4027,18 +6028,29 @@ function tick(now){
     cam.position.y = camBase.pos.y + pointer.y*1.2 + Math.sin(t*0.11)*0.7;
     cam.lookAt(camTarget);
   }
-  dimmables.forEach(rec=>{
+  if(!intro) dimmables.forEach(rec=>{
     if(Math.abs(rec.dim-rec.target) < 0.001) return;
     rec.dim += (rec.target-rec.dim)*Math.min(1, dt*5);
     applyDim(rec);
   });
   anims.forEach(a=>a(t, dt));
+  if(ANIM) RINGS.tick(dt);
+  tickOutlines(dt);
+  tickFog();
+  tickHalos();
   projectOverlay();
   render();
   requestAnimationFrame(tick);
 }
-function render(){ renderer.render(scene, cam); }
+function render(){ POST.render(); }
 
+dirtyShadows();
+{
+  // quality at load: a choice made earlier in the visit wins, else the probe
+  const hq = QP("quality") ? null : store.get("bc-hq");
+  QUAL.set(hq === "1" || hq === "0" ? hq === "1" : QUALITY === "high", false);
+  QUAL.arm(performance.now());
+}
 levelBoxes();                 // cache bounds while levels sit at build offsets
 applyExpand();                // then fold the building shut for the opening shot
 setHint("Click the building to open it — the grounds are live too");
@@ -4056,3 +6068,4 @@ if(hash){
   const i = ROOMS.findIndex(r=>r.id === hash);
   if(i >= 0) setTimeout(()=>activate(i), REDUCED ? 50 : 700);
 }
+INTRO.maybeStart();

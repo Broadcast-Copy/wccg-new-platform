@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Broadcast Copy — The Station Dollhouse</title>
+<link rel="icon" href="data:,">
 <style>
   :root{
     --paper:#eceae5;
@@ -93,6 +94,20 @@
   }
   #dayclock b{color:var(--accent);font-weight:700;}
 
+  /* view controls, bottom right of the stage */
+  #viewbar{position:absolute;right:36px;bottom:90px;z-index:5;display:flex;align-items:center;gap:8px;}
+  .seg{display:flex;background:rgba(255,255,255,.86);border:1px solid var(--line);border-radius:99px;padding:3px;
+    box-shadow:0 1px 3px rgba(23,21,15,.06);backdrop-filter:blur(6px);}
+  .seg button,.chip{font-family:inherit;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);background:none;border:none;border-radius:99px;padding:6px 11px;cursor:pointer;
+    transition:background .2s ease,color .2s ease;}
+  .seg button:hover,.chip:hover{color:var(--ink);}
+  .seg button.on{background:var(--ink);color:#fff;}
+  .chip{background:rgba(255,255,255,.86);border:1px solid var(--line);font-weight:700;padding:7px 11px;
+    box-shadow:0 1px 3px rgba(23,21,15,.06);}
+  .chip.on{color:var(--accent);border-color:var(--accent-soft);}
+  .seg button:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
   #backBtn{
     position:absolute;top:28px;right:24px;z-index:6;
     font-size:11px;letter-spacing:.14em;text-transform:uppercase;
@@ -153,19 +168,38 @@
   .cta{display:block;width:100%;text-align:center;background:var(--accent);color:#fff;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:13px;border-radius:10px;text-decoration:none;border:none;cursor:pointer;font-family:inherit;}
   .cta:hover{filter:brightness(.94);}
   .foot-row{display:flex;justify-content:space-between;align-items:center;margin-top:12px;}
-  .price{font-size:11px;color:var(--muted);}
-  .price b{color:var(--ink);}
+  .note{font-size:11px;color:var(--muted);}
   .foot-actions{display:flex;align-items:center;gap:14px;}
   #tourBtn,#reelBtn{background:none;border:none;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;padding:0;}
   #tourBtn:hover,#reelBtn:hover{color:var(--ink);}
   #tourBtn.on,#reelBtn.on{color:var(--accent);}
 
+  /* the opening sequence plays on a clean frame: labels, pins and the chrome
+     at the bottom of the stage fade back in when it ends or is skipped */
+  #hint,#dayclock,#viewbar{transition:opacity .6s ease;}
+  /* at dusk the page top turns lilac, so the captions darken and take a
+     lilac halo to keep their contrast */
+  body.dusk .tagline,body.dusk #hint,body.dusk #dayclock{color:#4f4a55;
+    text-shadow:0 1px 9px rgba(234,226,238,.95),0 0 3px rgba(234,226,238,.9);}
+  body.dusk .tagline b{color:#1f1b24;}
+  body.intro .rlabel,body.intro #pins,body.intro #hint,body.intro #dayclock,body.intro #viewbar{opacity:0 !important;}
+  body.intro #gl{cursor:pointer;}
   @media (prefers-reduced-motion: reduce){
     #hint .dot{animation:none;}
     .rlabel,#pins,#backBtn,#hint{transition:none !important;}
   }
   @media (max-width:1350px){ #tbr{display:none;} }
   @media (max-width:1000px){ #tbl{display:none;} }
+  /* phones: the controls take the bottom-right corner, the hint wraps above
+     them in a tighter setting, and the clock steps up clear of it */
+  @media (max-width:600px){
+    #viewbar{right:14px;bottom:14px;}
+    #hint{left:18px;right:18px;bottom:62px;font-size:10px;letter-spacing:.08em;line-height:1.5;}
+    #dayclock{left:18px;bottom:104px;}
+    /* the back button would sit on the wordmark: it moves down the left edge,
+       above the clock, clear of the view controls in the corner */
+    #backBtn{top:auto;right:auto;left:14px;bottom:134px;padding:8px 12px;font-size:10px;}
+  }
   @media (max-width:920px){
     #app{flex-direction:column;}
     #stage{height:56vh;flex:none;}
@@ -192,6 +226,15 @@
     </header>
     <div id="hint"><span class="dot"></span>Select a department — or click any room</div>
     <div id="dayclock"></div>
+    <!-- view controls: the light (day, dusk or a slow cycle) and the render quality -->
+    <div id="viewbar" role="group" aria-label="View">
+      <div id="todbar" class="seg" role="group" aria-label="Time of day">
+        <button type="button" data-tod="day">Day</button>
+        <button type="button" data-tod="dusk">Dusk</button>
+        <button type="button" data-tod="auto" title="A slow day-to-dusk cycle">Auto</button>
+      </div>
+      <button type="button" id="hqBtn" class="chip" aria-pressed="false" title="High quality: tilt-shift lens, sharper pixels and shadows">HQ</button>
+    </div>
     <button id="backBtn">← Whole building</button>
   </div>
 
@@ -214,9 +257,11 @@
       </div>
     </div>
     <footer>
+      <!-- the model runs inside an iframe on the site, so the waitlist opens in
+           the top window rather than inside the frame -->
       <a class="cta" href="/platform#early-access" target="_top">Join the waitlist</a>
       <div class="foot-row">
-        <div class="price">Pricing on request</div>
+        <div class="note">Pricing on request</div>
         <div class="foot-actions">
           <button id="reelBtn">◉ Flyover</button>
           <button id="tourBtn">▶ Play tour</button>
