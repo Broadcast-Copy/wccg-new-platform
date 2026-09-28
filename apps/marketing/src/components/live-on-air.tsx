@@ -93,7 +93,7 @@ export function LiveOnAir() {
       <span className="text-faint">·</span>
       <span className="min-w-0 truncate text-dim">{nowLine}</span>
       {nextLine && (
-        <span className="hidden text-faint sm:inline">
+        <span className="hidden text-dim sm:inline">
           &nbsp;· next: {nextLine}
         </span>
       )}

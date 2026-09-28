@@ -87,3 +87,14 @@ export const BROADCAST_COPY_MANAGER = {
   sha256: "b63709ace3d26890cce6c1fd6fab6209c3654630fa7f280a48af7d446e8fb5b0",
   sha256Href: `${RELEASES_ORIGIN}/broadcast-copy-manager/BroadcastCopyManager-0.5.0.sha256`,
 } as const;
+
+/**
+ * The member platform (control plane) — its own static export on its own
+ * subdomain. Login, the members-only guides and the signed-in profile all
+ * live there; this site only links to it.
+ */
+export const PLATFORM_URL = (
+  process.env.NEXT_PUBLIC_PLATFORM_URL || "https://platform.broadcastcopy.ai"
+).replace(/\/+$/, "");
+
+export const LOGIN_URL = `${PLATFORM_URL}/login`;

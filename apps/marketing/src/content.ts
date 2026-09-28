@@ -15,6 +15,7 @@ import {
   Trophy,
   Users,
 } from "lucide-react";
+import { PLATFORM_URL } from "@/lib/site";
 
 /* ------------------------------------------------------------------ */
 /*  Types — declared once, content derives from them via `satisfies`.  */
@@ -146,79 +147,21 @@ export const WHATS_NEW = {
   short: "Manager 0.5.0 is out",
   summary:
     "the daily log and its validation gate, a traffic desk, promotions and imaging calendars, and Studio Control in a native window.",
-  href: "/changelog",
+  href: "/changelog/",
 } as const;
 
 /* ------------------------------------------------------------------ */
-/*  Customer documentation. The full guides are MEMBERS-ONLY: they     */
-/*  live in the bc_docs table (RLS: signed-in accounts) and render at  */
+/*  Customer documentation. The guides are MEMBERS-ONLY: they live in  */
+/*  the bc_docs table (RLS: signed-in accounts) and render at          */
 /*  platform.broadcastcopy.ai/docs, so no guide text is in this static */
-/*  build. What is here is public teaser copy only: each guide keeps a */
-/*  short page at /documentation/<slug>/ that links to the full guide. */
+/*  build. The public /documentation page says what they cover and     */
+/*  where to sign in. (The five public teaser pages that used to live  */
+/*  under /documentation/<slug>/ were removed 2026-09-27; .htaccess    */
+/*  301s their old addresses to /documentation/.)                      */
 /* ------------------------------------------------------------------ */
 
 /** The member documentation on the control plane (sign-in required). */
-export const MEMBER_DOCS_URL = "https://platform.broadcastcopy.ai/docs";
-
-/** A member guide's address; sign-in returns the reader to it. */
-export const memberDocUrl = (slug: string): string => `${MEMBER_DOCS_URL}?d=${slug}`;
-
-type Guide = {
-  readonly slug: string;
-  readonly title: string;
-  readonly blurb: string;
-  /** 2–3 public sentences for the teaser page; never the guide's own text */
-  readonly teaser: string;
-  readonly who: string;
-};
-
-export const GUIDES = [
-  {
-    slug: "build-and-publish-a-days-log",
-    title: "Build and publish a day's log",
-    blurb:
-      "How tomorrow's log is generated from your clocks, what the validation gate checks, and what happens when a check fails.",
-    teaser:
-      "Broadcast Copy builds tomorrow's log from your clocks every evening, checks it against a validation gate, and publishes it only when it passes. The full guide covers what the gate checks, how to run it yourself, and what happens when a check fails.",
-    who: "Program director · operations",
-  },
-  {
-    slug: "inserting-traffic",
-    title: "Inserting traffic",
-    blurb:
-      "How booked spots reach a day's log — at generation, or into a day you are editing with a dry run first.",
-    teaser:
-      "Booked spots reach a day's log at the evening build, or through an import into a day you are editing — and every spot's outcome is shown. The full guide walks through both paths and the dry run that comes first.",
-    who: "Traffic · program director",
-  },
-  {
-    slug: "editing-and-validating-a-log",
-    title: "Editing and validating a log (PD)",
-    blurb:
-      "The log editor: what you can change, what it refuses, and how every saved edit is re-checked by the gate.",
-    teaser:
-      "Program directors change future days in the log editor, and every saved change is re-checked by the same gate as the evening build. The full guide covers what you can change, what the editor refuses, and how each change is recorded.",
-    who: "Program director",
-  },
-  {
-    slug: "imaging-ai-script-writer",
-    title: "Imaging with the AI script writer",
-    blurb:
-      "Imaging categories, the holiday calendar and its order-by dates, and drafting scripts with the optional AI writer.",
-    teaser:
-      "Imaging categories by type and occasion, a holiday calendar with order-by dates, and an optional AI writer whose drafts a person approves before anything is saved. The full guide covers each of them, and who can do what.",
-    who: "Production · program director",
-  },
-  {
-    slug: "traffic-basics",
-    title: "Traffic section basics",
-    blurb:
-      "Orders, copy, the as-run, make-goods, invoicing and reports — and how the desk runs beside your current traffic system.",
-    teaser:
-      "The traffic desk covers orders, copy, the as-run, make-goods, billing and reports, and runs beside your current traffic system until you are ready to switch. The full guide takes the desk area by area.",
-    who: "Traffic · business office",
-  },
-] as const satisfies readonly Guide[];
+export const MEMBER_DOCS_URL = `${PLATFORM_URL}/docs`;
 
 /**
  * What the member documentation covers, for the public overview. Topic
@@ -247,8 +190,6 @@ export const DOC_TOPICS = [
   },
 ] as const;
 
-export type GuideSlug = (typeof GUIDES)[number]["slug"];
-
 /* ------------------------------------------------------------------ */
 /*  FAQ                                                                */
 /* ------------------------------------------------------------------ */
@@ -256,7 +197,7 @@ export type GuideSlug = (typeof GUIDES)[number]["slug"];
 export const FAQS = [
   {
     q: "Does this replace my automation system?",
-    a: "No. Broadcast Copy runs alongside your playout — the flagship is live today next to DJB Radio. We ingest now-playing and schedule data rather than replacing the box in your rack.",
+    a: "Not on day one. AirSuite On-Air runs beside your current automation in a muted shadow mode first, and nothing reaches air until you switch it on — one piece at a time, when you trust it.",
   },
   {
     q: "Can I keep my own domain and branding?",
@@ -268,7 +209,7 @@ export const FAQS = [
   },
   {
     q: "Is my station's data isolated from other stations?",
-    a: "Yes, and it's enforced in the database rather than only in the app. Every station-scoped table carries a station id under row-level security, so one station cannot read another's rows even if the application layer is wrong.",
+    a: "Yes. Every station-scoped table carries a station ID, and row-level security in the database filters on it, not only the app. Before a second station goes live, the tables that hold private data move to strict per-station reads. The planned architecture goes further: each station gets its own database, and only shared records such as accounts and licences live in a common control plane.",
   },
   {
     q: "How does onboarding work?",
