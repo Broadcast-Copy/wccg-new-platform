@@ -197,7 +197,7 @@ export const DOC_TOPICS = [
 export const FAQS = [
   {
     q: "Does this replace my automation system?",
-    a: "No. Broadcast Copy runs alongside your playout — the flagship is live today next to DJB Radio. We ingest now-playing and schedule data rather than replacing the box in your rack.",
+    a: "Not on day one. AirSuite On-Air runs beside your current automation in a muted shadow mode first, and nothing reaches air until you switch it on — one piece at a time, when you trust it.",
   },
   {
     q: "Can I keep my own domain and branding?",
