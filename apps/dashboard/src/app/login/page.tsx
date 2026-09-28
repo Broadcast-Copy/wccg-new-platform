@@ -113,6 +113,11 @@ export default function LoginPage() {
               className={FIELD}
               placeholder="••••••••"
             />
+            <p className="text-right">
+              <a href="/forgot-password" className="text-xs text-dim transition hover:text-fg hover:underline">
+                Forgot password?
+              </a>
+            </p>
           </div>
 
           {state.status === "error" && (
