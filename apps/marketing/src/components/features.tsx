@@ -3,10 +3,14 @@
 import { useEffect, useState } from "react";
 import {
   AlertTriangle,
+  AudioLines,
   CalendarClock,
   Disc3,
   LineChart,
+  ListChecks,
   type LucideIcon,
+  Megaphone,
+  MonitorCog,
   PlayCircle,
   Radio,
   ShieldCheck,
@@ -22,10 +26,15 @@ import { FEATURES, ON_DEMAND_FEATURE } from "@/content";
  * initial state — so the full grid is in the static HTML (no flash, no SEO
  * loss) — then swaps to bc_features (mig 097, public read) if the DB returns
  * rows, so marketing copy is editable without a rebuild. The DB stores a
- * lucide icon NAME; ICON_MAP resolves it back to a component here.
+ * lucide icon NAME; ICON_MAP resolves it back to a component here — every
+ * icon content.ts uses must be listed, or its DB row renders as Sparkles.
  */
 
 const ICON_MAP: Record<string, LucideIcon> = {
+  AudioLines,
+  ListChecks,
+  Megaphone,
+  MonitorCog,
   Radio,
   CalendarClock,
   Disc3,
@@ -79,7 +88,7 @@ export function Features() {
           key={feature.name}
           className="w-full rounded-2xl border border-line bg-surface p-6 transition hover:border-signal/30 sm:w-[calc(50%-0.625rem)] lg:w-[calc(33.333%-0.834rem)]"
         >
-          <feature.Icon className="h-6 w-6 text-signal" aria-hidden />
+          <feature.Icon className="h-6 w-6 text-signal-ink" aria-hidden />
           <h3 className="mt-4 font-semibold">{feature.name}</h3>
           <p className="mt-2 text-sm leading-relaxed text-dim">{feature.blurb}</p>
         </article>

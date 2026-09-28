@@ -73,7 +73,7 @@ export function EarlyAccessForm() {
   if (state.status === "success") {
     return (
       <div className="rounded-2xl border border-signal/30 bg-elevated p-8 text-center">
-        <CheckCircle2 className="mx-auto h-10 w-10 text-signal" aria-hidden />
+        <CheckCircle2 className="mx-auto h-10 w-10 text-signal-ink" aria-hidden />
         <h3 className="mt-4 text-xl font-semibold">You&rsquo;re on the list.</h3>
         <p className="mt-2 text-sm text-dim">
           We&rsquo;ll reach out personally to schedule your station walkthrough —
@@ -96,7 +96,7 @@ export function EarlyAccessForm() {
         </div>
         <div className="space-y-1.5">
           <label className={LABEL} htmlFor="email">
-            Work email <span className="text-signal">*</span>
+            Work email <span className="text-signal-ink">*</span>
           </label>
           <input
             id="email"
@@ -175,7 +175,7 @@ export function EarlyAccessForm() {
       </div>
 
       {state.status === "error" && (
-        <p className="flex items-start gap-2 text-sm text-signal-soft">
+        <p className="flex items-start gap-2 text-sm text-signal-ink">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           {state.message}
         </p>
@@ -184,7 +184,7 @@ export function EarlyAccessForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-5 py-3 text-sm font-semibold text-white transition hover:bg-signal-soft disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-5 py-3 text-sm font-semibold text-fg transition hover:bg-signal-soft disabled:cursor-not-allowed disabled:opacity-60"
       >
         {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
         {submitting ? "Sending…" : "Request early access"}

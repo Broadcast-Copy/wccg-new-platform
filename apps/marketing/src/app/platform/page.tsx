@@ -36,7 +36,7 @@ export default function Page() {
       <section id="top" className="relative overflow-hidden bc-glow">
         <div className="pointer-events-none absolute inset-0 bc-grid" aria-hidden />
         <div className="relative mx-auto max-w-6xl px-5 pt-20 pb-16 text-center sm:pt-28">
-          <span className="inline-flex items-center gap-2 rounded-full border border-signal/30 bg-signal/10 px-3.5 py-1.5 text-xs font-medium tracking-wide text-signal-soft uppercase">
+          <span className="inline-flex items-center gap-2 rounded-full border border-signal/30 bg-signal/10 px-3.5 py-1.5 text-xs font-medium tracking-wide text-signal-ink uppercase">
             <span className="bc-pulse h-1.5 w-1.5 rounded-full bg-signal" aria-hidden />
             Live on air today
           </span>
@@ -54,7 +54,7 @@ export default function Page() {
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
               href="#early-access"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-6 py-3 text-sm font-semibold text-white transition hover:bg-signal-soft sm:w-auto"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-6 py-3 text-sm font-semibold text-fg transition hover:bg-signal-soft sm:w-auto"
             >
               Get early access <ArrowRight className="h-4 w-4" aria-hidden />
             </a>
@@ -124,7 +124,7 @@ export default function Page() {
           <ol className="mt-12 grid gap-8 md:grid-cols-3">
             {STEPS.map((step) => (
               <li key={step.n} className="border-t border-line pt-6">
-                <span className="font-mono text-sm text-signal">{step.n}</span>
+                <span className="font-mono text-sm text-signal-ink">{step.n}</span>
                 <h3 className="mt-3 text-lg font-semibold">{step.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-dim">{step.body}</p>
               </li>
@@ -156,7 +156,7 @@ export default function Page() {
               }
             >
               {plan.featured && (
-                <span className="absolute -top-3 left-7 rounded-full bg-signal px-3 py-1 text-xs font-semibold text-white">
+                <span className="absolute -top-3 left-7 rounded-full bg-signal px-3 py-1 text-xs font-semibold text-fg">
                   Most stations
                 </span>
               )}
@@ -171,7 +171,7 @@ export default function Page() {
               <ul className="mt-6 space-y-3">
                 {plan.points.map((point) => (
                   <li key={point} className="flex items-start gap-2.5 text-sm">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-signal" aria-hidden />
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-signal-ink" aria-hidden />
                     <span className="text-dim">{point}</span>
                   </li>
                 ))}
@@ -180,7 +180,7 @@ export default function Page() {
                 href="#early-access"
                 className={
                   plan.featured
-                    ? "mt-8 block rounded-lg bg-signal px-5 py-3 text-center text-sm font-semibold text-white transition hover:bg-signal-soft"
+                    ? "mt-8 block rounded-lg bg-signal px-5 py-3 text-center text-sm font-semibold text-fg transition hover:bg-signal-soft"
                     : "mt-8 block rounded-lg border border-line px-5 py-3 text-center text-sm font-semibold transition hover:border-dim/40"
                 }
               >
@@ -198,7 +198,7 @@ export default function Page() {
             {ADD_ONS.map((addOn) => (
               <div key={addOn.name}>
                 <p className="font-medium">{addOn.name}</p>
-                <p className="mt-1 text-sm text-signal">{addOn.price}</p>
+                <p className="mt-1 text-sm text-signal-ink">{addOn.price}</p>
                 <p className="mt-2 text-sm text-dim">{addOn.blurb}</p>
               </div>
             ))}
@@ -243,7 +243,7 @@ export default function Page() {
                 "Per-station data isolation enforced in the database",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2.5">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-signal" aria-hidden />
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-signal-ink" aria-hidden />
                   {item}
                 </li>
               ))}
@@ -266,6 +266,9 @@ export default function Page() {
           </a>
           <a href="/changelog" className="transition hover:text-fg">
             Changelog
+          </a>
+          <a href="/product-sheet/" className="transition hover:text-fg">
+            Product sheet
           </a>
           <p>
             Flagship:{" "}
