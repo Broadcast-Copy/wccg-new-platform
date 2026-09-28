@@ -5,6 +5,7 @@ import { Wordmark } from "@/components/wordmark";
 import { EarlyAccessForm } from "@/components/early-access-form";
 import { Features } from "@/components/features";
 import { LiveOnAir } from "@/components/live-on-air";
+import { SeeItWork } from "@/components/see-it-work";
 import { FAQS, STATS } from "@/content";
 import { FLAGSHIP_URL } from "@/lib/site";
 
@@ -114,6 +115,9 @@ export default function Page() {
 
         <Features />
       </section>
+
+      {/* ------------------------------------------------ see it work */}
+      <SeeItWork />
 
       {/* ------------------------------------------------------- steps */}
       <section className="border-y border-line bg-surface">
