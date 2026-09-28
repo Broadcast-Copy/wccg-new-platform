@@ -1,31 +1,21 @@
 import type { Metadata } from "next";
 import type { LucideIcon } from "lucide-react";
-import {
-  ArrowDown,
-  AudioLines,
-  Check,
-  Cpu,
-  Headphones,
-  Laptop,
-  Mic,
-  Monitor,
-  Network,
-  ShieldCheck,
-  Sliders,
-  Truck,
-} from "lucide-react";
+import { Cpu, Laptop, Network, ShieldCheck, Server, Terminal } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Wordmark } from "@/components/wordmark";
+import { SITE_URL } from "@/lib/site";
 import {
-  AIRSUITE_CONSOLE,
-  BROADCAST_COPY_MANAGER,
-  FLAGSHIP_URL,
-  SITE_URL,
-} from "@/lib/site";
+  ManagerDownloadButton,
+  ManagerFacts,
+  ModuleList,
+  PlannedList,
+  ReleaseCatalogProvider,
+  ReleaseTable,
+} from "./release-catalog";
 
 const title = "Download — Broadcast Copy";
 const description =
-  "Download the Broadcast Copy Manager — one native Windows app that carries the whole studio: it launches every module, installs and updates them from the release registry, and verifies every artifact. AirSuite Console is available through it today.";
+  "Download the Broadcast Copy Manager - one native Windows app that installs and updates every AirSuite module from the release registry, verifying each one against its published SHA-256.";
 
 export const metadata: Metadata = {
   title,
@@ -34,526 +24,261 @@ export const metadata: Metadata = {
   openGraph: { title, description, type: "website", url: `${SITE_URL}/download` },
 };
 
-// Every state on this page is true. "download" is a live link, "lan" is
-// distributed on the studio LAN by design, "planned" is a roadmap item — no
-// fake installed/updating rows now that the manager is a real product.
-type State = "download" | "lan" | "planned";
+// Every sentence on this page is true of the software as shipped. Versions, sizes and
+// checksums come from the release registry at runtime (release-catalog.tsx); nothing here
+// claims a module is downloadable before its build is published.
 
-type Module = {
-  icon: LucideIcon;
-  name: string;
-  body: string;
-  /** empty on planned modules — nothing to claim yet */
-  version: string;
-  size: string;
-  state: State;
-  /** set on the modules you can actually download today */
-  href?: string;
-};
-
-const MODULES: Module[] = [
+const STEPS: { n: string; t: string; b: string }[] = [
   {
-    icon: AudioLines,
-    name: "AirSuite Console",
-    body: "The software mixing console. Sixteen strips, PGM/AUD/UTILITY buses, cue, mic logic and mix-minus, metering to EBU R 128 — running on your Dante network with no surface to buy.",
-    version: AIRSUITE_CONSOLE.version,
-    size: AIRSUITE_CONSOLE.size,
-    state: "download",
-    href: AIRSUITE_CONSOLE.href,
+    n: "1",
+    t: "Reads the registry",
+    b: "The Updates window lists every published module and compares each with what this machine has - by the module's own install record, so it knows an install even if it predates the Manager.",
   },
   {
-    icon: Cpu,
-    name: "Studio Agent",
-    body: "Runs headless beside the playout box: reports now-playing, telemetry and installed builds. Distributed on the studio LAN rather than from here — it carries your station's fleet credentials.",
-    version: "2.1.0",
-    size: "",
-    state: "lan",
+    n: "2",
+    t: "Downloads and verifies",
+    b: "The artifact is checked against the SHA-256 the registry publishes before a single file lands. A missing or different checksum is a refusal, and the download is discarded.",
   },
   {
-    icon: Sliders,
-    name: "AirSuite On-Air",
-    body: "The live console — deck control, cart wall, mic logic and the log running against the clock.",
-    version: "",
-    size: "",
-    state: "planned",
+    n: "3",
+    t: "Runs the module's own installer",
+    b: "No administrator rights. Each installer prints exactly what it touches, and ships an uninstaller that reverses it.",
   },
   {
-    icon: Mic,
-    name: "AirSuite Production",
-    body: "Multitrack production and voice tracking, with copy and spots pulled from the traffic log.",
-    version: "",
-    size: "",
-    state: "planned",
-  },
-  {
-    icon: Headphones,
-    name: "AirSuite Podcast",
-    body: "Multi-room recording and the publishing chain, wired to the same content library.",
-    version: "",
-    size: "",
-    state: "planned",
-  },
-  {
-    icon: Truck,
-    name: "AirSuite Remote",
-    body: "The road kit — the same surface on a laptop, for remotes and live events.",
-    version: "",
-    size: "",
-    state: "planned",
-  },
-  {
-    icon: Monitor,
-    name: "Screens & Signage",
-    body: "Drives lobby displays, studio clocks and in-store reels from the same campaign calendar.",
-    version: "",
-    size: "",
-    state: "planned",
+    n: "4",
+    t: "Finds it again",
+    b: "Every module writes an install manifest. The Manager reads it back to show the installed version and offer Update when a newer build is published - and only when a person presses it.",
   },
 ];
 
-function StatePill({ state, href, name }: { state: State; href?: string; name: string }) {
-  if (state === "download" && href)
-    return (
-      <a
-        href={href}
-        download
-        className="inline-flex flex-none items-center gap-1.5 rounded-full bg-signal px-3.5 py-1.5 text-xs font-semibold text-fg transition hover:bg-signal-soft"
-      >
-        <ArrowDown className="h-3.5 w-3.5" aria-hidden />
-        Download
-        <span className="sr-only"> {name}</span>
-      </a>
-    );
-  if (state === "lan")
-    return (
-      <span className="inline-flex flex-none items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-faint">
-        <Check className="h-3.5 w-3.5" aria-hidden />
-        LAN install
-      </span>
-    );
-  return (
-    <span className="inline-flex flex-none items-center rounded-full border border-signal/40 bg-signal/10 px-3.5 py-1.5 text-xs font-semibold text-signal-ink">
-      Planned
-    </span>
-  );
-}
-
-type Prereq = {
-  icon: LucideIcon;
-  name: string;
-  body: string;
-  link?: { href: string; label: string };
-};
+type Prereq = { icon: LucideIcon; name: string; body: string; link?: { href: string; label: string } };
 
 const PREREQS: Prereq[] = [
   {
     icon: Laptop,
     name: "Windows 10 or 11, 64-bit",
-    body: "The manager needs nothing else at all — it ships with its own runtime and installs per-user, no administrator rights. Modules carry their own runtimes the same way; the two below apply to the console module.",
+    body: "All the Manager needs. It ships with its own runtime and installs per user, without administrator rights. The modules carry their own runtimes the same way.",
+  },
+  {
+    icon: Terminal,
+    name: "Node.js, for AirSuite Sync",
+    body: "Sync's service runs on Node.js 18 or newer (22 or 24 recommended), installed at its default location. Its installer checks and stops with a plain message if it is missing.",
+    link: { href: "https://nodejs.org", label: "nodejs.org" },
   },
   {
     icon: Network,
-    name: "Dante Controller",
-    body: "Free from Audinate. The console reads and writes audio over Dante, and every subscription — what this machine hears, and what hears it — is made by a person in Dante Controller. The console never writes routing itself: an audio network should only be repatched by somebody who meant to.",
-    link: {
-      href: "https://my.audinate.com/support/downloads",
-      label: "Audinate downloads",
-    },
+    name: "Dante, for AirSuite Console",
+    body: "Dante Controller, and Dante Virtual Soundcard set to ASIO at 48 kHz (or any Dante ASIO device). The console never changes routing itself - a person subscribes it in Dante Controller.",
+    link: { href: "https://my.audinate.com/support/downloads", label: "Audinate downloads" },
   },
   {
-    icon: Cpu,
-    name: "Dante Virtual Soundcard, set to ASIO",
-    body: "This is the audio device the engine opens. Set its interface mode to ASIO rather than WDM, at 48 kHz. A Dante hardware interface works just as well — anything presenting a Dante ASIO device will do; name it in the config and the console uses it.",
+    icon: Server,
+    name: "The library service, for AirSuite Production",
+    body: "Production is a client of the AirSuite Library & Programming service, which owns the format database. Point it at yours when you install it.",
   },
 ];
 
 export default function DownloadPage() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-clip">
       <SiteHeader />
-
-      {/* ------------------------------------------------------------ hero */}
-      <section className="relative overflow-hidden bc-glow">
-        <div className="pointer-events-none absolute inset-0 bc-grid" aria-hidden />
-        <div className="relative mx-auto max-w-6xl px-5 pt-20 pb-14 text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-signal/30 bg-signal/10 px-3.5 py-1.5 text-xs font-medium tracking-wide text-signal-ink uppercase">
-            <span className="bc-pulse h-1.5 w-1.5 rounded-full bg-signal" aria-hidden />
-            One installer
-          </span>
-
-          <h1 className="mx-auto mt-7 max-w-3xl text-4xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-6xl">
-            The Download Manager carries the whole studio.
-          </h1>
-
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-dim text-pretty">
-            You install one thing. Every AirSuite console, the studio agent and
-            the signage driver live inside it — installed, updated and rolled
-            back from one window, so a studio machine is never half a version
-            behind the platform.
-          </p>
-
-          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a
-              href={BROADCAST_COPY_MANAGER.href}
-              download
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-6 py-3 text-sm font-semibold text-fg transition hover:bg-signal-soft sm:w-auto"
-            >
-              <ArrowDown className="h-4 w-4" aria-hidden />
-              Download Broadcast Copy Manager
-            </a>
-            <a
-              href={FLAGSHIP_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex w-full items-center justify-center rounded-lg border border-line bg-elevated px-6 py-3 text-sm font-semibold transition hover:border-dim/40 sm:w-auto"
-            >
-              See it running
-            </a>
-          </div>
-
-          <p className="mt-6 text-sm text-faint">
-            v{BROADCAST_COPY_MANAGER.version} · {BROADCAST_COPY_MANAGER.size} · Windows 10/11
-            64-bit · per-user install, no admin rights
-          </p>
-        </div>
-      </section>
-
-      {/* -------------------------------------------------- manager mockup */}
-      <section id="modules" className="mx-auto max-w-5xl px-5 pb-6">
-        <div className="overflow-hidden rounded-2xl border border-line bg-elevated">
-          <div className="flex items-center gap-3 border-b border-line bg-ink px-4 py-3">
-            <span className="flex gap-1.5" aria-hidden>
-              <span className="h-2.5 w-2.5 rounded-full bg-line" />
-              <span className="h-2.5 w-2.5 rounded-full bg-line" />
-              <span className="h-2.5 w-2.5 rounded-full bg-line" />
+      <ReleaseCatalogProvider>
+        {/* ------------------------------------------------------------ hero */}
+        <section className="relative overflow-hidden bc-glow">
+          <div className="pointer-events-none absolute inset-0 bc-grid" aria-hidden />
+          <div className="relative mx-auto max-w-6xl px-4 pt-16 pb-12 text-center sm:px-5 sm:pt-20 sm:pb-14">
+            <span className="inline-flex items-center gap-2 rounded-full border border-signal/30 bg-signal/10 px-3.5 py-1.5 text-xs font-medium tracking-wide text-signal-ink uppercase">
+              <span className="bc-pulse h-1.5 w-1.5 rounded-full bg-signal" aria-hidden />
+              One download
             </span>
-            <Wordmark px={2} className="ml-1 text-fg" />
-            <span className="text-xs tracking-[0.18em] text-faint uppercase">
-              Download Manager
-            </span>
-            <span className="ml-auto text-xs text-faint">WBCC 104.5 · Studio A</span>
-          </div>
 
-          <div className="grid md:grid-cols-[190px_1fr]">
-            <aside className="border-b border-line p-4 text-sm md:border-r md:border-b-0">
-              <p className="text-[11px] tracking-[0.18em] text-faint uppercase">
-                Library
-              </p>
-              <ul className="mt-3 space-y-1">
-                {["All modules", "Installed", "Updates", "Beta channel"].map(
-                  (item, i) => (
-                    <li
-                      key={item}
-                      className={`rounded-lg px-3 py-2 ${
-                        i === 0 ? "bg-signal/10 font-semibold text-signal-ink" : "text-dim"
-                      }`}
-                    >
-                      {item}
-                    </li>
-                  ),
-                )}
-              </ul>
-              <p className="mt-6 text-[11px] tracking-[0.18em] text-faint uppercase">
-                Machine
-              </p>
-              <p className="mt-2 text-xs leading-relaxed text-dim">
-                Licensed to your station. Modules follow the station licence, not
-                the seat.
-              </p>
-            </aside>
+            <h1 className="mx-auto mt-7 max-w-3xl text-4xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-6xl">
+              One download installs the rest.
+            </h1>
 
-            <div className="divide-y divide-line">
-              {MODULES.map((m) => {
-                const Icon = m.icon;
-                return (
-                  <div key={m.name} className="flex items-start gap-4 px-5 py-4">
-                    <span
-                      className="mt-0.5 flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-line bg-ink"
-                      aria-hidden
-                    >
-                      <Icon className="h-5 w-5 text-signal-ink" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                        <p className="font-semibold">{m.name}</p>
-                        {m.version ? (
-                          <span className="font-mono text-xs text-faint">
-                            {m.version}
-                            {m.size ? ` · ${m.size}` : ""}
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="mt-1 text-sm leading-relaxed text-dim">{m.body}</p>
-                    </div>
-                    <StatePill state={m.state} href={m.href} name={m.name} />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-        <p className="mt-3 text-center text-xs text-faint">
-          The Manager and AirSuite Console are live downloads today. Modules marked
-          planned ship into this same window as they land.
-        </p>
-      </section>
+            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-dim text-pretty">
+              Install the Broadcast Copy Manager once. Its Updates window installs and updates every
+              AirSuite module from the release registry, and checks each one against its published
+              SHA-256 before a single file lands.
+            </p>
 
-      {/* --------------------------------------------------- manager download */}
-      <section id="manager" className="mx-auto max-w-5xl px-5 pt-16">
-        <div className="rounded-2xl border border-line bg-surface p-6 sm:p-8">
-          <div className="flex flex-wrap items-start justify-between gap-6">
-            <div className="max-w-2xl">
-              <span className="text-[11px] tracking-[0.18em] text-faint uppercase">
-                The download
-              </span>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-                Broadcast Copy Manager
-              </h2>
-              <p className="mt-4 leading-relaxed text-dim">
-                A native Windows dashboard for the whole suite: your station on the left,
-                every module a card that drills straight into the application, live service
-                status that never claims ON AIR while an engine is muted.
-              </p>
-              <p className="mt-4 leading-relaxed text-dim">
-                Its Updates window is this page, made real. It reads the Broadcast Copy
-                release registry, compares it with the machine, and installs or updates
-                modules on request — every artifact verified against its published SHA-256
-                before a single file lands. It even runs unattended for scripted studio
-                updates.
-              </p>
-            </div>
-
-            <div className="w-full sm:w-auto">
+            <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <ManagerDownloadButton label="Download Broadcast Copy Manager" />
               <a
-                href={BROADCAST_COPY_MANAGER.href}
-                download
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-6 py-3 text-sm font-semibold text-fg transition hover:bg-signal-soft sm:w-auto"
+                href="#modules"
+                className="inline-flex w-full items-center justify-center rounded-lg border border-line bg-elevated px-6 py-3 text-sm font-semibold transition hover:border-dim/40 sm:w-auto"
               >
-                <ArrowDown className="h-4 w-4" aria-hidden />
-                Download for Windows
+                See every module
               </a>
-              <dl className="mt-4 space-y-1 font-mono text-xs text-faint">
-                <div className="flex gap-2">
-                  <dt className="text-dim">version</dt>
-                  <dd>{BROADCAST_COPY_MANAGER.version}</dd>
-                </div>
-                <div className="flex gap-2">
-                  <dt className="text-dim">download</dt>
-                  <dd>{BROADCAST_COPY_MANAGER.size}</dd>
-                </div>
-                <div className="flex gap-2">
-                  <dt className="text-dim">installed</dt>
-                  <dd>{BROADCAST_COPY_MANAGER.installedSize}</dd>
-                </div>
-              </dl>
-              {/* Published so an engineer can check what they downloaded is what we built. */}
-              <p className="mt-3 max-w-[15rem] text-[11px] leading-relaxed text-faint">
-                SHA-256{" "}
-                <a
-                  className="font-mono break-all text-dim underline decoration-line underline-offset-2 hover:text-fg"
-                  href={BROADCAST_COPY_MANAGER.sha256Href}
-                >
-                  {BROADCAST_COPY_MANAGER.sha256.slice(0, 16)}…
-                </a>
-              </p>
             </div>
+            <ManagerFacts />
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* --------------------------------------------------- console download */}
-      <section id="console" className="mx-auto max-w-5xl px-5 pt-16">
-        <div className="rounded-2xl border border-line bg-surface p-6 sm:p-8">
-          <div className="flex flex-wrap items-start justify-between gap-6">
-            <div className="max-w-2xl">
-              <span className="text-[11px] tracking-[0.18em] text-faint uppercase">
-                Also available directly
-              </span>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-                AirSuite Console
-              </h2>
-              <p className="mt-2 text-sm text-faint">
-                The manager installs and updates it for you — this direct download exists
-                for machines that want exactly one module and nothing else.
-              </p>
-              <p className="mt-4 leading-relaxed text-dim">
-                A full mixing console in software, on the Dante network you already have.
-                Sixteen strips with PGM, audition and utility buses, cue, fader taper that
-                behaves like a broadcast surface, mic logic that ducks playout when a mic
-                opens, mix-minus for the phone, and programme loudness metered to EBU R 128.
-              </p>
-              <p className="mt-4 leading-relaxed text-dim">
-                It is one process. It owns the audio device, does the mixing and serves its
-                own surface, so you open a browser on the studio machine and the console is
-                there.
-              </p>
-            </div>
-
-            <div className="w-full sm:w-auto">
-              <a
-                href={AIRSUITE_CONSOLE.href}
-                download
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-6 py-3 text-sm font-semibold text-fg transition hover:bg-signal-soft sm:w-auto"
-              >
-                <ArrowDown className="h-4 w-4" aria-hidden />
-                Download for Windows
-              </a>
-              <dl className="mt-4 space-y-1 font-mono text-xs text-faint">
-                <div className="flex gap-2">
-                  <dt className="text-dim">version</dt>
-                  <dd>{AIRSUITE_CONSOLE.version}</dd>
-                </div>
-                <div className="flex gap-2">
-                  <dt className="text-dim">download</dt>
-                  <dd>{AIRSUITE_CONSOLE.size}</dd>
-                </div>
-                <div className="flex gap-2">
-                  <dt className="text-dim">installed</dt>
-                  <dd>{AIRSUITE_CONSOLE.installedSize}</dd>
-                </div>
-              </dl>
-              {/* Published so an engineer can check what they downloaded is what we built. */}
-              <p className="mt-3 max-w-[15rem] text-[11px] leading-relaxed text-faint">
-                SHA-256{" "}
-                <a
-                  className="font-mono break-all text-dim underline decoration-line underline-offset-2 hover:text-fg"
-                  href={AIRSUITE_CONSOLE.sha256Href}
-                >
-                  {AIRSUITE_CONSOLE.sha256.slice(0, 16)}…
-                </a>
-              </p>
-            </div>
+        {/* --------------------------------------------------------- modules */}
+        <section id="modules" className="mx-auto max-w-5xl px-4 pt-6 sm:px-5">
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Every module</h2>
+          <p className="mt-3 max-w-3xl leading-relaxed text-dim">
+            The Manager comes first; everything below it installs through its Updates window. A module
+            shows a download here only once its build is published - the same moment the Manager
+            starts offering it.
+          </p>
+          <div className="mt-8">
+            <ModuleList />
           </div>
-        </div>
-      </section>
 
-      {/* ---------------------------------------------------- prerequisites */}
-      <section className="mx-auto max-w-5xl px-5 pt-14">
-        <h2 className="text-xl font-semibold tracking-tight">Before you install</h2>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-dim">
-          The manager needs only the first. The console module needs the other two, and its
-          installer checks for both and tells you plainly if they are missing.
-        </p>
+          <h3 className="mt-12 text-lg font-semibold tracking-tight">Release details</h3>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-dim">
+            Published so an engineer can check that what was downloaded is what was built: compare the
+            SHA-256 of the zip with the one here, or let the Manager do it.
+          </p>
+          <div className="mt-5">
+            <ReleaseTable />
+          </div>
 
-        <div className="mt-8 grid gap-8 md:grid-cols-3">
-          {PREREQS.map((p) => {
-            const Icon = p.icon;
-            return (
-              <div key={p.name} className="border-t border-line pt-6">
-                <span
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-ink"
-                  aria-hidden
-                >
-                  <Icon className="h-5 w-5 text-signal-ink" />
-                </span>
-                <h3 className="mt-4 font-semibold">{p.name}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-dim">{p.body}</p>
-                {p.link ? (
-                  <a
-                    href={p.link.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-3 inline-block text-sm font-semibold text-signal-ink hover:text-signal-ink"
+          <div className="mt-10 rounded-2xl border border-line bg-surface px-4 py-5 sm:px-6">
+            <p className="text-[11px] tracking-[0.18em] text-faint uppercase">On the roadmap</p>
+            <PlannedList />
+          </div>
+        </section>
+
+        {/* ------------------------------------------- what the Manager does */}
+        <section className="mx-auto max-w-5xl px-4 pt-16 sm:px-5">
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            What the Manager does with a module
+          </h2>
+          <ol className="mt-8 grid gap-6 sm:grid-cols-2">
+            {STEPS.map((s) => (
+              <li key={s.n} className="rounded-2xl border border-line bg-elevated p-5">
+                <span className="font-mono text-xs text-signal-ink">{s.n}</span>
+                <p className="mt-2 font-semibold">{s.t}</p>
+                <p className="mt-2 text-sm leading-relaxed text-dim">{s.b}</p>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-6 max-w-3xl text-sm leading-relaxed text-dim">
+            It also runs unattended for a scripted update:{" "}
+            <span className="font-mono text-xs break-all text-fg">
+              BroadcastCopySuiteManager.exe --install &lt;module&gt; --log update.log
+            </span>{" "}
+            runs the same download, check and installer, reads the install back, and exits 0 or 1.
+          </p>
+        </section>
+
+        {/* ---------------------------------------------------- prerequisites */}
+        <section className="mx-auto max-w-5xl px-4 pt-16 sm:px-5">
+          <h2 className="text-xl font-semibold tracking-tight">Before you install</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-dim">
+            The Manager needs only the first. The others belong to the module named on each, and each
+            module&apos;s installer checks for its own and says plainly if one is missing.
+          </p>
+          <div className="mt-8 grid gap-8 sm:grid-cols-2">
+            {PREREQS.map((p) => {
+              const Icon = p.icon;
+              return (
+                <div key={p.name} className="border-t border-line pt-6">
+                  <span
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-ink"
+                    aria-hidden
                   >
-                    {p.link.label} →
-                  </a>
-                ) : null}
+                    <Icon className="h-5 w-5 text-signal-ink" />
+                  </span>
+                  <h3 className="mt-4 font-semibold">{p.name}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-dim">{p.body}</p>
+                  {p.link ? (
+                    <a
+                      href={p.link.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-3 inline-block text-sm font-semibold text-signal-ink hover:underline"
+                    >
+                      {p.link.label} →
+                    </a>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ------------------------------------------- install / uninstall */}
+        <section className="mx-auto max-w-5xl px-4 pt-16 sm:px-5">
+          <div className="rounded-2xl border border-line bg-elevated p-5 sm:p-8">
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="h-5 w-5 flex-none text-signal-ink" aria-hidden />
+              <h2 className="text-xl font-semibold tracking-tight">What it does to the machine</h2>
+            </div>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-dim">
+              A studio PC is not a place for surprises, so all of it is listed here. Unzip the Manager,
+              run{" "}
+              <span className="font-mono text-xs break-all text-fg">Install-BroadcastCopyManager.ps1</span>,
+              and it installs for the current user without asking for administrator rights.
+            </p>
+
+            <div className="mt-7 grid gap-8 md:grid-cols-2">
+              <div>
+                <p className="text-[11px] tracking-[0.18em] text-faint uppercase">The Manager touches</p>
+                <ul className="mt-3 space-y-2 text-sm leading-relaxed text-dim">
+                  <li>
+                    <span className="font-mono text-xs break-all text-fg">
+                      %LOCALAPPDATA%\Programs\Broadcast Copy Manager
+                    </span>{" "}
+                    - the program files and its install manifest
+                  </li>
+                  <li>
+                    <span className="font-mono text-xs break-all text-fg">
+                      %LOCALAPPDATA%\Broadcast Copy Manager
+                    </span>{" "}
+                    - your configuration, seeded once and never overwritten
+                  </li>
+                  <li>A Start Menu shortcut, and a desktop one unless you decline it</li>
+                  <li>One per-user entry, so it appears in Settings &rsaquo; Apps</li>
+                  <li>Your Startup folder only if you ask for it (-Autostart)</li>
+                </ul>
+                <p className="mt-4 text-sm leading-relaxed text-dim">
+                  No services, no scheduled tasks, no firewall rules, nothing in Program Files, and no
+                  change to any audio device or Dante setting.
+                </p>
               </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ------------------------------------------- install / uninstall */}
-      <section className="mx-auto max-w-5xl px-5 pt-14">
-        <div className="rounded-2xl border border-line bg-elevated p-6 sm:p-8">
-          <div className="flex items-center gap-3">
-            <ShieldCheck className="h-5 w-5 flex-none text-signal-ink" aria-hidden />
-            <h2 className="text-xl font-semibold tracking-tight">
-              What it does to the machine
-            </h2>
-          </div>
-          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-dim">
-            A studio PC is not a place for surprises, so the whole of it is listed here.
-            Unzip, run{" "}
-            <span className="font-mono text-fg">Install-BroadcastCopyManager.ps1</span>, and
-            the manager installs for the current user without ever asking for administrator
-            rights. Modules it installs follow the same discipline and print their own list.
-          </p>
-
-          <div className="mt-7 grid gap-8 md:grid-cols-2">
-            <div>
-              <p className="text-[11px] tracking-[0.18em] text-faint uppercase">
-                Everything it touches
-              </p>
-              <ul className="mt-3 space-y-2 text-sm leading-relaxed text-dim">
-                <li>
-                  <span className="font-mono text-xs text-fg">
-                    %LOCALAPPDATA%\Programs\Broadcast Copy Manager
-                  </span>{" "}
-                  — the program files
-                </li>
-                <li>
-                  <span className="font-mono text-xs text-fg">
-                    %LOCALAPPDATA%\Broadcast Copy Manager
-                  </span>{" "}
-                  — your station configuration, seeded once and never overwritten
-                </li>
-                <li>A Start Menu shortcut, and a desktop one unless you decline it</li>
-                <li>One per-user registry entry, so it appears in Settings &rsaquo; Apps</li>
-              </ul>
-              <p className="mt-4 text-sm leading-relaxed text-dim">
-                No services, no scheduled tasks, no autostart, no firewall rules, nothing in
-                Program Files, and no change to any audio device or Dante setting.
-              </p>
-            </div>
-
-            <div>
-              <p className="text-[11px] tracking-[0.18em] text-faint uppercase">
-                The console module arrives switched off
-              </p>
-              <p className="mt-3 text-sm leading-relaxed text-dim">
-                Outputs ship disabled, so a console that has just been installed writes
-                silence to every transmit channel. It meters, mixes and drives the surface —
-                it cannot put audio on your network until you say so. The surface answers on
-                the local machine only until you widen it.
-              </p>
-              <p className="mt-4 text-sm leading-relaxed text-dim">
-                Turn the outputs on once you have looked in Dante Controller and know exactly
-                what is subscribed to that machine. The first thing a new console should not
-                do is reach air by itself.
-              </p>
-
-              <p className="mt-6 text-[11px] tracking-[0.18em] text-faint uppercase">
-                Removing it
-              </p>
-              <p className="mt-3 text-sm leading-relaxed text-dim">
-                Settings &rsaquo; Apps &rsaquo; AirSuite Console, or run the uninstaller in the
-                install folder. It removes only what its own install manifest says it created,
-                and it stops only the engine running from that folder. Your channel map is
-                kept so a reinstall picks up where you left off; add{" "}
-                <span className="font-mono text-xs text-fg">-Purge</span> to take that too.
-              </p>
+              <div>
+                <p className="text-[11px] tracking-[0.18em] text-faint uppercase">The modules</p>
+                <ul className="mt-3 space-y-2 text-sm leading-relaxed text-dim">
+                  <li>
+                    <span className="font-semibold text-fg">Console</span> arrives with its outputs
+                    switched off: it cannot put audio on your network until you turn them on.
+                  </li>
+                  <li>
+                    <span className="font-semibold text-fg">Sync</span> installs to{" "}
+                    <span className="font-mono text-xs break-all text-fg">C:\AirSuiteSync</span> (or your
+                    per-user folder), starts in shadow mode, and every example job is off.
+                  </li>
+                  <li>
+                    Each uninstaller removes only what its install manifest says it created, and keeps
+                    your configuration unless you add{" "}
+                    <span className="font-mono text-xs text-fg">-Purge</span>.
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </ReleaseCatalogProvider>
 
       {/* ----------------------------------------------------------- notes */}
-      <section className="mx-auto max-w-5xl px-5 py-20">
+      <section className="mx-auto max-w-5xl px-4 py-16 sm:px-5 sm:py-20">
         <div className="grid gap-8 md:grid-cols-3">
           {[
             {
-              t: "One version, everywhere",
-              b: "The manager pins every studio machine to the build your station is licensed for, so On-Air and Production are never arguing about a log format.",
+              t: "Nothing installs itself",
+              b: "The Manager tells you an update exists. It installs one when a person presses Update, or when a script you wrote asks - never on its own.",
             },
             {
-              t: "Updates on your schedule",
-              b: "Nothing installs mid-show. Updates stage in the background and apply when the machine is off air, or when you say so.",
+              t: "Every artifact verified",
+              b: "Each download is checked against the SHA-256 in the registry before anything is written. No checksum means no install.",
             },
             {
-              t: "Roll back in one click",
-              b: "The last two builds of every module stay on disk. If a release misbehaves at 6am, you are not waiting on us.",
+              t: "No administrator rights",
+              b: "The Manager and every module install without administrator rights - the Manager, Console and Production per user - and uninstall the same way.",
             },
           ].map((c) => (
             <div key={c.t} className="border-t border-line pt-6">
@@ -563,25 +288,27 @@ export default function DownloadPage() {
           ))}
         </div>
 
-        <div className="mt-14 rounded-2xl border border-line bg-surface px-6 py-6 text-sm text-dim sm:px-8">
-          <p className="text-[11px] tracking-[0.18em] text-faint uppercase">
-            Also available
-          </p>
+        <div className="mt-14 rounded-2xl border border-line bg-surface px-5 py-6 text-sm text-dim sm:px-8">
+          <div className="flex items-center gap-2">
+            <Cpu className="h-4 w-4 text-signal-ink" aria-hidden />
+            <p className="text-[11px] tracking-[0.18em] text-faint uppercase">Also available</p>
+          </div>
           <p className="mt-3 leading-relaxed">
-            Listener apps for iOS and Android, plus Roku, Fire TV and Apple TV
-            channels and the Alexa and Google actions, are built per station from
-            your brand kit and published under your own developer accounts — ask
-            us and we will set them up with you.
+            Listener apps for iOS and Android, plus Roku, Fire TV and Apple TV channels and the Alexa and
+            Google actions, are built per station from your brand kit and published under your own
+            developer accounts - ask us and we will set them up with you.
           </p>
         </div>
       </section>
 
       <footer className="border-t border-line">
-        <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-5 py-10 text-sm text-faint sm:flex-row">
+        <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-4 py-10 text-sm text-faint sm:flex-row sm:px-5">
           <Wordmark px={2} className="text-dim" />
-          <p>
+          <p className="text-center">
             Broadcast Copy · pricing on request ·{" "}
-            <a href="/platform#early-access" className="underline underline-offset-2 hover:text-dim">join the waitlist</a>
+            <a href="/platform#early-access" className="underline underline-offset-2 hover:text-dim">
+              join the waitlist
+            </a>
           </p>
         </div>
       </footer>
