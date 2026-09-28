@@ -209,7 +209,7 @@ export const FAQS = [
   },
   {
     q: "Is my station's data isolated from other stations?",
-    a: "Yes, and it's enforced in the database rather than only in the app. Every station-scoped table carries a station id under row-level security, so one station cannot read another's rows even if the application layer is wrong.",
+    a: "Yes. Every station-scoped table carries a station ID, and row-level security in the database filters on it, not only the app. Before a second station goes live, the tables that hold private data move to strict per-station reads. The planned architecture goes further: each station gets its own database, and only shared records such as accounts and licences live in a common control plane.",
   },
   {
     q: "How does onboarding work?",
