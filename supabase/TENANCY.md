@@ -86,7 +86,8 @@ land, so a new station starts current rather than replaying a chain.
 | Tenant directory | `organization_members` `station_domains` `station_entitlements` (`organizations` and `stations` are **BOTH** — see below) |
 | Billing | `platform_fees` |
 | Station credentials | `airsuite_station_keys` `airsuite_station_status` |
-| Platform audit | `audit_log` `impersonation_log` |
+| Software licensing | `bc_license_keys` `bc_license_activations` `bc_license_throttle` (migration 116) |
+| Platform audit | `audit_log` `impersonation_log` `bc_admin_audit` (migration 115, the back office's append-only trail) |
 
 Note four of these carry `station_id` (`bc_devices`, `bc_pair_codes`, `airsuite_*`,
 `station_domains`, `station_entitlements`) — having a station_id does NOT make a table content.
@@ -126,10 +127,19 @@ No content table has an inbound FK to any of these, so dropping is clean:
 `bc_devices` `bc_device_agents` `bc_device_installs` `bc_device_peripherals` `bc_pair_codes`
 `bc_releases` `bc_changelog` `bc_features` `bc_docs` `bc_leads` `bc_org_invites` `organization_members`
 `station_domains` `station_entitlements` `platform_fees` `airsuite_station_keys`
-`airsuite_station_status` `audit_log` `impersonation_log`
+`airsuite_station_status` `audit_log` `impersonation_log` `bc_admin_audit`
+`bc_license_keys` `bc_license_activations` `bc_license_throttle`
 
 Drop `bc_devices` last or use `cascade` — the other four `bc_device_*`/`bc_pair_codes` tables
-FK to it.
+FK to it. Likewise `bc_license_activations` FKs to `bc_license_keys`.
+
+**Control-plane rules on BOTH tables.** Migration 117 puts the last-super-admin guard (a
+deferred constraint trigger plus a TRUNCATE guard) on `user_roles`, which every database keeps.
+That rule is the platform's, not a station's, so the strip script drops those two triggers and
+their functions and leaves `user_roles` itself alone. No back-office trigger sits on
+`organizations`, `stations` or `profiles`; changes to those are audited inside the RPCs that make
+them (`bc_update_org`, `bc_update_station`, `bc_admin_set_*_status`), which the strip script also
+drops.
 
 ### STATION CONTENT — one database per station
 
