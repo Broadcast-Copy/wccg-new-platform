@@ -56,7 +56,13 @@
     background:rgba(255,255,255,.82);padding:3px 8px;border-radius:99px;
     box-shadow:0 1px 3px rgba(23,21,15,.08);
   }
-  body.zoomed .rlabel,body.compact .rlabel{opacity:0;}
+  body.zoomed .rlabel,.rlabel.clash{opacity:0;}
+  /* the closed building's own tag reads a size up */
+  .rlabel.tag{font-size:11px;padding:5px 12px;}
+  /* narrow frames (tablets and phones): fewer labels, at a legible size —
+     scene.js drops any that would overlap (see projectOverlay) */
+  body.compact .rlabel{font-size:12px;letter-spacing:.06em;padding:3px 8px;}
+  body.compact .rlabel.tag{padding:5px 11px;letter-spacing:.08em;}
   .pin3{
     position:absolute;transform:translate(-50%,-50%);
     width:23px;height:23px;border-radius:50%;background:var(--ink);color:#fff;
@@ -83,7 +89,9 @@
     font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
     transition:opacity .4s ease;
   }
-  #hint .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite;}
+  #hint .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite;flex:none;}
+  /* the hint and the back button each carry a long and a short wording */
+  .hs,.bs{display:none;}
   body.zoomed #hint{opacity:0;}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
 
@@ -116,6 +124,19 @@
     opacity:0;pointer-events:none;transition:opacity .3s ease;font-family:inherit;
   }
   #backBtn:hover{border-color:var(--ink);}
+  #backBtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  /* In the site's frame a touch screen scrolls the page with one finger and
+     moves the model with two (scene.js); pan-y hands the one-finger swipe to
+     the browser, and this note says how to move the model instead. */
+  body.embed #gl{touch-action:pan-y;}
+  #gesturehint{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:7;
+    background:rgba(23,21,15,.82);color:#fff;font-size:13px;font-weight:600;letter-spacing:.01em;
+    padding:11px 18px;border-radius:99px;white-space:nowrap;pointer-events:none;
+    opacity:0;transition:opacity .25s ease;
+  }
+  #gesturehint.show{opacity:1;}
   body.zoomed #backBtn,body.expanded #backBtn{opacity:1;pointer-events:auto;}
 
   /* sidebar */
@@ -177,6 +198,9 @@
   /* the opening sequence plays on a clean frame: labels, pins and the chrome
      at the bottom of the stage fade back in when it ends or is skipped */
   #hint,#dayclock,#viewbar{transition:opacity .6s ease;}
+  /* the captions are read, not pressed: a finger (or a click) on them reaches
+     the model underneath */
+  #hint,#dayclock{pointer-events:none;}
   /* at dusk the page top turns lilac, so the captions darken and take a
      lilac halo to keep their contrast */
   body.dusk .tagline,body.dusk #hint,body.dusk #dayclock{color:#4f4a55;
@@ -186,25 +210,113 @@
   body.intro #gl{cursor:pointer;}
   @media (prefers-reduced-motion: reduce){
     #hint .dot{animation:none;}
-    .rlabel,#pins,#backBtn,#hint{transition:none !important;}
+    .rlabel,#pins,#backBtn,#hint,#gesturehint{transition:none !important;}
   }
   @media (max-width:1350px){ #tbr{display:none;} }
   @media (max-width:1000px){ #tbl{display:none;} }
-  /* phones: the controls take the bottom-right corner, the hint wraps above
-     them in a tighter setting, and the clock steps up clear of it */
-  @media (max-width:600px){
-    #viewbar{right:14px;bottom:14px;}
-    #hint{left:18px;right:18px;bottom:62px;font-size:10px;letter-spacing:.08em;line-height:1.5;}
-    #dayclock{left:18px;bottom:104px;}
-    /* the back button would sit on the wordmark: it moves down the left edge,
-       above the clock, clear of the view controls in the corner */
-    #backBtn{top:auto;right:auto;left:14px;bottom:134px;padding:8px 12px;font-size:10px;}
+  /* ---- tablets and phones (and any touch screen): type and targets ----
+     No text under 12px, and every control is at least a 44px target. */
+  @media (max-width:920px), (pointer:coarse){
+    #hint{font-size:12px;letter-spacing:.1em;}
+    #dayclock{font-size:12px;}
+    #backBtn{font-size:12px;min-height:44px;padding:0 16px;}
+    .seg{padding:0;}
+    .seg button{font-size:12px;letter-spacing:.12em;min-height:44px;min-width:52px;padding:0 14px;}
+    .chip{font-size:12px;letter-spacing:.12em;min-height:44px;min-width:50px;padding:0 14px;}
+    .side-eyebrow,.d-eyebrow,.gear h4,.gname{font-size:12px;}
+    .gcount{font-size:12px;}
+    .ghead{min-height:44px;}
+    .item{min-height:48px;}
+    .item .num{font-size:12px;width:24px;}
+    .item .name{font-size:15px;}
+    .item .auto{font-size:12px;letter-spacing:.1em;padding:3px 8px;}
+    .back{font-size:12px;min-height:44px;margin-bottom:10px;}
+    .d-promise{font-size:14.5px;}
+    .d-control .lbl{font-size:12px;}
+    .d-control .val{font-size:14.5px;}
+    .g-row .pin{width:22px;height:22px;font-size:12px;}
+    .g-row .t{font-size:14px;}
+    .g-row .d{font-size:13px;}
+    .d-nav button{font-size:12px;min-height:44px;}
+    .cta{font-size:13px;padding:15px;}
+    .note{font-size:12px;}
+    .foot-row{flex-wrap:wrap;gap:4px 14px;margin-top:8px;}
+    #tourBtn,#reelBtn{font-size:12px;min-height:44px;padding:0 4px;}
+    .pin3{width:26px;height:26px;font-size:12px;}
   }
+
+  /* ---- tablets and phones: the list stacks under the model ------------
+     The page scrolls; the stage keeps most of the screen (svh, so it does
+     not jump when a phone's toolbar slides away); the drawing-sheet frame
+     tightens and the chrome sits inside it: header top-left, back button
+     top-right, view controls bottom-right, hint and clock stacked above. */
   @media (max-width:920px){
-    #app{flex-direction:column;}
-    #stage{height:56vh;flex:none;}
-    #side{width:100%;flex:1;border-left:none;border-top:1px solid var(--line);}
     body{overflow:auto;}
+    #app{flex-direction:column;height:auto;min-height:100vh;}
+    #stage{flex:none;height:62vh;height:62svh;min-height:340px;}
+    #side{width:100%;height:auto;flex:none;border-left:none;border-top:1px solid var(--line);}
+    #side .scroll{flex:none;overflow:visible;padding:26px 24px 18px;}
+    #side footer{padding:16px 24px 22px;}
+    #frame{inset:12px;}
+    header{top:24px;left:24px;}
+    #backBtn{top:22px;right:22px;}
+    #viewbar{right:22px;bottom:22px;}
+    #hint{left:24px;right:24px;bottom:78px;}
+    #dayclock{left:24px;bottom:104px;}
+  }
+
+  /* ---- phones --------------------------------------------------------- */
+  @media (max-width:600px){
+    #frame{inset:8px;}
+    header{top:18px;left:16px;right:16px;}
+    /* the wordmark at two pixels a cell instead of three: still crisp */
+    #brandrow svg{width:auto;height:14px;}
+    .tagline{margin-top:8px;max-width:calc(100% - 128px);line-height:1.4;}
+    #backBtn{top:14px;right:14px;padding:0 14px;}
+    #viewbar{right:14px;bottom:14px;gap:6px;}
+    #hint{left:16px;right:16px;bottom:70px;letter-spacing:.08em;white-space:nowrap;}
+    #dayclock{left:16px;bottom:96px;}
+    #hint .hl,#backBtn .bl{display:none;}
+    #hint .hs,#backBtn .bs{display:inline;}
+    #side .scroll{padding:24px 16px 14px;}
+    #side footer{padding:14px 16px 20px;}
+    .side-title{font-size:20px;}
+  }
+
+  /* ---- landscape phones: the model and the list side by side ----------
+     A stacked stage would be a strip a couple of hundred pixels tall. */
+  @media (orientation:landscape) and (max-height:500px){
+    #frame{inset:8px;}
+    header{top:14px;left:16px;right:16px;}
+    #brandrow svg{width:auto;height:14px;}
+    .tagline{margin-top:6px;max-width:calc(100% - 130px);line-height:1.4;}
+    #backBtn{top:12px;right:12px;padding:0 14px;}
+    #viewbar{right:12px;bottom:12px;gap:6px;}
+    #hint{left:16px;right:16px;bottom:66px;letter-spacing:.08em;white-space:nowrap;}
+    #dayclock{left:16px;bottom:90px;}
+    #hint .hl,#backBtn .bl{display:none;}
+    #hint .hs,#backBtn .bs{display:inline;}
+    .side-title{font-size:18px;}
+    .side-sub{font-size:12.5px;}
+  }
+  @media (orientation:landscape) and (max-height:500px) and (max-width:920px){
+    body{overflow:hidden;}
+    #app{flex-direction:row;height:100vh;height:100svh;min-height:0;}
+    #stage{flex:1;height:auto;min-height:0;}
+    #side{width:min(340px,42vw);height:100%;flex:none;border-top:none;border-left:1px solid var(--line);}
+    #side .scroll{flex:1;overflow-y:auto;padding:18px 18px 12px;}
+    #side footer{padding:10px 18px 10px;}
+    .cta{padding:13px;}
+    .foot-row{gap:0 10px;margin-top:4px;}
+    .foot-actions{gap:10px;}
+    #tourBtn,#reelBtn{letter-spacing:.05em;}
+  }
+  /* the smallest landscape phones (iPhone SE class): a pinned footer would
+     wrap to three rows and leave the list a sliver, so the whole rail
+     scrolls and the waitlist button follows the list, as on a portrait phone */
+  @media (orientation:landscape) and (max-height:500px) and (max-width:740px){
+    #side{overflow-y:auto;}
+    #side .scroll{flex:none;overflow:visible;}
   }
 </style>
 </head>
@@ -235,7 +347,8 @@
       </div>
       <button type="button" id="hqBtn" class="chip" aria-pressed="false" title="High quality: tilt-shift lens, sharper pixels and shadows">HQ</button>
     </div>
-    <button id="backBtn">← Whole building</button>
+    <button id="backBtn" type="button">← Whole building</button>
+    <div id="gesturehint" aria-hidden="true">Use two fingers to move the model</div>
   </div>
 
   <aside id="side">

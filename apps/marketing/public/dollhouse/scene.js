@@ -4834,23 +4834,82 @@ function setPins(rec){
   });
 }
 const _pv = new THREE.Vector3();
+/* Narrow frames (tablets and phones, `compact`): the labels run at a legible
+   12px, and all 23 no longer fit, so they are placed in department order and
+   any that would overlap one already placed — or the page chrome — sits out.
+   The closed building's own tag goes first. A label that sat out needs a
+   little extra room to come back, so the slow ambient drift can't make a
+   pair flicker. Sizes are read at the top of the frame, while layout is
+   still clean, and cached until the next resize (labelGen). Wide frames keep
+   the approved behaviour: every label, stepping out of the bottom strip. */
+let labelGen = 0;
+/* phones show at most this many room labels (the building tag aside) */
+const PHONE_LABELS = 5;
+const KEEPOUT = ["header", "#backBtn", "#hint", "#dayclock", "#viewbar"].map(s => document.querySelector(s));
+function keepOutRects(){
+  const s = stage.getBoundingClientRect(), out = [];
+  const backOn = document.body.classList.contains("zoomed") || document.body.classList.contains("expanded");
+  out.floor = s.height;
+  KEEPOUT.forEach(el=>{
+    if(!el || (el.id === "backBtn" && !backOn)) return;
+    const r = el.getBoundingClientRect();
+    if(r.width < 1 || r.height < 1) return;
+    const q = {l:r.left - s.left - 4, r:r.right - s.left + 4, t:r.top - s.top - 4, b:r.bottom - s.top + 4};
+    out.push(q);
+    // nothing is labelled below the chrome stacked at the foot of the stage
+    if(el.id !== "backBtn" && el.tagName !== "HEADER") out.floor = Math.min(out.floor, q.t);
+  });
+  return out;
+}
+function placeLabel(a, px, py, w, h, placed, keep){
+  if(a.gen !== labelGen) return false;             // not measured yet: next frame
+  const pad = a.out ? 6 : 2, hw = a.w/2 + pad, hh = a.h/2 + pad;
+  const R = {l:px - hw, r:px + hw, t:py - hh, b:py + hh};
+  if(R.l < 4 || R.r > w - 4 || R.t < 4 || R.b > keep.floor) return false;
+  const hit = q => R.l < q.r && R.r > q.l && R.t < q.b && R.b > q.t;
+  if(keep.some(hit) || placed.some(hit)) return false;
+  placed.push({l:px - a.w/2 - 2, r:px + a.w/2 + 2, t:py - a.h/2 - 2, b:py + a.h/2 + 2});
+  return true;
+}
 function projectOverlay(){
   const w = stage.clientWidth, h = stage.clientHeight;
-  labelAnchors.forEach(a=>{
-    _pv.copy(a.v).project(cam);
-    a.el.style.left = ((_pv.x*0.5+0.5)*w)+"px";
-    a.el.style.top  = ((-_pv.y*0.5+0.5)*h)+"px";
-    // the bottom strip belongs to the hint and the title block; a label that
-    // lands in it collides with that copy, so it steps aside
-    const py = (-_pv.y*0.5+0.5)*h;
-    a.el.style.display =
-      (_pv.z > 1 || py > h - 72 || (!expandedTarget && !a.room.ext)) ? "none" : "";
-  });
+  const tight = document.body.classList.contains("compact");
+  let keep = null;
+  if(tight){
+    // reads first: chrome boxes and any label sizes not yet cached
+    keep = keepOutRects();
+    for(const a of overlayLabels)
+      if(a.gen !== labelGen && a.el.style.display !== "none" && a.el.offsetWidth){
+        a.w = a.el.offsetWidth; a.h = a.el.offsetHeight; a.gen = labelGen;
+      }
+  }
+  const placed = [];
+  const settle = (a, ok) => {
+    a.out = !ok;
+    if(a.el.classList.contains("clash") === ok) a.el.classList.toggle("clash", !ok);
+  };
   if(bldgTag.style.display !== "none"){
     _pv.copy(bldgTagV).project(cam);
-    bldgTag.style.left = ((_pv.x*0.5+0.5)*w)+"px";
-    bldgTag.style.top  = ((-_pv.y*0.5+0.5)*h)+"px";
+    const px = (_pv.x*0.5+0.5)*w, py = (-_pv.y*0.5+0.5)*h;
+    bldgTag.style.left = px+"px";
+    bldgTag.style.top  = py+"px";
+    settle(bldgA, !tight || placeLabel(bldgA, px, py, w, h, placed, keep));
   }
+  let room = tight && w < 600 ? PHONE_LABELS : Infinity;
+  labelAnchors.forEach(a=>{
+    _pv.copy(a.v).project(cam);
+    const px = (_pv.x*0.5+0.5)*w, py = (-_pv.y*0.5+0.5)*h;
+    a.el.style.left = px+"px";
+    a.el.style.top  = py+"px";
+    // wide frames: the bottom strip belongs to the hint and the title block;
+    // a label that lands in it collides with that copy, so it steps aside
+    const off = _pv.z > 1 || (!tight && py > h - 72) || (!expandedTarget && !a.room.ext);
+    a.el.style.display = off ? "none" : "";
+    if(off) return;
+    const ok = !tight || (room > 0 && placeLabel(a, px, py, w, h, placed, keep));
+    if(ok && tight) room--;
+    settle(a, ok);
+  });
   pinDots.forEach(p=>{
     _pv.copy(p.v).project(cam);
     p.el.style.left = ((_pv.x*0.5+0.5)*w)+"px";
@@ -4926,8 +4985,13 @@ function overviewFrame(){
   u.intersect(HERO_BOX);
   // the open state needs headroom the closed one doesn't: the plates cascade
   // up and back, and their labels sit above the topmost plate
-  return fitBox(u, expandedTarget ? 1.12 : 1.0);
+  const pad = expandedTarget ? 1.12 : 1.0;
+  // a portrait stage (phones) is fitted by its width, which leaves the
+  // station small in a tall frame: there the ring road's outer edge and the
+  // shore run off the sides, as the districts already do on the desktop
+  return fitBox(u, aspect() < 0.85 ? pad * PORTRAIT_FIT : pad);
 }
+const PORTRAIT_FIT = 0.8;
 function roomFrame(room){
   const b = room._box;
   // bias the target toward the back of the room, where the workstations sit
@@ -4991,7 +5055,7 @@ function activate(i, fromTour){
   if(ANIM) RINGS.setMode(room.id === "transmitter" ? "transmitter" : "idle");
   else RINGS.still(room.id === "transmitter");
   revealGroup(room.group);
-  document.getElementById("backBtn").textContent = "← Whole building";
+  setBack("room");
   document.body.classList.add("zoomed");
   hitboxes.forEach(h=> fadeOutline(h.userData.outline, false));
   goCam(roomFrame(room));
@@ -5027,7 +5091,7 @@ function overview(){
   pinsEl.classList.remove("show");
   setPins(null); setDims(null); setLevelVisibility(null);
   closeHomes();
-  document.getElementById("backBtn").textContent = "▣ Close the building";
+  setBack("close");
   goCam(overviewFrame());
   try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){}
 }
@@ -5035,7 +5099,15 @@ function overview(){
 /* ---------- pointer ---------- */
 const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
 let hovered = null, pointer = {x:0, y:0}, downAt = null;
+/* the site frames the model in an iframe and asks for ?embed=1; a touch
+   screen there gets the cooperative gestures (see below) */
+const EMBED = /(\?|&)embed=1\b/.test(location.search);
+if(EMBED) document.body.classList.add("embed");
+/* touch-first devices get "tap" wording; a touch laptop keeps "click" */
+const TOUCH = window.matchMedia("(pointer: coarse)").matches;
 canvas.addEventListener("pointermove", ev=>{
+  // a finger has no hover: no outlines, no parallax, no cursor
+  if(ev.pointerType === "touch") return;
   const r = canvas.getBoundingClientRect();
   mouse.x = ((ev.clientX-r.left)/r.width)*2-1;
   mouse.y = -((ev.clientY-r.top)/r.height)*2+1;
@@ -5095,12 +5167,23 @@ function setHover(hb){
   if(hovered){ fadeOutline(hovered.userData.outline, true); canvas.style.cursor = "pointer"; }
   else canvas.style.cursor = dragging ? "grabbing" : "grab";
 }
-/* ---- grab to pan, wheel to zoom -------------------------------------
+/* ---- grab to pan, wheel to zoom, pinch on touch -----------------------
    The view direction is fixed on purpose — fitBox measures against its screen
    axes and every label projects through it — so dragging pans rather than
    orbits. The whole rig (eye, target and the base the ambient drift is
    measured from) shifts together, which keeps panning working both at the
-   overview and inside a room, and leaves the next goCam free to re-frame. */
+   overview and inside a room, and leaves the next goCam free to re-frame.
+
+   Touch (owner, 2026-09-27: "pinch to zoom is not working on mobile"):
+   - two fingers pinch-zoom about their midpoint and pan with it, clamped to
+     the same limits as the wheel;
+   - one finger pans like the mouse — except when the site frames the model
+     (?embed=1). There one finger belongs to the page, so a phone can scroll
+     past the model: the canvas takes touch-action:pan-y, the browser scrolls
+     natively, and a short note says two fingers move the model (the
+     cooperative pattern of embedded maps);
+   - a tap picks exactly like a click, in both modes. No double-tap: a tap
+     acts at once, with no wait to see whether a second one follows. */
 let dragging = false, lastDrag = null;
 const _pr = new THREE.Vector3(), _pu = new THREE.Vector3(), _pd = new THREE.Vector3();
 function panBy(dxPx, dyPx){
@@ -5114,14 +5197,98 @@ function panBy(dxPx, dyPx){
   camBase.pos.add(mv); camBase.tgt.add(mv);
   cam.lookAt(camTarget);
 }
+/* Zoom by a factor, clamped to the rig's limits. With an anchor (client px)
+   the point of the focal plane under it stays where it is on screen — the
+   view direction never changes, so shrinking the eye-to-target distance and
+   the target's offset from that point by the same ratio keeps it fixed.
+   Without one it zooms about the frame's centre, as the wheel always has. */
+const ZOOM_MIN = 14, ZOOM_MAX = 420, _zp = new THREE.Vector3();
+function zoomBy(k, ax, ay){
+  const dist = cam.position.distanceTo(camTarget);
+  const next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, dist * k));
+  if(ax != null && next !== dist){
+    const r = canvas.getBoundingClientRect();
+    const nx = ((ax - r.left)/r.width)*2 - 1, ny = -((ay - r.top)/r.height)*2 + 1;
+    const hh = Math.tan(cam.fov * Math.PI / 360) * dist, hw = hh * cam.aspect;
+    cam.updateMatrixWorld();
+    cam.matrixWorld.extractBasis(_pr, _pu, _pd);
+    _zp.copy(camTarget).addScaledVector(_pr, nx*hw).addScaledVector(_pu, ny*hh);
+    camTarget.sub(_zp).multiplyScalar(next/dist).add(_zp);
+  }
+  cam.position.copy(camTarget).addScaledVector(VIEW, next);
+  if(camBase){ camBase.pos.copy(cam.position); camBase.tgt.copy(camTarget); }
+  cam.lookAt(camTarget);
+}
+/* the fingers on the canvas, by pointer id; `multi` marks a press that has
+   had two fingers down at some point, which is never a tap */
+const fingers = new Map();
+let pinch = null, multi = false, tapOK = false;
+function twoFingers(){
+  const v = [...fingers.values()];
+  return {x:(v[0][0] + v[1][0])/2, y:(v[0][1] + v[1][1])/2,
+          d:Math.max(12, Math.hypot(v[0][0] - v[1][0], v[0][1] - v[1][1]))};
+}
+/* the cooperative note, shown when one finger swipes on the framed model —
+   three times a visit at most, once per swipe */
+const gHint = document.getElementById("gesturehint");
+let gHintT = 0, gHintN = 0, gHinted = false;
+function coopHint(){
+  if(!gHint || gHinted || gHintN >= 3) return;
+  gHinted = true; gHintN++;
+  gHint.classList.add("show");
+  clearTimeout(gHintT);
+  gHintT = setTimeout(()=> gHint.classList.remove("show"), 1700);
+}
+if(EMBED){
+  // two fingers on the framed model are the model's, not the page's: hold
+  // the page still while they are down (one finger stays the page's)
+  const hold = e => { if(e.touches.length > 1 && e.cancelable) e.preventDefault(); };
+  canvas.addEventListener("touchstart", hold, {passive:false});
+  canvas.addEventListener("touchmove", hold, {passive:false});
+}
+// older iOS Safari zooms the page on a pinch unless its gesture is refused
+canvas.addEventListener("gesturestart", e=> e.preventDefault());
+
 canvas.addEventListener("pointerdown", ev=>{
-  downAt = [ev.clientX, ev.clientY];
+  // the press that skipped the opening sequence never picks, however long it
+  // is held (the skip itself runs first, in a capture listener on the window)
+  const skip = performance.now() < INTRO.swallowUntil;
+  if(ev.pointerType === "touch"){
+    fingers.set(ev.pointerId, [ev.clientX, ev.clientY]);
+    try{ canvas.setPointerCapture(ev.pointerId); }catch(e){}
+    if(fingers.size === 1){
+      downAt = [ev.clientX, ev.clientY]; tapOK = !skip; multi = false; gHinted = false;
+      if(!EMBED){ dragging = true; lastDrag = [ev.clientX, ev.clientY]; }
+    } else {
+      multi = true; tapOK = false; dragging = false;
+      camTween = null;                     // a pinch takes the wheel off any tween
+      pinch = twoFingers();
+    }
+    return;
+  }
+  downAt = skip ? null : [ev.clientX, ev.clientY];
   if(ev.button !== 0) return;
   dragging = true; lastDrag = [ev.clientX, ev.clientY];
   canvas.setPointerCapture(ev.pointerId);
   canvas.style.cursor = "grabbing";
 });
 canvas.addEventListener("pointermove", ev=>{
+  if(ev.pointerType === "touch"){
+    if(!fingers.has(ev.pointerId)) return;
+    fingers.set(ev.pointerId, [ev.clientX, ev.clientY]);
+    if(downAt && Math.hypot(ev.clientX - downAt[0], ev.clientY - downAt[1]) > 10) tapOK = false;
+    if(pinch && fingers.size >= 2){
+      const g = twoFingers();
+      panBy(g.x - pinch.x, g.y - pinch.y);
+      zoomBy(pinch.d / g.d, g.x, g.y);
+      pinch = g;
+    } else if(dragging){
+      camTween = null;
+      panBy(ev.clientX - lastDrag[0], ev.clientY - lastDrag[1]);
+      lastDrag = [ev.clientX, ev.clientY];
+    } else if(EMBED && !tapOK && !multi) coopHint();
+    return;
+  }
   if(!dragging) return;
   camTween = null;                       // a drag takes the wheel off any tween
   panBy(ev.clientX - lastDrag[0], ev.clientY - lastDrag[1]);
@@ -5130,13 +5297,26 @@ canvas.addEventListener("pointermove", ev=>{
 canvas.addEventListener("wheel", ev=>{
   ev.preventDefault();
   camTween = null;
-  const dist = cam.position.distanceTo(camTarget);
-  const next = Math.max(14, Math.min(420, dist * (1 + Math.sign(ev.deltaY) * 0.12)));
-  cam.position.copy(camTarget).addScaledVector(VIEW, next);
-  if(camBase){ camBase.pos.copy(cam.position); camBase.tgt.copy(camTarget); }
-  cam.lookAt(camTarget);
+  zoomBy(1 + Math.sign(ev.deltaY) * 0.12);
 }, {passive:false});
+function fingerUp(ev, cancelled){
+  if(!fingers.delete(ev.pointerId)) return;
+  if(fingers.size >= 2){ pinch = twoFingers(); return; }
+  pinch = null;
+  if(fingers.size === 1){
+    // one finger left after a pinch carries on panning (not in the iframe)
+    if(!EMBED){ dragging = true; lastDrag = [...fingers.values()][0].slice(); }
+    return;
+  }
+  dragging = false;
+  const wasTap = !cancelled && tapOK && !multi && !!downAt;
+  // the browser took a one-finger swipe to scroll the page: say how to move the model
+  if(cancelled && EMBED && !multi) coopHint();
+  downAt = null;
+  if(wasTap) pickAt(ev.clientX, ev.clientY);
+}
 canvas.addEventListener("pointerup", ev=>{
+  if(ev.pointerType === "touch"){ fingerUp(ev, false); return; }
   if(dragging){
     dragging = false;
     try{ canvas.releasePointerCapture(ev.pointerId); }catch(e){}
@@ -5146,7 +5326,18 @@ canvas.addEventListener("pointerup", ev=>{
   const moved = Math.hypot(ev.clientX-downAt[0], ev.clientY-downAt[1]);
   downAt = null;
   if(moved > 6) return;
+  pickAt(ev.clientX, ev.clientY);
+});
+canvas.addEventListener("pointercancel", ev=>{
+  if(ev.pointerType === "touch"){ fingerUp(ev, true); return; }
+  dragging = false; downAt = null;
+});
+/* a click or a tap at client (cx, cy) */
+function pickAt(cx, cy){
   if(performance.now() < INTRO.swallowUntil) return;
+  const r = canvas.getBoundingClientRect();
+  mouse.x = ((cx-r.left)/r.width)*2-1;
+  mouse.y = -((cy-r.top)/r.height)*2+1;
   ray.setFromCamera(mouse, cam);
   // inside the homes zoom, clicking a house lifts (or closes) its own roof
   if(document.body.classList.contains("zoomed") && active >= 0 && ROOMS[active].id === "homes"){
@@ -5169,9 +5360,21 @@ canvas.addEventListener("pointerup", ev=>{
     return;
   }
   if(hb) activate(hb.userData.idx);
-});
+}
 
 /* ---------- sidebar ---------- */
+/* Tablets and phones stack the list under the model, so a choice made down
+   in the list (a department, prev/next, the tour, the flyover) would play
+   out off screen: bring the model back into view first. It scrolls only this
+   page — never the site framing it. */
+function revealStage(){
+  if(getComputedStyle(document.getElementById("app")).flexDirection !== "column") return;
+  const top = stage.getBoundingClientRect().top;
+  if(top < -8){
+    try{ window.scrollBy({top, behavior: REDUCED ? "auto" : "smooth"}); }
+    catch(e){ window.scrollBy(0, top); }
+  }
+}
 const groupsEl = document.getElementById("groups");
 /* Groups collapse. 22 departments in one flat list is a wall of text; folded
    up, the six groups are the map and you open the one you want. The first is
@@ -5192,7 +5395,7 @@ GROUPS.forEach((gname, gi)=>{
     const b = document.createElement("button");
     b.className = "item";
     b.innerHTML = `<span class="num">${String(i+1).padStart(2,"0")}</span><span class="name">${room.name}</span><span class="auto">auto</span><span class="arrow">→</span>`;
-    b.addEventListener("click", ()=>activate(i));
+    b.addEventListener("click", ()=>{ revealStage(); activate(i); });
     b.addEventListener("mouseenter", ()=>{ if(active<0) setHover(hitboxes[i]); });
     b.addEventListener("mouseleave", ()=>{ if(active<0) setHover(null); });
     body.appendChild(b);
@@ -5220,8 +5423,8 @@ document.getElementById("backBtn").addEventListener("click", ()=>{
   if(document.body.classList.contains("zoomed")) overview(); else collapse();
 });
 document.getElementById("backLink").addEventListener("click", overview);
-document.getElementById("prevBtn").addEventListener("click", ()=>activate((active-1+ROOMS.length)%ROOMS.length));
-document.getElementById("nextBtn").addEventListener("click", ()=>activate((active+1)%ROOMS.length));
+document.getElementById("prevBtn").addEventListener("click", ()=>{ revealStage(); activate((active-1+ROOMS.length)%ROOMS.length); });
+document.getElementById("nextBtn").addEventListener("click", ()=>{ revealStage(); activate((active+1)%ROOMS.length); });
 document.addEventListener("keydown", e=>{
   if(e.key === "Escape"){
     if(document.body.classList.contains("zoomed")) overview();
@@ -5242,6 +5445,7 @@ function stopTour(){
 }
 tourBtn.addEventListener("click", ()=>{
   if(tourTimer){ stopTour(); return; }
+  revealStage();
   tourBtn.classList.add("on"); tourBtn.textContent = "■ Stop tour";
   let idx = active >= 0 ? active : -1;
   const step = ()=>{ idx = (idx+1)%ROOMS.length; activate(idx, true); };
@@ -5345,15 +5549,34 @@ const bldgOutline = new THREE.LineSegments(
 bldgOutline.position.copy(bldgHit.position); bldgOutline.visible = false; scene.add(bldgOutline);
 
 const bldgTag = document.createElement("div");
-bldgTag.className = "rlabel";
-bldgTag.style.fontSize = "11px"; bldgTag.style.padding = "5px 12px";
-bldgTag.textContent = "THE STATION · CLICK TO OPEN";
+bldgTag.className = "rlabel tag";
+bldgTag.textContent = TOUCH ? "THE STATION · TAP TO OPEN" : "THE STATION · CLICK TO OPEN";
 labelsEl.appendChild(bldgTag);
+/* the tag and the room labels, in the order the narrow-frame declutter places them */
+const bldgA = {el:bldgTag};
+const overlayLabels = [bldgA, ...labelAnchors];
 const bldgTagV = new THREE.Vector3(0, 4*4.38 + 9.6, 2);   // clears the roof sign
 
-function setHint(msg){
-  const h = document.getElementById("hint");
-  h.innerHTML = '<span class="dot"></span>' + msg;
+/* The hint and the back button carry a long and a short wording; the page
+   shows the short one on phones (index.html). Touch screens read "tap", and
+   in the site's frame the hint says how to move the model. */
+const HINTS = {
+  closed: [(TOUCH ? "Tap" : "Click") + " the building to open it — the grounds are live too",
+           (TOUCH ? "Tap" : "Click") + " the building to open it"],
+  open:   TOUCH ? [EMBED ? "Tap any room — two fingers move the model" : "Tap any room — pinch to zoom, drag to pan",
+                   EMBED ? "Tap a room · two fingers to move" : "Tap any room to zoom in"]
+                : ["Select a department — or click any room", "Click any room to zoom in"],
+};
+function setHint(key){
+  const h = document.getElementById("hint"), m = HINTS[key];
+  h.innerHTML = '<span class="dot"></span><span class="hl">' + m[0] + '</span><span class="hs">' + m[1] + '</span>';
+}
+function setBack(kind){
+  const b = document.getElementById("backBtn");
+  const [icon, long, short] = kind === "room" ? ["←", "Whole building", "Building"]
+                                              : ["▣", "Close the building", "Close"];
+  b.innerHTML = icon + ' <span class="bl">' + long + '</span><span class="bs">' + short + '</span>';
+  b.setAttribute("aria-label", long);
 }
 function applyExpand(){
   const e = t => t<.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;
@@ -5389,8 +5612,8 @@ function tickExpand(dt){
 function openBuilding(){
   if(expandedTarget) return;
   setExpanded(true);
-  setHint("Select a department — or click any room");
-  document.getElementById("backBtn").textContent = "▣ Close the building";
+  setHint("open");
+  setBack("close");
 }
 function collapse(){
   active = -1; stopTour(); stopReel();
@@ -5400,7 +5623,7 @@ function collapse(){
   setPins(null); setDims(null); setLevelVisibility(null);
   closeHomes();
   setExpanded(false);
-  setHint("Click the building to open it — the grounds are live too");
+  setHint("closed");
   try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){}
 }
 
@@ -5435,7 +5658,7 @@ function startReel(){
   step();
 }
 if(reelBtn) reelBtn.addEventListener("click", ()=>{
-  if(reelTimer) { stopReel(); overview(); } else startReel();
+  if(reelTimer) { stopReel(); overview(); } else { revealStage(); startReel(); }
 });
 
 /* =====================================================================
@@ -5940,8 +6163,8 @@ const INTRO = (()=>{
     expandCb = null; expandedTarget = true; expandK = 1; applyExpand();
     document.body.classList.add("expanded");
     document.body.classList.remove("intro");
-    setHint("Select a department — or click any room");
-    document.getElementById("backBtn").textContent = "▣ Close the building";
+    setHint("open");
+    setBack("close");
     TOD.hold(false);
     if(ENV.onairGlow){ const u = ENV.onairGlow.userData.glow; ENV.onairGlow.opacity = u.day + (u.dusk - u.day)*TOD.k; }
     const f = overviewFrame();
@@ -5990,6 +6213,7 @@ function resize(){
   const w = stage.clientWidth, h = stage.clientHeight;
   if(w < 2 || h < 2) return;          // container not laid out yet (iframes)
   document.body.classList.toggle("compact", w < 900);
+  labelGen++;                          // label sizes follow the width: measure again
   renderer.setSize(w, h, false);
   cam.aspect = aspect(); cam.updateProjectionMatrix();
   const f = (active >= 0) ? roomFrame(ROOMS[active]) : overviewFrame();
@@ -6053,7 +6277,8 @@ dirtyShadows();
 }
 levelBoxes();                 // cache bounds while levels sit at build offsets
 applyExpand();                // then fold the building shut for the opening shot
-setHint("Click the building to open it — the grounds are live too");
+setHint("closed");
+setBack("room");
 resize();
 {
   const f = overviewFrame();
