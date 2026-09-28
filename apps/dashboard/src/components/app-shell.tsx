@@ -26,7 +26,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               Control
             </span>
           </Link>
-          <nav className="hidden items-center gap-5 text-sm text-dim sm:flex">
+          <nav className="hidden items-center gap-4 text-sm text-dim sm:flex lg:gap-5">
             <Link href="/" className="transition-colors hover:text-fg">
               Stations
             </Link>
@@ -42,9 +42,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link href="/compliance" className="transition-colors hover:text-fg">
               Compliance
             </Link>
+            <Link href="/docs" className="transition-colors hover:text-fg">
+              Docs
+            </Link>
           </nav>
           <div className="flex items-center gap-4 text-sm">
-            {email && <span className="hidden text-dim sm:inline">{email}</span>}
+            {email && <span className="hidden max-w-[16rem] truncate text-dim lg:inline">{email}</span>}
             <button
               type="button"
               onClick={signOut}

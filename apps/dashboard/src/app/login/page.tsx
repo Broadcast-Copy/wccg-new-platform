@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Radio, Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/hooks/use-session";
+import { nextFromLocation } from "@/lib/next-path";
 
 /** Illegal states unrepresentable — no isLoading/isError boolean soup. */
 type FormState =
@@ -21,10 +22,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [state, setState] = useState<FormState>({ status: "idle" });
 
-  // Already signed in? Bounce to the cockpit. Client-side only — this is a
-  // static export with client-held sessions, so there is no server redirect.
+  // Already signed in? Go where ?next= asked (a same-site path only), else the
+  // cockpit. Client-side only — this is a static export with client-held
+  // sessions, so there is no server redirect.
   useEffect(() => {
-    if (session.status === "authed") window.location.href = "/";
+    if (session.status === "authed") window.location.href = nextFromLocation();
   }, [session.status]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -40,7 +42,7 @@ export default function LoginPage() {
         return;
       }
       // Success — full navigation so the session is re-read on the next page.
-      window.location.href = "/";
+      window.location.href = nextFromLocation();
     } catch (err: unknown) {
       setState({
         status: "error",
