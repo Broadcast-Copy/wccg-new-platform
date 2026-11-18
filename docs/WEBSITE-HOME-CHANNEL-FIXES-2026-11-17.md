@@ -13,7 +13,7 @@ The four audited legacy paths are `/wp-content/uploads/2025/09/bootleg-kev-new1.
 ## Validation
 
 - ESLint passes for all four changed TS/TSX files; full web TypeScript check passes.
--19 mapping checks cover all audited paths as relative/apex/www URLs, current and foreign artwork preservation, absent subject replacement and query/hash variants.
+- 19 mapping checks cover all audited paths as relative/apex/www URLs, current and foreign artwork preservation, absent subject replacement and query/hash variants.
 - Next16.1.6 webpack production build succeeds with its5642-page static export. Generated homepage contains two Featured Show labels and zero audited broken URL references; channels export contains five named Play controls.
 - Loopback8196 serves only this worktree's static export for browser review. Desktop and temporary390px mobile inspection confirm featured labels and loaded473px Bootleg artwork; no loaded image failure was observed in the reviewed hero. Temporary viewport override is reset. Playback controls are inspected, not pressed, preserving audio state.
 - Existing dependencies are reused without adding packages or changing the lockfile. The installed pnpm11 attempted an automatic dependency refresh and refused the cross-worktree module directory; no dependency removal was authorized or performed. Direct existing ESLint/TypeScript/Next binaries completed validation.
@@ -22,4 +22,12 @@ The four audited legacy paths are `/wp-content/uploads/2025/09/bootleg-kev-new1.
 
 Use the repository's existing web-only KnownHost workflow `.github/workflows/deploy.yml`. API/admin/workers paths and deployment settings are not modified. Public-site verification must confirm the new label, corrected image references/loaded artwork and five named controls after workflow success. The existing deployment exclusions for Broadcast Copy addon domains remain intact.
 
-Deployment result and pull request are recorded in the final task report. The original working checkout and other agents' untracked work are preserved. Full playback, authenticated workflows and unrelated preexisting page issues are outside this repair.
+Deployment result and source commits are recorded in the final task report. The original working checkout and other agents' untracked work are preserved. Full playback, authenticated workflows and unrelated preexisting page issues are outside this repair.
+
+## Hosted-build font blocker
+
+Initial source commit952a126 reached main, but KnownHost workflow44215424118 failed during compilation before uploading anything. `next/font/google` crashed in its filename-extension parser for Work Sans on the All Day & Night page, matching the upstream report https://github.com/vercel/next.js/issues/99114. Local validation had passed; no failed build was claimed live.
+
+Bundled the same full-glyph variable Work Sans font from the official Google Fonts repository, retaining its OFL license, and switched only that page's body font to the existing Next local-font loader. Weight range400–800 and CSS variable are retained; no npm dependency, framework upgrade or deployment permission change is needed. Source/provenance is recorded alongside the font. This removes the affected font's external build-time download; other Google font imports are unchanged.
+
+The GitHub integration could read workflow results but returned403 for PR creation and failed-job rerun; no access grant or credential extraction was attempted. The existing authorized Git remote publishes commits, which triggers the normal web deployment workflow.

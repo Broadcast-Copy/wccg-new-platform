@@ -1,6 +1,7 @@
 "use client";
 
-import { Alfa_Slab_One, Work_Sans } from "next/font/google";
+import { Alfa_Slab_One } from "next/font/google";
+import localFont from "next/font/local";
 import { useEffect, useRef, useState } from "react";
 import { AppImage as Image } from "@/components/ui/app-image";
 import { useNowPlaying } from "@/hooks/use-now-playing";
@@ -12,9 +13,11 @@ const displayFont = Alfa_Slab_One({
   variable: "--adn-font-display",
 });
 
-const bodyFont = Work_Sans({
-  weight: ["400", "500", "600", "700", "800"],
-  subsets: ["latin"],
+const bodyFont = localFont({
+  src: "../../../fonts/WorkSans-Variable.ttf",
+  weight: "400 800",
+  style: "normal",
+  display: "swap",
   variable: "--adn-font-body",
 });
 
