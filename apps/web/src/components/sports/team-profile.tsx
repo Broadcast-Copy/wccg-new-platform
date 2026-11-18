@@ -22,9 +22,10 @@ import {
   Tv,
   MapPinIcon,
 } from "lucide-react";
-import { isTeamLive } from "@/data/sports";
+
 import type { SportsTeam, UpcomingGame } from "@/data/sports";
-import { useESPNLive } from "@/hooks/use-espn-live";
+import { useDukeGameStats } from "@/hooks/use-duke-game-stats";
+import { DukeGameStats } from "@/components/sports/duke-game-stats";
 import { AppImage } from "@/components/ui/app-image";
 import { YouTubeGrid } from "@/components/youtube/youtube-grid";
 import type { YouTubeVideo } from "@/lib/youtube-rss";
@@ -224,25 +225,8 @@ function NextGameCountdown({
 export function TeamProfile({ team, youtubeVideos }: { team: SportsTeam; youtubeVideos?: YouTubeVideo[] }) {
   const [activeTab, setActiveTab] = useState<TabKey>("highlights");
 
-  // ESPN live game detection — polls scoreboard for real Duke game status
-  const espnLive = useESPNLive(team.espnSport ?? "mens-college-basketball");
-  const live = espnLive.isLive || isTeamLive(team);
-
-  // Force client-side re-evaluation so isTeamLive() uses real client time.
-  // The initial bump is deferred to a microtask so the effect body doesn't call
-  // setState synchronously; the interval keeps it fresh thereafter.
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    let active = true;
-    queueMicrotask(() => {
-      if (active) setTick(1);
-    });
-    const id = setInterval(() => setTick((t) => t + 1), 60_000);
-    return () => {
-      active = false;
-      clearInterval(id);
-    };
-  }, []);
+  const gameStats = useDukeGameStats(team.espnSport ?? "mens-college-basketball");
+  const live = gameStats.game?.state === "in" && !gameStats.error;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -304,15 +288,6 @@ export function TeamProfile({ team, youtubeVideos }: { team: SportsTeam; youtube
               <p className="text-sm sm:text-base text-white/50 mb-2">
                 {team.conference}
               </p>
-              {/* Live Score Ticker */}
-              {espnLive.isLive && espnLive.opponent && (
-                <div className="inline-flex items-center gap-3 rounded-xl bg-black/40 backdrop-blur-sm border border-red-500/30 px-4 py-2 mb-2">
-                  <span className="text-sm font-bold text-white">DUKE {espnLive.dukeScore}</span>
-                  <span className="text-xs text-white/50">-</span>
-                  <span className="text-sm font-bold text-white">{espnLive.opponentScore} {espnLive.opponent}</span>
-                  <span className="text-[10px] font-bold text-red-400 uppercase">{espnLive.statusText} {espnLive.clock}</span>
-                </div>
-              )}
               <div className="flex flex-wrap items-center gap-4 text-xs text-white/40">
                 <span className="flex items-center gap-1.5">
                   <MapPin className="h-3 w-3" />
@@ -341,7 +316,7 @@ export function TeamProfile({ team, youtubeVideos }: { team: SportsTeam; youtube
           </div>
 
           {/* Next Game Countdown */}
-          {team.nextGame && (
+          {team.nextGame && !live && (
             <NextGameCountdown team={team} game={team.nextGame} />
           )}
         </div>
@@ -349,6 +324,8 @@ export function TeamProfile({ team, youtubeVideos }: { team: SportsTeam; youtube
 
       {/* Content */}
       <div className="mx-auto max-w-5xl px-4 py-8">
+        <DukeGameStats state={gameStats} />
+
         {/* Tabs */}
         <div className="relative pb-4 mb-6 border-b border-border">
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
