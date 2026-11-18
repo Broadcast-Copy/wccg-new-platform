@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/sheet";
 import { Menu, type LucideIcon } from "lucide-react";
 import { ThemeLogo } from "@/components/theme-logo";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { UserMenu } from "@/components/auth/user-menu";
 
 interface NavLink {
   href: string;
@@ -29,7 +31,7 @@ export function MobileNav({ navLinks }: MobileNavProps) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden">
+        <Button variant="ghost" size="icon" className="lg:hidden">
           <Menu className="h-5 w-5" />
           <span className="sr-only">Toggle menu</span>
         </Button>
@@ -53,6 +55,10 @@ export function MobileNav({ navLinks }: MobileNavProps) {
             </Link>
           ))}
         </nav>
+        <div className="flex items-center justify-between border-t border-border pt-4 sm:hidden">
+          <UserMenu />
+          <ThemeToggle />
+        </div>
       </SheetContent>
     </Sheet>
   );

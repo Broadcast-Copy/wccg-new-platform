@@ -20,8 +20,16 @@ Assess impact with homepage visits→actual playback, listening minutes, return 
 
 - ESLint: all five changed TS/TSX files pass. Full web TypeScript passes.
 - Final Next16.1.6 webpack static production build succeeds,5642/5642 pages.
--10 export assertions pass: marketing metadata, valid RadioStation JSON, both responsive CTA labels, mobile DOM order, referral section, removal of unsupported count, and preservation of earlier image/channel fixes.
+- 10 export assertions pass: marketing metadata, valid RadioStation JSON, both responsive CTA labels, mobile DOM order, referral section, removal of unsupported count, and preservation of earlier image/channel fixes.
 - Five real share-handler scenarios pass with injected browser/analytics transports: native success, cancellation, clipboard-only, native failure→clipboard, and clipboard failure→manual read-only link. No real sharing or clipboard write was used in those tests.
 - Actual loopback preview: desktop and390px mobile visually inspected. Mobile CTA observed at top362px/bottom410px in844px viewport, before artwork. Search/social metadata and station JSON were inspected in the browser. No listening/share/newsletter action was submitted during browser review; temporary viewport override is reset.
 
 No npm dependency or lockfile change. Existing installed tools are reused. Live deployment and evidence are recorded after the normal web-only KnownHost workflow completes. AirSuite Production0.21.162, Library0.21.118, ENDEC/OnAir/audio/EAS records and existing monitor warnings are outside this change.
+
+## Deployment and responsive follow-up
+
+Homepage source 3783055ecfea9d41fc9d4df5355d8223a0c08414 deployed successfully through KnownHost workflow 44219569692; public homepage readback confirmed the listener pitch, free-listening CTA, invitation/share section, metadata and RadioStation schema.
+
+The final live phone check uncovered an existing header overflow (398px content against 384px client width at a 390px viewport), plus a tablet navigation gap: desktop links began at lg while the drawer trigger disappeared at md. The follow-up keeps the drawer available until lg and reduces phone header spacing. Phone account and theme controls move into the drawer; desktop/tablet retain them in the header. Listening and search stay immediately available. No account actions or permissions changed.
+
+Follow-up validation: both changed navigation files pass ESLint; full web TypeScript and the 5642-page production build pass. Browser preview at 390px has client/scroll width 384/384, with the free-listen CTA at 362–410px. Phone drawer opens and contains Sign In, Sign Up and theme controls. At 900px, the previously missing drawer opens and layout has no horizontal overflow. At 320px the header menu fits (right 298px in 314px content); pre-existing footer social links and the fixed navigation dock still exceed that narrow width, outside this header repair. No playback or account action was triggered.

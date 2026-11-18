@@ -328,11 +328,11 @@ export default function MainLayout({
           </nav>
 
           {/* Right: Controls */}
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center gap-1 sm:gap-2 ml-auto">
             <ListenLiveButton />
             <WeatherPill />
             <GlobalSearchButton />
-            <ThemeToggle />
+            <div className="hidden sm:block"><ThemeToggle /></div>
             <NotificationBell />
             <Link
               href="/marketplace"
@@ -341,7 +341,7 @@ export default function MainLayout({
             >
               <ShoppingCart className="h-4 w-4" />
             </Link>
-            <UserMenu />
+            <div className="hidden sm:block"><UserMenu /></div>
             <MobileNav navLinks={mobileNavLinks} />
           </div>
         </div>
