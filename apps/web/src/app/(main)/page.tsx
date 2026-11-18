@@ -1,6 +1,17 @@
 import HomePageContent from "./home-page-content";
 import { getShowsFromDb } from "@/lib/content-db";
 import { HERO_SHOWS, type ShowData } from "@/data/shows";
+import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/site";
+
+const description = "Listen live to WCCG 104.5 FM, Fayetteville’s hip hop and R&B station. Music, personalities, Duke sports and local connections. Free listening in your browser.";
+export const metadata: Metadata = {
+  title: "WCCG 104.5 FM | Listen Live — Fayetteville Hip Hop & R&B",
+  description,
+  alternates: { canonical: "/" },
+  openGraph: { title: "Your city. Your music. Your 104.5.", description, url: "/", type: "website", siteName: "WCCG 104.5 FM", images: [{ url: "/images/logos/wccg-logo.png", alt: "WCCG 104.5 FM — Fayetteville’s Hip Hop Station", width: 500, height: 324 }] },
+  twitter: { card: "summary_large_image", title: "WCCG 104.5 FM | Listen Live", description, images: ["/images/logos/wccg-logo.png"] },
+};
 
 export default async function HomePage() {
   // Hero carousel shows come from the DB at build time. HERO_SHOWS (the curated
@@ -14,5 +25,15 @@ export default async function HomePage() {
     (curated) => byId.get(curated.id) ?? curated,
   );
 
-  return <HomePageContent heroShows={heroShows} />;
+  const station = {
+    "@context": "https://schema.org",
+    "@type": "RadioStation",
+    "@id": `${SITE_URL}/#station`,
+    name: "WCCG 104.5 FM",
+    url: SITE_URL,
+    description,
+    logo: `${SITE_URL}/images/logos/wccg-logo.png`,
+    areaServed: { "@type": "City", name: "Fayetteville", address: { "@type": "PostalAddress", addressRegion: "NC", addressCountry: "US" } },
+  };
+  return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(station).replace(/</g, "\\u003c") }} /><HomePageContent heroShows={heroShows} /></>;
 }

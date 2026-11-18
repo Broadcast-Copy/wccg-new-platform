@@ -14,6 +14,7 @@ type EventName =
   | "visit_home"
   | "visit_listen"
   | "play_clicked"
+  | "station_share"
   | "audio_first_byte"
   | "audio_listen_minute"
   | "point_awarded"

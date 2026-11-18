@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Hero } from "@/components/home/hero";
+import { ListenerInvite } from "@/components/home/listener-invite";
 import type { ShowData } from "@/data/shows";
 import { createClient } from "@/lib/supabase/client";
 import { track } from "@/lib/analytics";
@@ -16,7 +17,6 @@ import {
   CalendarDays,
   Users2,
   ShoppingBag,
-  MapPin,
   CloudSun,
   Clapperboard,
   Megaphone,
@@ -359,20 +359,20 @@ export default function HomePageContent({
 
   return (
     <div className="space-y-10">
-      {/* Show carousel — primary on-air programming view.
-          The "Listen live, earn WP →" CTA strip lives on the user
-          dashboard (/my) instead of the home page. */}
+      {/* Station identity and listening come before platform services. */}
       <Hero heroShows={heroShows} />
+
+      <ListenerInvite />
 
       {/* Duke Game Day */}
       <DukeGameDay />
 
-      {/* Quick access — Marketplace · Local Resources · Events */}
+      {/* Local services remain available below the listening invitation. */}
       <section className="px-4 md:px-[50px]">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
-            { href: "/marketplace", label: "Marketplace", desc: "Shop local vendors, merch & more", icon: ShoppingBag, color: "#f59e0b" },
-            { href: "/community", label: "Local Resources", desc: "Find services & places near you", icon: MapPin, color: "#14b8a6" },
+            { href: "/shows", label: "Show lineup", desc: "Find your hosts and daily favorites", icon: Radio, color: "#dc2626" },
+            { href: "/channels", label: "Choose your soundtrack", desc: "Explore WCCG and our music channels", icon: Music, color: "#14b8a6" },
             { href: "/events", label: "Events", desc: "Concerts, contests & community happenings", icon: CalendarDays, color: "#7401df" },
           ].map((c) => {
             const Icon = c.icon;
@@ -403,10 +403,10 @@ export default function HomePageContent({
       {/* Platform Headline */}
       <section className="text-center py-4">
         <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-foreground tracking-tight">
-          One Platform. Endless Possibilities.
+          Your music. Your community.
         </h2>
         <p className="mt-3 max-w-2xl mx-auto text-sm sm:text-base text-muted-foreground leading-relaxed">
-          Your hub for tickets, streaming, weather &amp; news updates, community discovery, podcast booking, dynamic advertising, and digital media services, all in one place.
+          Stay connected to Fayetteville with music, personalities, Duke sports, local events and the people who make this community yours.
         </p>
       </section>
 
@@ -578,7 +578,7 @@ export default function HomePageContent({
             Your Station. Your Community.
           </h2>
           <p className="max-w-md text-white/70 text-sm md:text-base">
-            Join thousands of listeners earning rewards, attending exclusive events, and supporting local businesses through WCCG 104.5 FM.
+            Find your favorite shows, connect with other listeners and discover local events and businesses through WCCG 104.5 FM.
           </p>
           <div className="flex gap-3 mt-2">
             <Button

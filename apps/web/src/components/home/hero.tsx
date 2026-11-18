@@ -4,11 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { AppImage as Image } from "@/components/ui/app-image";
-import { ArrowDownRight } from "lucide-react";
+import { ArrowDownRight, Play } from "lucide-react";
 import { HERO_SHOWS, type ShowData } from "@/data/shows";
 import { useStreamPlayer } from "@/components/player/stream-player-overlay";
 import { useDukeNews } from "@/hooks/use-duke-news";
 import { useSupabase } from "@/components/providers/supabase-provider";
+import { track } from "@/lib/analytics";
 
 const SLIDE_INTERVAL = 8000;
 
@@ -107,6 +108,25 @@ function useTickerItems() {
   }, [dukeNews, blogTitles]);
 }
 
+function ListenerPitch({ onListen }: { onListen: () => void }) {
+  return (
+    <div className="space-y-4 md:space-y-5">
+      <p className="text-xs font-bold uppercase tracking-[0.16em] text-red-700 dark:text-red-400">WCCG 104.5 FM · Fayetteville, NC</p>
+      <h1 className="text-3xl lg:text-4xl xl:text-5xl font-black leading-[1.08] tracking-tight text-foreground">Your city. Your music.<br />Your 104.5.</h1>
+      <p className="max-w-lg text-base text-muted-foreground leading-relaxed">Hip hop, R&amp;B and the voices you know. Bring WCCG along for your morning, your workday and the ride home.</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button size="lg" onClick={onListen} aria-label="Listen live to WCCG 104.5 FM for free" className="h-12 rounded-full bg-[#dc2626] px-6 font-bold text-white shadow-lg shadow-red-500/20 hover:bg-[#b91c1c]">
+          <Play className="mr-2 h-4 w-4" fill="currentColor" aria-hidden="true" />Listen live — free
+        </Button>
+        <Button variant="outline" size="lg" asChild className="h-12 rounded-full px-5">
+          <Link href="/shows">Meet the shows<ArrowDownRight className="ml-2 h-4 w-4" aria-hidden="true" /></Link>
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground">Plays right here in your browser. No account required.</p>
+    </div>
+  );
+}
+
 export function Hero({ heroShows = HERO_SHOWS }: { heroShows?: ShowData[] }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -141,6 +161,7 @@ export function Hero({ heroShows = HERO_SHOWS }: { heroShows?: ShowData[] }) {
   const { open: openStreamPlayer } = useStreamPlayer();
 
   const handleListenLive = () => {
+    void track("play_clicked", { source: "home_hero", campaign: "listener_growth_20261117" });
     openStreamPlayer();
   };
 
@@ -166,6 +187,7 @@ export function Hero({ heroShows = HERO_SHOWS }: { heroShows?: ShowData[] }) {
       {/* Mobile: stacked layout */}
       <div className="md:hidden">
         <div className="relative overflow-hidden rounded-2xl border border-border">
+          <div className="bg-sidebar px-5 py-6"><ListenerPitch onListen={handleListenLive} /></div>
           {/* Sliding image */}
           <div className="relative aspect-[4/3]">
             {heroSlides.map((heroSlide, index) => (
@@ -239,38 +261,6 @@ export function Hero({ heroShows = HERO_SHOWS }: { heroShows?: ShowData[] }) {
                   />
                 ))}
               </div>
-            </div>
-          </div>
-
-          {/* Content below image */}
-          <div className="bg-sidebar px-5 py-6 space-y-4">
-            <h1 className="text-2xl font-black leading-[1.1] text-foreground">
-              Hip Hop, Sports, Reactions And Podcasts.
-            </h1>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Experience premium digital content wherever you are!
-            </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <Button
-                size="default"
-                onClick={handleListenLive}
-                className="group relative overflow-hidden rounded-full border-0 bg-[#dc2626] text-white font-bold shadow-lg shadow-red-500/20 hover:bg-[#b91c1c] px-5"
-              >
-                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                Now Streaming
-                <ArrowDownRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="default"
-                className="rounded-full border-white/20 text-foreground hover:border-white/40 hover:bg-white/5 px-5"
-                asChild
-              >
-                <Link href="/discover">
-                  Discover More
-                  <ArrowDownRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
             </div>
           </div>
 
@@ -385,38 +375,7 @@ export function Hero({ heroShows = HERO_SHOWS }: { heroShows?: ShowData[] }) {
 
           {/* Content */}
           <div className="relative z-20 flex flex-col justify-center flex-1 px-10 py-12 lg:px-14">
-            <div className="space-y-6">
-              <h1 className="text-3xl lg:text-4xl xl:text-5xl font-black leading-[1.1] text-foreground">
-                Hip Hop, Sports, Reactions And Podcasts.
-              </h1>
-
-              <p className="text-base lg:text-lg text-muted-foreground max-w-md leading-relaxed">
-                Experience premium digital content wherever you are!
-              </p>
-
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <Button
-                  size="lg"
-                  onClick={handleListenLive}
-                  className="group relative overflow-hidden rounded-full border-0 bg-[#dc2626] text-white font-bold shadow-lg shadow-red-500/20 hover:bg-[#b91c1c] hover:shadow-red-500/30 px-6"
-                >
-                  <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                  Now Streaming
-                  <ArrowDownRight className="ml-2 h-5 w-5" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="rounded-full border-white/20 text-foreground hover:border-white/40 hover:bg-white/5 px-6"
-                  asChild
-                >
-                  <Link href="/discover">
-                    Discover More
-                    <ArrowDownRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-            </div>
+            <ListenerPitch onListen={handleListenLive} />
           </div>
 
           {/* ── News Ticker (bottom of right card) ── */}
