@@ -35,7 +35,9 @@ export function useDukeGameStats(sport: DukeSport): DukeGameStatsState {
       try {
         const dateParts = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
         const date = ["year", "month", "day"].map(key => dateParts.find(part => part.type === key)?.value).join("");
-        const eventId = selectDukeEvent(await read(`${base}/scoreboard?groups=50&limit=1000&dates=${date}`));
+        const scoreboard = await read(`${base}/scoreboard?groups=50&limit=1000&dates=${date}`);
+        if (!scoreboard || !Array.isArray(scoreboard.events)) throw new Error("Invalid scoreboard response");
+        const eventId = selectDukeEvent(scoreboard);
         // Drop the prior event before fetching a new summary, so a failed request
         // cannot put yesterday's score or player rows under today's matchup.
         if (active) setState(previous => previous.game?.eventId === eventId ? previous : { game: null, loading: !!eventId, error: false, fetchedAt: null });
