@@ -209,7 +209,7 @@ export function Hero({ heroShows = HERO_SHOWS }: { heroShows?: ShowData[] }) {
             <div className="absolute bottom-0 left-0 right-0 z-30 px-5 pb-5">
               {currentShowSlide ? (
                 <Link href={`/shows/${currentShowSlide.id}`} className="group inline-block mb-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-0.5">Now Playing</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-0.5">Featured Show</p>
                   <h3 className="text-base font-black text-white group-hover:text-[#74ddc7] transition-colors">
                     {currentShowSlide.name}
                   </h3>
@@ -347,7 +347,7 @@ export function Hero({ heroShows = HERO_SHOWS }: { heroShows?: ShowData[] }) {
           <div className="absolute bottom-0 left-0 right-0 z-30 px-6 pb-5">
             {currentShowSlide ? (
               <Link href={`/shows/${currentShowSlide.id}`} className="group inline-block mb-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-0.5">Now Playing</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-0.5">Featured Show</p>
                 <h3 className="text-lg font-black text-white drop-shadow-lg group-hover:text-[#74ddc7] transition-colors">
                   {currentShowSlide.name}
                 </h3>

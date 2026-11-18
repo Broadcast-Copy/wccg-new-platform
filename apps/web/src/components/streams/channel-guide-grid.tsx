@@ -338,7 +338,11 @@ function ChannelTile({ stream, shows, hosts }: { stream: Stream; shows: ShowData
             <>
               {showImage ? (
                 <button
+                  type="button"
                   onClick={handleTogglePlay}
+                  aria-label={`${isThisPlaying ? "Pause" : "Play"} ${stream.name}`}
+                  aria-pressed={isThisPlaying}
+                  disabled={!stream.streamUrl}
                   className="relative h-18 w-18 sm:h-22 sm:w-22 rounded-lg overflow-hidden border border-border hover:border-[#74ddc7]/50 transition-colors"
                 >
                   <Image
@@ -351,7 +355,11 @@ function ChannelTile({ stream, shows, hosts }: { stream: Stream; shows: ShowData
                 </button>
               ) : (
                 <button
+                  type="button"
                   onClick={handleTogglePlay}
+                  aria-label={`${isThisPlaying ? "Pause" : "Play"} ${stream.name}`}
+                  aria-pressed={isThisPlaying}
+                  disabled={!stream.streamUrl}
                   className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-lg bg-foreground/[0.06] hover:bg-[#74ddc7]/20 transition-colors"
                 >
                   <Radio className="h-5 w-5 text-muted-foreground" />

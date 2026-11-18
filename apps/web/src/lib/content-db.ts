@@ -20,6 +20,7 @@ import {
   type ShowData,
 } from "@/data/shows";
 import { ALL_HOSTS, type HostData } from "@/data/hosts";
+import { contentImage } from "@/lib/content-image";
 import {
   WEEKLY_SCHEDULE,
   type DaySchedule,
@@ -332,9 +333,9 @@ export async function getShowsFromDb(): Promise<ShowData[]> {
       description: r.description ?? "",
       tagline: r.tagline ?? "",
       gradient: r.gradient ?? "",
-      imageUrl: r.image_url,
-      showImageUrl: r.show_image_url,
-      hostImageUrl: r.host_image_url,
+      imageUrl: contentImage(r.image_url, ALL_SHOWS.find(s => s.id === r.id)?.imageUrl),
+      showImageUrl: contentImage(r.show_image_url, ALL_SHOWS.find(s => s.id === r.id)?.showImageUrl),
+      hostImageUrl: contentImage(r.host_image_url, ALL_SHOWS.find(s => s.id === r.id)?.hostImageUrl),
       heroImageClass: r.hero_image_class ?? undefined,
       youtube: mapYoutube(r.youtube),
       podcastRss: r.podcast_rss ?? undefined,
@@ -382,7 +383,7 @@ export async function getHostsFromDb(): Promise<HostData[]> {
       role: hostRole(r.role),
       showIds: showIdsByHost.get(r.id) ?? [],
       bio: r.bio ?? "",
-      imageUrl: r.avatar_url,
+      imageUrl: contentImage(r.avatar_url, ALL_HOSTS.find(h => h.id === r.id)?.imageUrl),
       socialLinks: mapSocialLinks(r.social_links),
       youtubeChannel: r.youtube_channel ?? undefined,
       youtubeChannelId: r.youtube_channel_id ?? undefined,
